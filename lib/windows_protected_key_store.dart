@@ -144,7 +144,20 @@ class WindowsProtectedKeyFile implements ProtectedKeyFile {
       try {
         await _pending.readAsBytes();
       } on FileSystemException catch (pendingError) {
-        if (_missing(pendingError)) return null;
+        if (_missing(pendingError)) {
+          // A creator may have renamed .pending after the first destination
+          // read failed. Confirm the committed path again before reporting
+          // absence; preserve permission and other I/O failures.
+          try {
+            return await file.readAsBytes();
+          } on FileSystemException catch (destinationError) {
+            if (_missing(destinationError)) return null;
+            throw ProtectedKeyStoreException(
+              KeyStoreFailure.read,
+              osError: destinationError.osError?.errorCode,
+            );
+          }
+        }
         throw ProtectedKeyStoreException(
           KeyStoreFailure.read,
           osError: pendingError.osError?.errorCode,

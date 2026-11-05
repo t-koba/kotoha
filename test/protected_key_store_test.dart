@@ -67,6 +67,56 @@ class ReadFaultFile extends Fake implements File {
   Future<Uint8List> readAsBytes() async => throw error;
 }
 
+class MissingThenReadFaultFile extends Fake implements File {
+  MissingThenReadFaultFile(this.path, this.recheckError);
+
+  @override
+  final String path;
+  final FileSystemException recheckError;
+  var _reads = 0;
+
+  @override
+  Future<Uint8List> readAsBytes() async {
+    if (_reads++ == 0) {
+      throw FileSystemException(
+        'injected initial absence',
+        path,
+        OSError('', 2),
+      );
+    }
+    throw recheckError;
+  }
+}
+
+class PublishingFile extends Fake implements File {
+  PublishingFile(this.original, this.ciphertext);
+
+  final File original;
+  final Uint8List ciphertext;
+  var _firstRead = true;
+
+  @override
+  String get path => original.path;
+
+  @override
+  Future<Uint8List> readAsBytes() async {
+    if (_firstRead) {
+      _firstRead = false;
+      // Model a destination read that observed absence, whose error is
+      // delivered after a concurrent creator publishes its pending bytes.
+      final pending = File('$path.pending');
+      await pending.writeAsBytes(ciphertext, flush: true);
+      await pending.rename(path);
+      throw FileSystemException(
+        'injected stale not-found read',
+        path,
+        OSError('', 2),
+      );
+    }
+    return original.readAsBytes();
+  }
+}
+
 void main() {
   final key = Uint8List.fromList(List.generate(32, (i) => i));
   late MemoryKeyFile file;
@@ -171,6 +221,50 @@ void main() {
       await actual.writeAsBytes(corrupt);
       await expectLater(diskStore.load(), fails(KeyStoreFailure.format));
       expect(await actual.readAsBytes(), corrupt);
+    },
+  );
+
+  test('preserves destination errors during the absence recheck', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'kotoha-key-recheck-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final target = File('${directory.path}/key');
+    final file = WindowsProtectedKeyFile(
+      MissingThenReadFaultFile(
+        target.path,
+        FileSystemException(
+          'injected access denied',
+          target.path,
+          OSError('', 5),
+        ),
+      ),
+    );
+
+    await expectLater(
+      file.read(),
+      throwsA(
+        isA<ProtectedKeyStoreException>()
+            .having((error) => error.failure, 'failure', KeyStoreFailure.read)
+            .having((error) => error.osError, 'osError', 5),
+      ),
+    );
+  });
+
+  test(
+    'rechecks destination when a creator commits between missing reads',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'kotoha-key-race-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File('${directory.path}/key');
+      final ciphertext = Uint8List.fromList([1, 2, 3]);
+      final file = WindowsProtectedKeyFile(PublishingFile(target, ciphertext));
+
+      expect(await file.read(), ciphertext);
+      expect(await target.readAsBytes(), ciphertext);
+      expect(await File('${target.path}.pending').exists(), isFalse);
     },
   );
 
