@@ -10,7 +10,7 @@ void main() {
     await tester.pumpWidget(const KotohaApp());
 
     expect(find.textContaining('自動翻訳は行いません'), findsOneWidget);
-    expect(find.textContaining('このビルドでは保存されません'), findsOneWidget);
+    expect(find.textContaining('このアプリには保存されません'), findsOneWidget);
 
     await tester.enterText(find.byKey(const ValueKey('source-text')), 'こんにちは');
     await tester.dragUntilVisible(
@@ -120,6 +120,10 @@ void main() {
       ),
     );
     await tester.pumpWidget(const KotohaApp());
+    expect(
+      find.text('コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。'),
+      findsOneWidget,
+    );
 
     final copyButton = find.byKey(const ValueKey('copy-translation-0'));
     await tester.ensureVisible(copyButton);

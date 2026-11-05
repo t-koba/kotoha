@@ -131,6 +131,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
               ),
               const SizedBox(height: 24),
               Text('訳文', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              const Text(
+                'コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。',
+              ),
               const SizedBox(height: 12),
               for (var index = 0; index < _translations.length; index++)
                 _translationCard(index),
@@ -230,7 +234,7 @@ class _TemporaryDraftNotice extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: const Padding(
         padding: EdgeInsets.all(12),
-        child: Text('この下書きは一時的なものです。このビルドでは保存されません。'),
+        child: Text('この下書きは一時的なものです。このアプリには保存されません。'),
       ),
     ),
   );
