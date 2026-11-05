@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'workspace.dart';
-
 void main() => runApp(const KotohaApp());
 
 class KotohaApp extends StatelessWidget {
@@ -28,7 +26,6 @@ class TextWorkspacePage extends StatefulWidget {
 }
 
 class _TextWorkspacePageState extends State<TextWorkspacePage> {
-  late TextWorkspaceDraft _draft = TextWorkspaceDraft.empty();
   final TextEditingController _sourceLanguage = TextEditingController();
   final TextEditingController _sourceText = TextEditingController();
   final List<_TranslationFields> _translations = [_TranslationFields()];
@@ -43,21 +40,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     super.dispose();
   }
 
-  void _addTranslation() => setState(() {
-    _translations.add(_TranslationFields());
-    _draft = _draft.copyWith(
-      translations: [..._draft.translations, ManualTranslationDraft.empty()],
-    );
-  });
-
-  void _updateTranslation(int index, {String? language, String? text}) {
-    final translations = [..._draft.translations];
-    translations[index] = translations[index].copyWith(
-      targetLanguage: language,
-      text: text,
-    );
-    setState(() => _draft = _draft.copyWith(translations: translations));
-  }
+  void _addTranslation() =>
+      setState(() => _translations.add(_TranslationFields()));
 
   Future<void> _copyTranslation(int index) async {
     final text = _translations[index].text.text;
@@ -83,8 +67,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     if (_translations.length == 1) return;
     setState(() {
       _translations.removeAt(index).dispose();
-      final translations = [..._draft.translations]..removeAt(index);
-      _draft = _draft.copyWith(translations: translations);
     });
   }
 
@@ -119,20 +101,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
               const SizedBox(height: 16),
               const _TemporaryDraftNotice(),
               const SizedBox(height: 20),
-              _languageField(
-                _sourceLanguage,
-                '原文の言語',
-                '例: ja',
-                onChanged: (value) => setState(
-                  () => _draft = _draft.copyWith(sourceLanguage: value),
-                ),
-              ),
+              _languageField(_sourceLanguage, '原文の言語', '例: ja'),
               const SizedBox(height: 12),
               TextField(
                 key: const ValueKey('source-text'),
                 controller: _sourceText,
-                onChanged: (value) =>
-                    setState(() => _draft = _draft.copyWith(sourceText: value)),
                 minLines: 5,
                 maxLines: 12,
                 decoration: const InputDecoration(
@@ -177,13 +150,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
             Row(
               children: [
                 Expanded(
-                  child: _languageField(
-                    fields.language,
-                    '訳先の言語',
-                    '例: en',
-                    onChanged: (value) =>
-                        _updateTranslation(index, language: value),
-                  ),
+                  child: _languageField(fields.language, '訳先の言語', '例: en'),
                 ),
                 IconButton(
                   key: ValueKey('copy-translation-$index'),
@@ -204,7 +171,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
             TextField(
               key: ValueKey('translation-text-$index'),
               controller: fields.text,
-              onChanged: (value) => _updateTranslation(index, text: value),
               minLines: 4,
               maxLines: 10,
               decoration: const InputDecoration(
@@ -222,11 +188,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   Widget _languageField(
     TextEditingController controller,
     String label,
-    String hint, {
-    ValueChanged<String>? onChanged,
-  }) => TextField(
+    String hint,
+  ) => TextField(
     controller: controller,
-    onChanged: onChanged,
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
