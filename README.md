@@ -13,10 +13,18 @@ this temporary build.
 ## Development
 
 ```sh
-flutter test
-flutter analyze
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed lib test
+flutter analyze --no-pub
+flutter test --no-pub
+python3 design/specs/validate_specs.py
 ```
 
-The generated native runners currently cover Android, iOS, macOS, and Windows.
-Linux remains intentionally unscaffolded until its host can use the designed
-non-GTK Flutter Engine embedding.
+## Continuous integration
+
+`.github/workflows/ci.yml` runs the design-contract validator, Dart formatting,
+Flutter analysis and tests on pushes to `dev`, `mizu`, or `mizu/dev`, pull requests,
+and manual dispatch. It also builds debug apps on Android, iOS/macOS, and Windows
+runners. These are validation builds, not signed release artifacts. Linux remains
+intentionally unscaffolded until its host can use the designed non-GTK Flutter
+Engine embedding; the Ubuntu test job does not claim a Linux desktop build.
