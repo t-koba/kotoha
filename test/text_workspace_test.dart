@@ -60,4 +60,45 @@ void main() {
     expect(find.byKey(const ValueKey('translation-text-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('translation-text-1')), findsNothing);
   });
+
+  testWidgets(
+    'removing a middle target keeps the surviving translations aligned',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      for (final entry in const <(String, String)>[
+        ('translation-text-0', 'first'),
+        ('translation-text-1', 'middle'),
+        ('translation-text-2', 'last'),
+      ]) {
+        await tester.enterText(find.byKey(ValueKey(entry.$1)), entry.$2);
+      }
+      await tester.tap(find.byKey(const ValueKey('remove-translation-1')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('translation-text-0')))
+            .controller!
+            .text,
+        'first',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('translation-text-1')))
+            .controller!
+            .text,
+        'last',
+      );
+      expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+    },
+  );
 }
