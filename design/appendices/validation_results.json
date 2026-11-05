@@ -463,10 +463,10 @@
       "case": "compatible"
     },
     {
-      "name": "Apple bundle localization metadata",
+      "name": "Apple bundle metadata",
       "status": "pass",
       "case": "compatible"
     }
   ],
-  "scope": "design_contracts_bundle_localizations_and_synthetic_fixtures"
+  "scope": "design_contracts_apple_bundle_metadata_and_synthetic_fixtures"
 }
