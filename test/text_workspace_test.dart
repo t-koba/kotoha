@@ -4,6 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
 
 void main() {
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(
+    () => binding.platformDispatcher.localesTestValue = [const Locale('ja')],
+  );
+  tearDown(binding.platformDispatcher.clearLocalesTestValue);
+
   testWidgets('keeps the source separate while adding manual translations', (
     tester,
   ) async {
