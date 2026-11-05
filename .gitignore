@@ -1,1 +1,17 @@
 /.mizu/
+/.dart_tool/
+/.idea/
+/build/
+/.pub-cache/
+/.pub/
+/coverage/
+*.iml
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+/android/local.properties
+/ios/Flutter/.last_build_id
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/macos/Flutter/ephemeral/
+/windows/flutter/ephemeral/
