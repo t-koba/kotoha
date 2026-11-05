@@ -129,5 +129,7 @@ jobs:
         run: flutter config --enable-windows-desktop
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
+      - name: Test Windows DPAPI key preservation
+        run: flutter test --no-pub test/windows_dpapi_test.dart
       - name: Build Windows debug app
         run: flutter build windows --debug --no-pub
