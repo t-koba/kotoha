@@ -197,16 +197,21 @@ the `USER32.dll` / `ADVAPI32.dll` imports observed in the other two Windows ABIs
 | Windows ia32 | `CRYPT32.dll`, `USER32.dll`, `ADVAPI32.dll`, `WS2_32.dll`, `bcrypt.dll`, `KERNEL32.dll` |
 | Windows x64 | `CRYPT32.dll`, `USER32.dll`, `ADVAPI32.dll`, `WS2_32.dll`, `bcrypt.dll`, `KERNEL32.dll` |
 
-For Android, the candidate platform provider is Android/Bionic; for Apple it is
-Apple's system runtime/frameworks (including CommonCrypto); for Windows it is
-the Microsoft Windows system DLL set. Linux's `libc.so.6`, `libm.so.6` and loaders
-are host runtime dependencies, **not** a permissive-license finding: identify the
-actual distribution and applicable runtime terms before approval. Kotoha does
-not currently build a Linux desktop app. None of the listed OS libraries is
-proposed for bundling by this audit. For every platform, applicable terms and
-redistribution evidence remain uncollected and approval is pending. A system
-linkage classification does not approve any GPL-family selected term or waive
-policy. OpenSSL code included inside a candidate is not platform-runtime code.
+The platform providers are distinct from the SQLCipher/OpenSSL code inside the
+candidate. The system libraries in the table above are not proposed for bundling;
+these records classify their provider/linkage, not app distribution rights.
+
+| Platform runtime | Provider and terms evidence | Distribution scope / status |
+|---|---|---|
+| Android | Android NDK's [stable native APIs](https://developer.android.com/ndk/guides/stable_apis) document libc, libm and libdl as platform APIs (page SHA-256 `58f5e7da230c40e739b21999c4c51790dc08be2b8f5b582ada3ce0bf465f2fb0`). AOSP Bionic's [`libc/Android.bp`](https://raw.githubusercontent.com/aosp-mirror/platform_bionic/731631f300090436d7f5df80d50b6275c8c60a93/libc/Android.bp) at commit `731631f300090436d7f5df80d50b6275c8c60a93` (SHA-256 `437ec370a9dc1aefdfda60f982954ba904a20ca4d0ee5e79ff124be1eb2687ea`) declares multiple license kinds for libc (Apache-2.0, BSD, ISC, MIT, legacy notice and unencumbered) and references a NOTICE file. | OS-provided; no Android system libraries are bundled by this audit. Exact device runtime and applicable app-distribution terms are not selected; approval pending. |
+| Apple | Candidate load paths point to `/System/Library/Frameworks` and `/usr/lib/libSystem.B.dylib`. Apple's archived [system-framework overview](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/OSX_Technology_Overview/SystemFrameworks/SystemFrameworks.html) (SHA-256 `b9be6e8b350cda7a0b142455dd78f7353da1f41412aafad1765bd83417975380`) identifies `/System/Library/Frameworks` as the system framework location. | OS-provided; no Apple framework is bundled. Applicable current Apple platform/developer terms and approval remain unreviewed. |
+| Windows | Candidate imports are Windows system DLLs. Microsoft documents that Windows functionality is provided by DLLs ([DLL overview](https://learn.microsoft.com/en-us/troubleshoot/windows-client/setup-upgrade-and-drivers/dynamic-link-library), SHA-256 `45491cca3a35f4095ae9902e2043435b78cd0ad1592172ab5765e922df0dc760`) and publishes a specific [Windows SDK redistributable list](https://learn.microsoft.com/en-us/legal/windows-sdk/redist) (SHA-256 `146ab6547cf7c274b00fbae7c4f67bba14281296bd0f24688841a46104e67a1e`). The listed imports do not appear in that SDK redist list. | OS-provided; the candidate does not bundle those DLLs. Applicable Windows OS terms and approval remain unreviewed. |
+| Linux | ELF imports name host `libc.so.6`, `libm.so.6` and the dynamic loader. glibc [`COPYING.LESSERv2`](https://raw.githubusercontent.com/bminor/glibc/04e750e75b73957cf1c791535a3f4319534a52fc/COPYING.LESSERv2) at commit `04e750e75b73957cf1c791535a3f4319534a52fc` is LGPL-2.1 text (SHA-256 `20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95`); it is not a digest or license inventory for a particular host runtime. | Kotoha does not currently build a Linux desktop app. No Linux runtime is approved; identify the supported distribution and review its runtime terms before distribution. |
+
+None of these system libraries is selected as a bundled product dependency. Platform
+versions and the OS-specific terms applicable to a Kotoha distribution still require
+review and approval; system linkage does not establish a permissive code category or
+waive policy. The Linux runtime is specifically not treated as a permissive finding.
 
 ## License closure under the policy
 
