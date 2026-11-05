@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'workspace.dart';
 
@@ -56,6 +57,26 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
       text: text,
     );
     setState(() => _draft = _draft.copyWith(translations: translations));
+  }
+
+  Future<void> _copyTranslation(int index) async {
+    final text = _translations[index].text.text;
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('コピーする訳文を入力してください')));
+      return;
+    }
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } on Exception {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('クリップボードにコピーできませんでした')));
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('訳文をコピーしました')));
   }
 
   void _removeTranslation(int index) {
@@ -148,15 +169,19 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                         _updateTranslation(index, language: value),
                   ),
                 ),
-                if (_translations.length > 1) ...[
-                  const SizedBox(width: 8),
+                IconButton(
+                  key: ValueKey('copy-translation-$index'),
+                  tooltip: '訳文をコピー',
+                  onPressed: () => _copyTranslation(index),
+                  icon: const Icon(Icons.content_copy),
+                ),
+                if (_translations.length > 1)
                   IconButton(
                     key: ValueKey('remove-translation-$index'),
                     tooltip: 'この訳先を削除',
                     onPressed: () => _removeTranslation(index),
                     icon: const Icon(Icons.delete_outline),
                   ),
-                ],
               ],
             ),
             const SizedBox(height: 12),

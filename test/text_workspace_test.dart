@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
 
@@ -101,4 +102,110 @@ void main() {
       expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
     },
   );
+
+  testWidgets('copies exact multilingual manual text', (tester) async {
+    final calls = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') calls.add(call);
+        if (call.method == 'Clipboard.hasStrings') return {'value': false};
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.pumpWidget(const KotohaApp());
+
+    final copyButton = find.byKey(const ValueKey('copy-translation-0'));
+    await tester.ensureVisible(copyButton);
+    await tester.pumpAndSettle();
+    const translation = 'Bonjour 👋\nこんにちは';
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-0')),
+      translation,
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('translation-text-0')))
+          .controller!
+          .text,
+      translation,
+    );
+    expect(tester.widget<IconButton>(copyButton).onPressed, isNotNull);
+    await tester.tap(copyButton);
+    await tester.pump();
+
+    final clipboardCall = calls.singleWhere(
+      (call) => call.method == 'Clipboard.setData',
+    );
+    expect(clipboardCall.arguments, {'text': translation});
+    expect(find.text('訳文をコピーしました'), findsOneWidget);
+  });
+  testWidgets('explains why an empty translation cannot be copied', (
+    tester,
+  ) async {
+    var copyWrites = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') copyWrites++;
+        if (call.method == 'Clipboard.hasStrings') return {'value': false};
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.pumpWidget(const KotohaApp());
+    final copyButton = find.byKey(const ValueKey('copy-translation-0'));
+    await tester.ensureVisible(copyButton);
+    await tester.pumpAndSettle();
+    await tester.tap(copyButton);
+    await tester.pump();
+
+    expect(copyWrites, 0);
+    expect(find.text('コピーする訳文を入力してください'), findsOneWidget);
+  });
+  testWidgets('reports when the operating system rejects clipboard access', (
+    tester,
+  ) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'clipboard-unavailable');
+        }
+        if (call.method == 'Clipboard.hasStrings') return {'value': false};
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.pumpWidget(const KotohaApp());
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-0')),
+      'Hello',
+    );
+    final copyButton = find.byKey(const ValueKey('copy-translation-0'));
+    await tester.ensureVisible(copyButton);
+    await tester.pumpAndSettle();
+    await tester.tap(copyButton);
+    await tester.pump();
+
+    expect(find.text('クリップボードにコピーできませんでした'), findsOneWidget);
+    expect(find.text('訳文をコピーしました'), findsNothing);
+  });
 }
