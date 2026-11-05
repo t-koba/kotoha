@@ -43,6 +43,87 @@ void main() {
     });
   }
 
+  testWidgets(
+    'localized editor exposes field labels and actions to assistive technology',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        tester.view.physicalSize = const Size(1000, 2400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+
+        for (final (
+              locale,
+              fieldLabels,
+              notice,
+              tooltips,
+              addLabel,
+              removeLabel,
+            )
+            in [
+              (
+                const Locale('ja'),
+                ['原文の言語', '原文', '訳先の言語', '手入力した訳文'],
+                'この下書きは一時的なものです。このアプリには保存されません。',
+                ['表示言語', 'ライセンス', '訳文をコピー'],
+                '訳先を追加',
+                'この訳先を削除',
+              ),
+              (
+                const Locale('en'),
+                [
+                  'Source language',
+                  'Source text',
+                  'Target language',
+                  'Manual translation',
+                ],
+                'This draft is temporary. It is not saved in this app.',
+                ['Interface language', 'Licenses', 'Copy translation'],
+                'Add translation',
+                'Remove this target',
+              ),
+            ]) {
+          tester.binding.platformDispatcher.localesTestValue = [locale];
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpWidget(const KotohaApp());
+          await tester.pumpAndSettle();
+
+          for (final label in fieldLabels) {
+            expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+          }
+          expect(find.bySemanticsLabel(notice), findsOneWidget);
+          expect(find.bySemanticsLabel(addLabel), findsOneWidget);
+          for (final tooltip in tooltips) {
+            final control = find.byTooltip(tooltip);
+            expect(control, findsOneWidget, reason: tooltip);
+            expect(
+              tester.getSemantics(control).getSemanticsData().tooltip,
+              tooltip,
+            );
+          }
+
+          await tester.tap(find.text(addLabel));
+          await tester.pumpAndSettle();
+          final removeControls = find.byTooltip(removeLabel);
+          expect(removeControls, findsNWidgets(2));
+          for (var index = 0; index < 2; index++) {
+            expect(
+              tester
+                  .getSemantics(removeControls.at(index))
+                  .getSemanticsData()
+                  .tooltip,
+              removeLabel,
+            );
+          }
+        }
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
   testWidgets('session language switches preserve all manual fields', (
     tester,
   ) async {
