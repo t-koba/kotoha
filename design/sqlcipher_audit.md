@@ -41,9 +41,58 @@ Every cached asset was rehashed and matched both its filename's entry in
 `lib/src/hook/asset_hashes.dart` and the complete 17-entry SQLCipher set there.
 A package pin is an integrity reference, not independent authentication of the
 publisher or a source-to-binary reproducibility proof. The package's `doc/hook.md`
-reports SLSA level 3 attestations for released binaries and CycloneDX SBOMs retrievable
-through GitHub attestations. This audit has not retrieved or verified either artifact;
-the exact build provenance and native component inventory are still open.
+advertises SLSA level 3 attestations and CycloneDX SBOMs through GitHub
+attestations. The [GitHub release API response](https://api.github.com/repos/simolus3/sqlite3.dart/releases/tags/sqlite3-3.9.0)
+has SHA-256
+`059f48b2cad716889157567106ca3a89df6b45d05cf2b5e0ffb29f734ddb8423`, reports
+`immutable: true`, 53 assets including 17 SQLCipher candidates, and the exact
+Android ARM64 asset digest `e615e2750c5fa455d5a7e70fe4df86c3a2f5696367ceb021d46a9262120df046`.
+The upstream `asset_hashes.dart` at [package commit
+`28bd9b4cd33f02cff3ded6836459ba609a6016cc`](https://github.com/simolus3/sqlite3.dart/commit/28bd9b4cd33f02cff3ded6836459ba609a6016cc)
+hashes to `f95b40332e3087c1a0f5c1a75729b511305903ee0e07e5ebfb70b6d4b22b37fc`,
+the same digest as the cached file below. These are API/source-content claims;
+the [GitHub commit API](https://api.github.com/repos/simolus3/sqlite3.dart/commits/sqlite3-3.9.0)
+reports that package commit unsigned. Hash agreement alone establishes neither
+source authenticity nor the release response.
+
+The GitHub attestations API response for the target digest (SHA-256
+`8c7ee7b34454186a02468b0bc115d85f23eeced6acc334c54281dc31ec25c023`, 140,873 bytes)
+was parsed in an isolated experiment; signatures and the trust chain were not
+verified. The response contains one release statement, three SLSA provenance
+statements and three CycloneDX 1.7 BOM statements. Every decoded, unverified
+subject set includes the exact Android ARM64 hash. The three decoded BOMs have
+the same component/version inventory: 17 SQLCipher binary assets and version-only
+SQLCipher 4.20.0 / OpenSSL 4.1.0 entries. Their declared SQLCipher/OpenSSL
+license expressions use a singular `license` property. The official CycloneDX
+1.7 schema requires component `type` and `name`, allows `licenses` (plural), and
+rejects unknown properties, so these two BOM component entries do not satisfy
+the schema. Do not use the fetched BOM as a valid license inventory.
+
+The decoded SLSA predicates name the package source commit and
+`compile_sqlite.yml` workflow, but list only the `sqlite3.dart` source commit as
+a resolved dependency. They do not bind the SQLCipher/OpenSSL source archives
+or build inputs. The exact-tag workflow and scripts below fetch the SQLCipher
+v4.20.0 zip and OpenSSL 4.1.0 tarball without archive SHA-256 checks. The
+inspected build script links OpenSSL statically on Android, Linux and Windows
+and selects CommonCrypto for Apple.
+
+| Upstream source at [package commit `28bd9b4cd33f02cff3ded6836459ba609a6016cc`](https://github.com/simolus3/sqlite3.dart/commit/28bd9b4cd33f02cff3ded6836459ba609a6016cc) | SHA-256 |
+|---|---|
+| `.github/workflows/compile_sqlite.yml` | `aa1b6f704441343a0ae26b3105dc2547cce9bf618b2f8b0afffa6ad5bd40672b` |
+| `tool/download_sqlite.dart` | `eee9da6fdb8a34938a635bcaa3ff2c682df0cfb414a0577dcf530f94ddbeb0d4` |
+| `tool/build_openssl.dart` | `ba0abd6df0914be382767d4868c7818da7c77f349eabc9f87fe07ab05f405b3f` |
+| `tool/build_sqlite.dart` | `9fae2ddddb8e01fd05236cc438e9bcf1e0d34acc0fdd7019ca8cefdc8c40f635` |
+| `tool/generate_sbom.dart` | `be2930ea2f2b0a4d8e8ca19d50983566f8b8816ef8b54e1845d1a5f270f2ff9d` |
+
+The SBOM generator itself emits SQLCipher/OpenSSL components with the singular
+`license` property and without required `type`/`name`, matching the malformed
+BOM payload. A schema-level check of the [CycloneDX 1.7 JSON
+schema](https://raw.githubusercontent.com/CycloneDX/specification/1.7/schema/bom-1.7.schema.json),
+SHA-256 `df472ef4aaf593904c479293723a1a5c191d6672715c93b3c0b5c318f3914221`,
+confirmed those constraints. The fetched attestation response includes temporary
+signed bundle URLs; only the response digest and safe parsed facts are recorded
+here, not the raw body or those URLs. Treat all attestation payloads as
+unverified until a trusted verifier checks them.
 
 Package source: <https://pub.dev/packages/sqlite3/versions/3.9.0>.
 The local pub-cache archive-hash record is
@@ -141,13 +190,16 @@ remain unresolved. No paid, unknown or GPL-family term is approved for distribut
 
 ## Completion gate
 
-Retrieve and verify the package's advertised SLSA provenance and CycloneDX SBOM
-for each exact asset, then bind their SQLCipher/SQLite revisions, OpenSSL 4.1.0
-configuration and every embedded component to the asset hashes. Inspect and retain
-the complete license/NOTICE texts; complete the policy's expression, selected-term,
-classification, source, digest, notice and distribution-scope evidence. Review each
-supported platform runtime. Bundle every required native text in a user-accessible
-notice route; Flutter's collected Dart package licenses alone do not cover this set.
+Obtain trusted verification of the exact asset attestations and a schema-valid
+CycloneDX inventory; the currently retrieved BOM is malformed and its signature is
+unverified. Bind SQLCipher/SQLite and OpenSSL source archives, versions, build
+configuration and every embedded component to the artifact hashes with verified
+source/build evidence; the inspected recipe does not hash its external source
+archives. Inspect and retain complete license/NOTICE texts, complete the policy's
+expression, selected-term, classification, source, digest, notice and
+ distribution-scope evidence, and review each supported platform runtime. Bundle
+every required native text in a user-accessible route; Flutter's collected Dart
+package licenses alone do not cover this native set.
 
 The inspected inputs contain binaries and the Dart package, not the native source
 closure; approval is blocked until that evidence is supplied. Target encryption,
