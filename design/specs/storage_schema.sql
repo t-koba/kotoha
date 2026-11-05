@@ -126,7 +126,8 @@ CREATE TABLE translation_memory (
 CREATE TABLE jobs (
  job_id TEXT PRIMARY KEY,
  project_id TEXT REFERENCES projects(project_id) ON DELETE CASCADE,
- parent_job_id TEXT REFERENCES jobs(job_id),
+ -- Parent links record lineage; deleting a parent detaches surviving children, not their jobs.
+ parent_job_id TEXT REFERENCES jobs(job_id) ON DELETE SET NULL,
  state TEXT NOT NULL,
  input_fingerprint TEXT NOT NULL,
  plan_json TEXT NOT NULL,
@@ -160,5 +161,6 @@ CREATE TABLE evaluation_profiles (
 );
 CREATE INDEX segments_order_idx ON segments(project_id,asset_id,ordinal);
 CREATE INDEX translations_target_idx ON translations(snapshot_id,target_language);
+CREATE INDEX jobs_parent_idx ON jobs(parent_job_id);
 CREATE INDEX jobs_state_idx ON jobs(state,updated_at);
 COMMIT;

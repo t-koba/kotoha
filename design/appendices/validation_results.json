@@ -338,7 +338,7 @@
       "case": "compatible"
     },
     {
-      "name": "SQL cascading integrity",
+      "name": "SQL project cascade and parent detachment",
       "status": "pass",
       "case": "compatible"
     },

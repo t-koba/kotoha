@@ -278,6 +278,7 @@ def database_tests() -> None:
     check("SQL parent membership", lambda: db.execute("INSERT INTO segment_snapshots VALUES (?,?,?,?,?,?,?,?,?,?)", ("d"*64, "seg-other", snap, "e"*64, "x", "und", "[]", "input", "{}", "now")), True)
     check("SQL translation input", lambda: db.execute("INSERT INTO translations VALUES ('t','absent','und','x',NULL,'confirmed',NULL,'{}','now')"), True)
     db.execute("INSERT INTO jobs VALUES ('job','p',NULL,'queued','x','{}',NULL,'now')")
+    db.execute("INSERT INTO jobs VALUES ('child-job','other','job','queued','child','{}',NULL,'now')")
     db.execute("INSERT INTO job_runs VALUES ('job','run-a','succeeded','{}',NULL)")
     db.execute("INSERT INTO job_runs VALUES ('job','run-b','running','{}',NULL)")
     check("SQL concurrent run history", lambda: db.execute("INSERT INTO committed_events VALUES ('job','run-a',0,'{}')"))
@@ -285,7 +286,27 @@ def database_tests() -> None:
     check("SQL event uniqueness", lambda: db.execute("INSERT INTO committed_events VALUES ('job','run-a',0,'{}')"), True)
     db.commit()
     check("SQL project deletion", lambda: db.execute("DELETE FROM projects WHERE project_id='p'"))
-    check("SQL cascading integrity", lambda: require(not db.execute("PRAGMA foreign_key_check").fetchall() and db.execute("SELECT count(*) FROM committed_events").fetchone()[0] == 0, "cascade"))
+    def verify_project_deletion() -> None:
+        require(not db.execute("PRAGMA foreign_key_check").fetchall(), "foreign key integrity")
+        require(
+            db.execute("SELECT count(*) FROM committed_events").fetchone()[0] == 0,
+            "job event cascade",
+        )
+        require(
+            db.execute("SELECT count(*) FROM projects WHERE project_id='p'").fetchone()[0] == 0,
+            "project deletion",
+        )
+        require(
+            db.execute("SELECT count(*) FROM projects WHERE project_id='other'").fetchone()[0] == 1,
+            "unrelated project survives",
+        )
+        require(
+            db.execute("SELECT project_id,parent_job_id FROM jobs WHERE job_id='child-job'").fetchone()
+            == ("other", None),
+            "cross-project child survives with detached parent",
+        )
+
+    check("SQL project cascade and parent detachment", verify_project_deletion)
     db.close()
 
 
