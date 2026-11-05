@@ -8,27 +8,20 @@
     "helper",
     "generated_code"
   ],
-  "acceptable_code_licenses": [
-    "0BSD",
-    "MIT",
-    "MIT-0",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "Apache-2.0",
-    "Apache-2.0 WITH LLVM-exception",
-    "ISC",
-    "Zlib",
-    "BSL-1.0",
-    "Unicode-3.0",
-    "FTL",
-    "Libpng",
-    "CC0-1.0",
-    "Unlicense"
+  "acceptable_code_categories": [
+    "permissive",
+    "public-domain"
   ],
-  "license_expression_rule": "At least one complete OR branch; every AND term in the selected branch must be approved.",
+  "excluded_code_categories": [
+    "gpl-family",
+    "commercial-paid"
+  ],
+  "term_classification_rule": "Classify each term, including exceptions, from full upstream license evidence, not its identifier alone; unknown classifications fail closed.",
+  "license_expression_rule": "At least one complete OR branch; every AND term in the selected branch must have an acceptable, non-excluded classification.",
   "evidence_fields": [
     "license_expression",
     "selected_terms",
+    "term_classifications",
     "source",
     "content_digest",
     "notices",

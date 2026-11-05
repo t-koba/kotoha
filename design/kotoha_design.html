@@ -493,8 +493,10 @@ OSアダプター：表示・入力・音声・カメラ・ファイル・鍵・
 <p>モデルは検査済みの不変な内容として管理し、ジョブが使用する内容を固定する。切替先は独立に検査してから有効にし、再実行と比較を可能にする。使用中の資産の削除は参照の解放と同期する。モデル、資料、結果、同意記録はそれぞれの保持規則に従って管理する。</p>
 <h2 id="section-8">8. 依存ライセンスと配布審査</h2>
 <h3>8.1 採用基準</h3>
-<p><strong>製品が選択して組み込むコードは、再配布条件を明確に満たせる許諾型ライセンスを採用条件とする。</strong> 著作権表示、ライセンス文、必要なNOTICEを配布物から参照できるようにする。</p>
-<p><code>dependency_policy.json</code>に採用可能な許諾を定義する。MIT、BSD、Apache、ISC、zlib等を基礎にし、複数許諾は採用する条項を記録する。GPL・AGPL・LGPL系のコードは、この製品依存の採用条件では適合外として判定する。名称だけで一括判定せず、選択したファイル、リンク、機能、再配布単位まで評価する。<a class="source-ref" href="#source-s14">[S14]</a></p>
+<p><strong>製品が選択して組み込むコードは、許諾型（<code>permissive</code>）またはパブリックドメイン（<code>public-domain</code>）の条件を採用可能とし、GPL・AGPL・LGPL系（<code>gpl-family</code>）および商用許諾・有償コンポーネント（<code>commercial-paid</code>）は採用しない。</strong> 著作権表示、ライセンス文、必要なNOTICEを配布物に含め、利用者が参照できるようにする。</p>
+<p><code>dependency_policy.json</code>は固定の許諾名リストではなく、この分類規則を定義する。分類はSPDX識別子や名称だけで決めず、上流の許諾全文、例外条項、適用対象の根拠から行う。選択した各条項の分類、出典、内容ダイジェスト、通知、再配布範囲を記録し、不明な分類は不適合とする。選択したファイル、リンク、機能、再配布単位まで評価する。<a class="source-ref" href="#source-s14">[S14]</a></p>
+<p>SPDX式は少なくとも一つの完全なOR分岐を選択でき、その分岐内のすべてのAND条項が採用可能であることを要求する。例外付き条項も全体として分類する。たとえばMIT OR GPLではMIT分岐を選べるが、MIT AND GPLは不適合となる。検証器のSPDX・独自条項の分類マップは規則を試す合成テストデータであり、製品依存の全一覧や実物の許諾根拠ではない。</p>
+<p>この規則と合成テストだけでは、SQLCipherおよびネイティブ依存の推移的閉包の審査や、利用者が参照できる通知の実装は完了しない。これらは実際の依存構成・配布物を対象に別途検証する。</p>
 <h3>8.2 審査の範囲</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -2183,27 +2185,20 @@ python specs/validate_specs.py
     "helper",
     "generated_code"
   ],
-  "acceptable_code_licenses": [
-    "0BSD",
-    "MIT",
-    "MIT-0",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "Apache-2.0",
-    "Apache-2.0 WITH LLVM-exception",
-    "ISC",
-    "Zlib",
-    "BSL-1.0",
-    "Unicode-3.0",
-    "FTL",
-    "Libpng",
-    "CC0-1.0",
-    "Unlicense"
+  "acceptable_code_categories": [
+    "permissive",
+    "public-domain"
   ],
-  "license_expression_rule": "At least one complete OR branch; every AND term in the selected branch must be approved.",
+  "excluded_code_categories": [
+    "gpl-family",
+    "commercial-paid"
+  ],
+  "term_classification_rule": "Classify each term, including exceptions, from full upstream license evidence, not its identifier alone; unknown classifications fail closed.",
+  "license_expression_rule": "At least one complete OR branch; every AND term in the selected branch must have an acceptable, non-excluded classification.",
   "evidence_fields": [
     "license_expression",
     "selected_terms",
+    "term_classifications",
     "source",
     "content_digest",
     "notices",
@@ -2711,7 +2706,11 @@ def validate_events(events: list[dict[str, Any]], expected_snapshots: dict[str, 
     require(bool(states) and all(s["terminal"] for s in states.values()), "terminal per run")
 
 
-def license_terms(expression: str, allowed: set[str]) -&gt; set[str] | None:
+def license_terms(
+    expression: str, classifications: dict[str, str], policy: dict[str, Any]
+) -&gt; set[str] | None:
+    allowed = set(policy["acceptable_code_categories"])
+    excluded = set(policy["excluded_code_categories"])
     tokens = re.findall(r"\(|\)|[A-Za-z0-9.+-]+", expression)
     require("".join(tokens) == re.sub(r"\s+", "", expression), "license expression characters")
     pos = 0
@@ -2750,7 +2749,8 @@ def license_terms(expression: str, allowed: set[str]) -&gt; set[str] | None:
     require(pos == len(tokens), "license expression trailing token")
     def evaluate(node: Any) -&gt; set[str] | None:
         if node[0] == "license":
-            return {node[1]} if node[1] in allowed else None
+            category = classifications.get(node[1])
+            return {node[1]} if category in allowed and category not in excluded else None
         left, right = evaluate(node[1]), evaluate(node[2])
         if node[0] == "and":
             return left | right if left is not None and right is not None else None
@@ -2758,9 +2758,29 @@ def license_terms(expression: str, allowed: set[str]) -&gt; set[str] | None:
     return evaluate(tree)
 
 
-def validate_license(expression: str) -&gt; None:
+def validate_license_fixture(expression: str) -&gt; set[str]:
+    # Synthetic test data only, not a product dependency inventory or evidence
+    # of upstream terms. Real classifications require full upstream review.
+    classifications = {
+        "MIT": "permissive",
+        "BSD-2-Clause": "permissive",
+        "BSD-3-Clause": "permissive",
+        "Apache-2.0": "permissive",
+        "Apache-2.0 WITH LLVM-exception": "permissive",
+        "ISC": "permissive",
+        "WTFPL-2": "permissive",
+        "CC0-1.0": "public-domain",
+        "LicenseRef-Public-Domain": "public-domain",
+        "GPL-3.0-only": "gpl-family",
+        "AGPL-3.0-only": "gpl-family",
+        "LGPL-2.1-only": "gpl-family",
+        "LicenseRef-Paid-Commercial": "commercial-paid",
+        "LicenseRef-Unclassified": "unknown",
+    }
     policy = load("specs/dependency_policy.json")
-    require(license_terms(expression, set(policy["acceptable_code_licenses"])) is not None, "license policy")
+    selected = license_terms(expression, classifications, policy)
+    require(selected is not None, "license policy")
+    return selected
 
 
 def mutate(data: Any, fn: Callable[[Any], None]) -&gt; Any:
@@ -2790,6 +2810,7 @@ def database_tests() -&gt; None:
     check("SQL parent membership", lambda: db.execute("INSERT INTO segment_snapshots VALUES (?,?,?,?,?,?,?,?,?,?)", ("d"*64, "seg-other", snap, "e"*64, "x", "und", "[]", "input", "{}", "now")), True)
     check("SQL translation input", lambda: db.execute("INSERT INTO translations VALUES ('t','absent','und','x',NULL,'confirmed',NULL,'{}','now')"), True)
     db.execute("INSERT INTO jobs VALUES ('job','p',NULL,'queued','x','{}',NULL,'now')")
+    db.execute("INSERT INTO jobs VALUES ('child-job','other','job','queued','child','{}',NULL,'now')")
     db.execute("INSERT INTO job_runs VALUES ('job','run-a','succeeded','{}',NULL)")
     db.execute("INSERT INTO job_runs VALUES ('job','run-b','running','{}',NULL)")
     check("SQL concurrent run history", lambda: db.execute("INSERT INTO committed_events VALUES ('job','run-a',0,'{}')"))
@@ -2797,7 +2818,27 @@ def database_tests() -&gt; None:
     check("SQL event uniqueness", lambda: db.execute("INSERT INTO committed_events VALUES ('job','run-a',0,'{}')"), True)
     db.commit()
     check("SQL project deletion", lambda: db.execute("DELETE FROM projects WHERE project_id='p'"))
-    check("SQL cascading integrity", lambda: require(not db.execute("PRAGMA foreign_key_check").fetchall() and db.execute("SELECT count(*) FROM committed_events").fetchone()[0] == 0, "cascade"))
+    def verify_project_deletion() -&gt; None:
+        require(not db.execute("PRAGMA foreign_key_check").fetchall(), "foreign key integrity")
+        require(
+            db.execute("SELECT count(*) FROM committed_events").fetchone()[0] == 0,
+            "job event cascade",
+        )
+        require(
+            db.execute("SELECT count(*) FROM projects WHERE project_id='p'").fetchone()[0] == 0,
+            "project deletion",
+        )
+        require(
+            db.execute("SELECT count(*) FROM projects WHERE project_id='other'").fetchone()[0] == 1,
+            "unrelated project survives",
+        )
+        require(
+            db.execute("SELECT project_id,parent_job_id FROM jobs WHERE job_id='child-job'").fetchone()
+            == ("other", None),
+            "cross-project child survives with detached parent",
+        )
+
+    check("SQL project cascade and parent detachment", verify_project_deletion)
     db.close()
 
 
@@ -2874,10 +2915,32 @@ def main() -&gt; int:
     check("Events progress bound", lambda: validate_events([bad_progress,events[1]]), True)
     bad_terminal=copy.deepcopy(events[1]);bad_terminal["payload"]["outcome"]="failed"
     check("Events failure reason", lambda: validate_events([events[0],bad_terminal]), True)
-    for expr in ["MIT","MIT AND BSD-3-Clause","MIT OR GPL-3.0-only","(Apache-2.0 OR MIT) AND ISC","Apache-2.0 WITH LLVM-exception"]:
-        check("License: "+expr, lambda expr=expr: validate_license(expr))
-    for expr in ["GPL-3.0-only","AGPL-3.0-only","LGPL-2.1-only","MIT AND GPL-3.0-only","MIT AND (GPL-3.0-only OR LGPL-2.1-only)","MIT OR", "MIT; ISC"]:
-        check("License condition: "+expr, lambda expr=expr: validate_license(expr), True)
+    for expr, selected in [
+        ("MIT", {"MIT"}),
+        ("BSD-2-Clause AND BSD-3-Clause", {"BSD-2-Clause", "BSD-3-Clause"}),
+        ("MIT AND BSD-3-Clause", {"MIT", "BSD-3-Clause"}),
+        ("MIT OR GPL-3.0-only", {"MIT"}),
+        ("GPL-3.0-only OR MIT", {"MIT"}),
+        ("(Apache-2.0 OR MIT) AND ISC", {"Apache-2.0", "ISC"}),
+        ("Apache-2.0 WITH LLVM-exception", {"Apache-2.0 WITH LLVM-exception"}),
+        ("WTFPL-2", {"WTFPL-2"}),
+        ("CC0-1.0 AND LicenseRef-Public-Domain", {"CC0-1.0", "LicenseRef-Public-Domain"}),
+        ("GPL-3.0-only OR LicenseRef-Public-Domain", {"LicenseRef-Public-Domain"}),
+        ("(MIT AND GPL-3.0-only) OR (WTFPL-2 AND CC0-1.0)", {"WTFPL-2", "CC0-1.0"}),
+    ]:
+        check("License: " + expr, lambda expr=expr, selected=selected: require(
+            validate_license_fixture(expr) == selected, "selected license terms"))
+    for expr in [
+        "GPL-3.0-only", "AGPL-3.0-only", "LGPL-2.1-only",
+        "MIT AND GPL-3.0-only", "MIT AND AGPL-3.0-only", "MIT AND LGPL-2.1-only",
+        "MIT AND (GPL-3.0-only OR LGPL-2.1-only)",
+        "LicenseRef-Paid-Commercial", "MIT AND LicenseRef-Paid-Commercial",
+        "LicenseRef-Unclassified", "MIT AND LicenseRef-Unclassified", "LicenseRef-Missing",
+        "Apache-2.0 WITH Unknown-exception",
+        "", "MIT OR", "AND MIT", "MIT; ISC", "(MIT OR ISC", "MIT ISC", "MIT WITH",
+        "MIT OR (GPL-3.0-only AND)",
+    ]:
+        check("License condition: " + expr, lambda expr=expr: validate_license_fixture(expr), True)
     database_tests()
     check("C header", lambda: header_test("C","cc","c11"))
     check("C++ header", lambda: header_test("C++","c++","c++20"))
@@ -3126,8 +3189,8 @@ if __name__ == "__main__":
   }
 }
 </code></pre></div></details><details><summary>検査結果のデータ</summary><div class="detail-body"><p class="filepath">appendices/validation_results.json</p><pre><code>{
-  "checks": 72,
-  "passed": 72,
+  "checks": 92,
+  "passed": 92,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -3345,6 +3408,11 @@ if __name__ == "__main__":
       "case": "compatible"
     },
     {
+      "name": "License: BSD-2-Clause AND BSD-3-Clause",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
       "name": "License: MIT AND BSD-3-Clause",
       "status": "pass",
       "case": "compatible"
@@ -3355,12 +3423,37 @@ if __name__ == "__main__":
       "case": "compatible"
     },
     {
+      "name": "License: GPL-3.0-only OR MIT",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
       "name": "License: (Apache-2.0 OR MIT) AND ISC",
       "status": "pass",
       "case": "compatible"
     },
     {
       "name": "License: Apache-2.0 WITH LLVM-exception",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: WTFPL-2",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: CC0-1.0 AND LicenseRef-Public-Domain",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: GPL-3.0-only OR LicenseRef-Public-Domain",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: (MIT AND GPL-3.0-only) OR (WTFPL-2 AND CC0-1.0)",
       "status": "pass",
       "case": "compatible"
     },
@@ -3385,7 +3478,52 @@ if __name__ == "__main__":
       "case": "incompatible"
     },
     {
+      "name": "License condition: MIT AND AGPL-3.0-only",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT AND LGPL-2.1-only",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
       "name": "License condition: MIT AND (GPL-3.0-only OR LGPL-2.1-only)",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: LicenseRef-Paid-Commercial",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT AND LicenseRef-Paid-Commercial",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: LicenseRef-Unclassified",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT AND LicenseRef-Unclassified",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: LicenseRef-Missing",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: Apache-2.0 WITH Unknown-exception",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: ",
       "status": "pass",
       "case": "incompatible"
     },
@@ -3395,7 +3533,32 @@ if __name__ == "__main__":
       "case": "incompatible"
     },
     {
+      "name": "License condition: AND MIT",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
       "name": "License condition: MIT; ISC",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: (MIT OR ISC",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT ISC",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT WITH",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT OR (GPL-3.0-only AND)",
       "status": "pass",
       "case": "incompatible"
     },
@@ -3465,7 +3628,7 @@ if __name__ == "__main__":
       "case": "compatible"
     },
     {
-      "name": "SQL cascading integrity",
+      "name": "SQL project cascade and parent detachment",
       "status": "pass",
       "case": "compatible"
     },

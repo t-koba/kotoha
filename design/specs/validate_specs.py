@@ -199,7 +199,11 @@ def validate_events(events: list[dict[str, Any]], expected_snapshots: dict[str, 
     require(bool(states) and all(s["terminal"] for s in states.values()), "terminal per run")
 
 
-def license_terms(expression: str, allowed: set[str]) -> set[str] | None:
+def license_terms(
+    expression: str, classifications: dict[str, str], policy: dict[str, Any]
+) -> set[str] | None:
+    allowed = set(policy["acceptable_code_categories"])
+    excluded = set(policy["excluded_code_categories"])
     tokens = re.findall(r"\(|\)|[A-Za-z0-9.+-]+", expression)
     require("".join(tokens) == re.sub(r"\s+", "", expression), "license expression characters")
     pos = 0
@@ -238,7 +242,8 @@ def license_terms(expression: str, allowed: set[str]) -> set[str] | None:
     require(pos == len(tokens), "license expression trailing token")
     def evaluate(node: Any) -> set[str] | None:
         if node[0] == "license":
-            return {node[1]} if node[1] in allowed else None
+            category = classifications.get(node[1])
+            return {node[1]} if category in allowed and category not in excluded else None
         left, right = evaluate(node[1]), evaluate(node[2])
         if node[0] == "and":
             return left | right if left is not None and right is not None else None
@@ -246,9 +251,29 @@ def license_terms(expression: str, allowed: set[str]) -> set[str] | None:
     return evaluate(tree)
 
 
-def validate_license(expression: str) -> None:
+def validate_license_fixture(expression: str) -> set[str]:
+    # Synthetic test data only, not a product dependency inventory or evidence
+    # of upstream terms. Real classifications require full upstream review.
+    classifications = {
+        "MIT": "permissive",
+        "BSD-2-Clause": "permissive",
+        "BSD-3-Clause": "permissive",
+        "Apache-2.0": "permissive",
+        "Apache-2.0 WITH LLVM-exception": "permissive",
+        "ISC": "permissive",
+        "WTFPL-2": "permissive",
+        "CC0-1.0": "public-domain",
+        "LicenseRef-Public-Domain": "public-domain",
+        "GPL-3.0-only": "gpl-family",
+        "AGPL-3.0-only": "gpl-family",
+        "LGPL-2.1-only": "gpl-family",
+        "LicenseRef-Paid-Commercial": "commercial-paid",
+        "LicenseRef-Unclassified": "unknown",
+    }
     policy = load("specs/dependency_policy.json")
-    require(license_terms(expression, set(policy["acceptable_code_licenses"])) is not None, "license policy")
+    selected = license_terms(expression, classifications, policy)
+    require(selected is not None, "license policy")
+    return selected
 
 
 def mutate(data: Any, fn: Callable[[Any], None]) -> Any:
@@ -383,10 +408,32 @@ def main() -> int:
     check("Events progress bound", lambda: validate_events([bad_progress,events[1]]), True)
     bad_terminal=copy.deepcopy(events[1]);bad_terminal["payload"]["outcome"]="failed"
     check("Events failure reason", lambda: validate_events([events[0],bad_terminal]), True)
-    for expr in ["MIT","MIT AND BSD-3-Clause","MIT OR GPL-3.0-only","(Apache-2.0 OR MIT) AND ISC","Apache-2.0 WITH LLVM-exception"]:
-        check("License: "+expr, lambda expr=expr: validate_license(expr))
-    for expr in ["GPL-3.0-only","AGPL-3.0-only","LGPL-2.1-only","MIT AND GPL-3.0-only","MIT AND (GPL-3.0-only OR LGPL-2.1-only)","MIT OR", "MIT; ISC"]:
-        check("License condition: "+expr, lambda expr=expr: validate_license(expr), True)
+    for expr, selected in [
+        ("MIT", {"MIT"}),
+        ("BSD-2-Clause AND BSD-3-Clause", {"BSD-2-Clause", "BSD-3-Clause"}),
+        ("MIT AND BSD-3-Clause", {"MIT", "BSD-3-Clause"}),
+        ("MIT OR GPL-3.0-only", {"MIT"}),
+        ("GPL-3.0-only OR MIT", {"MIT"}),
+        ("(Apache-2.0 OR MIT) AND ISC", {"Apache-2.0", "ISC"}),
+        ("Apache-2.0 WITH LLVM-exception", {"Apache-2.0 WITH LLVM-exception"}),
+        ("WTFPL-2", {"WTFPL-2"}),
+        ("CC0-1.0 AND LicenseRef-Public-Domain", {"CC0-1.0", "LicenseRef-Public-Domain"}),
+        ("GPL-3.0-only OR LicenseRef-Public-Domain", {"LicenseRef-Public-Domain"}),
+        ("(MIT AND GPL-3.0-only) OR (WTFPL-2 AND CC0-1.0)", {"WTFPL-2", "CC0-1.0"}),
+    ]:
+        check("License: " + expr, lambda expr=expr, selected=selected: require(
+            validate_license_fixture(expr) == selected, "selected license terms"))
+    for expr in [
+        "GPL-3.0-only", "AGPL-3.0-only", "LGPL-2.1-only",
+        "MIT AND GPL-3.0-only", "MIT AND AGPL-3.0-only", "MIT AND LGPL-2.1-only",
+        "MIT AND (GPL-3.0-only OR LGPL-2.1-only)",
+        "LicenseRef-Paid-Commercial", "MIT AND LicenseRef-Paid-Commercial",
+        "LicenseRef-Unclassified", "MIT AND LicenseRef-Unclassified", "LicenseRef-Missing",
+        "Apache-2.0 WITH Unknown-exception",
+        "", "MIT OR", "AND MIT", "MIT; ISC", "(MIT OR ISC", "MIT ISC", "MIT WITH",
+        "MIT OR (GPL-3.0-only AND)",
+    ]:
+        check("License condition: " + expr, lambda expr=expr: validate_license_fixture(expr), True)
     database_tests()
     check("C header", lambda: header_test("C","cc","c11"))
     check("C++ header", lambda: header_test("C++","c++","c++20"))
