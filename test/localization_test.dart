@@ -106,6 +106,49 @@ void main() {
     );
   });
 
+  testWidgets('keeps both locales usable at a narrow width', (tester) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+
+    for (final (locale, copyTooltip, switchTo, title) in [
+      (const Locale('ja'), '訳文をコピー', 'English', 'Kotoha'),
+      (const Locale('en'), 'Copy translation', '日本語', 'ことは | Kotoha'),
+    ]) {
+      await tester.pumpWidget(const SizedBox());
+      tester.binding.platformDispatcher.localesTestValue = [locale];
+      await tester.pumpWidget(const KotohaApp());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('source-text')), findsOneWidget);
+      expect(find.byKey(const ValueKey('ui-language')), findsOneWidget);
+      expect(find.byKey(const ValueKey('show-licenses')), findsOneWidget);
+      await tester.dragUntilVisible(
+        find.byKey(const ValueKey('translation-text-0')),
+        find.byType(Scrollable).first,
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip(copyTooltip), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('ui-language')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(switchTo));
+      await tester.pumpAndSettle();
+      expect(find.text(title), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const ValueKey('show-licenses')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LicensePage), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
   testWidgets('English copy notice and SDK license page remain accessible', (
     tester,
   ) async {
