@@ -103,9 +103,12 @@ and multiple algorithms; `no-apps` is commented out. Its
 [`build_sqlite.dart`](https://github.com/simolus3/sqlite3.dart/blob/28bd9b4cd33f02cff3ded6836459ba609a6016cc/tool/build_sqlite.dart)
 links the OpenSSL `crypto` archive on Android, Linux and Windows, selects
 CommonCrypto on Apple, sets the SQLCipher codec/temp-store/init flags, and adds
-Windows system libraries. These source recipes corroborate linkage intent, but
-do not prove which downloaded archive bytes or complete code closure reached
-any candidate binary.
+Windows system libraries. Since `no-apps` is commented out, do not assume the
+intermediate OpenSSL install contains only libraries; the SQLCipher build links
+`libcrypto`, while the 17 release candidates themselves are SQLCipher library
+files, not standalone OpenSSL applications. This distinction still does not
+identify the exact archive bytes or close the objects incorporated into each
+candidate.
 
 The workflow's source and binary caches key on the download/build scripts,
 target and version, not external archive digests. The workflow therefore permits
