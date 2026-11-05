@@ -213,14 +213,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                 ),
                 IconButton(
                   key: ValueKey('copy-translation-$index'),
-                  tooltip: strings.copyTranslation,
+                  tooltip: strings.copyTranslationNumber(index + 1),
                   onPressed: () => _copyTranslation(index),
                   icon: const Icon(Icons.content_copy),
                 ),
                 if (_translations.length > 1)
                   IconButton(
                     key: ValueKey('remove-translation-$index'),
-                    tooltip: strings.removeTranslation,
+                    tooltip: strings.removeTranslationNumber(index + 1),
                     onPressed: () => _removeTranslation(index),
                     icon: const Icon(Icons.delete_outline),
                   ),

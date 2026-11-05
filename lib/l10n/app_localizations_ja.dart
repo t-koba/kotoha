@@ -47,10 +47,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get targetLanguageHint => '例: en';
 
   @override
-  String get copyTranslation => '訳文をコピー';
+  String copyTranslationNumber(int number) {
+    return '$number件目の訳文をコピー';
+  }
 
   @override
-  String get removeTranslation => 'この訳先を削除';
+  String removeTranslationNumber(int number) {
+    return '$number件目の訳先を削除';
+  }
 
   @override
   String get manualTranslation => '手入力した訳文';

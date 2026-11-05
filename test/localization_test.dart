@@ -59,17 +59,19 @@ void main() {
               fieldLabels,
               notice,
               tooltips,
+              copyLabels,
+              removeLabels,
               addLabel,
-              removeLabel,
             )
             in [
               (
                 const Locale('ja'),
                 ['原文の言語', '原文', '訳先の言語', '手入力した訳文'],
                 'この下書きは一時的なものです。このアプリには保存されません。',
-                ['表示言語', 'ライセンス', '訳文をコピー'],
+                ['表示言語', 'ライセンス'],
+                ['1件目の訳文をコピー', '2件目の訳文をコピー'],
+                ['1件目の訳先を削除', '2件目の訳先を削除'],
                 '訳先を追加',
-                'この訳先を削除',
               ),
               (
                 const Locale('en'),
@@ -80,9 +82,10 @@ void main() {
                   'Manual translation',
                 ],
                 'This draft is temporary. It is not saved in this app.',
-                ['Interface language', 'Licenses', 'Copy translation'],
+                ['Interface language', 'Licenses'],
+                ['Copy translation 1', 'Copy translation 2'],
+                ['Remove translation 1', 'Remove translation 2'],
                 'Add translation',
-                'Remove this target',
               ),
             ]) {
           tester.binding.platformDispatcher.localesTestValue = [locale];
@@ -103,20 +106,29 @@ void main() {
               tooltip,
             );
           }
+          final firstCopy = find.byTooltip(copyLabels.first);
+          expect(firstCopy, findsOneWidget);
+          expect(
+            tester.getSemantics(firstCopy).getSemanticsData().tooltip,
+            copyLabels.first,
+          );
 
           await tester.tap(find.text(addLabel));
           await tester.pumpAndSettle();
-          final removeControls = find.byTooltip(removeLabel);
-          expect(removeControls, findsNWidgets(2));
-          for (var index = 0; index < 2; index++) {
+          for (final label in [...copyLabels, ...removeLabels]) {
+            final control = find.byTooltip(label);
+            expect(control, findsOneWidget, reason: label);
             expect(
-              tester
-                  .getSemantics(removeControls.at(index))
-                  .getSemanticsData()
-                  .tooltip,
-              removeLabel,
+              tester.getSemantics(control).getSemanticsData().tooltip,
+              label,
             );
           }
+          await tester.tap(find.byTooltip(removeLabels.first));
+          await tester.pumpAndSettle();
+          expect(find.byTooltip(copyLabels.first), findsOneWidget);
+          expect(find.byTooltip(copyLabels.last), findsNothing);
+          expect(find.byTooltip(removeLabels.first), findsNothing);
+          expect(find.byTooltip(removeLabels.last), findsNothing);
         }
       } finally {
         semantics.dispose();
@@ -202,8 +214,8 @@ void main() {
     for (final textScale in [1.0, 2.0]) {
       tester.binding.platformDispatcher.textScaleFactorTestValue = textScale;
       for (final (locale, copyTooltip, switchTo, title) in [
-        (const Locale('ja'), '訳文をコピー', 'English', 'Kotoha'),
-        (const Locale('en'), 'Copy translation', '日本語', 'ことは | Kotoha'),
+        (const Locale('ja'), '1件目の訳文をコピー', 'English', 'Kotoha'),
+        (const Locale('en'), 'Copy translation 1', '日本語', 'ことは | Kotoha'),
       ]) {
         await tester.pumpWidget(const SizedBox());
         tester.binding.platformDispatcher.localesTestValue = [locale];
@@ -262,7 +274,7 @@ void main() {
       find.textContaining('Copied translations are sent to the OS clipboard'),
       findsOneWidget,
     );
-    final copy = find.byTooltip('Copy translation');
+    final copy = find.byTooltip('Copy translation 1');
     await tester.dragUntilVisible(
       copy,
       find.byType(Scrollable).first,

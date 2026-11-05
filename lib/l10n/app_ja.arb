@@ -12,8 +12,24 @@
   "addTranslation": "訳先を追加",
   "targetLanguage": "訳先の言語",
   "targetLanguageHint": "例: en",
-  "copyTranslation": "訳文をコピー",
-  "removeTranslation": "この訳先を削除",
+  "copyTranslationNumber": "{number}件目の訳文をコピー",
+  "@copyTranslationNumber": {
+    "description": "番号付き訳文のコピー操作ラベル。",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "removeTranslationNumber": "{number}件目の訳先を削除",
+  "@removeTranslationNumber": {
+    "description": "番号付き訳先の削除操作ラベル。",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "manualTranslation": "手入力した訳文",
   "emptyTranslationNotice": "コピーする訳文を入力してください",
   "clipboardFailureNotice": "クリップボードにコピーできませんでした",

@@ -49,10 +49,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get targetLanguageHint => 'e.g. en';
 
   @override
-  String get copyTranslation => 'Copy translation';
+  String copyTranslationNumber(int number) {
+    return 'Copy translation $number';
+  }
 
   @override
-  String get removeTranslation => 'Remove this target';
+  String removeTranslationNumber(int number) {
+    return 'Remove translation $number';
+  }
 
   @override
   String get manualTranslation => 'Manual translation';

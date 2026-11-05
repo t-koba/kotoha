@@ -12,8 +12,24 @@
   "addTranslation": "Add translation",
   "targetLanguage": "Target language",
   "targetLanguageHint": "e.g. en",
-  "copyTranslation": "Copy translation",
-  "removeTranslation": "Remove this target",
+  "copyTranslationNumber": "Copy translation {number}",
+  "@copyTranslationNumber": {
+    "description": "Label for copying the numbered translation.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "removeTranslationNumber": "Remove translation {number}",
+  "@removeTranslationNumber": {
+    "description": "Label for removing the numbered translation target.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "manualTranslation": "Manual translation",
   "emptyTranslationNotice": "Enter a translation to copy.",
   "clipboardFailureNotice": "Could not copy to the clipboard.",

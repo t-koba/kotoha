@@ -170,17 +170,17 @@ abstract class AppLocalizations {
   /// **'例: en'**
   String get targetLanguageHint;
 
-  /// No description provided for @copyTranslation.
+  /// 番号付き訳文のコピー操作ラベル。
   ///
   /// In ja, this message translates to:
-  /// **'訳文をコピー'**
-  String get copyTranslation;
+  /// **'{number}件目の訳文をコピー'**
+  String copyTranslationNumber(int number);
 
-  /// No description provided for @removeTranslation.
+  /// 番号付き訳先の削除操作ラベル。
   ///
   /// In ja, this message translates to:
-  /// **'この訳先を削除'**
-  String get removeTranslation;
+  /// **'{number}件目の訳先を削除'**
+  String removeTranslationNumber(int number);
 
   /// No description provided for @manualTranslation.
   ///
