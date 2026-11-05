@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:kotoha:engine-event",
+  "title": "ことは 処理イベント",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "kind": {
+      "enum": [
+        "segment.partial",
+        "segment.committed",
+        "segment.corrected",
+        "job.progress",
+        "job.warning",
+        "job.terminal"
+      ]
+    },
+    "payload": {}
+  },
+  "required": [
+    "job_id",
+    "run_id",
+    "sequence",
+    "kind",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "segment.partial",
+              "segment.committed",
+              "segment.corrected"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "segment_id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]*$",
+                "minLength": 1
+              },
+              "input_snapshot": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source_text": {
+                "type": "string"
+              },
+              "source_language": {
+                "type": "string",
+                "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+              },
+              "outputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "language": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                      "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "result_ref": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9._-]*$",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "language",
+                    "text",
+                    "result_ref"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0
+              },
+              "speaker_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "segment_id",
+              "input_snapshot",
+              "source_text",
+              "source_language",
+              "outputs"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "job.progress"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "processed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "unit": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]*$",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "processed",
+              "total",
+              "unit"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "job.warning"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]*$",
+                "minLength": 1
+              },
+              "message_key": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]*$",
+                "minLength": 1
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "code",
+              "message_key",
+              "retryable"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "job.terminal"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "enum": [
+                  "succeeded",
+                  "cancelled",
+                  "failed"
+                ]
+              },
+              "result_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9._-]*$",
+                  "minLength": 1
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              },
+              "reason_code": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9._-]*$",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "outcome",
+              "result_refs"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "outcome": {
+                      "const": "failed"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "job_id": "job-example",
+    "run_id": "run-example",
+    "sequence": 0,
+    "kind": "segment.committed",
+    "payload": {
+      "segment_id": "segment-example",
+      "input_snapshot": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d",
+      "source_text": "Synthetic input",
+      "source_language": "und",
+      "outputs": []
+    }
+  },
+  {
+    "job_id": "job-example",
+    "run_id": "run-example",
+    "sequence": 1,
+    "kind": "job.terminal",
+    "payload": {
+      "outcome": "succeeded",
+      "result_refs": [
+        "segment-example"
+      ]
+    }
+  }
+]

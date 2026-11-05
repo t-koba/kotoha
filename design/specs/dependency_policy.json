@@ -1,0 +1,64 @@
+{
+  "id": "distribution-license-policy",
+  "scope": [
+    "bundled_code",
+    "linked_product_dependency",
+    "runtime_loaded_product_dependency",
+    "plugin",
+    "helper",
+    "generated_code"
+  ],
+  "acceptable_code_licenses": [
+    "0BSD",
+    "MIT",
+    "MIT-0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "ISC",
+    "Zlib",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "FTL",
+    "Libpng",
+    "CC0-1.0",
+    "Unlicense"
+  ],
+  "license_expression_rule": "At least one complete OR branch; every AND term in the selected branch must be approved.",
+  "evidence_fields": [
+    "license_expression",
+    "selected_terms",
+    "source",
+    "content_digest",
+    "notices",
+    "distribution_scope"
+  ],
+  "resource_review": {
+    "fonts": "embedding_and_redistribution_terms",
+    "documentation": "redistribution_terms",
+    "model_assets": "user_managed_separate_acquisition"
+  },
+  "platform_runtime_review": {
+    "classification": "platform_provided_runtime",
+    "evidence": [
+      "provider",
+      "linkage",
+      "redistribution",
+      "applicable_terms",
+      "approval"
+    ]
+  },
+  "external_service_review": {
+    "classification": "platform_service",
+    "evidence": [
+      "protocol",
+      "client_code_terms",
+      "data_flow",
+      "permission"
+    ]
+  },
+  "model_distribution": "separate_user_acquisition",
+  "decision_basis": "file_and_dependency_closure",
+  "notice_delivery": "bundled_and_user_accessible"
+}

@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:kotoha:model-manifest",
+  "title": "ことは モデル定義",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "publisher": {
+      "type": "string",
+      "minLength": 1
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+          },
+          "role": {
+            "enum": [
+              "weights",
+              "tokenizer",
+              "vocabulary",
+              "configuration",
+              "terms",
+              "auxiliary"
+            ]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "path",
+          "role",
+          "sha256",
+          "size_bytes"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "executor": {
+      "type": "object",
+      "properties": {
+        "engine_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$",
+          "minLength": 1
+        },
+        "adapter_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9._-]*$",
+          "minLength": 1
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "engine_id",
+        "adapter_id",
+        "required_capabilities"
+      ],
+      "additionalProperties": false
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "input_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "output_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "languages": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                  "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              },
+              "target": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                  "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              },
+              "routes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                      "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                    },
+                    "target": {
+                      "type": "string",
+                      "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                      "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                    },
+                    "evidence": {
+                      "enum": [
+                        "provider",
+                        "evaluation",
+                        "user"
+                      ]
+                    },
+                    "evidence_ref": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "target",
+                    "evidence"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              },
+              "scripts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "source",
+              "target",
+              "routes",
+              "scripts"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "capability",
+          "input_types",
+          "output_types",
+          "languages"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "storage_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "peak_host_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peak_accelerator_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "basis": {
+          "enum": [
+            "declared",
+            "measured"
+          ]
+        },
+        "conditions": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "storage_bytes",
+        "peak_host_bytes",
+        "peak_accelerator_bytes",
+        "basis",
+        "conditions"
+      ],
+      "additionalProperties": false
+    },
+    "terms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "text_file": {
+            "type": "string",
+            "minLength": 1,
+            "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "consent": {
+            "const": "explicit"
+          },
+          "usage_requirements": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "required_attributions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "covered_files": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "text_file",
+          "text_sha256",
+          "consent",
+          "usage_requirements",
+          "required_attributions",
+          "covered_files"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "id",
+    "display_name",
+    "publisher",
+    "files",
+    "executor",
+    "tasks",
+    "resources",
+    "terms"
+  ],
+  "additionalProperties": false
+}

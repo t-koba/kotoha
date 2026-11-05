@@ -1,0 +1,86 @@
+{
+  "id": "synthetic-translation",
+  "display_name": "検査用のモデル定義",
+  "publisher": "fixture",
+  "files": [
+    {
+      "path": "weights.bin",
+      "role": "weights",
+      "sha256": "3a3436765885cdf2edc179512c22dd4c4259410f0d18f391cbc8d83a837c678e",
+      "size_bytes": 17
+    },
+    {
+      "path": "terms.txt",
+      "role": "terms",
+      "sha256": "b5d2202ec5fa1297db3afdca3e097643c108691c459d9d0638f73278929beb23",
+      "size_bytes": 15
+    }
+  ],
+  "executor": {
+    "engine_id": "local.engine",
+    "adapter_id": "local.adapter",
+    "required_capabilities": [
+      "translation.text"
+    ]
+  },
+  "tasks": [
+    {
+      "capability": "translation.text",
+      "input_types": [
+        "text"
+      ],
+      "output_types": [
+        "translations"
+      ],
+      "languages": {
+        "source": [
+          "de",
+          "ar"
+        ],
+        "target": [
+          "ar",
+          "de"
+        ],
+        "routes": [
+          {
+            "source": "de",
+            "target": "ar",
+            "evidence": "user"
+          },
+          {
+            "source": "ar",
+            "target": "de",
+            "evidence": "user"
+          }
+        ],
+        "scripts": [
+          "Latn",
+          "Arab"
+        ]
+      }
+    }
+  ],
+  "resources": {
+    "storage_bytes": 32,
+    "peak_host_bytes": 0,
+    "peak_accelerator_bytes": 0,
+    "basis": "declared",
+    "conditions": "検査用の合成値"
+  },
+  "terms": [
+    {
+      "id": "synthetic-terms",
+      "text_file": "terms.txt",
+      "text_sha256": "b5d2202ec5fa1297db3afdca3e097643c108691c459d9d0638f73278929beb23",
+      "consent": "explicit",
+      "usage_requirements": [
+        "検査用の合成情報"
+      ],
+      "required_attributions": [],
+      "covered_files": [
+        "weights.bin",
+        "terms.txt"
+      ]
+    }
+  ]
+}

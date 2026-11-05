@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:kotoha:mode-recipe",
+  "title": "ことは モード定義",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "title_key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "operation": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "role": {
+            "enum": [
+              "source",
+              "processor",
+              "sink"
+            ]
+          },
+          "inputs": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            }
+          },
+          "outputs": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            }
+          },
+          "required_capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9._-]*$",
+              "minLength": 1
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "parameters": {
+            "type": "object",
+            "description": "登録済み操作のパラメータ契約に従って検査する。"
+          }
+        },
+        "required": [
+          "id",
+          "operation",
+          "role",
+          "inputs",
+          "outputs",
+          "required_capabilities",
+          "parameters"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 2
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from_node": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "from_port": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "to_node": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          },
+          "to_port": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9._-]*$",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "from_node",
+          "from_port",
+          "to_node",
+          "to_port"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "view": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "target_policy": {
+      "enum": [
+        "selected_languages",
+        "viewer_preferences"
+      ]
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9._-]*$",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "resource_profile": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]*$",
+      "minLength": 1
+    },
+    "processing_location": {
+      "const": "device"
+    },
+    "retention": {
+      "enum": [
+        "session",
+        "project"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "title_key",
+    "nodes",
+    "edges",
+    "view",
+    "target_policy",
+    "permissions",
+    "resource_profile",
+    "processing_location",
+    "retention"
+  ],
+  "additionalProperties": false
+}

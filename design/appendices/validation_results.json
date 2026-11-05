@@ -1,0 +1,367 @@
+{
+  "checks": 72,
+  "passed": 72,
+  "results": [
+    {
+      "name": "Schema: model_manifest",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Schema: mode_recipe",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Schema: engine_event",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Model fixture",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Model extra executable field",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model duplicate file",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage accounting",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model traversal",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model absolute path",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model terms digest",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model terms file",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model terms coverage",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model source route",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model target route",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model route uniqueness",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model evaluation evidence",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model required capability",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model consent contract",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Unicode asset path",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Private language syntax",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Mode fixture",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Mode duplicate node",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode endpoint",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode port",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode type contract",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode input connection",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode operation registration",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode parameter contract",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode permission scope",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode local execution",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode declared capability",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Mode cyclic subgraph",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events fixture",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Events idempotent replay",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Events current input",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Events stale input",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events missing terminal",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events after terminal",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events sequence collision",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events partial after commit",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events progress bound",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Events failure reason",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License: MIT",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: MIT AND BSD-3-Clause",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: MIT OR GPL-3.0-only",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: (Apache-2.0 OR MIT) AND ISC",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License: Apache-2.0 WITH LLVM-exception",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "License condition: GPL-3.0-only",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: AGPL-3.0-only",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: LGPL-2.1-only",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT AND GPL-3.0-only",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT AND (GPL-3.0-only OR LGPL-2.1-only)",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT OR",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "License condition: MIT; ISC",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL structure and references",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "SQL retention conditions",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL profile consent",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL asset membership",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL participant membership",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL current snapshot",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "SQL snapshot membership",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL parent membership",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL translation input",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL concurrent run history",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "SQL event run reference",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL event uniqueness",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "SQL project deletion",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "SQL cascading integrity",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "C header",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "C++ header",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Feature traceability",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Contract identifiers",
+      "status": "pass",
+      "case": "compatible"
+    }
+  ],
+  "scope": "design_contracts_and_synthetic_fixtures"
+}

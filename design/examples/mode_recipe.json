@@ -1,0 +1,63 @@
+{
+  "id": "text-translation",
+  "title_key": "mode.text",
+  "nodes": [
+    {
+      "id": "input",
+      "operation": "input.text",
+      "role": "source",
+      "inputs": {},
+      "outputs": {
+        "text": "text"
+      },
+      "required_capabilities": [],
+      "parameters": {}
+    },
+    {
+      "id": "translate",
+      "operation": "translation.text",
+      "role": "processor",
+      "inputs": {
+        "text": "text"
+      },
+      "outputs": {
+        "result": "translations"
+      },
+      "required_capabilities": [
+        "translation.text"
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "show",
+      "operation": "output.translations",
+      "role": "sink",
+      "inputs": {
+        "result": "translations"
+      },
+      "outputs": {},
+      "required_capabilities": [],
+      "parameters": {}
+    }
+  ],
+  "edges": [
+    {
+      "from_node": "input",
+      "from_port": "text",
+      "to_node": "translate",
+      "to_port": "text"
+    },
+    {
+      "from_node": "translate",
+      "from_port": "result",
+      "to_node": "show",
+      "to_port": "result"
+    }
+  ],
+  "view": "parallel-text",
+  "target_policy": "selected_languages",
+  "permissions": [],
+  "resource_profile": "interactive",
+  "processing_location": "device",
+  "retention": "session"
+}

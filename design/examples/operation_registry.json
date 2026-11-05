@@ -1,0 +1,51 @@
+{
+  "input.text": {
+    "role": "source",
+    "inputs": {},
+    "outputs": {
+      "text": "text"
+    },
+    "required_capabilities": [],
+    "permissions": [],
+    "parameters_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "translation.text": {
+    "role": "processor",
+    "inputs": {
+      "text": "text"
+    },
+    "outputs": {
+      "result": "translations"
+    },
+    "required_capabilities": [
+      "translation.text"
+    ],
+    "permissions": [],
+    "parameters_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "output.translations": {
+    "role": "sink",
+    "inputs": {
+      "result": "translations"
+    },
+    "outputs": {},
+    "required_capabilities": [],
+    "permissions": [],
+    "parameters_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+}
