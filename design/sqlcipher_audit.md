@@ -83,14 +83,17 @@ API response SHA-256
 published digest for the generated ZIP was found.
 
 The workflow downloads the OpenSSL 4.1.0 GitHub release asset at the exact URL
-shown in `compile_sqlite.yml`. GitHub's [OpenSSL release API](https://api.github.com/repos/openssl/openssl/releases/tags/openssl-4.1.0)
-response (SHA-256 `30d1fcc60452a43c2784094e076dbe3e56ab7ab0f4d36147b70503d6d040d5f1`)
+shown in `compile_sqlite.yml`. The latest observed [OpenSSL release API](https://api.github.com/repos/openssl/openssl/releases/tags/openssl-4.1.0)
+response (SHA-256 `38e32da590820e0ec229a304d801b21c370ec5c8b9d8041046e1bac360575db7`)
 reports the archive digest as `50c17baf54cb008f6ce42d50deb4b28050a1aad711636cabd4b241c7e90cc2fd`,
-but the release is marked mutable and the build does not verify that digest.
-The tag resolves to unsigned commit `2f4e3a5fec05394068cfa7379890ab552483a8a6`
-(commit API response SHA-256
-`d22a3269c15f93f8995e2b11ef62db02b013784e5359d0782774bdc39308cc2c`). These API
-claims were not independently authenticated.
+marks the release mutable, and lists an `openssl-4.1.0.tar.gz.asc` sidecar
+(931 bytes; reported SHA-256
+`d66bbf4cb7810c1c3dcab2aa29b824c9f3793cd28288e7aa698ef848c0e6db33`). The
+build verifies neither the archive digest nor the sidecar; neither sidecar
+contents nor signing-key trust was verified. The tag resolves to unsigned commit
+`2f4e3a5fec05394068cfa7379890ab552483a8a6` (commit API response SHA-256
+`d22a3269c15f93f8995e2b11ef62db02b013784e5359d0782774bdc39308cc2c`). All these
+GitHub API claims remain external-untrusted.
 
 The pinned [`download_sqlite.dart`](https://github.com/simolus3/sqlite3.dart/blob/28bd9b4cd33f02cff3ded6836459ba609a6016cc/tool/download_sqlite.dart)
 uses `curl -L` and `unzip` for the SQLite 3.54.1, SQLite3MultipleCiphers 2.6.1
