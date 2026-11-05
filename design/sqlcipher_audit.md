@@ -118,7 +118,12 @@ candidate.
 The workflow's source and binary caches key on the download/build scripts,
 target and version, not external archive digests. The workflow therefore permits
 cache reuse without checking the exact source bytes; no claim is made about a
-cache hit for these release assets.
+cache hit for these release assets. Its OpenSSL build uploads `openssl-compiled`
+(not the source archive) with one-day retention; the SQLCipher build similarly
+uploads `sqlite-compiled` with one-day retention. The inspected workflow and
+build scripts do not emit or upload an `ar` member manifest or linker map, so no
+generated `libcrypto` member list is retained to map against the candidate
+hashes.
 
 The SQLCipher source tree at the unsigned tag commit also contains
 [`SQLITE_LICENSE.md`](https://github.com/sqlcipher/sqlcipher/blob/355d4db92d3404e71faa8088d071a71d767807f4/SQLITE_LICENSE.md)
