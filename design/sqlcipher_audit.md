@@ -5,7 +5,10 @@ This is a static review of the 17 SQLCipher candidates pinned by `sqlite3` 3.9.0
 not a claim about shipped Kotoha binaries. The current `pubspec.yaml` and lockfile
 contain no `sqlite3` dependency or SQLCipher hook selection. No native library was
 executed, no target-platform behavior was tested, and no user text was persisted.
-The governing rules are [dependency_policy.json](specs/dependency_policy.json).
+The host will not verify native archives or attestations. If Kotoha later selects
+SQLCipher, its own pinned build workflow must verify the inputs and retain the
+source-to-binary evidence. The governing rules are
+[dependency_policy.json](specs/dependency_policy.json).
 
 ## Provider finding
 
@@ -287,19 +290,30 @@ remain unresolved. No paid, unknown or GPL-family term is approved for distribut
 
 ## Completion gate
 
-Obtain trusted verification of the exact asset attestations and a schema-valid
-CycloneDX inventory; the currently retrieved BOM is malformed and its signature is
-unverified. Bind the generated SQLCipher ZIP and OpenSSL source tarball, versions,
-build configuration and every embedded component to the artifact hashes with
-verified source/build evidence. The OpenSSL release API reports a tarball digest,
-but the build does not check it; no published digest for the generated SQLCipher
-ZIP was found. Inspect and retain complete license/NOTICE texts, complete the
-policy's expression, selected-term, classification, source, digest, notice and
-distribution-scope evidence, and review each supported platform runtime. Bundle
-every required native text in a user-accessible route; Flutter's collected Dart
-package licenses alone do not cover this native set.
+Kotoha does not select or distribute these vendor-prebuilt binaries. Their exact
+source/build provenance, embedded OpenSSL component closure, complete notice
+inventory and target runtime terms remain unresolved. GitHub API checksums and
+unverified attestations are not evidence; the 17 assets remain unapproved.
 
-The inspected inputs contain binaries and the Dart package, not the native source
-closure; approval is blocked until that evidence is supplied. Target encryption,
-key-management, backup exclusion and save/reopen tests remain separate gates even
-after license approval. Persistence stays disabled.
+If Kotoha selects SQLCipher for persistence, first add a Kotoha-owned native build
+workflow for the exact supported ABIs. That workflow must:
+
+- pin each source archive or commit and the build configuration in
+  review-controlled files, then verify source bytes against the checked-in
+  SHA-256 pins before extraction. Treat upstream API checksums as untrusted;
+  verify a detached signature with GPG when its signing-key fingerprint can be
+  justified from an independent official source;
+- build target libraries from those pinned inputs and retain the source hashes,
+  toolchain versions, build flags, compiler/linker inputs, final artifact hashes,
+  and linker map/archive-member manifest (including the exact `libcrypto`
+  members) needed to connect source and licenses to each binary;
+- inventory complete license and notice texts for every included component
+  under `dependency_policy.json`, review platform-provided runtimes, and deliver
+  every required notice through a user-accessible route.
+
+A schema-valid upstream SBOM or cryptographically verified provenance can be
+corroborating evidence, but does not replace Kotoha's pinned inputs and exact
+source-to-binary record. The current `pubspec.yaml` selects no `sqlite3`
+dependency. Draft persistence stays disabled; any future implementation must
+also pass key recovery, encrypted backup/restore, platform behavior and data
+retention tests.
