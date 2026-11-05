@@ -90,7 +90,19 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('ことは | Kotoha')),
+    appBar: AppBar(
+      title: const Text('ことは | Kotoha'),
+      actions: [
+        Builder(
+          builder: (innerContext) => IconButton(
+            key: const ValueKey('show-licenses'),
+            tooltip: 'ライセンス',
+            onPressed: () => showLicensePage(context: innerContext),
+            icon: const Icon(Icons.info_outline),
+          ),
+        ),
+      ],
+    ),
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
