@@ -5,10 +5,11 @@ manual text-workspace draft: enter a source text, add one or more target languag
 and write translations without an installed model. It does not claim to translate
 text automatically.
 
-This development build does not yet save drafts. The product design requires saved
-content to use encrypted storage and protected key management; persistence will be
-added when its reviewed dependencies are available. Do not enter sensitive text in
-this temporary build.
+This development build does not save drafts. Saved content must use encrypted
+storage and a validated key lifecycle, recovery, and encrypted backup/restore path.
+Persistence remains disabled until native dependency provenance and licenses are
+verified and the complete flow is tested on every supported platform. Do not enter
+sensitive text in this temporary build.
 
 ## Development
 
