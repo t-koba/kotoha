@@ -92,11 +92,25 @@ The tag resolves to unsigned commit `2f4e3a5fec05394068cfa7379890ab552483a8a6`
 `d22a3269c15f93f8995e2b11ef62db02b013784e5359d0782774bdc39308cc2c`). These API
 claims were not independently authenticated.
 
+The pinned [`download_sqlite.dart`](https://github.com/simolus3/sqlite3.dart/blob/28bd9b4cd33f02cff3ded6836459ba609a6016cc/tool/download_sqlite.dart)
+uses `curl -L` and `unzip` for the SQLite 3.54.1, SQLite3MultipleCiphers 2.6.1
+and SQLCipher v4.20.0 archives without checking their hashes. For the SQLCipher
+fork it runs `configure` and `make sqlite3.c -j`, then copies the amalgamation
+for compilation; the other two source trees are separate forks. The package's
+[`build_openssl.dart`](https://github.com/simolus3/sqlite3.dart/blob/28bd9b4cd33f02cff3ded6836459ba609a6016cc/tool/build_openssl.dart)
+configures static libraries, disables SSL/TLS, engines/modules, FIPS, legacy
+and multiple algorithms; `no-apps` is commented out. Its
+[`build_sqlite.dart`](https://github.com/simolus3/sqlite3.dart/blob/28bd9b4cd33f02cff3ded6836459ba609a6016cc/tool/build_sqlite.dart)
+links the OpenSSL `crypto` archive on Android, Linux and Windows, selects
+CommonCrypto on Apple, sets the SQLCipher codec/temp-store/init flags, and adds
+Windows system libraries. These source recipes corroborate linkage intent, but
+do not prove which downloaded archive bytes or complete code closure reached
+any candidate binary.
+
 The workflow's source and binary caches key on the download/build scripts,
 target and version, not external archive digests. The workflow therefore permits
 cache reuse without checking the exact source bytes; no claim is made about a
-cache hit for these release assets. The inspected build script links OpenSSL
-statically on Android, Linux and Windows and selects CommonCrypto for Apple.
+cache hit for these release assets.
 
 The SQLCipher source tree at the unsigned tag commit also contains
 [`SQLITE_LICENSE.md`](https://github.com/sqlcipher/sqlcipher/blob/355d4db92d3404e71faa8088d071a71d767807f4/SQLITE_LICENSE.md)
