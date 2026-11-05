@@ -28,7 +28,9 @@ That agrees with these exact artifacts. A generic SQLCipher Community Android
 matrix describing LibTomCrypt 1.18.2 does **not** identify the provider of these
 sqlite3.dart binaries. Do not substitute that matrix's license closure for this
 inventory. Static evidence settles this provider discrepancy, not the complete
-build provenance or all embedded third-party code.
+build provenance or all embedded third-party code. The operator-approved LibTomCrypt
+1.18.2 terms apply to the upstream Community Android package, not to this candidate;
+they do not replace the OpenSSL review for these exact assets.
 
 ## Evidence and source identity
 
@@ -38,7 +40,10 @@ The filenames below are the exact release names, including `ios_sim` and `ia32`.
 Every cached asset was rehashed and matched both its filename's entry in
 `lib/src/hook/asset_hashes.dart` and the complete 17-entry SQLCipher set there.
 A package pin is an integrity reference, not independent authentication of the
-publisher or a source-to-binary reproducibility proof.
+publisher or a source-to-binary reproducibility proof. The package's `doc/hook.md`
+reports SLSA level 3 attestations for released binaries and CycloneDX SBOMs retrievable
+through GitHub attestations. This audit has not retrieved or verified either artifact;
+the exact build provenance and native component inventory are still open.
 
 Package source: <https://pub.dev/packages/sqlite3/versions/3.9.0>.
 The local pub-cache archive-hash record is
@@ -123,25 +128,26 @@ must be tied to the build that produced these exact artifact hashes.
 | Component / distribution scope | License expression / selected terms | Classification and full-text evidence | Notices / missing evidence |
 |---|---|---|---|
 | `sqlite3` 3.9.0 Dart wrapper and hook; prospective bundled product dependency | `MIT` / `MIT` | Permissive: inspected the complete package `LICENSE` (digest above). It grants use, modification and redistribution, requires preservation of copyright and permission notice, and disclaims warranty. | Preserve the complete MIT text, including Copyright (c) 2020 Simon Binder. This covers the wrapper/hook, not the native closure. Not presently bundled. |
-| SQLCipher 4.20.0 native code; prospective bundled product dependency | Unknown / none selected | Unknown: embedded version evidence and asset digests above; exact build's full upstream license bytes and source digest not available. Upstream source location: <https://github.com/sqlcipher/sqlcipher>. | Obtain the corresponding source/license and required copyright, conditions and disclaimer before selecting terms. No native notice has been delivered by this audit. |
-| SQLite code inside SQLCipher; prospective bundled product dependency | Unknown / none selected | Unknown pending exact source/public-domain evidence. Upstream: <https://sqlite.org/copyright.html>; a generic public-domain claim is not a source-to-artifact review. | Identify the incorporated SQLite source revision and included extensions; retain its dedication and any separate extension notices. |
-| OpenSSL code included in Android, Linux and Windows candidates; prospective bundled product dependency | Unknown / none selected | Unknown: `4.1.0` is binary version evidence, not full license evidence. Upstream: <https://github.com/openssl/openssl>. | Obtain exact build sources, license and NOTICE/third-party texts, source digests, selected expressions and classifications for every included component. Do not assume an OpenSSL identifier covers all embedded code. |
+| SQLCipher 4.20.0 native code; prospective bundled product dependency | `BSD-3-Clause` / `BSD-3-Clause` (provisional source selection) | Permissive: full upstream tag text at <https://raw.githubusercontent.com/sqlcipher/sqlcipher/v4.20.0/LICENSE.md>, SHA-256 `2a2826f6acf46fa650730cf42cbb22a642be33a7ef119c9c4f4bf6daf3bef48e`. It contains source/binary notice requirements, a no-endorsement condition, and warranty/liability disclaimers. Candidate version string matches `4.20.0`, but source-to-binary provenance is not verified. | Bundle the complete text, including Copyright (c) 2025, ZETETIC LLC. This provisional source classification is not approval of the full binary closure; no native notice is delivered yet. |
+| SQLite code inside SQLCipher; prospective bundled product dependency | SQLite public-domain dedication / `public-domain` (provisional) | Public-domain: official <https://sqlite.org/copyright.html> text, SHA-256 `44ca9f793055c8e32fc65f65a4f5bcf813a33f5bdaaa084067dd617a4ed3cc70`. [SQLCipher 4.20.0 release notes](https://www.zetetic.net/blog/2026/10/27/sqlcipher-4.20.0-release/) identify SQLite 3.54.1, and the candidate contains `s3.54.1`; the exact incorporated source revision and extensions are not verified. | Retain the public-domain dedication as a user-accessible notice if included; inspect extensions separately and tie the code to the release source before approval. |
+| OpenSSL code included in Android, Linux and Windows candidates; prospective bundled product dependency | `Apache-2.0` / `Apache-2.0` (provisional source selection) | Permissive: full upstream `openssl-4.1.0/LICENSE.txt` text at <https://raw.githubusercontent.com/openssl/openssl/openssl-4.1.0/LICENSE.txt>, SHA-256 `7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a`. Candidate binaries contain the `OpenSSL 4.1.0` version string and OpenSSL implementation symbols; source-to-binary provenance and the complete embedded component set remain unverified. | Bundle the complete Apache license and determine whether the build has applicable NOTICE or third-party texts. This provisional classification is not approval of the complete binary closure. |
 | Apple CommonCrypto and all direct OS dependencies above; platform-provided runtime candidates | Unknown / none selected | Provider/linkage recorded above; applicable terms, redistribution evidence and approval pending for each target runtime. | Review the supported platform's SDK/runtime terms and notice obligations; do not copy OS libraries into the application as a substitute. |
 
-The only selected term here is MIT for the inspected Dart package. This is not
-approval of the package plus native dependencies. Complete native expressions,
-selected branches, source content digests and user-accessible notices are still
-missing; no paid, unknown or GPL-family branch is approved.
+The versioned upstream evidence provisionally classifies the Dart wrapper as MIT,
+SQLCipher as BSD-3-Clause, OpenSSL as Apache-2.0, and SQLite as public domain. These
+source-level selections do not approve a bundled candidate: source/build provenance,
+the complete embedded component set, platform-runtime terms and native notice delivery
+remain unresolved. No paid, unknown or GPL-family term is approved for distribution.
 
 ## Completion gate
 
-Obtain a digest-bound source/build manifest for these exact release assets,
-including SQLCipher/SQLite revisions, OpenSSL 4.1.0 configuration and every
-embedded third-party component. Inspect and retain their complete license and
-notice texts; fill in the policy's expression, selected-term, classification,
-source, digest, notice and scope evidence. Complete each supported platform's
-runtime review. Then bundle required texts in a user-accessible notice route;
-Flutter's collected Dart package licenses alone do not cover this native set.
+Retrieve and verify the package's advertised SLSA provenance and CycloneDX SBOM
+for each exact asset, then bind their SQLCipher/SQLite revisions, OpenSSL 4.1.0
+configuration and every embedded component to the asset hashes. Inspect and retain
+the complete license/NOTICE texts; complete the policy's expression, selected-term,
+classification, source, digest, notice and distribution-scope evidence. Review each
+supported platform runtime. Bundle every required native text in a user-accessible
+notice route; Flutter's collected Dart package licenses alone do not cover this set.
 
 The inspected inputs contain binaries and the Dart package, not the native source
 closure; approval is blocked until that evidence is supplied. Target encryption,
