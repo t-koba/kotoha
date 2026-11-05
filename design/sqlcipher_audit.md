@@ -89,8 +89,10 @@ reports the archive digest as `50c17baf54cb008f6ce42d50deb4b28050a1aad711636cabd
 marks the release mutable, and lists an `openssl-4.1.0.tar.gz.asc` sidecar
 (931 bytes; reported SHA-256
 `d66bbf4cb7810c1c3dcab2aa29b824c9f3793cd28288e7aa698ef848c0e6db33`). The
-build verifies neither the archive digest nor the sidecar; neither sidecar
-contents nor signing-key trust was verified. The tag resolves to unsigned commit
+pinned `compile_sqlite.yml` instead downloads the archive with `curl -L ... |
+tar --extract --gzip`; the workflow has no `.asc`, `gpg` or `sha256sum` check,
+so it does not consume the reported sidecar or verify the archive digest. Neither
+sidecar contents nor signing-key trust was verified. The tag resolves to unsigned commit
 `2f4e3a5fec05394068cfa7379890ab552483a8a6` (commit API response SHA-256
 `d22a3269c15f93f8995e2b11ef62db02b013784e5359d0782774bdc39308cc2c`). All these
 GitHub API claims remain external-untrusted.
