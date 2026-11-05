@@ -125,13 +125,38 @@ does not prove which source bytes reached the candidate binary.
 
 The [OpenSSL tag's root listing](https://api.github.com/repos/openssl/openssl/contents?ref=2f4e3a5fec05394068cfa7379890ab552483a8a6)
 (response SHA-256 `afbda0fea57670542fd980184eacda30c98eb72011e64f2a7fe58c8c0af68fc0`)
-contains `LICENSE.txt` and [`ACKNOWLEDGEMENTS.md`](https://github.com/openssl/openssl/blob/2f4e3a5fec05394068cfa7379890ab552483a8a6/ACKNOWLEDGEMENTS.md)
-among license/notice-named files. The latter (SHA-256
-`58dee45791f007ced048114717f86672778fe75c551827c57e760861446ce3c3`)
-points to a live acknowledgements page, not a static third-party license
-inventory. No root-level `NOTICE` file appears in the listing; nested or
-feature-specific notices in the source archive or exact static library closure
-remain unresolved.
+contains `LICENSE.txt` and [`ACKNOWLEDGEMENTS.md`](https://github.com/openssl/openssl/blob/2f4e3a5fec05394068cfa7379890ab552483a8a6/ACKNOWLEDGEMENTS.md).
+The latter's exact fetched bytes (SHA-256
+`58dee45791f007ced048114717f86672778fe75c551827c57e760861446ce3c3`) say only
+to see the live Thanks page; it is not a static third-party license inventory.
+The full `LICENSE.txt` (SHA-256
+`7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a`) is
+Apache-2.0 text: section 4(a) requires a copy of the license, 4(c) requires
+retention of pertinent notices in distributed source, and 4(d) addresses
+attribution from a `NOTICE` file if the Work includes one in its distribution.
+The root listing has no root-level `NOTICE`; that does not establish that no
+nested or build-specific attribution applies.
+
+Unverified GitHub Contents API views at the unsigned tag commit list 161 direct
+entries (74 directories) under `crypto/` (response SHA-256
+`a472b3e00a511400cd0e5b81943fe5fcb06077c9be109be2c6f4131471fe0ae0`) and 15
+under `providers/` (3 directories; response SHA-256
+`4385a708fa9008b8140fe38040a98fa85102424f7d8d926b5f6b8dbd4143cb36`). A scan
+of those immediate names found none matching `license`, `notice`, `copyright`,
+`copying`, `acknowledgements` or `third-party`. The nested implementation
+directories were not recursively inventoried, so this is not evidence that the
+source closure has no further notices.
+
+The fetched [`crypto/build.info`](https://github.com/openssl/openssl/blob/2f4e3a5fec05394068cfa7379890ab552483a8a6/crypto/build.info)
+(SHA-256 `7fe0a2309baab3dc4201271d5e47d47f664ff15dc694905bb6849aae2ff7d50e`)
+and [`providers/build.info`](https://github.com/openssl/openssl/blob/2f4e3a5fec05394068cfa7379890ab552483a8a6/providers/build.info)
+(SHA-256 `0710a7b3a513566a14bfe3a7fc8f8fe157d41f1ecb1af4e751c94bfca7ac5b7b`)
+show source-level build metadata for `libcrypto`: the default and base provider
+are built into it, while FIPS and legacy builds are conditional. The package
+recipe disables FIPS and legacy and links static `libcrypto`, so the candidate
+is not established as containing only a minimal AES object. These unverified
+manifests do not identify the generated object/member set for the candidate;
+exact embedded code and required attribution remain unresolved.
 
 | Upstream source at [package commit `28bd9b4cd33f02cff3ded6836459ba609a6016cc`](https://github.com/simolus3/sqlite3.dart/commit/28bd9b4cd33f02cff3ded6836459ba609a6016cc) | SHA-256 |
 |---|---|
@@ -241,7 +266,7 @@ must be tied to the build that produced these exact artifact hashes.
 | `sqlite3` 3.9.0 Dart wrapper and hook; prospective bundled product dependency | `MIT` / `MIT` | Permissive: inspected the complete package `LICENSE` (digest above). It grants use, modification and redistribution, requires preservation of copyright and permission notice, and disclaims warranty. | Preserve the complete MIT text, including Copyright (c) 2020 Simon Binder. This covers the wrapper/hook, not the native closure. Not presently bundled. |
 | SQLCipher 4.20.0 native code; prospective bundled product dependency | `BSD-3-Clause` / `BSD-3-Clause` (provisional source selection) | Permissive: full upstream text at <https://raw.githubusercontent.com/sqlcipher/sqlcipher/355d4db92d3404e71faa8088d071a71d767807f4/LICENSE.md>, SHA-256 `2a2826f6acf46fa650730cf42cbb22a642be33a7ef119c9c4f4bf6daf3bef48e`. It contains source/binary notice requirements, a no-endorsement condition, and warranty/liability disclaimers. Candidate version string matches `4.20.0`, but source-to-binary provenance is not verified. | Bundle the complete text, including Copyright (c) 2025, ZETETIC LLC. This provisional source classification is not approval of the full binary closure; no native notice is delivered yet. |
 | SQLite code inside SQLCipher; prospective bundled product dependency | SQLite public-domain dedication / `public-domain` (provisional) | Public-domain: upstream SQLCipher v4.20.0 `SQLITE_LICENSE.md` at commit `355d4db92d3404e71faa8088d071a71d767807f4`, SHA-256 `595e823c2ada6c839679e693bee1f4d7f88e2d34ac99a913ae41e3d43fb10c7d`, states that SQLite source and `sqlite3.c`/`sqlite3.h` products are public domain. Official <https://sqlite.org/copyright.html> text, SHA-256 `44ca9f793055c8e32fc65f65a4f5bcf813a33f5bdaaa084067dd617a4ed3cc70`, agrees. SQLCipher release notes identify SQLite 3.54.1, and the candidate contains `s3.54.1`; exact incorporated source revision and extensions are not verified. | Retain the public-domain dedication as a user-accessible notice if included; inspect extensions separately and tie the code to the release source before approval. |
-| OpenSSL code included in Android, Linux and Windows candidates; prospective bundled product dependency | `Apache-2.0` / `Apache-2.0` (provisional source selection) | Permissive: full upstream `openssl-4.1.0/LICENSE.txt` text at <https://raw.githubusercontent.com/openssl/openssl/2f4e3a5fec05394068cfa7379890ab552483a8a6/LICENSE.txt>, SHA-256 `7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a`. Candidate binaries contain the `OpenSSL 4.1.0` version string and OpenSSL implementation symbols; source-to-binary provenance and the complete embedded component set remain unverified. | Bundle the complete Apache license and determine whether the build has applicable NOTICE or third-party texts. This provisional classification is not approval of the complete binary closure. |
+| OpenSSL code included in Android, Linux and Windows candidates; prospective bundled product dependency | `Apache-2.0` / `Apache-2.0` (provisional source selection) | Permissive: full upstream `openssl-4.1.0/LICENSE.txt` text at <https://raw.githubusercontent.com/openssl/openssl/2f4e3a5fec05394068cfa7379890ab552483a8a6/LICENSE.txt>, SHA-256 `7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a`. Candidate binaries contain the `OpenSSL 4.1.0` version string and OpenSSL implementation symbols; source-to-binary provenance and the complete embedded component set remain unverified. | Provide the complete Apache license. The pinned `ACKNOWLEDGEMENTS.md` links to a live Thanks page, not a static inventory; the direct source-name scan and build manifests do not establish all attribution obligations or the exact static `libcrypto` member set. |
 | Apple CommonCrypto and all direct OS dependencies above; platform-provided runtime candidates | Unknown / none selected | Provider/linkage recorded above; applicable terms, redistribution evidence and approval pending for each target runtime. | Review the supported platform's SDK/runtime terms and notice obligations; do not copy OS libraries into the application as a substitute. |
 
 The versioned upstream evidence provisionally classifies the Dart wrapper as MIT,
