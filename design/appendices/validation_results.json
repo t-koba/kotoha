@@ -1,6 +1,6 @@
 {
-  "checks": 92,
-  "passed": 92,
+  "checks": 93,
+  "passed": 93,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -461,7 +461,12 @@
       "name": "Contract identifiers",
       "status": "pass",
       "case": "compatible"
+    },
+    {
+      "name": "Apple bundle localization metadata",
+      "status": "pass",
+      "case": "compatible"
     }
   ],
-  "scope": "design_contracts_and_synthetic_fixtures"
+  "scope": "design_contracts_bundle_localizations_and_synthetic_fixtures"
 }

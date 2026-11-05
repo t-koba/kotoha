@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Validate kotoha's design contracts with synthetic fixtures."""
+"""Validate design contracts, Apple locale metadata, and synthetic fixtures."""
 from __future__ import annotations
 import copy
 import hashlib
 import json
+import plistlib
 import re
 import shutil
 import sqlite3
@@ -346,6 +347,25 @@ def header_test(language: str, compiler: str, standard: str) -> None:
         require(result.returncode == 0, result.stderr)
 
 
+def validate_apple_localizations() -> None:
+    l10n = ROOT.parent / "lib/l10n"
+    locale_values = [
+        json.loads(path.read_text(encoding="utf-8"))["@@locale"]
+        for path in l10n.glob("app_*.arb")
+    ]
+    require(bool(locale_values) and len(locale_values) == len(set(locale_values)), "unique ARB locales")
+    locales = set(locale_values)
+    for platform in ("ios", "macos"):
+        info_path = ROOT.parent / platform / "Runner/Info.plist"
+        info = plistlib.loads(info_path.read_bytes())
+        require(locales <= set(info.get("CFBundleLocalizations", [])), f"{platform} bundle locales")
+        project = (ROOT.parent / platform / "Runner.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
+        match = re.search(r"\bknownRegions\s*=\s*\((.*?)\);", project, re.DOTALL)
+        require(match is not None, f"{platform} known regions")
+        regions = set(re.findall(r"\b[A-Za-z][A-Za-z0-9-]*\b", match.group(1)))
+        require(locales <= regions and "Base" in regions, f"{platform} project locales")
+
+
 def main() -> int:
     for name, schema in SCHEMAS.items():
         check(f"Schema: {name}", lambda schema=schema: Draft202012Validator.check_schema(schema))
@@ -443,7 +463,8 @@ def main() -> int:
     expected={f"F{i:02}" for i in range(1,39)}
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
-    report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_and_synthetic_fixtures"}
+    check("Apple bundle localization metadata", validate_apple_localizations)
+    report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_bundle_localizations_and_synthetic_fixtures"}
     (ROOT/"appendices/validation_results.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"checks":len(RESULTS),"passed":len(RESULTS)},ensure_ascii=False))
     return 0

@@ -4,9 +4,10 @@
 Regenerate the committed Dart files with `flutter gen-l10n` using the configured
 Flutter 3.47.9 SDK; `flutter pub get` also generates them. `l10n.yaml` puts Japanese
 first, so device locales resolve to Japanese or English (including regional
-variants) and unsupported locales fall back to Japanese. The app-bar language
-menu overrides the device choice for the current session only; it neither
-changes source/target language fields nor saves text or preferences.
+variants) and unsupported locales fall back to Japanese. iOS and macOS bundle
+metadata and Xcode known-region lists also include `ja` and `en`.
+The app-bar language menu overrides the device choice for the current session
+only; it neither changes source/target language fields nor saves text or preferences.
 
 ## Dependency and license evidence
 
