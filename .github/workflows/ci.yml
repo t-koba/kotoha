@@ -106,7 +106,7 @@ jobs:
       - name: Build unsigned iOS app
         run: flutter build ios --debug --no-codesign --no-pub
       - name: Build unsigned macOS app
-        run: flutter build macos --debug --no-codesign --no-pub
+        run: flutter build macos --debug --no-pub
 
   windows:
     name: Windows debug build
