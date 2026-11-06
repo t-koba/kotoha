@@ -103,23 +103,40 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   }
 
   private func assertField(_ id: String, label: String, value: String) {
-    let element = field(id) // Re-query XCUI after every dynamic rebuild.
-    let state = NSPredicate { object, _ in
-      guard let field = object as? XCUIElement,
-            field.exists, field.isEnabled,
-            let actual = field.value as? String else { return false }
+    let expected = Self.withoutBidiFormattingControls(value)
+    let state = NSPredicate { [self] _, _ in
+      // Resolve the identity on each poll; Flutter can replace its semantics node
+      // when the field direction changes from RTL to LTR.
+      let current = field(id)
+      guard current.exists, current.isEnabled,
+            let actual = current.value as? String else { return false }
       // Some native accessibility bridges include bidi formatting controls in the
       // exposed value. They change presentation, not the underlying editor text; the
       // Flutter tests independently assert exact controller contents.
-      return Self.withoutBidiFormattingControls(actual)
-        == Self.withoutBidiFormattingControls(value)
+      return current.label == label
+        && Self.withoutBidiFormattingControls(actual) == expected
     }
-    let expectation = XCTNSPredicateExpectation(predicate: state, object: element)
+    let expectation = XCTNSPredicateExpectation(predicate: state, object: nil)
     let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
-    XCTAssertEqual(result, .completed,
-      "Expected native field \(label) value=\(value), "
-        + "got \(String(describing: element.value)); tree: \(app.debugDescription)")
-    XCTAssertEqual(element.label, label)
+    guard result == .completed else {
+      // This is a post-wait observation, not necessarily the value seen by the
+      // final predicate poll. Keep it bounded while preserving scalar-level clues.
+      let current = field(id)
+      let actual = current.value as? String
+      let scalarPrefix = actual.map { text in
+        text.unicodeScalars.prefix(32)
+          .map { String($0.value, radix: 16) }
+          .joined(separator: " ")
+      } ?? "<non-string>"
+      let scalarCount = actual?.unicodeScalars.count ?? 0
+      let valueType = current.value.map { String(describing: type(of: $0)) } ?? "nil"
+      XCTFail(
+        "Expected native field \(label) value=\(value); wait=\(result). "
+          + "Post-wait observation: exists=\(current.exists), enabled=\(current.isEnabled), "
+          + "label=\(current.label), valueType=\(valueType), "
+          + "scalarPrefix=[\(scalarPrefix)], scalarCount=\(scalarCount)")
+      return
+    }
   }
 
   private static func withoutBidiFormattingControls(_ text: String) -> String {
