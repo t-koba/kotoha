@@ -8,6 +8,27 @@ on:
       - mizu/dev
   pull_request:
   workflow_dispatch:
+    inputs:
+      profile_bytes:
+        description: 'Opt-in synthetic import bytes per stage (empty disables profiling)'
+        default: ''
+        type: string
+      profile_editor:
+        description: 'Also run macOS debug editor trial under external watchdog'
+        default: false
+        type: boolean
+      profile_seconds:
+        description: 'macOS editor watchdog wall seconds'
+        default: '60'
+        type: string
+      profile_rss_mib:
+        description: 'macOS editor process-group sampled RSS ceiling MiB'
+        default: '4096'
+        type: string
+      profile_poll_seconds:
+        description: 'macOS editor watchdog sampling interval seconds'
+        default: '0.5'
+        type: string
 
 permissions:
   contents: read
@@ -48,9 +69,11 @@ jobs:
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
       - name: Check Dart formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: dart format --output=none --set-exit-if-changed lib test tools
       - name: Analyze Flutter code
         run: flutter analyze --no-pub
+      - name: Test external profile watchdog
+        run: python3 -m unittest tools/test_watch_import_profile.py
       - name: Run Flutter tests
         run: flutter test --no-pub
 
@@ -93,6 +116,7 @@ jobs:
           ANDROID_TEST_TIMEOUT: 7m
           ANDROID_AX_TIMEOUT_MILLIS: '10000'
           ANDROID_AX_POLL_MILLIS: '100'
+          PROFILE_BYTES: ${{ inputs.profile_bytes }}
         shell: bash
         run: |
           set -euo pipefail
@@ -127,11 +151,17 @@ jobs:
           '
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
+          # Capture native profile output even when Gradle or instrumentation fails.
+          if [[ -n "$PROFILE_BYTES" ]]; then
+            adb logcat -c
+            trap 'adb logcat -d -s KotohaImportProfile:I; cleanup' EXIT
+          fi
           cd android
           timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
             -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest,org.kotoha.app.MainActivityAccessibilityTest,org.kotoha.app.TextImportTest \
             -Pandroid.testInstrumentationRunnerArguments.axTimeoutMillis="$ANDROID_AX_TIMEOUT_MILLIS" \
-            -Pandroid.testInstrumentationRunnerArguments.axPollMillis="$ANDROID_AX_POLL_MILLIS"
+            -Pandroid.testInstrumentationRunnerArguments.axPollMillis="$ANDROID_AX_POLL_MILLIS" \
+            -Pandroid.testInstrumentationRunnerArguments.profileBytes="$PROFILE_BYTES"
 
   apple:
     name: iOS and macOS debug builds
@@ -166,6 +196,7 @@ jobs:
           IOS_DESTINATION_TIMEOUT_SECONDS: '60'
           IOS_TEST_TIMEOUT_SECONDS: '120'
           IOS_AX_TIMEOUT_SECONDS: '10'
+          PROFILE_BYTES: ${{ inputs.profile_bytes }}
         run: |
           set -euo pipefail
           # Require the software keyboard for XCUI text input; no physical keyboard is used.
@@ -179,7 +210,26 @@ jobs:
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
-            KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
+            KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" KOTOHA_IMPORT_PROFILE_BYTES="$PROFILE_BYTES" CODE_SIGNING_ALLOWED=NO
+      - name: Profile desktop disk read and strict decode
+        if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
+        timeout-minutes: 5
+        env:
+          PROFILE_BYTES: ${{ inputs.profile_bytes }}
+        run: flutter test --no-pub tools/profile_text_import_test.dart --dart-define=PROFILE_BYTES="$PROFILE_BYTES" --dart-define=PROFILE_STAGE=decode
+      - name: Profile macOS debug editor with external watchdog
+        if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != '' && inputs.profile_editor
+        timeout-minutes: 5
+        env:
+          PROFILE_BYTES: ${{ inputs.profile_bytes }}
+          PROFILE_SECONDS: ${{ inputs.profile_seconds }}
+          PROFILE_RSS_MIB: ${{ inputs.profile_rss_mib }}
+          PROFILE_POLL_SECONDS: ${{ inputs.profile_poll_seconds }}
+        run: >-
+          python3 tools/watch_import_profile.py --seconds "$PROFILE_SECONDS"
+          --rss-mib "$PROFILE_RSS_MIB" --poll-seconds "$PROFILE_POLL_SECONDS" --
+          flutter test --no-pub tools/profile_text_import_test.dart
+          --dart-define=PROFILE_BYTES="$PROFILE_BYTES" --dart-define=PROFILE_STAGE=editor
       - name: Build unsigned macOS app
         run: flutter build macos --debug --no-pub
 
@@ -206,5 +256,11 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Test Windows DPAPI key preservation
         run: flutter test --no-pub test/windows_dpapi_test.dart
+      - name: Profile desktop disk read and strict decode
+        if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
+        timeout-minutes: 5
+        env:
+          PROFILE_BYTES: ${{ inputs.profile_bytes }}
+        run: flutter test --no-pub tools/profile_text_import_test.dart --dart-define=PROFILE_BYTES="$env:PROFILE_BYTES" --dart-define=PROFILE_STAGE=decode
       - name: Build Windows debug app
         run: flutter build windows --debug --no-pub

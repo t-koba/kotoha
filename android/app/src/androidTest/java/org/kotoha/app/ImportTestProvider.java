@@ -41,7 +41,14 @@ public final class ImportTestProvider extends ContentProvider {
             new Thread(() -> {
                 try (ParcelFileDescriptor.AutoCloseOutputStream out =
                         new ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])) {
-                    out.write(BYTES);
+                    String requested = uri.getQueryParameter("profileBytes");
+                    if (requested == null) { out.write(BYTES); }
+                    else {
+                        byte[] chunk = (new String(new char[1000]).replace('\0', 'a')
+                                + "日本語 مرحبا\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        int length = Integer.parseInt(requested) / chunk.length * chunk.length;
+                        for (int n = 0; n < length; n += chunk.length) out.write(chunk);
+                    }
                 } catch (IOException ignored) { /* Reader may reject or detach. */ }
             }).start();
             return new AssetFileDescriptor(pipe[0], 0, AssetFileDescriptor.UNKNOWN_LENGTH) {

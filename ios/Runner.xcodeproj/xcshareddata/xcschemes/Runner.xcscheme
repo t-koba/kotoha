@@ -55,6 +55,9 @@
             ReferencedContainer = "container:Runner.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
+      <EnvironmentVariables>
+         <EnvironmentVariable key = "KOTOHA_IMPORT_PROFILE_BYTES" value = "$(KOTOHA_IMPORT_PROFILE_BYTES)" isEnabled = "YES"/>
+      </EnvironmentVariables>
       <Testables>
          <TestableReference
             skipped = "NO"

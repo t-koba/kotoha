@@ -269,6 +269,73 @@ widget/editor path, not picker/reader overhead, dominates these small local
 profiles. This does not predict release or mobile behavior, nor justify a size
 limit; native target measurements are still required.
 
+### Opt-in hosted stage harness
+
+Manual `CI` dispatch accepts `profile_bytes` (empty by default: no profile).
+Start with `65536`; each stage rounds down to complete 1,021-byte synthetic
+lines (1,000 ASCII letters, Japanese/Arabic text, newline), and reports actual
+bytes. Dispatch a fresh run for each size so peaks do not carry across sizes.
+These are debug test profiles, not release/device benchmarks.
+
+- Android `TextImportTest.testOptInNativeReadMemoryProfile` calls production
+  `readDocument` through `ContentResolver` and a pipe-backed test-APK provider.
+  Logcat emits `KotohaImportProfile` with API version, elapsed nanoseconds,
+  bytes and before/after `VmRSS`/`VmHWM` (kB). The provider streams bounded
+  chunks. The existing emulator and test timeout apply; profile logs are printed
+  even on instrumentation failure.
+- iOS `RunnerTests.testOptInNativeReadMemoryProfile` creates a synthetic local
+  file in chunks, then calls production `TextDocumentReader` with real Foundation
+  coordination/loading. XCTest logs include OS version, elapsed seconds, bytes
+  and before/after process `ru_maxrss` (bytes on Darwin). The fixture is removed
+  with `defer`. The Debug setting is empty by default; the scheme passes the CI
+  build setting into tests. This is not an external-provider/scope measurement.
+- macOS and Windows run `tools/profile_text_import_test.dart` in fresh Flutter
+  test processes for disk `XFile.readAsBytes` plus strict UTF-8 decode. JSON
+  records OS/Dart runtime, bytes, code units, elapsed microseconds, current RSS
+  and process high-water RSS (memory values in bytes). This is the desktop
+  filesystem reader, not an OS picker. Its decoder expression matches the app;
+  the decode-only stage does not execute the app import handler.
+- `profile_editor=true` additionally runs the actual app import handler,
+  controller assignment and `TextField` layout on the macOS hosted test runner.
+  Only selection is substituted; bytes come from the synthetic disk file. The
+  handler runs in the real async zone rather than via pointer interaction.
+  The harness explicitly selects desktop widget behavior (widget tests otherwise
+  default to Android). Windows editor and mobile Dart/editor profiles are absent.
+
+Editor trials, including any 16 MiB trial, go through
+`tools/watch_import_profile.py`. Dispatch settings expose wall time
+(`profile_seconds=60`), sampled process-group RSS ceiling
+(`profile_rss_mib=4096`) and sample interval (`profile_poll_seconds=0.5`). These
+are experiment safety policies, not app import limits. The watchdog includes
+compiler/Flutter children, kills the process group on budget breach (exit 124),
+and removes its owned temporary directory, including files left by killed tests.
+Its sampled group peak is a safety estimate, not a process high-water metric;
+short peaks can be missed. The CI step's five-minute outer timeout is separate.
+No large editor trial runs on the shared sandbox. Small local smoke command:
+
+```sh
+python3 tools/watch_import_profile.py --seconds 45 --rss-mib 1536 --poll-seconds 0.2 -- \
+  flutter test --no-pub tools/profile_text_import_test.dart \
+  --dart-define=PROFILE_BYTES=8192 --dart-define=PROFILE_STAGE=editor
+```
+
+Local harness validation only: 8,168 bytes / 8,080 code units completed in both
+stages on Linux. Editor smoke passed under the watchdog (command
+`e1869cda18804f6590fd73e1971c7d28`); decode passed in
+`b293e8267ef041a3adc5840164a7a072`. A 768 MiB group budget stopped startup
+before measurement (`dfdf508b3eb542b4a1e53d4ab107f856`), demonstrating that
+the budget includes compilation, not only editor memory. These smoke checks
+are not supported-platform memory evidence.
+
+All stage peaks are process-wide and may include startup, fixture preparation,
+framework work and unrelated allocations. Zero peak delta does not mean zero
+allocation. Do not add/subtract separate stage peaks to infer bridge copies.
+Native stages stop before MethodChannel serialization. Native-to-Dart transfer,
+provider failures under pressure, picker/provider allocations, physical devices
+and release-mode editors remain unmeasured. Keep the memory work item open until
+hosted observations cover the needed path. No size cap, chunked import
+implementation, cache copy or draft persistence is introduced by this harness.
+
 Failure behavior is fail-closed: strict decoding throws `FormatException` on
 malformed input, the UI shows only a generic notice and preserves source,
 language and translation state (covered by existing desktop/mobile widget

@@ -88,6 +88,35 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         return plugin;
     }
 
+    public void testOptInNativeReadMemoryProfile() throws Exception {
+        android.os.Bundle args = ((android.test.InstrumentationTestRunner) getInstrumentation()).getArguments();
+        String configured = args.getString("profileBytes", "");
+        if (configured.isEmpty()) return; // Normal CI does not run a large profile.
+        int requested = Integer.parseInt(configured);
+        assertTrue(requested >= 1024);
+        Uri selected = uri("ok").buildUpon().appendQueryParameter("profileBytes", configured).build();
+        String before = memoryStatus();
+        long start = System.nanoTime();
+        Map<String, Object> result = TextImportPlugin.readDocument(
+                getInstrumentation().getContext().getContentResolver(), selected);
+        byte[] bytes = (byte[]) result.get("bytes");
+        assertTrue(bytes.length > 0 && bytes.length <= requested);
+        android.util.Log.i("KotohaImportProfile", "native-read bytes=" + bytes.length
+                + " nanos=" + (System.nanoTime() - start) + " sdk=" + android.os.Build.VERSION.SDK_INT
+                + " before=" + before + " after=" + memoryStatus());
+    }
+
+    private static String memoryStatus() throws Exception {
+        StringBuilder result = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader("/proc/self/status"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("VmRSS:") || line.startsWith("VmHWM:")) result.append(line).append(';');
+            }
+        }
+        return result.toString();
+    }
+
     public void testProviderReadAndClosureOnSuccessAndFailure() throws Exception {
         // Local provider transport retains the tracking stream subclass; remote binder
         // descriptors cannot expose close counts. No mock reader bypasses ContentResolver.

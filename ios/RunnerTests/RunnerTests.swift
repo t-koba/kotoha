@@ -1,3 +1,4 @@
+import Darwin
 import Flutter
 import UIKit
 import XCTest
@@ -58,6 +59,32 @@ class RunnerTests: XCTestCase {
       XCTAssertTrue(window.rootViewController === content)
       XCTAssertTrue(content.view.isDescendant(of: window))
     }
+  }
+
+  func testOptInNativeReadMemoryProfile() throws {
+    let configured = ProcessInfo.processInfo.environment["KOTOHA_IMPORT_PROFILE_BYTES"] ?? ""
+    guard !configured.isEmpty else { throw XCTSkip("Opt-in memory profile") }
+    let requested = try XCTUnwrap(Int(configured))
+    XCTAssertGreaterThanOrEqual(requested, 1024)
+    let chunk = Data((String(repeating: "a", count: 1000) + "日本語 مرحبا\n").utf8)
+    let length = requested / chunk.count * chunk.count
+    let local = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".txt")
+    defer { try? FileManager.default.removeItem(at: local) }
+    XCTAssertTrue(FileManager.default.createFile(atPath: local.path, contents: nil))
+    let file = try FileHandle(forWritingTo: local)
+    do {
+      for _ in 0..<(length / chunk.count) { try file.write(contentsOf: chunk) }
+      try file.close()
+    } catch { try? file.close(); throw error }
+    var before = rusage()
+    XCTAssertEqual(getrusage(RUSAGE_SELF, &before), 0)
+    let start = ProcessInfo.processInfo.systemUptime
+    let result = try TextDocumentReader().read(local)
+    let bytes = try XCTUnwrap(result["bytes"] as? FlutterStandardTypedData)
+    XCTAssertEqual(bytes.data.count, length)
+    var after = rusage()
+    XCTAssertEqual(getrusage(RUSAGE_SELF, &after), 0)
+    print("KotohaImportProfile native-read bytes=\(length) seconds=\(ProcessInfo.processInfo.systemUptime - start) peakBeforeBytes=\(before.ru_maxrss) peakAfterBytes=\(after.ru_maxrss) os=\(ProcessInfo.processInfo.operatingSystemVersionString)")
   }
 
   func testTextImportReaderScopeAndReadFailures() throws {

@@ -1,1 +1,3 @@
 #include "Generated.xcconfig"
+// Empty by default; opt-in synthetic reader profile is set by xcodebuild in CI.
+KOTOHA_IMPORT_PROFILE_BYTES =
