@@ -65,7 +65,9 @@ class RunnerTests: XCTestCase {
     let configured = ProcessInfo.processInfo.environment["KOTOHA_IMPORT_PROFILE_BYTES"] ?? ""
     guard !configured.isEmpty else { throw XCTSkip("Opt-in memory profile") }
     let requested = try XCTUnwrap(Int(configured))
-    XCTAssertGreaterThanOrEqual(requested, 1024)
+    let validProfileSize = (1024...(16 * 1024 * 1024)).contains(requested)
+    XCTAssertTrue(validProfileSize, "Profile fixture is bounded to 16 MiB")
+    guard validProfileSize else { return }
     let chunk = Data((String(repeating: "a", count: 1000) + "日本語 مرحبا\n").utf8)
     let length = requested / chunk.count * chunk.count
     let local = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".txt")

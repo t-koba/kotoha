@@ -10,11 +10,11 @@ on:
   workflow_dispatch:
     inputs:
       profile_bytes:
-        description: 'Opt-in synthetic import bytes per stage (empty disables profiling)'
+        description: 'Synthetic profile bytes: 65536, 2097152, or 16777216; empty disables'
         default: ''
         type: string
       profile_editor:
-        description: 'Also run macOS debug editor trial under external watchdog'
+        description: 'Also run macOS editor profile (up to 2 MiB) under external watchdog'
         default: false
         type: boolean
       profile_seconds:
@@ -47,6 +47,39 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Validate opt-in profile bounds
+        if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
+        env:
+          PROFILE_BYTES: ${{ inputs.profile_bytes }}
+          PROFILE_EDITOR: ${{ inputs.profile_editor }}
+          PROFILE_SECONDS: ${{ inputs.profile_seconds }}
+          PROFILE_RSS_MIB: ${{ inputs.profile_rss_mib }}
+          PROFILE_POLL_SECONDS: ${{ inputs.profile_poll_seconds }}
+        run: |
+          python3 - <<'PY'
+          import math
+          import os
+          import sys
+
+          size = os.environ['PROFILE_BYTES']
+          if size not in {'65536', '2097152', '16777216'}:
+              sys.exit('profile_bytes must be 65536, 2097152, or 16777216')
+          if os.environ['PROFILE_EDITOR'].lower() != 'true':
+              raise SystemExit(0)
+          if size == '16777216':
+              sys.exit('16 MiB editor profile is disabled; the previous sandbox widget run did not complete and the RSS sampler is not a hard allocation limit')
+          try:
+              seconds, rss_mib, poll_seconds = map(float, (
+                  os.environ['PROFILE_SECONDS'], os.environ['PROFILE_RSS_MIB'],
+                  os.environ['PROFILE_POLL_SECONDS']))
+          except ValueError:
+              sys.exit('editor watchdog inputs must be finite positive numbers')
+          if (not all(map(math.isfinite, (seconds, rss_mib, poll_seconds)))
+                  or not 0 < seconds <= 120
+                  or not 0 < rss_mib <= 4096
+                  or not 0.05 <= poll_seconds <= 0.5):
+              sys.exit('editor watchdog bounds: seconds <= 120, RSS <= 4096 MiB, poll 0.05–0.5 seconds')
+          PY
       - name: Validate design contracts
         run: python3 design/specs/validate_specs.py
 
@@ -154,7 +187,7 @@ jobs:
           # Capture native profile output even when Gradle or instrumentation fails.
           if [[ -n "$PROFILE_BYTES" ]]; then
             adb logcat -c
-            trap 'adb logcat -d -s KotohaImportProfile:I; cleanup' EXIT
+            trap 'adb logcat -d -s KotohaImportProfile:I || true; cleanup' EXIT
           fi
           cd android
           timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \

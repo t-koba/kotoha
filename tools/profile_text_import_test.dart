@@ -25,9 +25,16 @@ void main() {
   const requested = int.fromEnvironment('PROFILE_BYTES');
   const stage = String.fromEnvironment('PROFILE_STAGE', defaultValue: 'decode');
   final chunk = utf8.encode('${'a' * 1000}日本語 مرحبا\n');
-  if (requested < chunk.length || !['decode', 'editor'].contains(stage)) {
+  const maximumProfileBytes = 16 * 1024 * 1024;
+  const maximumEditorBytes = 2 * 1024 * 1024;
+  final maximumBytes = stage == 'editor'
+      ? maximumEditorBytes
+      : maximumProfileBytes;
+  if (requested < chunk.length ||
+      requested > maximumBytes ||
+      !['decode', 'editor'].contains(stage)) {
     throw ArgumentError(
-      'Set PROFILE_BYTES >= ${chunk.length}; stage decode/editor',
+      'Set PROFILE_BYTES between ${chunk.length} and $maximumBytes for stage $stage',
     );
   }
   final length = requested ~/ chunk.length * chunk.length;
@@ -41,10 +48,15 @@ void main() {
       // Fixture creation is outside the measured stage, in bounded chunks.
       await tester.runAsync(() async {
         final output = fixture.openWrite();
+        var buffered = 0;
         try {
           for (var n = 0; n < length; n += chunk.length) {
             output.add(chunk);
-            await output.flush();
+            buffered += chunk.length;
+            if (buffered >= 1024 * 1024) {
+              await output.flush();
+              buffered = 0;
+            }
           }
         } finally {
           await output.close();

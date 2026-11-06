@@ -94,6 +94,7 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         if (configured.isEmpty()) return; // Normal CI does not run a large profile.
         int requested = Integer.parseInt(configured);
         assertTrue(requested >= 1024);
+        assertTrue("Profile fixture is bounded to 16 MiB", requested <= 16 * 1024 * 1024);
         Uri selected = uri("ok").buildUpon().appendQueryParameter("profileBytes", configured).build();
         String before = memoryStatus();
         long start = System.nanoTime();

@@ -272,10 +272,15 @@ limit; native target measurements are still required.
 ### Opt-in hosted stage harness
 
 Manual `CI` dispatch accepts `profile_bytes` (empty by default: no profile).
-Start with `65536`; each stage rounds down to complete 1,021-byte synthetic
-lines (1,000 ASCII letters, Japanese/Arabic text, newline), and reports actual
-bytes. Dispatch a fresh run for each size so peaks do not carry across sizes.
-These are debug test profiles, not release/device benchmarks.
+Only `65536`, `2097152`, and `16777216` are accepted; each stage rounds down to
+complete 1,021-byte synthetic lines (1,000 ASCII letters, Japanese/Arabic text,
+newline), and reports actual bytes. The 16 MiB ceiling is a profiling-fixture
+bound, not an application import limit. The optional editor trial rejects 16
+MiB because the earlier sandbox widget run did not complete and the sampled RSS
+watchdog is not a hard allocation limit; start with 64 KiB and review its
+headroom before opting into 2 MiB. Dispatch a fresh run for each size so peaks
+do not carry across sizes. These are debug test profiles, not release/device
+benchmarks.
 
 - Android `TextImportTest.testOptInNativeReadMemoryProfile` calls production
   `readDocument` through `ContentResolver` and a pipe-backed test-APK provider.
@@ -302,11 +307,12 @@ These are debug test profiles, not release/device benchmarks.
   The harness explicitly selects desktop widget behavior (widget tests otherwise
   default to Android). Windows editor and mobile Dart/editor profiles are absent.
 
-Editor trials, including any 16 MiB trial, go through
-`tools/watch_import_profile.py`. Dispatch settings expose wall time
-(`profile_seconds=60`), sampled process-group RSS ceiling
-(`profile_rss_mib=4096`) and sample interval (`profile_poll_seconds=0.5`). These
-are experiment safety policies, not app import limits. The watchdog includes
+Editor trials go through `tools/watch_import_profile.py` and accept only
+profile sizes up to 2 MiB. Dispatch settings expose wall time
+(`profile_seconds=60`, maximum 120), sampled process-group RSS ceiling
+(`profile_rss_mib=4096`, maximum 4096 MiB) and sample interval
+(`profile_poll_seconds=0.5`, constrained to 0.05–0.5). These are experiment
+safety policies, not app import limits. The watchdog includes
 compiler/Flutter children, kills the process group on budget breach (exit 124),
 and removes its owned temporary directory, including files left by killed tests.
 Its sampled group peak is a safety estimate, not a process high-water metric;
