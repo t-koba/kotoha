@@ -45,20 +45,26 @@ class TextWorkspacePage extends StatefulWidget {
 class _TextWorkspacePageState extends State<TextWorkspacePage> {
   final TextEditingController _sourceLanguage = TextEditingController();
   final TextEditingController _sourceText = TextEditingController();
+  final FocusNode _addTranslationFocusNode = FocusNode();
   final List<_TranslationFields> _translations = [_TranslationFields()];
 
   @override
   void dispose() {
     _sourceLanguage.dispose();
     _sourceText.dispose();
+    _addTranslationFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
     }
     super.dispose();
   }
 
-  void _addTranslation() =>
-      setState(() => _translations.add(_TranslationFields()));
+  void _addTranslation() {
+    setState(() => _translations.add(_TranslationFields()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _addTranslationFocusNode.requestFocus();
+    });
+  }
 
   Future<void> _copyTranslation(int index) async {
     final text = _translations[index].text.text;
@@ -179,6 +185,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: OutlinedButton.icon(
+                    focusNode: _addTranslationFocusNode,
                     onPressed: _addTranslation,
                     icon: const Icon(Icons.add),
                     label: Text(strings.addTranslation),

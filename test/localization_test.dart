@@ -1,4 +1,7 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
 
@@ -135,6 +138,160 @@ void main() {
       }
     },
   );
+
+  testWidgets('supports localized keyboard traversal and actions', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+
+      for (final (
+            locale,
+            sourceLanguage,
+            sourceText,
+            targetLanguage,
+            translation,
+            interfaceLanguage,
+            licenses,
+            copyOne,
+            copyTwo,
+            removeOne,
+            removeTwo,
+            addTranslation,
+          )
+          in [
+            (
+              const Locale('ja'),
+              '原文の言語',
+              '原文',
+              '訳先の言語',
+              '手入力した訳文',
+              '表示言語',
+              'ライセンス',
+              '1件目の訳文をコピー',
+              '2件目の訳文をコピー',
+              '1件目の訳先を削除',
+              '2件目の訳先を削除',
+              '訳先を追加',
+            ),
+            (
+              const Locale('en'),
+              'Source language',
+              'Source text',
+              'Target language',
+              'Manual translation',
+              'Interface language',
+              'Licenses',
+              'Copy translation 1',
+              'Copy translation 2',
+              'Remove translation 1',
+              'Remove translation 2',
+              'Add translation',
+            ),
+          ]) {
+        tester.binding.platformDispatcher.localesTestValue = [locale];
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(const KotohaApp());
+        await tester.pumpAndSettle();
+
+        Future<void> pressTab() async {
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.pump();
+        }
+
+        Future<void> pressShiftTab() async {
+          await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+          await tester.pump();
+        }
+
+        void expectFocused(Finder finder, String label) {
+          expect(
+            tester
+                .getSemantics(finder)
+                .getSemanticsData()
+                .flagsCollection
+                .isFocused,
+            Tristate.isTrue,
+            reason: 'Keyboard focus should be on $label.',
+          );
+        }
+
+        final firstCardOrder = [
+          find.byTooltip(interfaceLanguage),
+          find.byTooltip(licenses),
+          find.bySemanticsLabel(sourceLanguage),
+          find.bySemanticsLabel(sourceText),
+          find.bySemanticsLabel(targetLanguage),
+          find.byTooltip(copyOne),
+          find.bySemanticsLabel(translation),
+          find.bySemanticsLabel(addTranslation),
+        ];
+        for (var index = 0; index < firstCardOrder.length; index++) {
+          await pressTab();
+          expectFocused(firstCardOrder[index], 'initial control $index');
+        }
+
+        // The add action is operable from the keyboard, not only discoverable.
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expectFocused(
+          find.bySemanticsLabel(addTranslation),
+          'add translation after adding a card',
+        );
+        expect(find.byTooltip(copyTwo), findsOneWidget);
+        expect(find.byTooltip(removeOne), findsOneWidget);
+        expect(find.byTooltip(removeTwo), findsOneWidget);
+
+        // Start again at the first control and verify forward/reverse order for
+        // both translation cards, including their individually named actions.
+        final twoCardOrder = [
+          find.byTooltip(interfaceLanguage),
+          find.byTooltip(licenses),
+          find.bySemanticsLabel(sourceLanguage),
+          find.bySemanticsLabel(sourceText),
+          find.bySemanticsLabel(targetLanguage).at(0),
+          find.byTooltip(copyOne),
+          find.byTooltip(removeOne),
+          find.bySemanticsLabel(translation).at(0),
+          find.bySemanticsLabel(targetLanguage).at(1),
+          find.byTooltip(copyTwo),
+          find.byTooltip(removeTwo),
+          find.bySemanticsLabel(translation).at(1),
+          find.bySemanticsLabel(addTranslation),
+        ];
+        await pressTab();
+        expectFocused(twoCardOrder.first, 'first control after adding a card');
+        for (var index = 1; index < twoCardOrder.length; index++) {
+          await pressTab();
+          expectFocused(twoCardOrder[index], 'two-card control $index');
+        }
+        await pressShiftTab();
+        expectFocused(
+          find.bySemanticsLabel(translation).at(1),
+          'second translation',
+        );
+        await pressShiftTab();
+        expectFocused(find.byTooltip(removeTwo), 'remove second translation');
+
+        // The remove action is also keyboard-operable.
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.byTooltip(copyOne), findsOneWidget);
+        expect(find.byTooltip(copyTwo), findsNothing);
+        expect(find.byTooltip(removeOne), findsNothing);
+        expect(find.byTooltip(removeTwo), findsNothing);
+      }
+    } finally {
+      semantics.dispose();
+    }
+  });
 
   testWidgets('session language switches preserve all manual fields', (
     tester,
