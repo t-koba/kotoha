@@ -259,6 +259,16 @@ excluded (commands `73fa355f39614b37874f57bccb53d084` and
 `43f3c85869f3474b81b0a5c870702801`). They show the full widget path can greatly
 exceed the decode-only measurement, but are not a basis for a shipping limit.
 
+A matched controller-assignment control used the same widget-test harness,
+text payloads, and `TextField`, but bypassed `FileSelectorPlatform` and directly
+decoded then assigned the same source text. `VmHWM` rose by 74,148 kB for the
+65,065-byte import versus 68,216 kB for direct assignment, and by 288,064 kB
+for the 261,261-byte import versus 282,100 kB for direct assignment (command
+`21ca1a919b2e486787914cc0d76275ca`). The similar peaks suggest the Linux debug
+widget/editor path, not picker/reader overhead, dominates these small local
+profiles. This does not predict release or mobile behavior, nor justify a size
+limit; native target measurements are still required.
+
 Failure behavior is fail-closed: strict decoding throws `FormatException` on
 malformed input, the UI shows only a generic notice and preserves source,
 language and translation state (covered by existing desktop/mobile widget
