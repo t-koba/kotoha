@@ -61,17 +61,18 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   private func reveal(_ id: String) -> XCUIElement {
     let element = field(id)
+    let scrollView = app.scrollViews.firstMatch
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
       if element.exists && element.isHittable { return element }
-      // Ordinary UI scrolling, not a VoiceOver gesture. Drag in the content viewport,
-      // above the software keyboard if present.
-      let bottom = app.keyboards.firstMatch.exists
-        ? app.keyboards.firstMatch.frame.minY : app.frame.maxY
-      let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
-        .withOffset(CGVector(dx: 0, dy: bottom - app.frame.minY - 20))
-      let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
-      start.press(forDuration: 0.15, thenDragTo: end)
+      // Scroll the actual Flutter ListView with an ordinary UI gesture. Coordinates
+      // derived from the app frame landed at the left edge on the simulator when the
+      // keyboard was open, so they did not scroll the content.
+      if scrollView.exists && scrollView.isHittable {
+        scrollView.swipeUp()
+      } else {
+        app.swipeUp()
+      }
     }
     XCTFail("Native editable field unavailable after scrolling: \(id)")
     return element
