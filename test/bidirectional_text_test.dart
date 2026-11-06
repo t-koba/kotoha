@@ -9,6 +9,8 @@ void main() {
     const cases = <String, TextDirection>{
       '😀 العربية': TextDirection.rtl, // Supplementary ON, then AL.
       '\u200fEnglish': TextDirection.rtl, // RLM is R, not neutral.
+      '\u{10ECB}English':
+          TextDirection.rtl, // UCD17 @missing: Arabic Extended-C is AL.
       '\u061cEnglish': TextDirection.rtl, // ALM is AL.
       '\u200eالعربية': TextDirection.ltr, // LRM is L.
       '\u{1E900} English': TextDirection.rtl, // Supplementary R (Adlam).

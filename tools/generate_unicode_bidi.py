@@ -5,9 +5,9 @@ import hashlib
 from pathlib import Path
 import re
 
-SOURCE_URI = 'https://unicode.org/Public/18.0.0/ucd/extracted/DerivedBidiClass.txt'
-SOURCE_SHA256 = 'd9e23222522551348ea1ccfbb4f62efbf98982afb95840f8959c08ed992c5607'
-DATA_SHA256 = '69712a92c89809280008948c79da6da675a980a490eee024a379aeb6f5fb5034'
+SOURCE_URI = 'https://unicode.org/Public/17.0.0/ucd/extracted/DerivedBidiClass.txt'
+SOURCE_SHA256 = '4867b4b7f0731ed1bfcd34cc6251211ff1542541fce0734b6fbda139ee80b3a4'
+DATA_SHA256 = '77c6391f0a107c5ec774c4b62e9a4bfb80f3bbf284244f62d01a2b08c8044a8c'
 OUTPUT = Path(__file__).resolve().parents[1] / 'lib/unicode_bidi_data.dart'
 # Unicode scalar/code point space is a format limit, not a runtime policy.
 CODE_POINTS = 0x110000
@@ -59,12 +59,12 @@ def render(ranges):
     normalized = ''.join(f'{a:06X} {b:06X} {c}\n' for a, b, c in ranges)
     if hashlib.sha256(normalized.encode('ascii')).hexdigest() != DATA_SHA256:
         raise ValueError('Projected range-data SHA-256 mismatch')
-    header = f'''// Generated from Unicode 18.0.0 DerivedBidiClass.txt; do not edit by hand.
+    header = f'''// Generated from Unicode 17.0.0 DerivedBidiClass.txt; do not edit by hand.
 // Source: {SOURCE_URI}
 // Source SHA-256: {SOURCE_SHA256}
 // Projected range-data SHA-256: {DATA_SHA256}
 // Projection: default L; 1=R/AL, 2=B, 3=isolate initiator, 4=PDI, 5=other.
-// Copyright © 1991-2026 Unicode, Inc.; Unicode License v3 (Unicode-3.0).
+// Copyright © 1991-2025 Unicode, Inc.; Unicode License v3 (Unicode-3.0).
 // Full required notice is delivered in the app license page and design audit.
 
 // dart format off
@@ -76,7 +76,7 @@ const List<int> unicodeBidiClassRanges = <int>[
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('source', type=Path, help='local DerivedBidiClass-18.0.0.txt')
+    parser.add_argument('source', type=Path, help='local DerivedBidiClass-17.0.0.txt')
     parser.add_argument('--write', action='store_true', help='replace checked-in Dart data')
     args = parser.parse_args()
     source = args.source.read_bytes()
@@ -87,7 +87,7 @@ def main():
         OUTPUT.write_bytes(expected)
     elif OUTPUT.read_bytes() != expected:
         parser.error('Checked-in Dart data differs; regenerate with --write')
-    print(f'Unicode 18.0.0 bidi data verified: {DATA_SHA256}')
+    print(f'Unicode 17.0.0 bidi data verified: {DATA_SHA256}')
 
 
 if __name__ == '__main__':
