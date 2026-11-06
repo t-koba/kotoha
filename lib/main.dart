@@ -1,11 +1,13 @@
 import 'dart:convert';
 
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
+import 'text_document_exporter.dart';
 import 'text_document_picker.dart';
 
 void main() {
@@ -18,7 +20,9 @@ void main() {
 }
 
 class KotohaApp extends StatefulWidget {
-  const KotohaApp({super.key});
+  const KotohaApp({super.key, this.exportText = exportTextDocument});
+
+  final Future<void> Function(String path, String text) exportText;
 
   @override
   State<KotohaApp> createState() => _KotohaAppState();
@@ -40,6 +44,7 @@ class _KotohaAppState extends State<KotohaApp> {
     themeMode: ThemeMode.system,
     home: TextWorkspacePage(
       onLocaleChanged: (locale) => setState(() => _locale = locale),
+      exportText: widget.exportText,
     ),
   );
 }
@@ -53,9 +58,14 @@ ThemeData _themeFor(Brightness brightness) => ThemeData(
 );
 
 class TextWorkspacePage extends StatefulWidget {
-  const TextWorkspacePage({super.key, required this.onLocaleChanged});
+  const TextWorkspacePage({
+    super.key,
+    required this.onLocaleChanged,
+    this.exportText = exportTextDocument,
+  });
 
   final ValueChanged<Locale> onLocaleChanged;
+  final Future<void> Function(String path, String text) exportText;
 
   @override
   State<TextWorkspacePage> createState() => _TextWorkspacePageState();
@@ -185,6 +195,43 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     );
   }
 
+  Future<void> _exportTranslation(int index) async {
+    final strings = AppLocalizations.of(context)!;
+    final text = _translations[index].text.text;
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.emptyTranslationExportNotice)),
+      );
+      return;
+    }
+
+    try {
+      final location = await FileSelectorPlatform.instance.getSaveLocation(
+        acceptedTypeGroups: const [
+          XTypeGroup(
+            extensions: ['txt'],
+            uniformTypeIdentifiers: ['public.utf8-plain-text'],
+          ),
+        ],
+        options: SaveDialogOptions(
+          suggestedName: 'translation.txt',
+          confirmButtonText: strings.exportFileButton,
+        ),
+      );
+      if (!mounted || location == null) return;
+      await widget.exportText(location.path, text);
+    } on Exception {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(strings.exportFailureNotice)));
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(strings.exportedTranslationNotice)));
+  }
+
   void _removeTranslation(int index) {
     if (_translations.length == 1) return;
     setState(() {
@@ -311,6 +358,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                 ),
                 const SizedBox(height: 8),
                 Text(strings.clipboardNotice),
+                if (!kIsWeb &&
+                    (defaultTargetPlatform == TargetPlatform.macOS ||
+                        defaultTargetPlatform == TargetPlatform.windows)) ...[
+                  const SizedBox(height: 8),
+                  Text(strings.exportTranslationNotice),
+                ],
                 const SizedBox(height: 12),
                 for (var index = 0; index < _translations.length; index++)
                   _translationCard(index),
@@ -357,6 +410,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                   onPressed: () => _copyTranslation(index),
                   icon: const Icon(Icons.content_copy),
                 ),
+                if (!kIsWeb &&
+                    (defaultTargetPlatform == TargetPlatform.macOS ||
+                        defaultTargetPlatform == TargetPlatform.windows))
+                  IconButton(
+                    key: ValueKey('export-translation-$index'),
+                    tooltip: strings.exportTranslationNumber(index + 1),
+                    onPressed: () => _exportTranslation(index),
+                    icon: const Icon(Icons.file_download_outlined),
+                  ),
                 if (_translations.length > 1)
                   IconButton(
                     key: ValueKey('remove-translation-$index'),

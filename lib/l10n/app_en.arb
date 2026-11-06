@@ -12,12 +12,22 @@
   "sourceText": "Source text",
   "translations": "Translations",
   "clipboardNotice": "Copied translations are sent to the OS clipboard and may be accessed, retained, or shared by the OS or clipboard features.",
+  "exportTranslationNotice": "Export writes only the selected translation to a file you choose; the workspace and other drafts remain temporary.",
   "addTranslation": "Add translation",
   "targetLanguage": "Target language",
   "targetLanguageHint": "e.g. en",
   "copyTranslationNumber": "Copy translation {number}",
   "@copyTranslationNumber": {
     "description": "Label for copying the numbered translation.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "exportTranslationNumber": "Export translation {number}",
+  "@exportTranslationNumber": {
+    "description": "Label for exporting the numbered translation.",
     "placeholders": {
       "number": {
         "type": "int"
@@ -37,6 +47,10 @@
   "emptyTranslationNotice": "Enter a translation to copy.",
   "clipboardFailureNotice": "Could not copy to the clipboard.",
   "copiedTranslationNotice": "Translation copied.",
+  "emptyTranslationExportNotice": "Enter a translation to export.",
+  "exportFailureNotice": "Could not export the translation.",
+  "exportedTranslationNotice": "Translation exported.",
+  "exportFileButton": "Export",
   "licenses": "Licenses",
   "uiLanguage": "Interface language",
   "japanese": "日本語",

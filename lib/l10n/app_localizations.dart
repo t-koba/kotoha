@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。'**
   String get clipboardNotice;
 
+  /// No description provided for @exportTranslationNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出しでは、選択した訳文だけを選んだファイルに保存します。作業内容全体や他の下書きは保存されません。'**
+  String get exportTranslationNotice;
+
   /// No description provided for @addTranslation.
   ///
   /// In ja, this message translates to:
@@ -193,6 +199,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'{number}件目の訳文をコピー'**
   String copyTranslationNumber(int number);
+
+  /// 番号付き訳文の書き出し操作ラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'{number}件目の訳文を書き出す'**
+  String exportTranslationNumber(int number);
 
   /// 番号付き訳先の削除操作ラベル。
   ///
@@ -223,6 +235,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'訳文をコピーしました'**
   String get copiedTranslationNotice;
+
+  /// No description provided for @emptyTranslationExportNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出す訳文を入力してください'**
+  String get emptyTranslationExportNotice;
+
+  /// No description provided for @exportFailureNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'訳文を書き出せませんでした'**
+  String get exportFailureNotice;
+
+  /// No description provided for @exportedTranslationNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'訳文を書き出しました'**
+  String get exportedTranslationNotice;
+
+  /// No description provided for @exportFileButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出す'**
+  String get exportFileButton;
 
   /// No description provided for @licenses.
   ///

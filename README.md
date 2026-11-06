@@ -10,6 +10,9 @@ an explicit system picker on macOS/Windows and the Android/iOS adapters.
 Import replaces only source text after consent; translations remain manual and
 all drafts stay in memory. Kotoha does not stage a cache copy, persist document
 grants, or add a network client, but the OS/provider may download or stage a file.
+On macOS and Windows, each translation can also be explicitly exported as UTF-8
+text to a user-selected `.txt` file; this writes only that translation, not the
+workspace or other drafts.
 Hosted Android Emulator and iOS Simulator CI now validates the native builds and
 configured import adapter tests, including picker-cancellation/error preservation.
 It does not establish reads from live file providers or behavior on physical devices

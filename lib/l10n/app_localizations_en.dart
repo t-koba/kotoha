@@ -52,6 +52,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Copied translations are sent to the OS clipboard and may be accessed, retained, or shared by the OS or clipboard features.';
 
   @override
+  String get exportTranslationNotice =>
+      'Export writes only the selected translation to a file you choose; the workspace and other drafts remain temporary.';
+
+  @override
   String get addTranslation => 'Add translation';
 
   @override
@@ -63,6 +67,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String copyTranslationNumber(int number) {
     return 'Copy translation $number';
+  }
+
+  @override
+  String exportTranslationNumber(int number) {
+    return 'Export translation $number';
   }
 
   @override
@@ -81,6 +90,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copiedTranslationNotice => 'Translation copied.';
+
+  @override
+  String get emptyTranslationExportNotice => 'Enter a translation to export.';
+
+  @override
+  String get exportFailureNotice => 'Could not export the translation.';
+
+  @override
+  String get exportedTranslationNotice => 'Translation exported.';
+
+  @override
+  String get exportFileButton => 'Export';
 
   @override
   String get licenses => 'Licenses';

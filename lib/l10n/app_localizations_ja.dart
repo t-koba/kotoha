@@ -49,6 +49,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。';
 
   @override
+  String get exportTranslationNotice =>
+      '書き出しでは、選択した訳文だけを選んだファイルに保存します。作業内容全体や他の下書きは保存されません。';
+
+  @override
   String get addTranslation => '訳先を追加';
 
   @override
@@ -60,6 +64,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String copyTranslationNumber(int number) {
     return '$number件目の訳文をコピー';
+  }
+
+  @override
+  String exportTranslationNumber(int number) {
+    return '$number件目の訳文を書き出す';
   }
 
   @override
@@ -78,6 +87,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get copiedTranslationNotice => '訳文をコピーしました';
+
+  @override
+  String get emptyTranslationExportNotice => '書き出す訳文を入力してください';
+
+  @override
+  String get exportFailureNotice => '訳文を書き出せませんでした';
+
+  @override
+  String get exportedTranslationNotice => '訳文を書き出しました';
+
+  @override
+  String get exportFileButton => '書き出す';
 
   @override
   String get licenses => 'ライセンス';

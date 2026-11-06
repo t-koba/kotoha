@@ -106,9 +106,10 @@ published packages.
 - macOS `NSOpenPanel` returns selected URL paths; the plugin does not copy the
   selected file. The `cross_file` IO `XFile.readAsBytes` implementation reads
   the selected path via `dart:io File.readAsBytes`; it does not call `saveTo`
-  or write a cache file. The app sandbox receives only
-  `com.apple.security.files.user-selected.read-only` in DebugProfile and
-  Release entitlements.
+  or write a cache file. DebugProfile and Release declare
+  `com.apple.security.files.user-selected.read-write` for the separate explicit
+  translation-export save panel; import still reads the selected input only, and
+  export writes only to the user-selected target.
 - Windows uses the OS `IFileOpenDialog`/COM shell API and returns the selected
   filesystem path. The plugin CMake lists no bundled third-party libraries;
   the app reads the path into memory using the same IO `XFile` implementation.

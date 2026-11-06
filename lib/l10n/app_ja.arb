@@ -12,12 +12,22 @@
   "sourceText": "原文",
   "translations": "訳文",
   "clipboardNotice": "コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。",
+  "exportTranslationNotice": "書き出しでは、選択した訳文だけを選んだファイルに保存します。作業内容全体や他の下書きは保存されません。",
   "addTranslation": "訳先を追加",
   "targetLanguage": "訳先の言語",
   "targetLanguageHint": "例: en",
   "copyTranslationNumber": "{number}件目の訳文をコピー",
   "@copyTranslationNumber": {
     "description": "番号付き訳文のコピー操作ラベル。",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "exportTranslationNumber": "{number}件目の訳文を書き出す",
+  "@exportTranslationNumber": {
+    "description": "番号付き訳文の書き出し操作ラベル。",
     "placeholders": {
       "number": {
         "type": "int"
@@ -37,6 +47,10 @@
   "emptyTranslationNotice": "コピーする訳文を入力してください",
   "clipboardFailureNotice": "クリップボードにコピーできませんでした",
   "copiedTranslationNotice": "訳文をコピーしました",
+  "emptyTranslationExportNotice": "書き出す訳文を入力してください",
+  "exportFailureNotice": "訳文を書き出せませんでした",
+  "exportedTranslationNotice": "訳文を書き出しました",
+  "exportFileButton": "書き出す",
   "licenses": "ライセンス",
   "uiLanguage": "表示言語",
   "japanese": "日本語",
