@@ -10,8 +10,11 @@ an explicit system picker on macOS/Windows and the Android/iOS adapters.
 Import replaces only source text after consent; translations remain manual and
 all drafts stay in memory. Kotoha does not stage a cache copy, persist document
 grants, or add a network client, but the OS/provider may download or stage a file.
-Mobile native compilation and picker execution still need hosted validation;
-see `design/text_import_audit.md` for the data flow and evidence boundaries.
+Hosted Android Emulator and iOS Simulator CI now validates the native builds and
+configured import adapter tests, including picker-cancellation/error preservation.
+It does not establish reads from live file providers or behavior on physical devices
+and OEM launchers; see `design/text_import_audit.md` for the data flow and evidence
+boundaries.
 
 This development build does not save drafts. Saved content must use encrypted
 storage and a validated key lifecycle, recovery, and encrypted backup/restore path.
