@@ -166,7 +166,8 @@ The adapters read provider bytes away from the UI thread and deliver a single te
 on the platform thread. One pending picker/read per engine is sufficient; reject
 a concurrent request rather than overwriting its completion. Release pending
 callbacks and picker delegates on completion, cancellation, read failure and
-engine/activity detach. A late result after detach must not reach a new request.
+engine/activity detach. A late result after detach must not reach a new request;
+retain only its in-memory request-code tombstone until that result is consumed.
 Activity/process recreation does not restore a draft or import: fail or discard
 the interrupted request, never persist a callback, URI, bytes or text for recovery.
 No retry loop, timer, history, background import service or persistence layer is

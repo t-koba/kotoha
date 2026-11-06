@@ -6,13 +6,16 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.test.ActivityInstrumentationTestCase2;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.StandardMethodCodec;
+import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Synthetic provider/results on Emulator, not live system DocumentsUI coverage. */
@@ -31,6 +34,18 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         public void error(String code, String message, Object details) { error = code; complete(); }
         public void notImplemented() { error = "notImplemented"; complete(); }
         void complete() { completions.incrementAndGet(); done.countDown(); }
+    }
+    private static final class CapturingActivity extends Activity {
+        int requestCode = -1;
+        @Override public void startActivityForResult(Intent intent, int requestCode) {
+            this.requestCode = requestCode;
+        }
+    }
+    private static ActivityPluginBinding binding(Activity activity) {
+        return (ActivityPluginBinding) Proxy.newProxyInstance(
+                ActivityPluginBinding.class.getClassLoader(),
+                new Class<?>[] {ActivityPluginBinding.class},
+                (proxy, method, args) -> "getActivity".equals(method.getName()) ? activity : null);
     }
     private void await(Reply reply) throws Exception {
         // Reuse the configured native-test wait budget, not an import runtime deadline.
@@ -116,32 +131,85 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         }
     }
 
-    public void testBusyDetachAndLateResultCannotCompleteAgain() throws Throwable {
-        TextImportPlugin plugin = plugin();
-        // Hold the synthetic activity result until after detach.
-        Instrumentation.ActivityMonitor held = monitor(Activity.RESULT_CANCELED, null);
-        Reply pending = new Reply();
+    public void testRequestCodesRecycleAfterCompletedCycles() {
+        ActivityRequestCodePool codes = new ActivityRequestCodePool(0xffff);
+        int first = -1;
+        for (int index = 0; index <= 0x10000; index++) {
+            Integer code = codes.acquire();
+            assertNotNull("Request code available at cycle " + index, code);
+            if (index == 0) {
+                first = code;
+                assertEquals(0xffff, first);
+            } else if (index == 0x10000) {
+                assertEquals("Completed request codes are reusable after wrap", first, code.intValue());
+            }
+            codes.release(code);
+        }
+    }
+
+    public void testAbandonedCodesRemainReservedUntilTheirLateResult() {
+        ActivityRequestCodePool codes = new ActivityRequestCodePool(0xffff);
+        Integer abandoned = codes.acquire();
+        assertNotNull(abandoned);
+        codes.abandon(abandoned);
+
+        for (int index = 0; index < 0x10000; index++) {
+            Integer code = codes.acquire();
+            assertNotNull("Other completed requests remain available", code);
+            assertTrue("Outstanding late result keeps its code reserved", code.intValue() != abandoned);
+            codes.release(code);
+        }
+        assertTrue("Matching late result clears the tombstone", codes.consumeAbandoned(abandoned));
+
+        boolean reused = false;
+        for (int index = 0; index < 0x10000; index++) {
+            Integer code = codes.acquire();
+            assertNotNull(code);
+            if (code.intValue() == abandoned) reused = true;
+            codes.release(code);
+        }
+        assertTrue("Consumed tombstone returns its code to the pool", reused);
+    }
+
+    public void testBusyDetachAndLateResultCannotCompleteNewRequest() throws Throwable {
+        TextImportPlugin detachedPlugin = new TextImportPlugin();
+        CapturingActivity detachedActivity = new CapturingActivity();
+        runTestOnUiThread(() -> detachedPlugin.onAttachedToActivity(binding(detachedActivity)));
+        Reply detached = new Reply();
         Reply busy = new Reply();
-        try {
-            runTestOnUiThread(() -> {
-                plugin.onMethodCall(new MethodCall("open", null), pending);
-                plugin.onMethodCall(new MethodCall("open", null), busy);
-                engine().getPlugins().remove(TextImportPlugin.class);
-            });
-            await(pending); await(busy);
-            assertEquals("detached", pending.error);
-            assertEquals("busy", busy.error);
-            getInstrumentation().waitForIdleSync();
-            assertEquals(1, pending.completions.get());
-            Reply detached = new Reply();
-            open(plugin, detached); await(detached);
-            assertEquals("detached", detached.error);
-            runTestOnUiThread(() -> engine().getPlugins().add(new TextImportPlugin()));
-            Reply fresh = new Reply();
-            open(plugin(), fresh); await(fresh);
-            assertNull(fresh.error);
-            assertNull(fresh.value);
-            assertEquals(1, pending.completions.get());
-        } finally { getInstrumentation().removeMonitor(held); }
+        open(detachedPlugin, detached);
+        open(detachedPlugin, busy);
+        int retiredCode = detachedActivity.requestCode;
+        assertTrue("Picker request code captured", retiredCode >= 0);
+
+        runTestOnUiThread(detachedPlugin::onDetachedFromActivity);
+        await(detached);
+        await(busy);
+        assertEquals("detached", detached.error);
+        assertEquals("busy", busy.error);
+
+        TextImportPlugin freshPlugin = new TextImportPlugin();
+        CapturingActivity freshActivity = new CapturingActivity();
+        runTestOnUiThread(() -> freshPlugin.onAttachedToActivity(binding(freshActivity)));
+        Reply fresh = new Reply();
+        open(freshPlugin, fresh);
+        int freshCode = freshActivity.requestCode;
+        assertTrue("New request gets a different code while the old result is outstanding",
+                freshCode >= 0 && freshCode != retiredCode);
+
+        AtomicBoolean lateHandled = new AtomicBoolean();
+        runTestOnUiThread(() -> lateHandled.set(freshPlugin.onActivityResult(
+                retiredCode, Activity.RESULT_CANCELED, null)));
+        assertTrue("Late abandoned result is consumed", lateHandled.get());
+        assertEquals("Late result does not finish the new request", 1L, fresh.done.getCount());
+
+        AtomicBoolean currentHandled = new AtomicBoolean();
+        runTestOnUiThread(() -> currentHandled.set(freshPlugin.onActivityResult(
+                freshCode, Activity.RESULT_CANCELED, null)));
+        assertTrue(currentHandled.get());
+        await(fresh);
+        assertNull(fresh.error);
+        assertNull(fresh.value);
+        runTestOnUiThread(freshPlugin::onDetachedFromActivity);
     }
 }
