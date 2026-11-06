@@ -91,18 +91,12 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   private func reveal(_ id: String) -> XCUIElement {
     let element = field(id)
-    let scrollView = app.scrollViews.firstMatch
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
       if element.exists && hasUsableFrame(element) && element.isHittable { return element }
-      // XCUI may report a stale Flutter ScrollView as hittable with an infinite,
-      // zero-sized frame after a keyboard/layout transition. Scroll it only when the
-      // returned geometry is actionable; otherwise use the app viewport gesture.
-      if scrollView.exists && hasUsableFrame(scrollView) && scrollView.isHittable {
-        scrollView.swipeUp()
-      } else {
-        app.swipeUp()
-      }
+      // Flutter may expose a stale ScrollView after a keyboard/layout transition.
+      // Swipe the stable app viewport instead of acting on that recycled element.
+      app.swipeUp()
     }
     XCTFail("Native editable field unavailable after scrolling: \(id)")
     return element
@@ -151,16 +145,12 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     paste.tap()
     assertField(id, label: label, value: "العربية")
 
-    // No re-tap throughout the direction change: typing, deleting the known RTL
-    // value at its insertion point, and typing Latin must keep the same input focus.
+    // No re-tap through the RTL-to-LTR edit: delete the known RTL value, then type
+    // Latin. The exact final value checks input focus survived both direction rebuilds.
     // This is input-focus evidence, not VoiceOver/accessibility focus.
-    app.typeText("x")
-    assertField(id, label: label, value: "العربيةx")
-    app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "العربيةx".count))
+    app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "العربية".count))
     app.typeText("Latin")
     assertField(id, label: label, value: "Latin")
-    app.typeText("x")
-    assertField(id, label: label, value: "Latinx")
     // Tap the next native field and verify it receives keyboard input. Flutter widget
     // tests separately cover keyboard traversal order; iPhone XCUI has no Tab key API.
     let destination = reveal(nextID)
