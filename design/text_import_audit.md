@@ -1,15 +1,17 @@
 # Memory-only plain-text and Markdown import
 
-Kotoha now offers a user-triggered import on the currently scaffolded macOS and
-Windows desktop targets. The selected content is decoded into the source editor
-in memory and can then be edited manually; existing translation fields and the
-copy action remain unchanged. No model inference, network client call, selected
-path retention, cache copy, or draft persistence is part of this workflow. The
-user's original file remains outside this guarantee.
+Kotoha implements user-triggered import on macOS, Windows, Android and iOS.
+The mobile source and tests still require native compilation and hosted execution
+before acceptance; local Dart tests are not mobile runtime evidence. The selected
+content is decoded into the source editor in memory and can then
+be edited manually; existing translation fields and the copy action remain
+unchanged. No model inference, network client call, selected path retention, cache
+copy, or draft persistence is part of this workflow. The user's original file
+remains outside this guarantee.
 
-Mobile import is not implemented. The audited umbrella `file_selector` uses an
-Android cache copy and iOS `asCopy: true`; the read-in-place adapter contract
-below replaces those paths rather than attempting to delete copies afterward.
+The audited umbrella `file_selector` uses an Android cache copy and iOS
+`asCopy: true`; the app-owned mobile adapter below replaces those paths rather
+than attempting to delete copies afterward. No mobile dependency is added.
 Linux remains separate because the project's designed Linux Flutter host must
 avoid GTK, while `file_selector_linux` links GTK. Neither prerequisite blocks
 the macOS/Windows slice.
@@ -88,9 +90,11 @@ published packages.
 
 ## Data flow and platform review
 
-- The app passes only `.txt`, `.md`, and `.markdown` extensions (plus the
-  recognized plain-text and Markdown UTIs) to the picker and independently
-  validates the returned filename before reading. It strictly decodes UTF-8,
+- The desktop picker receives `.txt`, `.md`, and `.markdown` extensions plus
+  recognized plain-text and Markdown UTIs. Mobile uses advisory broad data filters
+  (`*/*` on Android, `.data` on iOS) so provider MIME/UTI mappings do not exclude
+  Markdown; both native adapters validate the selected name before loading bytes.
+  Dart independently validates every returned name. It strictly decodes UTF-8,
   strips a UTF-8 BOM, and replaces only the in-memory source text after consent
   when nonempty text would be replaced. Cancellation, errors, unsupported
   extensions, invalid bytes, or a source edit during selection/read/consent
@@ -130,35 +134,35 @@ permissive dependency closure. The umbrella `file_selector` is not added:
 The umbrella candidate was resolved separately (not adopted); its materialized
 resolution is receipt `79146132bfd34463a71264fdecd19c01` and locked offline
 resolution evidence `4b8953fcc80e42adb20c2fc3e00ba755`. Its archive hashes and
-source-file hashes are recorded in the following provenance table. Mobile still
-needs an OS adapter that reads the granted document handle directly into
-memory; it is separate from encrypted save/reopen or SQLCipher.
+source-file hashes are recorded in the following provenance table. The mobile
+adapter reads the granted document handle directly into memory; it is separate
+from encrypted save/reopen or SQLCipher.
 
-## Mobile read-in-place adapter contract
+## Mobile read-in-place adapter
 
-This is an implementation prerequisite, not native execution evidence. Repository
-inspection finds no mobile picker or import channel in `MainActivity.kt`,
-`AppDelegate.swift`, or `SceneDelegate.swift`. The Android activity currently owns
-pause/resume privacy flags; the iOS scene owns its inactive privacy cover. Both
-must remain intact when a picker is added. iOS uses an implicit Flutter engine and
-a scene storyboard, so channel registration belongs with the engine's registrar,
-not a cast of `AppDelegate.window.rootViewController` during launch.
+`TextImportPlugin.kt` registers with the Android Flutter engine and implements
+`ActivityAware`/activity-result handling. `TextImportPlugin.swift` registers with
+the iOS implicit engine registrar and presents through the active scene, never
+`AppDelegate.window.rootViewController`. The activity's pause/resume privacy flags
+and scene's inactive cover remain unchanged.
 
-The smallest candidate is an app-owned method channel returning a display name
-and bytes, or null for cancellation. Do not return a filesystem path for a
-content URI, or wrap a provider URL in a Dart `File`. Keep extension validation,
-strict UTF-8 decoding, replacement consent and source-edit race handling in the
-existing Dart import flow; language and translation controllers remain untouched.
+The app-owned `org.kotoha/text_import` channel accepts `open` and returns only a
+display name and typed bytes, null on cancellation, or a generic error without
+selected locations. `text_document_picker.dart` checks the response shape and
+feeds the same `_importSource` validation, consent and edit-race handling as the
+desktop picker; language and translation controllers remain untouched. The
+mobile response is an in-memory document, not a provider URL wrapped in a Dart
+`File`/`XFile`. Desktop selection still uses its existing deferred `XFile` read.
 Native code must also check the name before reading unsupported content. Picker
 filters are advisory: MIME/UTI mappings differ across Markdown providers, so a
 filter must not be the only acceptance check.
 
-| Platform | Candidate read path | Resource lifetime and exclusions |
+| Platform | Implemented read path | Resource lifetime and exclusions |
 | --- | --- | --- |
 | Android | `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE`, single selection; query `OpenableColumns.DISPLAY_NAME`, then read the granted URI with `ContentResolver.openInputStream` into memory. | Close the query cursor and input stream on success and failure. Do not call `takePersistableUriPermission`, request broad storage access, derive a real path, or create an app cache file. Keep the URI only for the active request. |
 | iOS | `UIDocumentPickerViewController(forOpeningContentTypes:asCopy: false)`, single selection; acquire security-scoped access and coordinate a read using `NSFileCoordinator`, then `Data(contentsOf:)` inside its accessor. | Balance successful `startAccessingSecurityScopedResource` with `stopAccessingSecurityScopedResource` after the read, including failures. An unsuccessful start is not by itself proof that a local URL is unreadable; the coordinated read must report its actual result. Do not create a bookmark, copy the URL to the sandbox, or retain the selected URL after completion. |
 
-Read provider bytes away from the UI thread and deliver a single terminal result
+The adapters read provider bytes away from the UI thread and deliver a single terminal result
 on the platform thread. One pending picker/read per engine is sufficient; reject
 a concurrent request rather than overwriting its completion. Release pending
 callbacks and picker delegates on completion, cancellation, read failure and
@@ -172,25 +176,44 @@ This limits **Kotoha's own writes**, not an OS/provider's implementation. A docu
 provider may download or stage a file even for an in-place read. Neither Android
 `openInputStream` nor iOS `asCopy: false` proves that every selectable document is
 already offline or that the OS never writes it. No app network client is needed.
-The candidate uses platform-provided Android framework and Apple UIKit/Foundation
+The adapter uses platform-provided Android framework and Apple UIKit/Foundation
 APIs, not an additional redistributed picker library; it does not resolve or
 change the separate SQLCipher/persistence dependency decision.
 
-### Evidence needed before enabling mobile import
+### Mobile validation boundary
 
-- Android provider-backed tests must cover exact selected bytes/name, cancellation,
-  unsupported names, missing names, stream errors, and closing resources. Exercise
-  the actual activity-result/channel path and repeat after cancellation/detach.
-- iOS tests must cover picker configuration (`asCopy: false`), delegate selection
-  and cancellation, coordinated-read errors and balanced security-scope release.
-  A synthetic local URL tests the reader but is not a security-scoped provider
-  selection; label those results separately. Exercise the implicit-engine channel
-  and scene presentation path on the configured simulator, including iPad popover
-  presentation where applicable.
-- Reuse the existing Dart import integrity cases with the mobile channel boundary.
-  Check picker pause/resume does not leave the privacy flag/cover active or lose
-  edits. Inspect the implementation for all writes, retained URLs and grants;
-  unchanged cache-directory contents alone cannot exclude a transient copy.
+The following native regressions are included in the existing CI test targets,
+but have **not been compiled or run in this sandbox**:
+
+- Android `TextImportTest` uses a pipe-backed test provider through
+  `ContentResolver`, checking exact selected bytes/name, unsupported/missing
+  names, open/read errors and cursor/stream closure. A local provider transport
+  exposes resource counters; a test-APK provider exercises real activity-result
+  dispatch using synthetic intercepted picker results. Tests cover cancellation,
+  busy requests, engine detach and a fresh request afterward. They do not prove
+  live DocumentsUI selection, real provider grant behavior, or offline availability.
+- iOS `RunnerTests` checks open-not-copy picker configuration, single selection,
+  active-scene presentation through the implicit engine's registered plugin,
+  delegate selection/cancellation/errors, busy requests and detach. Injected
+  system operations check balanced scope release for success/error and both scope
+  start outcomes. A synthetic temporary local file separately exercises actual
+  Foundation coordination and `Data`; it is not a security-scoped provider test.
+  XCUI additionally exercises the real Dart channel's system picker presentation
+  and repeated cancellation with an unsaved draft. Presentation uses a form sheet
+  rather than a popover; physical iPads and external-provider selections remain
+  unverified, as does all native execution until hosted results arrive.
+- Dart mobile-channel tests cover malformed channel replies, strict UTF-8/BOM,
+  advisory extension rejection, native errors, cancellation, replacement consent,
+  source edits during read/confirmation (including undo), translation/language
+  preservation and lifecycle continuity. Desktop integrity tests remain in place.
+  Existing native privacy/RTL tests remain selected in CI without weakening them.
+
+Source review finds no import-path writes, cache staging, URI grant persistence,
+bookmarks, selected-location history or network client. Worker reads release their
+local URL/URI and bytes on completion; detach clears the callback immediately and
+late worker results cannot satisfy another request. This is not a cancellation
+guarantee for a provider's already-running blocking I/O. Unchanged cache-directory
+contents alone would not exclude a transient OS/provider copy.
 
 API references for implementation (not fetched or runtime-verified by this audit):
 [Android document selection](https://developer.android.com/training/data-storage/shared/documents-files),
@@ -202,16 +225,16 @@ Xcode/Apple SDK. Mobile compilation, OS picker interaction and provider behavior
 therefore remain unverified; the configured hosted mobile profiles are the next
 execution boundary, not evidence already obtained.
 
-## Validation boundaries
+## Hosted validation and remaining claims
 
-Focused widget tests use a fake `FileSelectorPlatform` for cancellation,
-multilingual import, malformed UTF-8, unsupported extensions, read/picker
-errors, replacement consent, source-change races, and preservation of source
-language and translation fields. They exercise the app's import logic and
-filter arguments; they do not exercise a live OS dialog. Hosted CI must build
-macOS and Windows from the exact published revision. No claim is made here
-that an actual native picker selection/cancellation has been manually observed.
-
+Desktop widget tests use a fake `FileSelectorPlatform` for cancellation,
+multilingual import, malformed UTF-8, unsupported extensions, read/picker errors,
+replacement consent, source-change races, and preservation of source language
+and translation fields. They exercise app logic and filter arguments, not a live
+OS dialog. The Android and iOS native tests above are selected in CI but have not
+been compiled or run in this sandbox. Hosted CI must build the exact published
+revision and run its platform tests before acceptance; no claim is made that a
+real external provider selection or physical-device behavior has been observed.
 
 ## Rejected umbrella candidate provenance
 

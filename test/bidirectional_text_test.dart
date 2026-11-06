@@ -272,6 +272,9 @@ void main() {
   ) async {
     await tester.pumpWidget(const KotohaApp());
     final source = find.byKey(const ValueKey('source-text'));
+    // Mobile import adds a control above this field; scroll before real IME input.
+    await tester.ensureVisible(source);
+    await tester.pumpAndSettle();
     await tester.tap(source);
     await tester.pump();
 

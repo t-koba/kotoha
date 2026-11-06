@@ -227,13 +227,9 @@ void main() {
     expect(find.textContaining('読み込めませんでした。'), findsOneWidget);
   });
 
-  importTest('import is absent on mobile and Linux', (tester) async {
+  importTest('import is absent on Linux', (tester) async {
     await open(tester);
-    for (final platform in [
-      TargetPlatform.android,
-      TargetPlatform.iOS,
-      TargetPlatform.linux,
-    ]) {
+    for (final platform in [TargetPlatform.linux]) {
       debugDefaultTargetPlatformOverride = platform;
       await tester.pumpWidget(KotohaApp(key: ValueKey(platform)));
       await tester.pumpAndSettle();

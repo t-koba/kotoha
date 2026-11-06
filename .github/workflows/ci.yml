@@ -129,7 +129,7 @@ jobs:
           adb shell wm dismiss-keyguard
           cd android
           timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
-            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest,org.kotoha.app.MainActivityAccessibilityTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest,org.kotoha.app.MainActivityAccessibilityTest,org.kotoha.app.TextImportTest \
             -Pandroid.testInstrumentationRunnerArguments.axTimeoutMillis="$ANDROID_AX_TIMEOUT_MILLIS" \
             -Pandroid.testInstrumentationRunnerArguments.axPollMillis="$ANDROID_AX_POLL_MILLIS"
 
@@ -174,7 +174,7 @@ jobs:
             -configuration Debug -sdk iphonesimulator \
             -destination "platform=iOS Simulator,OS=$IOS_SIMULATOR_OS,name=$IOS_SIMULATOR_DEVICE" \
             -destination-timeout "$IOS_DESTINATION_TIMEOUT_SECONDS" \
-            -only-testing:RunnerTests/RunnerTests/testPrivacyCoverIsIdempotentAndLeavesContentAttached \
+            -only-testing:RunnerTests/RunnerTests \
             -only-testing:RunnerUITests/LanguageFieldAccessibilityTests \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \

@@ -41,6 +41,24 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
                 target: "訳先の言語", translation: "手入力した訳文")
   }
 
+  func testImportChannelPresentsSystemPickerAndCancellationKeepsDraft() {
+    // Real Dart -> implicit-engine channel -> active-scene UIKit presentation.
+    // No fixture is selected here: provider read/scope paths are unit-tested separately.
+    let source = reveal("source-text")
+    source.tap()
+    app.typeText("unsaved source")
+    for _ in 0..<2 {
+      let importButton = app.buttons["Import text or Markdown"]
+      if !importButton.isHittable { app.swipeDown() }
+      XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
+      importButton.tap()
+      let cancel = app.buttons["Cancel"]
+      XCTAssertTrue(cancel.waitForExistence(timeout: timeout), "System document picker must be presented")
+      cancel.tap()
+      assertField("source-text", label: "Source text", value: "unsaved source")
+    }
+  }
+
   private func checkLocale(_ locale: String, source: String, sourceText: String,
                            target: String, translation: String) {
     let menu = app.buttons["Interface language"]

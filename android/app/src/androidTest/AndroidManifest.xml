@@ -3,5 +3,8 @@
         <!-- Only the instrumentation APK requires the SDK test runtime. -->
         <uses-library android:name="android.test.runner" android:required="true" />
         <uses-library android:name="android.test.base" android:required="true" />
+        <provider android:name="org.kotoha.app.ImportTestProvider"
+            android:authorities="org.kotoha.app.test.documents"
+            android:exported="true" android:grantUriPermissions="true" />
     </application>
 </manifest>

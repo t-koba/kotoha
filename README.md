@@ -5,6 +5,14 @@ manual text-workspace draft: enter a source text, add one or more target languag
 and write translations without an installed model. It does not claim to translate
 text automatically.
 
+The source editor can import UTF-8 `.txt`, `.md` and `.markdown` documents through
+an explicit system picker on macOS/Windows and the Android/iOS adapters.
+Import replaces only source text after consent; translations remain manual and
+all drafts stay in memory. Kotoha does not stage a cache copy, persist document
+grants, or add a network client, but the OS/provider may download or stage a file.
+Mobile native compilation and picker execution still need hosted validation;
+see `design/text_import_audit.md` for the data flow and evidence boundaries.
+
 This development build does not save drafts. Saved content must use encrypted
 storage and a validated key lifecycle, recovery, and encrypted backup/restore path.
 Persistence remains disabled until native dependency provenance and licenses are

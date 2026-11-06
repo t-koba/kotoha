@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
+import 'text_document_picker.dart';
 
 void main() {
   LicenseRegistry.addLicense(() async* {
@@ -101,24 +101,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
 
     _sourceText.addListener(watchSource);
     try {
-      final file = await FileSelectorPlatform.instance.openFile(
-        acceptedTypeGroups: const [
-          XTypeGroup(
-            extensions: ['txt', 'md', 'markdown'],
-            uniformTypeIdentifiers: [
-              'public.utf8-plain-text',
-              'net.daringfireball.markdown',
-            ],
-          ),
-        ],
-      );
+      final file = await pickTextDocument();
       if (!mounted || file == null) return;
       // The OS filter is advisory. Reject unsupported names before reading.
       final name = file.name.toLowerCase();
       if (!['.txt', '.md', '.markdown'].any(name.endsWith)) {
         throw const FormatException('Unsupported text document.');
       }
-      // Native desktop XFile reads the selected file in place, into memory.
+      // Desktop reads in place; mobile returns only in-memory bytes.
       // utf8.decode is strict by default and strips a leading UTF-8 BOM.
       final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
       if (!mounted) return;
@@ -295,7 +285,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                 const SizedBox(height: 12),
                 if (!kIsWeb &&
                     (defaultTargetPlatform == TargetPlatform.macOS ||
-                        defaultTargetPlatform == TargetPlatform.windows))
+                        defaultTargetPlatform == TargetPlatform.windows ||
+                        defaultTargetPlatform == TargetPlatform.android ||
+                        defaultTargetPlatform == TargetPlatform.iOS))
                   Align(
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
