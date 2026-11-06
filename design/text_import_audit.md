@@ -7,11 +7,12 @@ copy action remain unchanged. No model inference, network client call, selected
 path retention, cache copy, or draft persistence is part of this workflow. The
 user's original file remains outside this guarantee.
 
-Mobile import is intentionally separate: the audited umbrella `file_selector`
-uses an Android cache copy and iOS `asCopy: true`. Linux remains separate
-because the project's designed Linux Flutter host must avoid GTK, while
-`file_selector_linux` links GTK. These platform decisions do not block the
-macOS/Windows slice.
+Mobile import is not implemented. The audited umbrella `file_selector` uses an
+Android cache copy and iOS `asCopy: true`; the read-in-place adapter contract
+below replaces those paths rather than attempting to delete copies afterward.
+Linux remains separate because the project's designed Linux Flutter host must
+avoid GTK, while `file_selector_linux` links GTK. Neither prerequisite blocks
+the macOS/Windows slice.
 
 ## Selected desktop packages and exact resolution
 
@@ -132,6 +133,74 @@ resolution evidence `4b8953fcc80e42adb20c2fc3e00ba755`. Its archive hashes and
 source-file hashes are recorded in the following provenance table. Mobile still
 needs an OS adapter that reads the granted document handle directly into
 memory; it is separate from encrypted save/reopen or SQLCipher.
+
+## Mobile read-in-place adapter contract
+
+This is an implementation prerequisite, not native execution evidence. Repository
+inspection finds no mobile picker or import channel in `MainActivity.kt`,
+`AppDelegate.swift`, or `SceneDelegate.swift`. The Android activity currently owns
+pause/resume privacy flags; the iOS scene owns its inactive privacy cover. Both
+must remain intact when a picker is added. iOS uses an implicit Flutter engine and
+a scene storyboard, so channel registration belongs with the engine's registrar,
+not a cast of `AppDelegate.window.rootViewController` during launch.
+
+The smallest candidate is an app-owned method channel returning a display name
+and bytes, or null for cancellation. Do not return a filesystem path for a
+content URI, or wrap a provider URL in a Dart `File`. Keep extension validation,
+strict UTF-8 decoding, replacement consent and source-edit race handling in the
+existing Dart import flow; language and translation controllers remain untouched.
+Native code must also check the name before reading unsupported content. Picker
+filters are advisory: MIME/UTI mappings differ across Markdown providers, so a
+filter must not be the only acceptance check.
+
+| Platform | Candidate read path | Resource lifetime and exclusions |
+| --- | --- | --- |
+| Android | `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE`, single selection; query `OpenableColumns.DISPLAY_NAME`, then read the granted URI with `ContentResolver.openInputStream` into memory. | Close the query cursor and input stream on success and failure. Do not call `takePersistableUriPermission`, request broad storage access, derive a real path, or create an app cache file. Keep the URI only for the active request. |
+| iOS | `UIDocumentPickerViewController(forOpeningContentTypes:asCopy: false)`, single selection; acquire security-scoped access and coordinate a read using `NSFileCoordinator`, then `Data(contentsOf:)` inside its accessor. | Balance successful `startAccessingSecurityScopedResource` with `stopAccessingSecurityScopedResource` after the read, including failures. An unsuccessful start is not by itself proof that a local URL is unreadable; the coordinated read must report its actual result. Do not create a bookmark, copy the URL to the sandbox, or retain the selected URL after completion. |
+
+Read provider bytes away from the UI thread and deliver a single terminal result
+on the platform thread. One pending picker/read per engine is sufficient; reject
+a concurrent request rather than overwriting its completion. Release pending
+callbacks and picker delegates on completion, cancellation, read failure and
+engine/activity detach. A late result after detach must not reach a new request.
+Activity/process recreation does not restore a draft or import: fail or discard
+the interrupted request, never persist a callback, URI, bytes or text for recovery.
+No retry loop, timer, history, background import service or persistence layer is
+needed for this one-shot operation.
+
+This limits **Kotoha's own writes**, not an OS/provider's implementation. A document
+provider may download or stage a file even for an in-place read. Neither Android
+`openInputStream` nor iOS `asCopy: false` proves that every selectable document is
+already offline or that the OS never writes it. No app network client is needed.
+The candidate uses platform-provided Android framework and Apple UIKit/Foundation
+APIs, not an additional redistributed picker library; it does not resolve or
+change the separate SQLCipher/persistence dependency decision.
+
+### Evidence needed before enabling mobile import
+
+- Android provider-backed tests must cover exact selected bytes/name, cancellation,
+  unsupported names, missing names, stream errors, and closing resources. Exercise
+  the actual activity-result/channel path and repeat after cancellation/detach.
+- iOS tests must cover picker configuration (`asCopy: false`), delegate selection
+  and cancellation, coordinated-read errors and balanced security-scope release.
+  A synthetic local URL tests the reader but is not a security-scoped provider
+  selection; label those results separately. Exercise the implicit-engine channel
+  and scene presentation path on the configured simulator, including iPad popover
+  presentation where applicable.
+- Reuse the existing Dart import integrity cases with the mobile channel boundary.
+  Check picker pause/resume does not leave the privacy flag/cover active or lose
+  edits. Inspect the implementation for all writes, retained URLs and grants;
+  unchanged cache-directory contents alone cannot exclude a transient copy.
+
+API references for implementation (not fetched or runtime-verified by this audit):
+[Android document selection](https://developer.android.com/training/data-storage/shared/documents-files),
+[`ContentResolver.openInputStream`](https://developer.android.com/reference/android/content/ContentResolver#openInputStream(android.net.Uri)),
+[Apple document picker](https://developer.apple.com/documentation/uikit/uidocumentpickerviewcontroller),
+[Apple file coordination](https://developer.apple.com/documentation/foundation/nsfilecoordinator).
+The current sandbox has Flutter artifacts but no Android SDK/Java toolchain or
+Xcode/Apple SDK. Mobile compilation, OS picker interaction and provider behavior
+therefore remain unverified; the configured hosted mobile profiles are the next
+execution boundary, not evidence already obtained.
 
 ## Validation boundaries
 
