@@ -228,6 +228,52 @@ Xcode/Apple SDK. Mobile compilation, OS picker interaction and provider behavior
 therefore remain unverified; the configured hosted mobile profiles are the next
 execution boundary, not evidence already obtained.
 
+## Memory profile (sandbox-only, no limit selected)
+
+The current path materializes the whole selection: `readAsBytes` holds one
+`Uint8List`, strict `utf8.decode` builds one `String` into the in-memory source
+editor. There is no size guard, chunked transfer, or cache/persistence copy.
+
+Sandbox-only Dart measurement on this Linux host (not device evidence,
+experiment `f5c51d3fa13d438db0bcc057b5dbed2b`): fresh `dart` processes reading
+synthetic multilingual UTF-8 files via `File.readAsBytes` plus
+`utf8.decode(allowMalformed: false)` observed `VmHWM` increases of about
+5,444 kB for a 2,097,160-byte file and about 17,372 kB for a 16,777,228-byte
+file. This covers only Dart bytes plus the decoded string; it excludes native
+provider copies, `MethodChannel` copies, OS staging, and editor retention, and
+must not be used to choose a limit.
+
+A separate Linux Flutter widget-test profile included Kotoha's actual import
+button, strict decoder, source-controller update, and `TextField` layout, but
+used a mocked `FileSelectorPlatform` returning an in-memory synthetic `XFile`;
+it did not exercise the OS picker, filesystem `XFile` path, or native bridge.
+With a repeated multilingual payload wrapped at roughly 1 KiB per line, the
+test process `VmHWM` was 206,884 to 283,964 kB for 65,065 bytes (45,565
+decoded code units), 210,200 to 499,604 kB for 261,261 bytes (182,961 code
+units), and 206,600 to 2,506,536 kB for 2,097,095 bytes (1,468,595 code
+units). The 16 MiB widget case did not complete; `flutter test` reported no
+tests and exited 79 after 26 seconds, so its cause is unconfirmed. These are
+Linux debug test-process peaks, not target-device memory results; framework and
+text-layout costs are included, and native/provider/MethodChannel copies are
+excluded (commands `73fa355f39614b37874f57bccb53d084` and
+`43f3c85869f3474b81b0a5c870702801`). They show the full widget path can greatly
+exceed the decode-only measurement, but are not a basis for a shipping limit.
+
+Failure behavior is fail-closed: strict decoding throws `FormatException` on
+malformed input, the UI shows only a generic notice and preserves source,
+language and translation state (covered by existing desktop/mobile widget
+tests). Large-file out-of-memory behavior on constrained targets is unmeasured.
+
+No limit or incremental transfer is selected. Any future guard must be
+configuration with hosted-profile evidence, preserve drafts on error, and keep
+read-in-place access with no persistence or cache copy.
+
+The smallest hosted measurement still needed, per supported profile
+(macOS/Windows and Android Emulator/iOS Simulator CI), is: import synthetic
+2 MiB and 16 MiB UTF-8 `.txt`/`.md` files through the exact shipped picker
+path, record native peak plus Dart peak and success/failure with draft
+preservation. No product telemetry is added for this one-shot check.
+
 ## Hosted validation and remaining claims
 
 Desktop widget tests use a fake `FileSelectorPlatform` for cancellation,
