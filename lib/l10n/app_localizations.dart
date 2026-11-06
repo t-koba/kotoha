@@ -247,6 +247,48 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'English'**
   String get english;
+
+  /// No description provided for @importSource.
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト・Markdownを読み込む'**
+  String get importSource;
+
+  /// No description provided for @replaceSourceTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'原文を置き換えますか？'**
+  String get replaceSourceTitle;
+
+  /// No description provided for @replaceSourceQuestion.
+  ///
+  /// In ja, this message translates to:
+  /// **'現在の原文を読み込んだテキストで置き換えます。訳文は変更されません。'**
+  String get replaceSourceQuestion;
+
+  /// No description provided for @cancelImport.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get cancelImport;
+
+  /// No description provided for @replaceSource.
+  ///
+  /// In ja, this message translates to:
+  /// **'置き換える'**
+  String get replaceSource;
+
+  /// No description provided for @importFailureNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込めませんでした。UTF-8の.txt、.md、.markdownファイルを選択してください。'**
+  String get importFailureNotice;
+
+  /// No description provided for @importSourceChangedNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。'**
+  String get importSourceChangedNotice;
 }
 
 class _AppLocalizationsDelegate

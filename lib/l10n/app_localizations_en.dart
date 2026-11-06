@@ -93,4 +93,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get english => 'English';
+
+  @override
+  String get importSource => 'Import text or Markdown';
+
+  @override
+  String get replaceSourceTitle => 'Replace source text?';
+
+  @override
+  String get replaceSourceQuestion =>
+      'The imported text will replace your current source text. Translations will not change.';
+
+  @override
+  String get cancelImport => 'Cancel';
+
+  @override
+  String get replaceSource => 'Replace';
+
+  @override
+  String get importFailureNotice =>
+      'Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.';
+
+  @override
+  String get importSourceChangedNotice =>
+      'Source text changed during import. Your edits were kept; import again to retry.';
 }

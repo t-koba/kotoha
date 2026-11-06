@@ -90,4 +90,27 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get english => 'English';
+
+  @override
+  String get importSource => 'テキスト・Markdownを読み込む';
+
+  @override
+  String get replaceSourceTitle => '原文を置き換えますか？';
+
+  @override
+  String get replaceSourceQuestion => '現在の原文を読み込んだテキストで置き換えます。訳文は変更されません。';
+
+  @override
+  String get cancelImport => 'キャンセル';
+
+  @override
+  String get replaceSource => '置き換える';
+
+  @override
+  String get importFailureNotice =>
+      '読み込めませんでした。UTF-8の.txt、.md、.markdownファイルを選択してください。';
+
+  @override
+  String get importSourceChangedNotice =>
+      '読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。';
 }

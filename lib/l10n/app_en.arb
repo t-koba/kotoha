@@ -40,5 +40,12 @@
   "licenses": "Licenses",
   "uiLanguage": "Interface language",
   "japanese": "日本語",
-  "english": "English"
+  "english": "English",
+  "importSource": "Import text or Markdown",
+  "replaceSourceTitle": "Replace source text?",
+  "replaceSourceQuestion": "The imported text will replace your current source text. Translations will not change.",
+  "cancelImport": "Cancel",
+  "replaceSource": "Replace",
+  "importFailureNotice": "Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.",
+  "importSourceChangedNotice": "Source text changed during import. Your edits were kept; import again to retry."
 }

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -64,6 +67,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   bool _allowImePersonalizedLearning = false;
+  bool _importing = false;
   final List<_TranslationFields> _translations = [_TranslationFields()];
 
   @override
@@ -84,6 +88,83 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
       if (mounted) _addTranslationFocusNode.requestFocus();
     });
   }
+
+  Future<void> _importSource() async {
+    if (_importing) return;
+    setState(() => _importing = true);
+    // Watch text edits, not selection/focus changes caused by the OS dialog.
+    final snapshot = _sourceText.text;
+    var sourceChanged = false;
+    void watchSource() {
+      if (_sourceText.text != snapshot) sourceChanged = true;
+    }
+
+    _sourceText.addListener(watchSource);
+    try {
+      final file = await FileSelectorPlatform.instance.openFile(
+        acceptedTypeGroups: const [
+          XTypeGroup(
+            extensions: ['txt', 'md', 'markdown'],
+            uniformTypeIdentifiers: [
+              'public.utf8-plain-text',
+              'net.daringfireball.markdown',
+            ],
+          ),
+        ],
+      );
+      if (!mounted || file == null) return;
+      // The OS filter is advisory. Reject unsupported names before reading.
+      final name = file.name.toLowerCase();
+      if (!['.txt', '.md', '.markdown'].any(name.endsWith)) {
+        throw const FormatException('Unsupported text document.');
+      }
+      // Native desktop XFile reads the selected file in place, into memory.
+      // utf8.decode is strict by default and strips a leading UTF-8 BOM.
+      final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
+      if (!mounted) return;
+      if (sourceChanged || _sourceText.text != snapshot) {
+        _importNotice(AppLocalizations.of(context)!.importSourceChangedNotice);
+        return;
+      }
+      if (snapshot.isNotEmpty) {
+        final strings = AppLocalizations.of(context)!;
+        final replace = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(strings.replaceSourceTitle),
+            content: Text(strings.replaceSourceQuestion),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(strings.cancelImport),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(strings.replaceSource),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || replace != true) return;
+      }
+      if (sourceChanged || _sourceText.text != snapshot) {
+        _importNotice(AppLocalizations.of(context)!.importSourceChangedNotice);
+        return;
+      }
+      _sourceText.text = text;
+    } on Exception {
+      if (mounted) {
+        _importNotice(AppLocalizations.of(context)!.importFailureNotice);
+      }
+    } finally {
+      _sourceText.removeListener(watchSource);
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  void _importNotice(String message) =>
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> _copyTranslation(int index) async {
     final text = _translations[index].text.text;
@@ -212,6 +293,18 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                   key: const ValueKey('source-language'),
                 ),
                 const SizedBox(height: 12),
+                if (!kIsWeb &&
+                    (defaultTargetPlatform == TargetPlatform.macOS ||
+                        defaultTargetPlatform == TargetPlatform.windows))
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('import-source'),
+                      onPressed: _importing ? null : _importSource,
+                      icon: const Icon(Icons.file_open_outlined),
+                      label: Text(strings.importSource),
+                    ),
+                  ),
                 _manualTextField(
                   key: const ValueKey('source-text'),
                   controller: _sourceText,

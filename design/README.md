@@ -7,6 +7,7 @@ kotoha／ことはの製品要求、システム構造、データ・処理契�
 | `kotoha_design.html` | 設計書と付属仕様の閲覧用文書 |
 | `kotoha_design.md` | 設計書の編集用原稿 |
 | [SQLCipher候補の監査](sqlcipher_audit.md) | sqlite3 3.9.0のネイティブ資産・プロバイダー・許諾根拠と未解決項目 |
+| [メモリー限定テキスト取込みの監査](text_import_audit.md) | デスクトップのピッカー採用根拠、依存許諾、データフロー、未対応プラットフォームの前提 |
 | `specs/` | モデル、モード、イベント、依存方針、C ABI、保存構造、検査ツール |
 | `examples/` | データ契約を確認するための合成データ |
 | `appendices/acceptance_matrix.md` | 機能と受入確認の対応 |
