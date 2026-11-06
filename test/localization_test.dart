@@ -483,6 +483,10 @@ void main() {
         // The remove action is also keyboard-operable.
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pumpAndSettle();
+        expectFocused(
+          find.bySemanticsLabel(addTranslation),
+          'add translation after removing the second card',
+        );
         expect(find.byTooltip(copyOne), findsOneWidget);
         expect(find.byTooltip(copyTwo), findsNothing);
         expect(find.byTooltip(removeOne), findsNothing);
