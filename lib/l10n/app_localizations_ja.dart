@@ -22,6 +22,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get temporaryDraftNotice => 'この下書きは一時的なものです。このアプリには保存されません。';
 
   @override
+  String get androidImePersonalizedLearning => 'Androidキーボードの個人学習を許可';
+
+  @override
+  String get androidImePersonalizedLearningDescription =>
+      '各セッションの初期設定では無効です。設定変更は次にテキスト欄へフォーカスしたときに反映されます。有効にすると、Androidの入力方法に入力履歴やユーザー辞書などの個人データの更新を許可します。実際の動作はキーボード側で管理されます。';
+
+  @override
+  String get externalKeyboardPrivacyNotice =>
+      'このプラットフォームでは、ことはからキーボードの学習を制御できません。入力方法のプライバシー設定をご確認ください。';
+
+  @override
   String get sourceLanguage => '原文の言語';
 
   @override

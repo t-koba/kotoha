@@ -126,19 +126,32 @@ void main() {
       ),
     );
     await tester.pumpWidget(const KotohaApp());
-    expect(
-      find.text('コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。'),
-      findsOneWidget,
+    final clipboardNotice = find.text(
+      'コピーした訳文はOSのクリップボードに渡され、OSやクリップボード機能によって参照・保持・共有される場合があります。',
     );
+    await tester.dragUntilVisible(
+      clipboardNotice,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    expect(clipboardNotice, findsOneWidget);
 
     final copyButton = find.byKey(const ValueKey('copy-translation-0'));
-    await tester.ensureVisible(copyButton);
+    await tester.dragUntilVisible(
+      copyButton,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
     await tester.pumpAndSettle();
     const translation = 'Bonjour 👋\nこんにちは';
-    await tester.enterText(
-      find.byKey(const ValueKey('translation-text-0')),
-      translation,
+    final translationField = find.byKey(const ValueKey('translation-text-0'));
+    await tester.dragUntilVisible(
+      translationField,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
     );
+    await tester.enterText(translationField, translation);
     await tester.pump();
     expect(
       tester
@@ -177,7 +190,11 @@ void main() {
     );
     await tester.pumpWidget(const KotohaApp());
     final copyButton = find.byKey(const ValueKey('copy-translation-0'));
-    await tester.ensureVisible(copyButton);
+    await tester.dragUntilVisible(
+      copyButton,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
     await tester.pumpAndSettle();
     await tester.tap(copyButton);
     await tester.pump();
@@ -205,12 +222,19 @@ void main() {
       ),
     );
     await tester.pumpWidget(const KotohaApp());
-    await tester.enterText(
-      find.byKey(const ValueKey('translation-text-0')),
-      'Hello',
+    final translationField = find.byKey(const ValueKey('translation-text-0'));
+    await tester.dragUntilVisible(
+      translationField,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
     );
+    await tester.enterText(translationField, 'Hello');
     final copyButton = find.byKey(const ValueKey('copy-translation-0'));
-    await tester.ensureVisible(copyButton);
+    await tester.dragUntilVisible(
+      copyButton,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
     await tester.pumpAndSettle();
     await tester.tap(copyButton);
     await tester.pump();

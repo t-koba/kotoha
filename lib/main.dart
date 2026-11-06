@@ -55,6 +55,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   final TextEditingController _sourceLanguage = TextEditingController();
   final TextEditingController _sourceText = TextEditingController();
   final FocusNode _addTranslationFocusNode = FocusNode();
+  final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
+  bool _allowImePersonalizedLearning = false;
   final List<_TranslationFields> _translations = [_TranslationFields()];
 
   @override
@@ -62,6 +64,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     _sourceLanguage.dispose();
     _sourceText.dispose();
     _addTranslationFocusNode.dispose();
+    _imePersonalizedLearningFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
     }
@@ -168,7 +171,32 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                 ),
                 const SizedBox(height: 16),
                 const _TemporaryDraftNotice(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
+                if (defaultTargetPlatform == TargetPlatform.android)
+                  SwitchListTile(
+                    key: const ValueKey('android-ime-personalized-learning'),
+                    contentPadding: EdgeInsets.zero,
+                    focusNode: _imePersonalizedLearningFocusNode,
+                    value: _allowImePersonalizedLearning,
+                    onChanged: (value) {
+                      // Reopen the input connection on the next field focus so
+                      // Android receives the updated IME configuration.
+                      if (!_imePersonalizedLearningFocusNode.hasFocus) {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                      }
+                      setState(() => _allowImePersonalizedLearning = value);
+                    },
+                    title: Text(strings.androidImePersonalizedLearning),
+                    subtitle: Text(
+                      strings.androidImePersonalizedLearningDescription,
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(strings.externalKeyboardPrivacyNotice),
+                  ),
+                const SizedBox(height: 12),
                 _languageField(
                   _sourceLanguage,
                   strings.sourceLanguage,
@@ -263,6 +291,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     String hint,
   ) => TextField(
     controller: controller,
+    enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
@@ -281,6 +310,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     builder: (context, value, _) => TextField(
       key: key,
       controller: controller,
+      enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
       textDirection: firstStrongDirection(value.text),
       minLines: minLines,
       maxLines: maxLines,

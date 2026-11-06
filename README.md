@@ -11,6 +11,13 @@ Persistence remains disabled until native dependency provenance and licenses are
 verified and the complete flow is tested on every supported platform. Do not enter
 sensitive text in this temporary build.
 
+On Android, the editor asks the input method not to update personalized typing data
+by default; users can opt in for the current session. A change applies when a text
+field is focused again. Kotoha provides no equivalent keyboard-learning control on
+iOS or other platforms. Input methods control their own behavior, so this flag does
+not guarantee that an external keyboard will never process or retain entered text;
+check the keyboard's privacy settings.
+
 ## Development
 
 ```sh

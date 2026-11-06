@@ -24,6 +24,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'This draft is temporary. It is not saved in this app.';
 
   @override
+  String get androidImePersonalizedLearning =>
+      'Allow Android keyboard learning';
+
+  @override
+  String get androidImePersonalizedLearningDescription =>
+      'Off by default each session. Changes apply the next time you focus a text field. When enabled, the Android input method may update personalized typing history or dictionaries; actual behavior is controlled by the keyboard.';
+
+  @override
+  String get externalKeyboardPrivacyNotice =>
+      'Kotoha cannot control keyboard learning on this platform. Check your input method\'s privacy settings.';
+
+  @override
   String get sourceLanguage => 'Source language';
 
   @override

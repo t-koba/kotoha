@@ -122,6 +122,24 @@ abstract class AppLocalizations {
   /// **'この下書きは一時的なものです。このアプリには保存されません。'**
   String get temporaryDraftNotice;
 
+  /// No description provided for @androidImePersonalizedLearning.
+  ///
+  /// In ja, this message translates to:
+  /// **'Androidキーボードの個人学習を許可'**
+  String get androidImePersonalizedLearning;
+
+  /// No description provided for @androidImePersonalizedLearningDescription.
+  ///
+  /// In ja, this message translates to:
+  /// **'各セッションの初期設定では無効です。設定変更は次にテキスト欄へフォーカスしたときに反映されます。有効にすると、Androidの入力方法に入力履歴やユーザー辞書などの個人データの更新を許可します。実際の動作はキーボード側で管理されます。'**
+  String get androidImePersonalizedLearningDescription;
+
+  /// No description provided for @externalKeyboardPrivacyNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'このプラットフォームでは、ことはからキーボードの学習を制御できません。入力方法のプライバシー設定をご確認ください。'**
+  String get externalKeyboardPrivacyNotice;
+
   /// No description provided for @sourceLanguage.
   ///
   /// In ja, this message translates to:

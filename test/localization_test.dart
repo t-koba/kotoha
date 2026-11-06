@@ -1,5 +1,7 @@
 import 'dart:ui' show Tristate;
 
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,11 +58,14 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
 
         for (final (
               locale,
               fieldLabels,
               notice,
+              imeSetting,
+              imeDescription,
               tooltips,
               copyLabels,
               removeLabels,
@@ -71,6 +76,8 @@ void main() {
                 const Locale('ja'),
                 ['原文の言語', '原文', '訳先の言語', '手入力した訳文'],
                 'この下書きは一時的なものです。このアプリには保存されません。',
+                'Androidキーボードの個人学習を許可',
+                '各セッションの初期設定では無効です。設定変更は次にテキスト欄へフォーカスしたときに反映されます。有効にすると、Androidの入力方法に入力履歴やユーザー辞書などの個人データの更新を許可します。実際の動作はキーボード側で管理されます。',
                 ['表示言語', 'ライセンス'],
                 ['1件目の訳文をコピー', '2件目の訳文をコピー'],
                 ['1件目の訳先を削除', '2件目の訳先を削除'],
@@ -85,6 +92,8 @@ void main() {
                   'Manual translation',
                 ],
                 'This draft is temporary. It is not saved in this app.',
+                'Allow Android keyboard learning',
+                'Off by default each session. Changes apply the next time you focus a text field. When enabled, the Android input method may update personalized typing history or dictionaries; actual behavior is controlled by the keyboard.',
                 ['Interface language', 'Licenses'],
                 ['Copy translation 1', 'Copy translation 2'],
                 ['Remove translation 1', 'Remove translation 2'],
@@ -108,6 +117,14 @@ void main() {
                 .isLiveRegion,
             isTrue,
           );
+          expect(find.text(imeDescription), findsOneWidget);
+          final imeSwitch = find.byKey(
+            const ValueKey('android-ime-personalized-learning'),
+          );
+          expect(imeSwitch, findsOneWidget);
+          final imeData = tester.getSemantics(imeSwitch).getSemanticsData();
+          expect(imeData.label, contains(imeSetting));
+          expect(imeData.flagsCollection.isToggled, Tristate.isFalse);
           expect(find.bySemanticsLabel(addLabel), findsOneWidget);
           for (final tooltip in tooltips) {
             final control = find.byTooltip(tooltip);
@@ -142,10 +159,126 @@ void main() {
           expect(find.byTooltip(removeLabels.last), findsNothing);
         }
       } finally {
+        debugDefaultTargetPlatformOverride = null;
         semantics.dispose();
       }
     },
   );
+
+  testWidgets(
+    'Android IME personalized learning is opt-in for source and translation',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      tester.view.physicalSize = const Size(1000, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      try {
+        for (final (locale, title, description) in [
+          (
+            const Locale('ja'),
+            'Androidキーボードの個人学習を許可',
+            '各セッションの初期設定では無効です。設定変更は次にテキスト欄へフォーカスしたときに反映されます。有効にすると、Androidの入力方法に入力履歴やユーザー辞書などの個人データの更新を許可します。実際の動作はキーボード側で管理されます。',
+          ),
+          (
+            const Locale('en'),
+            'Allow Android keyboard learning',
+            'Off by default each session. Changes apply the next time you focus a text field. When enabled, the Android input method may update personalized typing history or dictionaries; actual behavior is controlled by the keyboard.',
+          ),
+        ]) {
+          tester.binding.platformDispatcher.localesTestValue = [locale];
+          await tester.pumpWidget(const SizedBox());
+          await tester.pumpWidget(const KotohaApp());
+          await tester.pumpAndSettle();
+
+          final setting = find.byKey(
+            const ValueKey('android-ime-personalized-learning'),
+          );
+          expect(find.text(title), findsOneWidget);
+          expect(find.text(description), findsOneWidget);
+          expect(setting, findsOneWidget);
+
+          final sourceField = tester.widget<TextField>(
+            find.byKey(const ValueKey('source-text')),
+          );
+          final translationField = tester.widget<TextField>(
+            find.byKey(const ValueKey('translation-text-0')),
+          );
+          expect(sourceField.enableIMEPersonalizedLearning, isFalse);
+          expect(translationField.enableIMEPersonalizedLearning, isFalse);
+
+          final sourceFinder = find.byKey(const ValueKey('source-text'));
+          await tester.showKeyboard(sourceFinder);
+          expect(
+            tester
+                .testTextInput
+                .setClientArgs!['enableIMEPersonalizedLearning'],
+            isFalse,
+          );
+
+          await tester.tap(setting);
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const ValueKey('source-text')))
+                .enableIMEPersonalizedLearning,
+            isTrue,
+          );
+          expect(
+            tester
+                .widget<TextField>(
+                  find.byKey(const ValueKey('translation-text-0')),
+                )
+                .enableIMEPersonalizedLearning,
+            isTrue,
+          );
+          await tester.showKeyboard(sourceFinder);
+          expect(
+            tester
+                .testTextInput
+                .setClientArgs!['enableIMEPersonalizedLearning'],
+            isTrue,
+          );
+        }
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
+  testWidgets('discloses keyboard privacy control limits outside Android', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    try {
+      for (final (locale, notice) in [
+        (
+          const Locale('ja'),
+          'このプラットフォームでは、ことはからキーボードの学習を制御できません。入力方法のプライバシー設定をご確認ください。',
+        ),
+        (
+          const Locale('en'),
+          "Kotoha cannot control keyboard learning on this platform. Check your input method's privacy settings.",
+        ),
+      ]) {
+        tester.binding.platformDispatcher.localesTestValue = [locale];
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(const KotohaApp());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('android-ime-personalized-learning')),
+          findsNothing,
+        );
+        expect(find.text(notice), findsOneWidget);
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 
   testWidgets('supports localized keyboard traversal and actions', (
     tester,
@@ -157,6 +290,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
 
       for (final (
             locale,
@@ -234,6 +368,7 @@ void main() {
         final firstCardOrder = [
           find.byTooltip(interfaceLanguage),
           find.byTooltip(licenses),
+          find.byKey(const ValueKey('android-ime-personalized-learning')),
           find.bySemanticsLabel(sourceLanguage),
           find.bySemanticsLabel(sourceText),
           find.bySemanticsLabel(targetLanguage),
@@ -244,6 +379,14 @@ void main() {
         for (var index = 0; index < firstCardOrder.length; index++) {
           await pressTab();
           expectFocused(firstCardOrder[index], 'initial control $index');
+          if (index == 2) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.space);
+            await tester.pumpAndSettle();
+            expectFocused(
+              firstCardOrder[index],
+              'IME setting after keyboard activation',
+            );
+          }
         }
 
         // The add action is operable from the keyboard, not only discoverable.
@@ -262,6 +405,7 @@ void main() {
         final twoCardOrder = [
           find.byTooltip(interfaceLanguage),
           find.byTooltip(licenses),
+          find.byKey(const ValueKey('android-ime-personalized-learning')),
           find.bySemanticsLabel(sourceLanguage),
           find.bySemanticsLabel(sourceText),
           find.bySemanticsLabel(targetLanguage).at(0),
@@ -297,6 +441,7 @@ void main() {
         expect(find.byTooltip(removeTwo), findsNothing);
       }
     } finally {
+      debugDefaultTargetPlatformOverride = null;
       semantics.dispose();
     }
   });
@@ -443,10 +588,16 @@ void main() {
       find.textContaining('No automatic translation is performed.'),
       findsOneWidget,
     );
-    expect(
-      find.textContaining('Copied translations are sent to the OS clipboard'),
-      findsOneWidget,
+    final clipboardNotice = find.textContaining(
+      'Copied translations are sent to the OS clipboard',
     );
+    await tester.dragUntilVisible(
+      clipboardNotice,
+      find.byType(Scrollable).first,
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(clipboardNotice, findsOneWidget);
     final copy = find.byTooltip('Copy translation 1');
     await tester.dragUntilVisible(
       copy,
