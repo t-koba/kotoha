@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' as intl;
 
 import 'l10n/app_localizations.dart';
 
@@ -161,16 +162,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                   strings.sourceLanguageHint,
                 ),
                 const SizedBox(height: 12),
-                TextField(
+                _manualTextField(
                   key: const ValueKey('source-text'),
                   controller: _sourceText,
+                  label: strings.sourceText,
                   minLines: 5,
                   maxLines: 12,
-                  decoration: InputDecoration(
-                    labelText: strings.sourceText,
-                    alignLabelWithHint: true,
-                    border: const OutlineInputBorder(),
-                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -234,16 +231,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
               ],
             ),
             const SizedBox(height: 12),
-            TextField(
+            _manualTextField(
               key: ValueKey('translation-text-$index'),
               controller: fields.text,
+              label: strings.manualTranslation,
               minLines: 4,
               maxLines: 10,
-              decoration: InputDecoration(
-                labelText: strings.manualTranslation,
-                alignLabelWithHint: true,
-                border: const OutlineInputBorder(),
-              ),
             ),
           ],
         ),
@@ -261,6 +254,30 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
       labelText: label,
       hintText: hint,
       border: const OutlineInputBorder(),
+    ),
+  );
+
+  Widget _manualTextField({
+    required Key key,
+    required TextEditingController controller,
+    required String label,
+    required int minLines,
+    required int maxLines,
+  }) => ValueListenableBuilder<TextEditingValue>(
+    valueListenable: controller,
+    builder: (context, value, _) => TextField(
+      key: key,
+      controller: controller,
+      textDirection: intl.Bidi.startsWithRtl(value.text)
+          ? TextDirection.rtl
+          : TextDirection.ltr,
+      minLines: minLines,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        alignLabelWithHint: true,
+        border: const OutlineInputBorder(),
+      ),
     ),
   );
 }
