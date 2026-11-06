@@ -107,21 +107,18 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     let state = NSPredicate { [self] _, _ in
       // Resolve the identity on each poll; Flutter can replace its semantics node
       // when the field direction changes from RTL to LTR.
-      let current = field(id)
-      guard current.exists, current.isEnabled,
-            let actual = current.value as? String else { return false }
-      // Some native accessibility bridges include bidi formatting controls in the
-      // exposed value. They change presentation, not the underlying editor text; the
-      // Flutter tests independently assert exact controller contents.
-      return current.label == label
-        && Self.withoutBidiFormattingControls(actual) == expected
+      matchesField(field(id), label: label, expected: expected)
     }
     let expectation = XCTNSPredicateExpectation(predicate: state, object: nil)
     let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
     guard result == .completed else {
-      // This is a post-wait observation, not necessarily the value seen by the
-      // final predicate poll. Keep it bounded while preserving scalar-level clues.
+      // The CI failure showed a matching value in the post-timeout observation.
+      // Check that fresh snapshot once; do not add a second polling interval.
       let current = field(id)
+      if result == .timedOut && matchesField(current, label: label, expected: expected) {
+        return
+      }
+      // Keep failure details bounded while preserving scalar-level clues.
       let actual = current.value as? String
       let scalarPrefix = actual.map { text in
         text.unicodeScalars.prefix(32)
@@ -137,6 +134,16 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
           + "scalarPrefix=[\(scalarPrefix)], scalarCount=\(scalarCount)")
       return
     }
+  }
+
+  private func matchesField(_ current: XCUIElement, label: String, expected: String) -> Bool {
+    guard current.exists, current.isEnabled,
+          let actual = current.value as? String else { return false }
+    // Some native accessibility bridges include bidi formatting controls in the
+    // exposed value. They change presentation, not the underlying editor text; the
+    // Flutter tests independently assert exact controller contents.
+    return current.label == label
+      && Self.withoutBidiFormattingControls(actual) == expected
   }
 
   private static func withoutBidiFormattingControls(_ text: String) -> String {
