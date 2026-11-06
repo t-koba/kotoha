@@ -215,4 +215,45 @@ void main() {
     );
     expect(secondParagraphCaret.top, greaterThan(firstParagraphCaret.top));
   });
+
+  testWidgets('source field preserves composing input across edit rebuilds', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const KotohaApp());
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.tap(source);
+    await tester.pump();
+
+    final controller = tester.widget<TextField>(source).controller!;
+    final editable = find.descendant(
+      of: source,
+      matching: find.byType(EditableText),
+    );
+    final focusNode = tester.widget<EditableText>(editable).focusNode;
+
+    const firstComposition = TextEditingValue(
+      text: 'ひらがな',
+      selection: TextSelection.collapsed(offset: 4),
+      composing: TextRange(start: 0, end: 4),
+    );
+    tester.testTextInput.updateEditingValue(firstComposition);
+    await tester.pump();
+    expect(tester.widget<TextField>(source).controller, same(controller));
+    expect(controller.value, firstComposition);
+    expect(tester.widget<EditableText>(editable).focusNode, same(focusNode));
+    expect(focusNode.hasFocus, isTrue);
+
+    const secondComposition = TextEditingValue(
+      text: 'ひらがな日本語',
+      selection: TextSelection.collapsed(offset: 7),
+      composing: TextRange(start: 0, end: 7),
+    );
+    tester.testTextInput.updateEditingValue(secondComposition);
+    await tester.pump();
+    expect(tester.widget<TextField>(source).controller, same(controller));
+    expect(controller.value, secondComposition);
+    expect(controller.value.composing, const TextRange(start: 0, end: 7));
+    expect(tester.widget<EditableText>(editable).focusNode, same(focusNode));
+    expect(focusNode.hasFocus, isTrue);
+  });
 }
