@@ -116,16 +116,21 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
             initialValue: Localizations.localeOf(context),
             onSelected: widget.onLocaleChanged,
             icon: const Icon(Icons.translate),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: const Locale('ja'),
-                child: Text(strings.japanese),
-              ),
-              PopupMenuItem(
-                value: const Locale('en'),
-                child: Text(strings.english),
-              ),
-            ],
+            itemBuilder: (context) {
+              final selectedLocale = Localizations.localeOf(context);
+              return [
+                CheckedPopupMenuItem<Locale>(
+                  value: const Locale('ja'),
+                  checked: selectedLocale.languageCode == 'ja',
+                  child: Text(strings.japanese),
+                ),
+                CheckedPopupMenuItem<Locale>(
+                  value: const Locale('en'),
+                  checked: selectedLocale.languageCode == 'en',
+                  child: Text(strings.english),
+                ),
+              ];
+            },
           ),
           Builder(
             builder: (innerContext) => IconButton(

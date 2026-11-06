@@ -323,7 +323,11 @@ void main() {
     ]) {
       await tester.tap(find.byKey(const ValueKey('ui-language')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(choice));
+      await tester.tap(
+        find
+            .byType(CheckedPopupMenuItem<Locale>)
+            .at(choice == 'English' ? 1 : 0),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text(title), findsOneWidget);
@@ -342,7 +346,7 @@ void main() {
     // A fresh app session follows the device again and starts with empty fields.
     await tester.tap(find.byKey(const ValueKey('ui-language')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('English'));
+    await tester.tap(find.byType(CheckedPopupMenuItem<Locale>).at(1));
     await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(const KotohaApp());
@@ -402,7 +406,11 @@ void main() {
 
         await tester.tap(find.byKey(const ValueKey('ui-language')));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(switchTo));
+        await tester.tap(
+          find
+              .byType(CheckedPopupMenuItem<Locale>)
+              .at(switchTo == 'English' ? 1 : 0),
+        );
         await tester.pumpAndSettle();
         expect(find.text(title), findsOneWidget);
         expect(tester.takeException(), isNull);
