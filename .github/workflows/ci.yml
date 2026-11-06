@@ -95,11 +95,17 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
           sdkmanager "platform-tools" "emulator" "$ANDROID_SYSTEM_IMAGE"
           echo no | avdmanager create avd --force --name kotoha-privacy \
             --package "$ANDROID_SYSTEM_IMAGE" --device "$ANDROID_AVD_DEVICE"
+          test -s "$ANDROID_AVD_HOME/kotoha-privacy.ini" || {
+            echo "AVD metadata missing from $ANDROID_AVD_HOME" >&2
+            exit 1
+          }
           emulator -avd kotoha-privacy -port 5554 -no-window -no-audio \
             -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on \
             > "$RUNNER_TEMP/kotoha-emulator.log" 2>&1 &
