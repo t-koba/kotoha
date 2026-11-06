@@ -32,15 +32,22 @@ class _KotohaAppState extends State<KotohaApp> {
     supportedLocales: AppLocalizations.supportedLocales,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF315F58)),
-      useMaterial3: true,
-    ),
+    theme: _themeFor(Brightness.light),
+    darkTheme: _themeFor(Brightness.dark),
+    themeMode: ThemeMode.system,
     home: TextWorkspacePage(
       onLocaleChanged: (locale) => setState(() => _locale = locale),
     ),
   );
 }
+
+ThemeData _themeFor(Brightness brightness) => ThemeData(
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: const Color(0xFF315F58),
+    brightness: brightness,
+  ),
+  useMaterial3: true,
+);
 
 class TextWorkspacePage extends StatefulWidget {
   const TextWorkspacePage({super.key, required this.onLocaleChanged});

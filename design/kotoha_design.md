@@ -108,6 +108,7 @@ Unicodeの書記素、結合文字、双方向表示、縦書き、文字幅、�
 入口は「翻訳」「取り込む」「会話」「ライブラリ」を基本にする。取り込み対象と利用目的から必要な処理を提案する。利用者の頻用操作をホームに配置できる。
 
 コンパクトな画面は上下・切替表示、広い画面はサイドバーと複数ペインへ適応する。ウィンドウ幅、入力方式、表示倍率、利用中のモードからレイアウトを決定する。
+画面の明暗はOS設定に追従し、通常サイズの文字色と背景の組合せは4.5:1以上を受入下限とする。[S23] 配色の利用者設定は保存せず、OS設定の変更を反映する。
 
 | 画面 | 表示と操作 |
 |---|---|
@@ -622,3 +623,4 @@ kotoha capabilities --json
 - [S20] [Apple — Preventing Sensitive Information From Appearing in the App Switcher](https://developer.apple.com/library/archive/qa/qa1838/_index.html)
 - [S21] [Android Developers — Secure sensitive activities](https://developer.android.com/security/fraud-prevention/activities)
 - [S22] [Android Developers — WindowManager.LayoutParams.FLAG_SECURE](https://developer.android.com/reference/android/view/WindowManager.LayoutParams#FLAG_SECURE)
+- [S23] [W3C WAI — Understanding Success Criterion 1.4.3: Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)

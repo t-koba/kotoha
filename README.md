@@ -25,6 +25,9 @@ iOS or other platforms. Input methods control their own behavior, so this flag d
 not guarantee that an external keyboard will never process or retain entered text;
 check the keyboard's privacy settings.
 
+The interface follows the operating system's light/dark appearance; Kotoha does not
+persist a theme preference.
+
 ## Development
 
 ```sh
