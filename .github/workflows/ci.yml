@@ -81,6 +81,47 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub
+      # Callback/flag coverage only: not every launcher/OEM recents snapshot or
+      # physical-device behavior, nor image capture or Flutter draft/focus restoration.
+      - name: Check task-switcher flags on Android Emulator
+        timeout-minutes: 15
+        env:
+          ANDROID_SYSTEM_IMAGE: system-images;android-35;default;x86_64
+          ANDROID_AVD_DEVICE: pixel_2
+          ANDROID_BOOT_TIMEOUT_SECONDS: '180'
+          ANDROID_BOOT_POLL_SECONDS: '2'
+          ANDROID_TEST_TIMEOUT: 7m
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          sdkmanager "platform-tools" "emulator" "$ANDROID_SYSTEM_IMAGE"
+          echo no | avdmanager create avd --force --name kotoha-privacy \
+            --package "$ANDROID_SYSTEM_IMAGE" --device "$ANDROID_AVD_DEVICE"
+          emulator -avd kotoha-privacy -port 5554 -no-window -no-audio \
+            -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on \
+            > "$RUNNER_TEMP/kotoha-emulator.log" 2>&1 &
+          emulator_pid=$!
+          cleanup() {
+            kill "$emulator_pid" 2>/dev/null || true
+            wait "$emulator_pid" 2>/dev/null || true
+            tail -n 80 "$RUNNER_TEMP/kotoha-emulator.log"
+          }
+          trap cleanup EXIT
+          export emulator_pid
+          timeout "${ANDROID_BOOT_TIMEOUT_SECONDS}s" bash -c '
+            until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" == 1 ]]; do
+              kill -0 "$emulator_pid" || exit 1
+              sleep "$ANDROID_BOOT_POLL_SECONDS"
+            done
+          '
+          adb shell input keyevent KEYCODE_WAKEUP
+          adb shell wm dismiss-keyguard
+          cd android
+          timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest
 
   apple:
     name: iOS and macOS debug builds
@@ -105,6 +146,26 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Build unsigned iOS app
         run: flutter build ios --debug --no-codesign --no-pub
+      # Native scene callback/cover behavior only: no Dart draft/focus or actual
+      # task-switcher snapshot assertions. Missing pinned profiles fail, not skip.
+      - name: Test iOS privacy cover on Simulator
+        timeout-minutes: 15
+        env:
+          IOS_SIMULATOR_OS: '26.2'
+          IOS_SIMULATOR_DEVICE: iPhone 17
+          IOS_DESTINATION_TIMEOUT_SECONDS: '60'
+          IOS_TEST_TIMEOUT_SECONDS: '60'
+        run: |
+          set -euo pipefail
+          xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
+            -configuration Debug -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,OS=$IOS_SIMULATOR_OS,name=$IOS_SIMULATOR_DEVICE" \
+            -destination-timeout "$IOS_DESTINATION_TIMEOUT_SECONDS" \
+            -only-testing:RunnerTests/RunnerTests/testPrivacyCoverIsIdempotentAndLeavesContentAttached \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
+            -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
+            CODE_SIGNING_ALLOWED=NO
       - name: Build unsigned macOS app
         run: flutter build macos --debug --no-pub
 

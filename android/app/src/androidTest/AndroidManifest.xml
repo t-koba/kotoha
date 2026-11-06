@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Only the instrumentation APK requires the SDK test runtime. -->
+        <uses-library android:name="android.test.runner" android:required="true" />
+        <uses-library android:name="android.test.base" android:required="true" />
+    </application>
+</manifest>

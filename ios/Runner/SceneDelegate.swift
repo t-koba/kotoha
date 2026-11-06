@@ -11,6 +11,10 @@ class SceneDelegate: FlutterSceneDelegate {
 
   override func sceneDidBecomeActive(_ scene: UIScene) {
     super.sceneDidBecomeActive(scene)
+    hidePrivacyCover()
+  }
+
+  private func hidePrivacyCover() {
     privacyCover?.removeFromSuperview()
     privacyCover = nil
   }

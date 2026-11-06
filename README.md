@@ -13,10 +13,13 @@ sensitive text in this temporary build.
 
 Mobile task-switcher previews receive a best-effort privacy mask: Android temporarily
 sets the secure-window flag while the activity is paused; iOS displays an opaque
-window cover while its scene is inactive. The mask is removed on resume and does
-not affect normal foreground screenshots. Platform behavior must still be checked on
-real devices; this is not protection from external cameras, keyboards, or every OS
-version. Android may suppress capture while paused.
+window cover while its scene is inactive. CI checks the native pause/resume callback
+state on a pinned Android API 35 emulator and iPhone 17/iOS 26.2 simulator, while a
+Flutter lifecycle test checks in-memory draft and focus continuity. These tests do
+not inspect the OS task-switcher thumbnail or establish behavior on physical devices,
+OEM launchers, every OS version, external cameras, keyboards, or screen sharing.
+Kotoha removes its mask on resume and does not intentionally block ordinary foreground
+screenshots; Android may suppress capture while paused.
 
 On Android, the editor asks the input method not to update personalized typing data
 by default; users can opt in for the current session. A change applies when a text

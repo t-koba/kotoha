@@ -9,6 +9,10 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    // SDK test APIs, optional here so the app does not require test libraries.
+    useLibrary("android.test.runner", false)
+    useLibrary("android.test.base", false)
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -17,6 +21,7 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "org.kotoha.app"
+        testInstrumentationRunner = "android.test.InstrumentationTestRunner"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
