@@ -112,10 +112,11 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     let expectation = XCTNSPredicateExpectation(predicate: state, object: nil)
     let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
     guard result == .completed else {
-      // The CI failure showed a matching value in the post-timeout observation.
-      // Check that fresh snapshot once; do not add a second polling interval.
+      // XCTest may stop waiting for reasons other than timeout even after the
+      // UI reaches the expected state. Check one fresh snapshot without polling
+      // again; the exact label/value remains the acceptance condition.
       let current = field(id)
-      if result == .timedOut && matchesField(current, label: label, expected: expected) {
+      if matchesField(current, label: label, expected: expected) {
         return
       }
       // Keep failure details bounded while preserving scalar-level clues.
