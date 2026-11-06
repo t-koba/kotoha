@@ -81,9 +81,9 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub
-      # Callback/flag coverage only: not every launcher/OEM recents snapshot or
-      # physical-device behavior, nor image capture or Flutter draft/focus restoration.
-      - name: Check task-switcher flags on Android Emulator
+      # Callback/flag + native accessibility/input coverage, not OS thumbnails,
+      # TalkBack speech/gestures, physical devices/keyboards, or every launcher/OEM.
+      - name: Check privacy callbacks and accessibility on Android Emulator
         timeout-minutes: 15
         env:
           ANDROID_SYSTEM_IMAGE: system-images;android-35;default;x86_64
@@ -91,6 +91,8 @@ jobs:
           ANDROID_BOOT_TIMEOUT_SECONDS: '180'
           ANDROID_BOOT_POLL_SECONDS: '2'
           ANDROID_TEST_TIMEOUT: 7m
+          ANDROID_AX_TIMEOUT_MILLIS: '10000'
+          ANDROID_AX_POLL_MILLIS: '100'
         shell: bash
         run: |
           set -euo pipefail
@@ -127,7 +129,9 @@ jobs:
           adb shell wm dismiss-keyguard
           cd android
           timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
-            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest
+            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest,org.kotoha.app.MainActivityAccessibilityTest \
+            -Pandroid.testInstrumentationRunnerArguments.axTimeoutMillis="$ANDROID_AX_TIMEOUT_MILLIS" \
+            -Pandroid.testInstrumentationRunnerArguments.axPollMillis="$ANDROID_AX_POLL_MILLIS"
 
   apple:
     name: iOS and macOS debug builds
@@ -152,26 +156,30 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Build unsigned iOS app
         run: flutter build ios --debug --no-codesign --no-pub
-      # Native scene callback/cover behavior only: no Dart draft/focus or actual
-      # task-switcher snapshot assertions. Missing pinned profiles fail, not skip.
-      - name: Test iOS privacy cover on Simulator
+      # Native cover callbacks + XCUI accessibility/input only: no OS thumbnails,
+      # VoiceOver speech/gestures or physical devices/keyboards. Missing profiles fail.
+      - name: Test iOS privacy callbacks and accessibility on Simulator
         timeout-minutes: 15
         env:
           IOS_SIMULATOR_OS: '26.2'
           IOS_SIMULATOR_DEVICE: iPhone 17
           IOS_DESTINATION_TIMEOUT_SECONDS: '60'
-          IOS_TEST_TIMEOUT_SECONDS: '60'
+          IOS_TEST_TIMEOUT_SECONDS: '120'
+          IOS_AX_TIMEOUT_SECONDS: '10'
         run: |
           set -euo pipefail
+          # Require the software keyboard for XCUI text input; no physical keyboard is used.
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
           xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
             -configuration Debug -sdk iphonesimulator \
             -destination "platform=iOS Simulator,OS=$IOS_SIMULATOR_OS,name=$IOS_SIMULATOR_DEVICE" \
             -destination-timeout "$IOS_DESTINATION_TIMEOUT_SECONDS" \
             -only-testing:RunnerTests/RunnerTests/testPrivacyCoverIsIdempotentAndLeavesContentAttached \
+            -only-testing:RunnerUITests/LanguageFieldAccessibilityTests \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
-            CODE_SIGNING_ALLOWED=NO
+            KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
       - name: Build unsigned macOS app
         run: flutter build macos --debug --no-pub
 

@@ -46,6 +46,17 @@ python3 design/specs/validate_specs.py
 `.github/workflows/ci.yml` runs the design-contract validator, Dart formatting,
 Flutter analysis and tests on pushes to `dev`, `mizu`, or `mizu/dev`, pull requests,
 and manual dispatch. It also builds debug apps on Android, iOS/macOS, and Windows
-runners. These are validation builds, not signed release artifacts. Linux remains
+runners. On the same pinned mobile profiles used for privacy callback tests,
+native tests inspect localized source/target language-field names and values during
+Arabic-to-Latin edits under English and Japanese app UI locales, and check
+synthesized text input/focus continuity (Android also checks forward/reverse Tab).
+iOS uses a minimal XCUI test target; the hosted unit-test target still checks
+privacy callbacks.
+
+These tests do not validate TalkBack/VoiceOver speech or gestures, physical-device
+or physical-keyboard behavior. Native execution requires those CI profiles; no local
+widget-test result substitutes for it. Wait budgets are configured in the workflow
+and passed to the native tests; missing profiles and inaccessible fields fail, not skip.
+These are validation builds, not signed release artifacts. Linux remains
 intentionally unscaffolded until its host can use the designed non-GTK Flutter
 Engine embedding; the Ubuntu test job does not claim a Linux desktop build.
