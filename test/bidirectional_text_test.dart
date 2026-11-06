@@ -2,8 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
+import 'package:kotoha/first_strong_direction.dart';
 
 void main() {
+  test('UAX #9 P2/P3 scans scalars and ignores non-strong types', () {
+    const cases = <String, TextDirection>{
+      '😀 العربية': TextDirection.rtl, // Supplementary ON, then AL.
+      '\u200fEnglish': TextDirection.rtl, // RLM is R, not neutral.
+      '\u061cEnglish': TextDirection.rtl, // ALM is AL.
+      '\u200eالعربية': TextDirection.ltr, // LRM is L.
+      '\u{1E900} English': TextDirection.rtl, // Supplementary R (Adlam).
+      '\u{10400} العربية': TextDirection.ltr, // Supplementary L (Deseret).
+      '\u{1F680}\u{1D167}עברית': TextDirection.rtl, // ON and NSM.
+      '\u202bEnglish': TextDirection.ltr, // RLE is not a strong type.
+      // Skip nested LRI/RLI/FSI through their matching PDI.
+      '\u2066English\u2067עברית\u2069\u2068日本語\u2069\u2069العربية':
+          TextDirection.rtl,
+      '\u2067עברית\u2069English': TextDirection.ltr,
+      '\u2069العربية': TextDirection.rtl, // Unmatched PDI is skipped.
+      '\u2067العربية': TextDirection.ltr, // Unmatched isolate hides rest.
+      '\u2066English\u2067עברית\u2069العربية': TextDirection.ltr,
+      '\nالعربية': TextDirection.ltr, // B terminates before a strong type.
+      '\u2067עברית\u2029\u2069العربية': TextDirection.ltr, // B in isolate.
+      'العربية\nEnglish': TextDirection.rtl, // First paragraph only.
+      '': TextDirection.ltr,
+      '123 😀': TextDirection.ltr, // No strong type defaults to LTR.
+    };
+    for (final entry in cases.entries) {
+      expect(firstStrongDirection(entry.key), entry.value, reason: entry.key);
+    }
+  });
+
   testWidgets(
     'mixed-script text direction and clipboard are independent of UI locale',
     (tester) async {
@@ -31,9 +60,9 @@ void main() {
       const sourceKey = ValueKey('source-text');
       const translationKey = ValueKey('translation-text-0');
       const copyKey = ValueKey('copy-translation-0');
-      const rtlSource = 'العربية — English 日本語';
-      const ltrSource = 'English — العربية 日本語';
-      const rtlTranslation = 'עברית — English العربية';
+      const rtlSource = '😀 العربية — English 日本語';
+      const ltrSource = '\u200eEnglish — العربية 日本語';
+      const rtlTranslation = '\u200fEnglish — עברית العربية';
 
       for (final locale in [const Locale('en'), const Locale('ja')]) {
         tester.binding.platformDispatcher.localesTestValue = [locale];
@@ -97,12 +126,29 @@ void main() {
           rtlTranslation.length,
         );
 
+        const selected = TextSelection(baseOffset: 1, extentOffset: 8);
+        translationController.selection = selected;
+        await tester.pump();
+        expect(translationController.selection, selected);
+        final edited = translationController.value.replaced(selected, '日本語');
+        tester.testTextInput.updateEditingValue(edited);
+        await tester.pump();
+        expect(translationController.value, edited);
+        expect(
+          tester.widget<EditableText>(translationEditable).focusNode.hasFocus,
+          isTrue,
+        );
+        expect(
+          tester.widget<EditableText>(translationEditable).textDirection,
+          TextDirection.rtl,
+        );
+
         final copy = find.byKey(copyKey);
         await tester.ensureVisible(copy);
         await tester.pumpAndSettle();
         await tester.tap(copy);
         await tester.pump();
-        expect(clipboardCalls.last.arguments, {'text': rtlTranslation});
+        expect(clipboardCalls.last.arguments, {'text': edited.text});
       }
     },
   );

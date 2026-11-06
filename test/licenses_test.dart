@@ -1,29 +1,39 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kotoha/main.dart';
+import 'package:kotoha/main.dart' as app;
 
 void main() {
-  testWidgets('opens a license page backed by the license registry', (
+  testWidgets('bundled Unicode notice is accessible from the license page', (
     tester,
   ) async {
-    LicenseRegistry.addLicense(
-      () => Stream<LicenseEntry>.value(
-        const LicenseEntryWithLineBreaks([
-          'kotoha_test_package',
-        ], 'Test license body.'),
-      ),
-    );
     addTearDown(LicenseRegistry.reset);
+    app.main();
+    await tester.pumpAndSettle();
 
-    await tester.pumpWidget(const KotohaApp());
-
-    expect(find.byKey(const ValueKey('show-licenses')), findsOneWidget);
+    final notice = await rootBundle.loadString(
+      'assets/licenses/Unicode-3.0.txt',
+    );
+    final entries = await LicenseRegistry.licenses
+        .where((entry) => entry.packages.contains('Unicode Bidi Data'))
+        .toList();
+    expect(entries, hasLength(1));
+    String normalizeWhitespace(String text) =>
+        text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    expect(
+      normalizeWhitespace(
+        entries.single.paragraphs.map((p) => p.text).join(' '),
+      ),
+      normalizeWhitespace(notice),
+    );
 
     await tester.tap(find.byKey(const ValueKey('show-licenses')));
     await tester.pumpAndSettle();
-
     expect(find.byType(LicensePage), findsOneWidget);
-    expect(find.textContaining('kotoha_test_package'), findsWidgets);
+    await tester.tap(find.text('Unicode Bidi Data'));
+    await tester.pumpAndSettle();
+    expect(find.text('UNICODE LICENSE V3'), findsOneWidget);
+    expect(find.text('Copyright © 1991-2026 Unicode, Inc.'), findsOneWidget);
   });
 }

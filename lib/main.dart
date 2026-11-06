@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart' as intl;
+import 'package:flutter/foundation.dart';
 
+import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
 
-void main() => runApp(const KotohaApp());
+void main() {
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks([
+      'Unicode Bidi Data',
+    ], await rootBundle.loadString('assets/licenses/Unicode-3.0.txt'));
+  });
+  runApp(const KotohaApp());
+}
 
 class KotohaApp extends StatefulWidget {
   const KotohaApp({super.key});
@@ -273,9 +281,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     builder: (context, value, _) => TextField(
       key: key,
       controller: controller,
-      textDirection: intl.Bidi.startsWithRtl(value.text)
-          ? TextDirection.rtl
-          : TextDirection.ltr,
+      textDirection: firstStrongDirection(value.text),
       minLines: minLines,
       maxLines: maxLines,
       decoration: InputDecoration(
