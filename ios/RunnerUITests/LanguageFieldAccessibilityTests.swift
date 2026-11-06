@@ -45,19 +45,22 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       NSPredicate(format: "label == %@", locale)).firstMatch
     XCTAssertTrue(choice.waitForExistence(timeout: timeout))
     choice.tap()
-    checkField(source, nextField: sourceText)
-    checkField(target, nextField: translation)
+    checkField("source-language", label: source, nextID: "source-text", nextLabel: sourceText)
+    checkField("target-language-0", label: target, nextID: "translation-text-0",
+               nextLabel: translation)
   }
 
-  private func field(_ label: String) -> XCUIElement {
+  // A focused empty field can include its example hint in the label. Locate by
+  // identity instead; assert the localized label separately after entering text.
+  private func field(_ id: String) -> XCUIElement {
     app.descendants(matching: .any).matching(NSPredicate(
-      format: "label == %@ AND (elementType == %d OR elementType == %d)", label,
+      format: "identifier == %@ AND (elementType == %d OR elementType == %d)", id,
       XCUIElement.ElementType.textField.rawValue,
       XCUIElement.ElementType.textView.rawValue)).firstMatch
   }
 
-  private func reveal(_ label: String) -> XCUIElement {
-    let element = field(label)
+  private func reveal(_ id: String) -> XCUIElement {
+    let element = field(id)
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
       if element.exists && element.isHittable { return element }
@@ -70,12 +73,12 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
       start.press(forDuration: 0.15, thenDragTo: end)
     }
-    XCTFail("Native editable field unavailable after scrolling: \(label)")
+    XCTFail("Native editable field unavailable after scrolling: \(id)")
     return element
   }
 
-  private func assertField(_ label: String, value: String) {
-    let element = field(label) // Re-query XCUI after every dynamic rebuild.
+  private func assertField(_ id: String, label: String, value: String) {
+    let element = field(id) // Re-query XCUI after every dynamic rebuild.
     let state = NSPredicate(format: "exists == true AND enabled == true AND value == %@", value)
     let expectation = XCTNSPredicateExpectation(predicate: state, object: element)
     XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed,
@@ -83,8 +86,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     XCTAssertEqual(element.label, label)
   }
 
-  private func checkField(_ label: String, nextField: String) {
-    let element = reveal(label)
+  private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
+    let element = reveal(id)
     element.tap()
     XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
     // Use the public Paste UI for Arabic: typeText cannot synthesize every Unicode
@@ -97,25 +100,25 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       XCUIElement.ElementType.button.rawValue)).firstMatch
     XCTAssertTrue(paste.waitForExistence(timeout: timeout))
     paste.tap()
-    assertField(label, value: "العربية")
+    assertField(id, label: label, value: "العربية")
 
     // No re-tap throughout the direction change: typing, deleting the known RTL
     // value at its insertion point, and typing Latin must keep the same input focus.
     // This is input-focus evidence, not VoiceOver/accessibility focus.
     app.typeText("x")
-    assertField(label, value: "العربيةx")
+    assertField(id, label: label, value: "العربيةx")
     app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "العربيةx".count))
     app.typeText("Latin")
-    assertField(label, value: "Latin")
+    assertField(id, label: label, value: "Latin")
     app.typeText("x")
-    assertField(label, value: "Latinx")
+    assertField(id, label: label, value: "Latinx")
     // Tap the next native field and verify it receives keyboard input. Flutter widget
     // tests separately cover keyboard traversal order; iPhone XCUI has no Tab key API.
-    let destination = reveal(nextField)
+    let destination = reveal(nextID)
     destination.tap()
     XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
     app.typeText("z")
-    assertField(nextField, value: "z")
-    assertField(label, value: "Latinx")
+    assertField(nextID, label: nextLabel, value: "z")
+    assertField(id, label: label, value: "Latinx")
   }
 }

@@ -298,41 +298,47 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     TextEditingController controller,
     String label,
     String hint, {
-    required Key key,
+    required ValueKey<String> key,
   }) => ValueListenableBuilder<TextEditingValue>(
     valueListenable: controller,
-    builder: (context, value, _) => TextField(
-      key: key,
-      controller: controller,
-      enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
-      textDirection: firstStrongDirection(value.text),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        border: const OutlineInputBorder(),
+    builder: (context, value, _) => Semantics(
+      identifier: key.value,
+      child: TextField(
+        key: key,
+        controller: controller,
+        enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+        textDirection: firstStrongDirection(value.text),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          border: const OutlineInputBorder(),
+        ),
       ),
     ),
   );
 
   Widget _manualTextField({
-    required Key key,
+    required ValueKey<String> key,
     required TextEditingController controller,
     required String label,
     required int minLines,
     required int maxLines,
   }) => ValueListenableBuilder<TextEditingValue>(
     valueListenable: controller,
-    builder: (context, value, _) => TextField(
-      key: key,
-      controller: controller,
-      enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
-      textDirection: firstStrongDirection(value.text),
-      minLines: minLines,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        alignLabelWithHint: true,
-        border: const OutlineInputBorder(),
+    builder: (context, value, _) => Semantics(
+      identifier: key.value,
+      child: TextField(
+        key: key,
+        controller: controller,
+        enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+        textDirection: firstStrongDirection(value.text),
+        minLines: minLines,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          alignLabelWithHint: true,
+          border: const OutlineInputBorder(),
+        ),
       ),
     ),
   );

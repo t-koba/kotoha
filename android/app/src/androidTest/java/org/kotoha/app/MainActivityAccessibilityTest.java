@@ -1,5 +1,6 @@
 package org.kotoha.app;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -7,6 +8,8 @@ import android.test.ActivityInstrumentationTestCase2;
 import android.test.InstrumentationTestRunner;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -36,6 +39,10 @@ public final class MainActivityAccessibilityTest
         // Enables native semantics exposure without installing/enabling TalkBack.
         automation = getInstrumentation().getUiAutomation();
         assertNotNull(automation);
+        AccessibilityServiceInfo service = automation.getServiceInfo();
+        service.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+                | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+        automation.setServiceInfo(service);
         getActivity();
     }
 
@@ -53,37 +60,39 @@ public final class MainActivityAccessibilityTest
         act("interface language menu", n -> named(n, "Interface language")
                 || named(n, "表示言語"), AccessibilityNodeInfo.ACTION_CLICK, null);
         act(locale, n -> named(n, locale), AccessibilityNodeInfo.ACTION_CLICK, null);
-        checkField(source, sourceText, true);
-        checkField(target, copy, false);
+        checkField("source-language", source, "source-text", sourceText);
+        checkField("target-language-0", target, null, copy);
     }
 
-    private void checkField(String label, String nextLabel, boolean nextIsField) {
-        revealField(label);
-        act(label, n -> field(n, label), AccessibilityNodeInfo.ACTION_CLICK, null);
-        awaitFocused(label, true);
+    private void checkField(String id, String label, String nextId, String nextLabel) {
+        revealField(id);
+        act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_CLICK, null);
+        awaitFocused(id, label);
         for (String value : new String[] {"العربية", "Latin"}) {
             Bundle text = new Bundle();
             text.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
-            act(label, n -> field(n, label), AccessibilityNodeInfo.ACTION_SET_TEXT, text);
-            assertField(label, value);
+            act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_SET_TEXT, text);
+            assertField(id, label, value);
             // No re-tap: input must still reach this field after its direction rebuild.
             getInstrumentation().sendStringSync("x");
-            assertField(label, value + "x");
+            assertField(id, label, value + "x");
             tab(false);
-            awaitFocused(nextLabel, nextIsField);
+            awaitFocused(nextId, nextLabel);
             tab(true);
-            assertField(label, value + "x");
+            assertField(id, label, value + "x");
         }
     }
 
-    private void assertField(String label, String value) {
+    private void assertField(String id, String label, String value) {
         AccessibilityNodeInfo node = await(label + " value=" + value + " with input focus",
-                n -> field(n, label) && value.contentEquals(string(n.getText()))
+                n -> field(n, id) && value.contentEquals(string(n.getText()))
                         && n.isFocused());
         try {
             // Flutter may expose the localized name in the hint or description, optionally
             // combined with the field's example hint.
-            assertTrue("localized native field label: " + label, field(node, label));
+            assertTrue("localized native field label: " + label,
+                    nameMatches(string(node.getHintText()), label)
+                            || nameMatches(string(node.getContentDescription()), label));
             assertEquals("android.widget.EditText", string(node.getClassName()));
             assertTrue(node.isEnabled());
             assertTrue(node.isEditable());
@@ -95,9 +104,9 @@ public final class MainActivityAccessibilityTest
         }
     }
 
-    private void awaitFocused(String label, boolean isField) {
+    private void awaitFocused(String id, String label) {
         AccessibilityNodeInfo node = await(label + " input focus",
-                n -> (isField ? field(n, label) : named(n, label)) && n.isFocused());
+                n -> (id != null ? field(n, id) : named(n, label)) && n.isFocused());
         node.recycle();
     }
 
@@ -110,18 +119,18 @@ public final class MainActivityAccessibilityTest
                 new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_TAB, 0, meta));
     }
 
-    private void revealField(String label) {
+    private void revealField(String id) {
         // A phone viewport cannot show the entire editor. Scroll until the field is
         // visible in the native tree, bounded by the configured wait.
         long deadline = SystemClock.uptimeMillis() + timeoutMillis;
         do {
-            AccessibilityNodeInfo node = find(automation.getRootInActiveWindow(),
-                    n -> field(n, label) && n.isVisibleToUser());
+            AccessibilityNodeInfo node = findInApplication(
+                    n -> field(n, id) && n.isVisibleToUser());
             if (node != null) {
                 node.recycle();
                 return;
             }
-            AccessibilityNodeInfo scroll = find(automation.getRootInActiveWindow(),
+            AccessibilityNodeInfo scroll = findInApplication(
                     n -> n.isScrollable() && !n.isEditable());
             if (scroll != null) {
                 try {
@@ -132,7 +141,7 @@ public final class MainActivityAccessibilityTest
             }
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
-        fail("Native field unavailable after scrolling: " + label);
+        fail("Native field unavailable after scrolling: " + id);
     }
 
     private void act(String description, Predicate<AccessibilityNodeInfo> predicate,
@@ -149,12 +158,32 @@ public final class MainActivityAccessibilityTest
             Predicate<AccessibilityNodeInfo> predicate) {
         long deadline = SystemClock.uptimeMillis() + timeoutMillis;
         do {
-            AccessibilityNodeInfo node = find(automation.getRootInActiveWindow(), predicate);
+            AccessibilityNodeInfo node = findInApplication(predicate);
             if (node != null) return node;
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
         fail("Native accessibility state unavailable: " + description);
         return null;
+    }
+
+    // The active window can be the IME after tapping an editor. Search only our
+    // application's windows, including popup menus, without substituting AX focus
+    // for the input focus asserted above.
+    private AccessibilityNodeInfo findInApplication(Predicate<AccessibilityNodeInfo> predicate) {
+        String packageName = getInstrumentation().getTargetContext().getPackageName();
+        List<AccessibilityWindowInfo> windows = automation.getWindows();
+        try {
+            for (AccessibilityWindowInfo window : windows) {
+                if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
+                AccessibilityNodeInfo node = find(window.getRoot(), n ->
+                        packageName.contentEquals(string(n.getPackageName()))
+                                && predicate.test(n));
+                if (node != null) return node;
+            }
+            return null;
+        } finally {
+            for (AccessibilityWindowInfo window : windows) window.recycle();
+        }
     }
 
     // Each poll reads a fresh OS tree; never assert against a stale pre-rebuild node.
@@ -173,10 +202,8 @@ public final class MainActivityAccessibilityTest
         }
     }
 
-    private static boolean field(AccessibilityNodeInfo node, String label) {
-        return node.isEditable() && (nameMatches(string(node.getHintText()), label)
-                || nameMatches(string(node.getContentDescription()), label)
-                || nameMatches(string(node.getText()), label));
+    private static boolean field(AccessibilityNodeInfo node, String id) {
+        return node.isEditable() && id.equals(node.getViewIdResourceName());
     }
 
     private static boolean nameMatches(String name, String label) {

@@ -280,6 +280,76 @@ void main() {
     }
   });
 
+  testWidgets('native field identifiers survive focus and bidi rebuilds', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+
+      for (final (locale, labels) in [
+        (
+          const Locale('en'),
+          [
+            'Source language',
+            'Source text',
+            'Target language',
+            'Manual translation',
+          ],
+        ),
+        (const Locale('ja'), ['原文の言語', '原文', '訳先の言語', '手入力した訳文']),
+      ]) {
+        tester.binding.platformDispatcher.localesTestValue = [locale];
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(const KotohaApp());
+        await tester.pumpAndSettle();
+        const ids = [
+          'source-language',
+          'source-text',
+          'target-language-0',
+          'translation-text-0',
+        ];
+        for (var i = 0; i < ids.length; i++) {
+          final field = find.byKey(ValueKey(ids[i]));
+          await tester.ensureVisible(field);
+          await tester.pumpAndSettle();
+          final identified = find.bySemanticsIdentifier(ids[i]);
+          expect(identified, findsOneWidget);
+          final node = tester.getSemantics(identified);
+          expect(node.id, tester.getSemantics(field).id);
+          expect(node.getSemanticsData().label, contains(labels[i]));
+          await tester.tap(field);
+          await tester.pumpAndSettle();
+          for (final value in ['', 'العربية', 'Latin']) {
+            // Update the current input connection without requesting focus again.
+            tester.testTextInput.updateEditingValue(
+              TextEditingValue(
+                text: value,
+                selection: TextSelection.collapsed(offset: value.length),
+              ),
+            );
+            await tester.pumpAndSettle();
+            expect(identified, findsOneWidget);
+            final data = tester.getSemantics(identified).getSemanticsData();
+            expect(tester.getSemantics(identified).id, node.id);
+            expect(data.identifier, ids[i]);
+            expect(data.label, value.isEmpty ? contains(labels[i]) : labels[i]);
+            expect(data.value, value);
+            expect(data.flagsCollection.isTextField, isTrue);
+            expect(data.flagsCollection.isFocused, Tristate.isTrue);
+            expect(data.hasAction(SemanticsAction.setText), isTrue);
+          }
+        }
+      }
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   testWidgets('supports localized keyboard traversal and actions', (
     tester,
   ) async {
