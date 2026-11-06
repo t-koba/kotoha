@@ -128,8 +128,7 @@ public final class MainActivityAccessibilityTest
         // Value updates are polled independently from focus flags. The initial typed
         // marker proves input reaches the field; later typing without retapping proves
         // it remains routed here when direction changes rebuild the semantics tree.
-        AccessibilityNodeInfo node = await(label + " value=" + value,
-                n -> field(n, id) && value.contentEquals(string(n.getText())));
+        AccessibilityNodeInfo node = awaitFieldValue(id, label, value);
         try {
             // Flutter may expose the localized name in the hint or description, optionally
             // combined with the field's example hint.
@@ -178,6 +177,50 @@ public final class MainActivityAccessibilityTest
         } finally {
             node.recycle();
         }
+    }
+
+    private AccessibilityNodeInfo awaitFieldValue(String id, String label, String value) {
+        long deadline = SystemClock.uptimeMillis() + timeoutMillis;
+        do {
+            AccessibilityNodeInfo node = findInApplication(n ->
+                    field(n, id) && value.contentEquals(string(n.getText())));
+            if (node != null) return node;
+            SystemClock.sleep(pollMillis);
+        } while (SystemClock.uptimeMillis() < deadline);
+        fail("Native accessibility value unavailable: " + label
+                + "; expectedCodePoints=" + codePoints(value) + "; current=" + fieldState(id));
+        return null;
+    }
+
+    // This test enters only synthetic text. Emit a bounded code-point prefix, not
+    // raw text or a tree dump, so invisible bidi controls can be diagnosed without
+    // changing the exact-value assertion.
+    private String fieldState(String id) {
+        AccessibilityNodeInfo node = findInApplication(n -> field(n, id));
+        if (node == null) return "field missing";
+        try {
+            return "textCodePoints=" + codePoints(string(node.getText()))
+                    + ", focused=" + node.isFocused()
+                    + ", visible=" + node.isVisibleToUser();
+        } finally {
+            node.recycle();
+        }
+    }
+
+    private static String codePoints(String value) {
+        StringBuilder result = new StringBuilder("[");
+        int offset = 0;
+        int count = 0;
+        while (offset < value.length() && count < 32) {
+            int codePoint = value.codePointAt(offset);
+            if (count > 0) result.append(' ');
+            result.append("U+").append(Integer.toHexString(codePoint));
+            offset += Character.charCount(codePoint);
+            count++;
+        }
+        if (offset < value.length()) result.append(" …");
+        return result.append(']').append(" (scalars=")
+                .append(value.codePointCount(0, value.length())).append(')').toString();
     }
 
     private AccessibilityNodeInfo await(String description,

@@ -82,24 +82,63 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       XCUIElement.ElementType.textView.rawValue)).firstMatch
   }
 
-  private func hasUsableFrame(_ element: XCUIElement) -> Bool {
-    let frame = element.frame
+  private func hasUsableFrame(_ frame: CGRect) -> Bool {
     return frame.origin.x.isFinite && frame.origin.y.isFinite
       && frame.width.isFinite && frame.height.isFinite
       && frame.width > 0 && frame.height > 0
   }
 
   private func reveal(_ id: String) -> XCUIElement {
-    let element = field(id)
     let deadline = Date().addingTimeInterval(timeout)
+    var swipes = 0
     while Date() < deadline {
-      if element.exists && hasUsableFrame(element) && element.isHittable { return element }
-      // Flutter may expose a stale ScrollView after a keyboard/layout transition.
-      // Swipe the stable app viewport instead of acting on that recycled element.
-      app.swipeUp()
+      // Re-resolve the field after every scroll; direction changes can replace its
+      // native semantics node. Do not retain a recycled ScrollView or target.
+      let element = field(id)
+      let targetFrame = element.exists ? element.frame : .null
+      if hasUsableFrame(targetFrame) && element.isHittable { return element }
+
+      let appFrame = app.frame
+      guard hasUsableFrame(appFrame) else { break }
+      let keyboard = app.keyboards.firstMatch
+      let keyboardExists = keyboard.exists
+      let keyboardFrame = keyboardExists ? keyboard.frame : .null
+      // Never fall back to a full-window gesture over a keyboard with unknown bounds.
+      guard !keyboardExists || hasUsableFrame(keyboardFrame) else { break }
+      let top = appFrame.minY + 8
+      // The app-level coordinates are clipped above the software keyboard. The
+      // editor ListView dismisses the keyboard on drag, then scrolls its content.
+      let bottom = min(
+        appFrame.maxY - 8,
+        keyboardFrame.isNull ? appFrame.maxY - 8 : keyboardFrame.minY - 8)
+      let height = bottom - top
+      guard height > 48 else { break }
+
+      let midpoint = (top + bottom) / 2
+      let swipeUp = !hasUsableFrame(targetFrame) || targetFrame.midY >= midpoint
+      let distance = min(240, height * 0.6)
+      // Start inside the available region, away from the status bar/window edges.
+      let startY = top + height * (swipeUp ? 0.8 : 0.2)
+      let endY = swipeUp ? max(top, startY - distance) : min(bottom, startY + distance)
+      let start = app.coordinate(withNormalizedOffset: CGVector(
+        dx: 0.5, dy: (startY - appFrame.minY) / appFrame.height))
+      let end = app.coordinate(withNormalizedOffset: CGVector(
+        dx: 0.5, dy: (endY - appFrame.minY) / appFrame.height))
+      start.press(forDuration: 0.05, thenDragTo: end)
+      swipes += 1
     }
-    XCTFail("Native editable field unavailable after scrolling: \(id)")
-    return element
+
+    let current = field(id)
+    let keyboard = app.keyboards.firstMatch
+    let targetExists = current.exists
+    XCTFail(
+      "Native editable field unavailable after targeted scrolling: \(id); "
+        + "swipes=\(swipes), app=\(String(describing: app.frame)), "
+        + "keyboard=\(keyboard.exists ? String(describing: keyboard.frame) : "<absent>"), "
+        + "targetExists=\(targetExists), "
+        + "target=\(targetExists ? String(describing: current.frame) : "<absent>"), "
+        + "hittable=\(targetExists && current.isHittable)")
+    return current
   }
 
   private func assertField(_ id: String, label: String, value: String) {
