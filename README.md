@@ -11,6 +11,13 @@ Persistence remains disabled until native dependency provenance and licenses are
 verified and the complete flow is tested on every supported platform. Do not enter
 sensitive text in this temporary build.
 
+Mobile task-switcher previews receive a best-effort privacy mask: Android temporarily
+sets the secure-window flag while the activity is paused; iOS displays an opaque
+window cover while its scene is inactive. The mask is removed on resume and does
+not affect normal foreground screenshots. Platform behavior must still be checked on
+real devices; this is not protection from external cameras, keyboards, or every OS
+version. Android may suppress capture while paused.
+
 On Android, the editor asks the input method not to update personalized typing data
 by default; users can opt in for the current session. A change applies when a text
 field is focused again. Kotoha provides no equivalent keyboard-learning control on

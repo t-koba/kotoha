@@ -49,6 +49,47 @@ void main() {
     expect(find.byKey(const ValueKey('translation-text-0')), findsOneWidget);
   });
 
+  testWidgets('retains in-memory drafts through background transitions', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const KotohaApp());
+    await tester.enterText(find.byKey(const ValueKey('source-text')), 'こんにちは');
+    final translationField = find.byKey(const ValueKey('translation-text-0'));
+    await tester.dragUntilVisible(
+      translationField,
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
+    await tester.enterText(translationField, 'Hello');
+    final focusedNode = tester.binding.focusManager.primaryFocus;
+    expect(focusedNode, isNotNull);
+
+    for (final state in const <AppLifecycleState>[
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+      await tester.pump();
+    }
+
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('source-text')))
+          .controller!
+          .text,
+      'こんにちは',
+    );
+    expect(
+      tester.widget<TextField>(translationField).controller!.text,
+      'Hello',
+    );
+    expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
+  });
+
   testWidgets('does not allow deleting the final translation field', (
     tester,
   ) async {

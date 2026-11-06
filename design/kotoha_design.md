@@ -509,6 +509,8 @@ C++ではRAIIと所有権型、長さ付きデータ、検査済み演算、資�
 
 現在の手入力欄では、Androidの入力方法に対して入力履歴やユーザー辞書を個人学習へ反映しないよう要求し、既定は無効にする。利用者は現在のアプリセッション中のみ有効化でき、設定変更は次にテキスト欄へフォーカスしたときに反映する。この要求は入力方法による処理・保持を保証しない。iOSには同等のFlutterフラグがなく、他のOSもKotohaから入力方法の学習を制御しないため、利用者へ入力方法側のプライバシー設定を案内する。
 
+モバイルのタスク切替プレビューには、AndroidでActivityのpause中だけsecure-windowフラグを設定し、iOSでSceneが非アクティブになる時に不透明なネイティブカバーを重ねる。再開時に一時状態を戻し、入力内容とフォーカスを保持する。これはOSプレビューに対するbest-effortのマスクであり、外部カメラ、入力方法、すべてのOS版での取得を防ぐ保証ではない。通常の前景スクリーンショットは制限しないが、Androidではpause中の画面取得が抑止される場合がある。対象OS版での実機確認を受入条件とする。[S20][S21][S22]
+
 カメラ、マイク、画面、ファイルの権限は用途と期間に対応させる。利用中の取得状態、保存範囲、参加者の同意、停止方法を表示する。生の音声・映像、話者特徴、原文・訳文には個別の保持方針を適用する。
 
 診断は処理種別、状態、資源、時間、原因分類を中心とする。利用者が内容を確認してから、選択した診断情報を出力できる。
@@ -617,3 +619,6 @@ kotoha capabilities --json
 - [S17] [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines)
 - [S18] [Clang — AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 - [S19] [Apple — App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+- [S20] [Apple — Preventing Sensitive Information From Appearing in the App Switcher](https://developer.apple.com/library/archive/qa/qa1838/_index.html)
+- [S21] [Android Developers — Secure sensitive activities](https://developer.android.com/security/fraud-prevention/activities)
+- [S22] [Android Developers — WindowManager.LayoutParams.FLAG_SECURE](https://developer.android.com/reference/android/view/WindowManager.LayoutParams#FLAG_SECURE)
