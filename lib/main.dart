@@ -208,6 +208,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                   _sourceLanguage,
                   strings.sourceLanguage,
                   strings.sourceLanguageHint,
+                  key: const ValueKey('source-language'),
                 ),
                 const SizedBox(height: 12),
                 _manualTextField(
@@ -261,6 +262,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                     fields.language,
                     strings.targetLanguage,
                     strings.targetLanguageHint,
+                    key: ValueKey('target-language-$index'),
                   ),
                 ),
                 IconButton(
@@ -295,14 +297,20 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   Widget _languageField(
     TextEditingController controller,
     String label,
-    String hint,
-  ) => TextField(
-    controller: controller,
-    enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
-    decoration: InputDecoration(
-      labelText: label,
-      hintText: hint,
-      border: const OutlineInputBorder(),
+    String hint, {
+    required Key key,
+  }) => ValueListenableBuilder<TextEditingValue>(
+    valueListenable: controller,
+    builder: (context, value, _) => TextField(
+      key: key,
+      controller: controller,
+      enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+      textDirection: firstStrongDirection(value.text),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+      ),
     ),
   );
 

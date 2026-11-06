@@ -72,6 +72,57 @@ void main() {
         await tester.pumpWidget(const KotohaApp());
         await tester.pumpAndSettle();
 
+        final languageFields = [
+          (find.byKey(const ValueKey('source-language')), 'source language'),
+          (find.byKey(const ValueKey('target-language-0')), 'target language'),
+        ];
+        for (final (field, label) in languageFields) {
+          await tester.ensureVisible(field);
+          await tester.pumpAndSettle();
+          final controller = tester.widget<TextField>(field).controller!;
+          final editable = find.descendant(
+            of: field,
+            matching: find.byType(EditableText),
+          );
+          for (final (text, direction) in [
+            (rtlSource, TextDirection.rtl),
+            (ltrSource, TextDirection.ltr),
+          ]) {
+            await tester.enterText(field, text);
+            await tester.pump();
+            final editableState = tester.state<EditableTextState>(editable);
+            expect(
+              editableState.widget.textDirection,
+              direction,
+              reason: '$label direction for $text',
+            );
+            expect(editableState.widget.focusNode.hasFocus, isTrue);
+            expect(controller.text, text);
+            expect(controller.selection.baseOffset, text.length);
+
+            final render = editableState.renderEditable;
+            final startCaret = render.getLocalRectForCaret(
+              const TextPosition(offset: 0),
+            );
+            final endCaret = render.getLocalRectForCaret(
+              TextPosition(offset: text.length),
+            );
+            if (direction == TextDirection.rtl) {
+              expect(
+                startCaret.left,
+                greaterThan(endCaret.left),
+                reason: '$label RTL caret order',
+              );
+            } else {
+              expect(
+                startCaret.left,
+                lessThan(endCaret.left),
+                reason: '$label LTR caret order',
+              );
+            }
+          }
+        }
+
         final source = find.byKey(sourceKey);
         final sourceController = tester.widget<TextField>(source).controller!;
         final sourceEditable = find.descendant(
