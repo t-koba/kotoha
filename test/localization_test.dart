@@ -393,6 +393,33 @@ void main() {
           );
         }
 
+        // Content-field semantics and traversal must remain stable after their
+        // value changes the editing direction too.
+        final contentFields = [
+          (find.byKey(const ValueKey('source-text')), sourceText),
+          (find.byKey(const ValueKey('translation-text-0')), translation),
+        ];
+        for (final (field, label) in contentFields) {
+          tester.widget<TextField>(field).controller!.text = rtlLanguageName;
+          await tester.pump();
+          final semanticField = find.bySemanticsLabel(label);
+          expect(semanticField, findsOneWidget);
+          final data = tester.getSemantics(semanticField).getSemanticsData();
+          expect(data.label, label);
+          expect(data.value, rtlLanguageName);
+          expect(data.flagsCollection.isTextField, isTrue);
+          expect(data.hasAction(SemanticsAction.tap), isTrue);
+          expect(data.hasAction(SemanticsAction.focus), isTrue);
+          final editable = find.descendant(
+            of: field,
+            matching: find.byType(EditableText),
+          );
+          expect(
+            tester.widget<EditableText>(editable).textDirection,
+            TextDirection.rtl,
+          );
+        }
+
         final firstCardOrder = [
           find.byTooltip(interfaceLanguage),
           find.byTooltip(licenses),
@@ -423,6 +450,17 @@ void main() {
               firstCardOrder[3],
               'source language after reverse tab',
             );
+          } else if (index == 4) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[5],
+              'target language after RTL source text',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[4],
+              'RTL source text after reverse tab',
+            );
           } else if (index == 5) {
             await pressTab();
             expectFocused(
@@ -433,6 +471,17 @@ void main() {
             expectFocused(
               firstCardOrder[5],
               'target language after reverse tab',
+            );
+          } else if (index == 7) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[8],
+              'Add translation after RTL translation text',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[7],
+              'RTL translation text after reverse tab',
             );
           }
         }
