@@ -67,7 +67,12 @@ public final class MainActivityAccessibilityTest
     private void checkField(String id, String label, String nextId, String nextLabel) {
         revealField(id);
         act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_CLICK, null);
-        awaitFocused(id, label);
+        getInstrumentation().waitForIdleSync();
+        // Verify initial native input focus by sending real keyboard input rather than
+        // relying on isFocused(), which is not consistently exposed for Flutter editors.
+        getInstrumentation().sendStringSync("p");
+        assertField(id, label, "p");
+        String nextValue = "";
         for (String value : new String[] {"العربية", "Latin"}) {
             Bundle text = new Bundle();
             text.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
@@ -77,17 +82,24 @@ public final class MainActivityAccessibilityTest
             getInstrumentation().sendStringSync("x");
             assertField(id, label, value + "x");
             tab(false);
-            awaitFocused(nextId, nextLabel);
+            if (nextId != null) {
+                getInstrumentation().sendStringSync("z");
+                nextValue += "z";
+                assertField(nextId, nextLabel, nextValue);
+            } else {
+                // The target-language field's next control is its copy button.
+                awaitFocused(null, nextLabel);
+            }
             tab(true);
-            awaitFocused(id, label);
-            assertField(id, label, value + "x");
+            getInstrumentation().sendStringSync("y");
+            assertField(id, label, value + "xy");
         }
     }
 
     private void assertField(String id, String label, String value) {
-        // Value updates are polled independently from native input focus: after the
-        // initial focus assertion, typing without retapping proves the input remains
-        // routed to this field even when its text direction rebuilds the semantics tree.
+        // Value updates are polled independently from focus flags. The initial typed
+        // marker proves input reaches the field; later typing without retapping proves
+        // it remains routed here when direction changes rebuild the semantics tree.
         AccessibilityNodeInfo node = await(label + " value=" + value,
                 n -> field(n, id) && value.contentEquals(string(n.getText())));
         try {
@@ -106,7 +118,9 @@ public final class MainActivityAccessibilityTest
     }
 
     private void awaitFocused(String id, String label) {
-        AccessibilityNodeInfo node = await(label + " input focus",
+        // Used only for the non-editable copy button. Text-field input focus is
+        // verified by routing synthesized characters into the expected field.
+        AccessibilityNodeInfo node = await(label + " traversal focus",
                 n -> (id != null ? field(n, id) : named(n, label)) && n.isFocused());
         node.recycle();
     }

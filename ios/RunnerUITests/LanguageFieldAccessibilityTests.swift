@@ -6,6 +6,11 @@ import XCTest
 // own direction/caret policy and the complete forward/reverse Flutter focus order.
 final class LanguageFieldAccessibilityTests: XCTestCase {
   private let app = XCUIApplication()
+  private static let bidiFormattingControls: Set<UInt32> = [
+    0x061C, 0x200E, 0x200F,
+    0x202A, 0x202B, 0x202C, 0x202D, 0x202E,
+    0x2066, 0x2067, 0x2068, 0x2069,
+  ]
   // Test policy default, overridable in the Runner scheme/build setting.
   private var timeout: TimeInterval = 10
 
@@ -59,16 +64,23 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       XCUIElement.ElementType.textView.rawValue)).firstMatch
   }
 
+  private func hasUsableFrame(_ element: XCUIElement) -> Bool {
+    let frame = element.frame
+    return frame.origin.x.isFinite && frame.origin.y.isFinite
+      && frame.width.isFinite && frame.height.isFinite
+      && frame.width > 0 && frame.height > 0
+  }
+
   private func reveal(_ id: String) -> XCUIElement {
     let element = field(id)
     let scrollView = app.scrollViews.firstMatch
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
-      if element.exists && element.isHittable { return element }
-      // Scroll the Flutter ListView itself; the app-level swipe misses the list when
-      // the software keyboard is open. With onDrag dismiss, the first swipe hides the
-      // keyboard and later swipes reveal the off-screen field.
-      if scrollView.exists && scrollView.isHittable {
+      if element.exists && hasUsableFrame(element) && element.isHittable { return element }
+      // XCUI may report a stale Flutter ScrollView as hittable with an infinite,
+      // zero-sized frame after a keyboard/layout transition. Scroll it only when the
+      // returned geometry is actionable; otherwise use the app viewport gesture.
+      if scrollView.exists && hasUsableFrame(scrollView) && scrollView.isHittable {
         scrollView.swipeUp()
       } else {
         app.swipeUp()
@@ -80,11 +92,29 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   private func assertField(_ id: String, label: String, value: String) {
     let element = field(id) // Re-query XCUI after every dynamic rebuild.
-    let state = NSPredicate(format: "exists == true AND enabled == true AND value == %@", value)
+    let state = NSPredicate { object, _ in
+      guard let field = object as? XCUIElement,
+            field.exists, field.isEnabled,
+            let actual = field.value as? String else { return false }
+      // Some native accessibility bridges include bidi formatting controls in the
+      // exposed value. They change presentation, not the underlying editor text; the
+      // Flutter tests independently assert exact controller contents.
+      return Self.withoutBidiFormattingControls(actual)
+        == Self.withoutBidiFormattingControls(value)
+    }
     let expectation = XCTNSPredicateExpectation(predicate: state, object: element)
-    XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed,
-                   "Expected native field \(label) value=\(value); tree: \(app.debugDescription)")
+    let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
+    let message = "Expected native field \(label) value=\(value), "
+      + "got \(String(describing: element.value)); tree: \(app.debugDescription)"
+    XCTAssertEqual(result, .completed, message)
     XCTAssertEqual(element.label, label)
+  }
+
+  private static func withoutBidiFormattingControls(_ text: String) -> String {
+    let scalars = text.unicodeScalars.filter {
+      !bidiFormattingControls.contains($0.value)
+    }
+    return String(String.UnicodeScalarView(scalars))
   }
 
   private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
