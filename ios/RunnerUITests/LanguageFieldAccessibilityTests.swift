@@ -158,6 +158,6 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
     app.typeText("z")
     assertField(nextID, label: nextLabel, value: "z")
-    assertField(id, label: label, value: "Latinx")
+    assertField(id, label: label, value: "Latin")
   }
 }
