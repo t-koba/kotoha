@@ -154,4 +154,65 @@ void main() {
       }
     },
   );
+
+  testWidgets('renderer lays out bidi runs and caret positions', (
+    tester,
+  ) async {
+    const text = 'العربية — English';
+    const multilineText = 'العربية\nEnglish';
+    final controller = TextEditingController(text: text);
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 600,
+            height: 160,
+            child: TextField(
+              controller: controller,
+              maxLines: null,
+              textDirection: firstStrongDirection(text),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final editableFinder = find.byType(EditableText);
+    final editableState = tester.state<EditableTextState>(editableFinder);
+    final renderEditable = editableState.renderEditable;
+    final startCaret = renderEditable.getLocalRectForCaret(
+      const TextPosition(offset: 0),
+    );
+    final endCaret = renderEditable.getLocalRectForCaret(
+      TextPosition(offset: text.length),
+    );
+    final selectionBoxes = renderEditable.getBoxesForSelection(
+      TextSelection(baseOffset: 0, extentOffset: text.length),
+    );
+
+    expect(startCaret.left, greaterThan(endCaret.left));
+    expect(
+      selectionBoxes.map((box) => box.direction).toSet(),
+      containsAll({TextDirection.ltr, TextDirection.rtl}),
+    );
+
+    controller.value = const TextEditingValue(
+      text: multilineText,
+      selection: TextSelection.collapsed(offset: 0),
+    );
+    await tester.pumpAndSettle();
+    final multilineRenderEditable = tester
+        .state<EditableTextState>(editableFinder)
+        .renderEditable;
+    final firstParagraphCaret = multilineRenderEditable.getLocalRectForCaret(
+      const TextPosition(offset: 0),
+    );
+    final secondParagraphCaret = multilineRenderEditable.getLocalRectForCaret(
+      const TextPosition(offset: 8),
+    );
+    expect(secondParagraphCaret.top, greaterThan(firstParagraphCaret.top));
+  });
 }
