@@ -165,6 +165,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 920),
             child: ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(20),
               children: [
                 Text(

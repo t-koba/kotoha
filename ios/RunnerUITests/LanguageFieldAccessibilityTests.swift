@@ -65,9 +65,9 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
       if element.exists && element.isHittable { return element }
-      // Scroll the actual Flutter ListView with an ordinary UI gesture. Coordinates
-      // derived from the app frame landed at the left edge on the simulator when the
-      // keyboard was open, so they did not scroll the content.
+      // Scroll the Flutter ListView itself; the app-level swipe misses the list when
+      // the software keyboard is open. With onDrag dismiss, the first swipe hides the
+      // keyboard and later swipes reveal the off-screen field.
       if scrollView.exists && scrollView.isHittable {
         scrollView.swipeUp()
       } else {
