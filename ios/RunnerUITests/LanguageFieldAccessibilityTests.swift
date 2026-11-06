@@ -116,9 +116,9 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     }
     let expectation = XCTNSPredicateExpectation(predicate: state, object: element)
     let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
-    let message = "Expected native field \(label) value=\(value), "
-      + "got \(String(describing: element.value)); tree: \(app.debugDescription)"
-    XCTAssertEqual(result, .completed, message)
+    XCTAssertEqual(result, .completed,
+      "Expected native field \(label) value=\(value), "
+        + "got \(String(describing: element.value)); tree: \(app.debugDescription)")
     XCTAssertEqual(element.label, label)
   }
 
