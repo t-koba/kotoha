@@ -1,10 +1,14 @@
 # Memory-only plain-text and Markdown import
 
 Kotoha implements user-triggered import on macOS, Windows, Android and iOS.
-The mobile source and tests still require native compilation and hosted execution
-before acceptance; local Dart tests are not mobile runtime evidence. The selected
-content is decoded into the source editor in memory and can then
-be edited manually; existing translation fields and the copy action remain
+Hosted CI for code SHA `a76efcb9b0f75637bae608bfb2a761d97ca02247` passed all five
+required checks, including Android Emulator import coverage and iOS Simulator
+tests/builds. This evidence covers configured tests, not live provider-selected
+reads, physical devices or offline availability; the local sandbox lacks native
+mobile SDKs, so its Dart tests are not mobile runtime evidence.
+
+The selected content is decoded into the source editor in memory and can then be
+edited manually; existing translation fields and the copy action remain
 unchanged. No model inference, network client call, selected path retention, cache
 copy, or draft persistence is part of this workflow. The user's original file
 remains outside this guarantee.
@@ -183,8 +187,9 @@ change the separate SQLCipher/persistence dependency decision.
 
 ### Mobile validation boundary
 
-The following native regressions are included in the existing CI test targets,
-but have **not been compiled or run in this sandbox**:
+The following native regressions are included in existing CI targets and were
+exercised on the hosted code SHA above. This local sandbox lacks Android SDK/Java
+and Xcode/Apple SDK, so this audit did not compile or execute them locally:
 
 - Android `TextImportTest` uses a pipe-backed test provider through
   `ContentResolver`, checking exact selected bytes/name, unsupported/missing
@@ -201,8 +206,8 @@ but have **not been compiled or run in this sandbox**:
   Foundation coordination and `Data`; it is not a security-scoped provider test.
   XCUI additionally exercises the real Dart channel's system picker presentation
   and repeated cancellation with an unsaved draft. Presentation uses a form sheet
-  rather than a popover; physical iPads and external-provider selections remain
-  unverified, as does all native execution until hosted results arrive.
+  rather than a popover; hosted simulator coverage does not establish physical
+  iPads or external-provider reads.
 - Dart mobile-channel tests cover malformed channel replies, strict UTF-8/BOM,
   advisory extension rejection, native errors, cancellation, replacement consent,
   source edits during read/confirmation (including undo), translation/language
@@ -223,10 +228,10 @@ API references for implementation (not fetched or runtime-verified by this audit
 [`ContentResolver.openInputStream`](https://developer.android.com/reference/android/content/ContentResolver#openInputStream(android.net.Uri)),
 [Apple document picker](https://developer.apple.com/documentation/uikit/uidocumentpickerviewcontroller),
 [Apple file coordination](https://developer.apple.com/documentation/foundation/nsfilecoordinator).
-The current sandbox has Flutter artifacts but no Android SDK/Java toolchain or
-Xcode/Apple SDK. Mobile compilation, OS picker interaction and provider behavior
-therefore remain unverified; the configured hosted mobile profiles are the next
-execution boundary, not evidence already obtained.
+The local sandbox has Flutter artifacts but no Android SDK/Java toolchain or
+Xcode/Apple SDK, so it could not run the native compilation or simulator tests
+itself. Hosted results above cover the configured test fixtures; real
+provider-selected file reads and physical-device behavior remain unverified.
 
 ## Memory profile (sandbox-only, no limit selected)
 
@@ -368,10 +373,11 @@ Desktop widget tests use a fake `FileSelectorPlatform` for cancellation,
 multilingual import, malformed UTF-8, unsupported extensions, read/picker errors,
 replacement consent, source-change races, and preservation of source language
 and translation fields. They exercise app logic and filter arguments, not a live
-OS dialog. The Android and iOS native tests above are selected in CI but have not
-been compiled or run in this sandbox. Hosted CI must build the exact published
-revision and run its platform tests before acceptance; no claim is made that a
-real external provider selection or physical-device behavior has been observed.
+OS dialog. The Android and iOS native tests above passed on exact hosted code SHA
+`a76efcb9b0f75637bae608bfb2a761d97ca02247`, alongside all five required CI
+checks. Those tests cover the documented emulator/simulator fixtures, not live
+provider-selected content or physical devices; every later revision still needs
+its own exact hosted validation.
 
 ## Rejected umbrella candidate provenance
 
