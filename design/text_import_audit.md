@@ -313,10 +313,15 @@ profile sizes up to 2 MiB. Dispatch settings expose wall time
 (`profile_rss_mib=4096`, maximum 4096 MiB) and sample interval
 (`profile_poll_seconds=0.5`, constrained to 0.05–0.5). These are experiment
 safety policies, not app import limits. The watchdog includes
-compiler/Flutter children, kills the process group on budget breach (exit 124),
-and removes its owned temporary directory, including files left by killed tests.
-Its sampled group peak is a safety estimate, not a process high-water metric;
-short peaks can be missed. The CI step's five-minute outer timeout is separate.
+compiler/Flutter children, kills the child process group and reaps its leader
+on budget breach
+(exit 124) or SIGINT/SIGTERM (128+signal), and removes its owned temporary
+directory on completion, stop, or cancellation. Process sampling timeouts and
+poll sleeps are clipped to the remaining wall budget. This is best-effort rather
+than hard real-time: scheduler/teardown latency can add time, and SIGKILL cannot
+be intercepted. Its sampled group peak is a safety estimate, not a process
+high-water metric; short peaks can be missed. The CI step's five-minute outer
+timeout is separate.
 No large editor trial runs on the shared sandbox. Small local smoke command:
 
 ```sh
@@ -326,12 +331,12 @@ python3 tools/watch_import_profile.py --seconds 45 --rss-mib 1536 --poll-seconds
 ```
 
 Local harness validation only: 8,168 bytes / 8,080 code units completed in both
-stages on Linux. Editor smoke passed under the watchdog (command
-`e1869cda18804f6590fd73e1971c7d28`); decode passed in
-`b293e8267ef041a3adc5840164a7a072`. A 768 MiB group budget stopped startup
-before measurement (`dfdf508b3eb542b4a1e53d4ab107f856`), demonstrating that
-the budget includes compilation, not only editor memory. These smoke checks
-are not supported-platform memory evidence.
+stages on Linux. Editor/decode smoke, wall-time clipping, SIGTERM child
+termination and fixture cleanup, RSS stop behavior, design validation (93/93),
+and all four watchdog tests passed (`df4421713bce4466b30c0bb5f052ee21`).
+These are not supported-platform memory evidence. A 768 MiB group budget
+stopped startup before measurement (`dfdf508b3eb542b4a1e53d4ab107f856`),
+demonstrating that the budget includes compilation, not only editor memory.
 
 All stage peaks are process-wide and may include startup, fixture preparation,
 framework work and unrelated allocations. Zero peak delta does not mean zero
