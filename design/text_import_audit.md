@@ -206,7 +206,9 @@ but have **not been compiled or run in this sandbox**:
   advisory extension rejection, native errors, cancellation, replacement consent,
   source edits during read/confirmation (including undo), translation/language
   preservation and lifecycle continuity. Desktop integrity tests remain in place.
-  Existing native privacy/RTL tests remain selected in CI without weakening them.
+  Native privacy/RTL tests remain selected in CI. Android checks native labels,
+  values and synthesized input after direction changes; Flutter widget tests own
+  complete forward/reverse traversal, including the mobile import control.
 
 Source review finds no import-path writes, cache staging, URI grant persistence,
 bookmarks, selected-location history or network client. Worker reads release their

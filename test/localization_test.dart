@@ -495,6 +495,7 @@ void main() {
           find.byTooltip(licenses),
           find.byKey(const ValueKey('android-ime-personalized-learning')),
           find.bySemanticsLabel(sourceLanguage),
+          find.byKey(const ValueKey('import-source')),
           find.bySemanticsLabel(sourceText),
           find.bySemanticsLabel(targetLanguage),
           find.byTooltip(copyOne),
@@ -514,7 +515,10 @@ void main() {
           }
           if (index == 3) {
             await pressTab();
-            expectFocused(firstCardOrder[4], 'source text after RTL language');
+            expectFocused(
+              firstCardOrder[4],
+              'import action after source language',
+            );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[3],
@@ -522,35 +526,40 @@ void main() {
             );
           } else if (index == 4) {
             await pressTab();
-            expectFocused(
-              firstCardOrder[5],
-              'target language after RTL source text',
-            );
+            expectFocused(firstCardOrder[5], 'source text after import action');
             await pressShiftTab();
-            expectFocused(
-              firstCardOrder[4],
-              'RTL source text after reverse tab',
-            );
+            expectFocused(firstCardOrder[4], 'import action after reverse tab');
           } else if (index == 5) {
             await pressTab();
             expectFocused(
               firstCardOrder[6],
-              'copy action after RTL target language',
+              'target language after RTL source text',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[5],
-              'target language after reverse tab',
+              'RTL source text after reverse tab',
             );
-          } else if (index == 7) {
+          } else if (index == 6) {
             await pressTab();
             expectFocused(
-              firstCardOrder[8],
+              firstCardOrder[7],
+              'copy action after RTL target language',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[6],
+              'target language after reverse tab',
+            );
+          } else if (index == 8) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[9],
               'Add translation after RTL translation text',
             );
             await pressShiftTab();
             expectFocused(
-              firstCardOrder[7],
+              firstCardOrder[8],
               'RTL translation text after reverse tab',
             );
           }
@@ -574,6 +583,7 @@ void main() {
           find.byTooltip(licenses),
           find.byKey(const ValueKey('android-ime-personalized-learning')),
           find.bySemanticsLabel(sourceLanguage),
+          find.byKey(const ValueKey('import-source')),
           find.bySemanticsLabel(sourceText),
           find.bySemanticsLabel(targetLanguage).at(0),
           find.byTooltip(copyOne),

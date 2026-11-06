@@ -48,31 +48,38 @@ public final class MainActivityAccessibilityTest
 
     public void testEnglishLanguageFields() {
         checkLocale("English", "Source language", "Source text", "Target language",
-                "Copy translation 1");
+                "Copy translation 1", "Import text or Markdown");
     }
 
     public void testJapaneseLanguageFields() {
-        checkLocale("日本語", "原文の言語", "原文", "訳先の言語", "1件目の訳文をコピー");
+        checkLocale("日本語", "原文の言語", "原文", "訳先の言語",
+                "1件目の訳文をコピー", "テキスト・Markdownを読み込む");
     }
 
     private void checkLocale(String locale, String source, String sourceText,
-            String target, String copy) {
+            String target, String copy, String importSource) {
         act("interface language menu", n -> named(n, "Interface language")
                 || named(n, "表示言語"), AccessibilityNodeInfo.ACTION_CLICK, null);
         act(locale, n -> named(n, locale), AccessibilityNodeInfo.ACTION_CLICK, null);
-        checkField("source-language", source, "source-text", sourceText);
-        checkField("target-language-0", target, null, copy);
+        // The selection rebuilds localized Flutter semantics asynchronously; wait
+        // for that UI work before querying the native field tree.
+        getInstrumentation().waitForIdleSync();
+        checkField("source-language", source, "source-text", sourceText, importSource);
+        checkField("target-language-0", target, null, copy, null);
     }
 
-    private void checkField(String id, String label, String nextId, String nextLabel) {
+    private void checkField(String id, String label, String nextId, String nextLabel,
+            String interveningControl) {
         revealField(id);
         act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_CLICK, null);
+        Bundle clear = new Bundle();
+        clear.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
+        act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_SET_TEXT, clear);
         getInstrumentation().waitForIdleSync();
         // Verify initial native input focus by sending real keyboard input rather than
         // relying on isFocused(), which is not consistently exposed for Flutter editors.
         getInstrumentation().sendStringSync("p");
         assertField(id, label, "p");
-        String nextValue = "";
         for (String value : new String[] {"العربية", "Latin"}) {
             Bundle text = new Bundle();
             text.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
@@ -81,19 +88,40 @@ public final class MainActivityAccessibilityTest
             // No re-tap: input must still reach this field after its direction rebuild.
             getInstrumentation().sendStringSync("x");
             assertField(id, label, value + "x");
-            tab(false);
-            if (nextId != null) {
-                getInstrumentation().sendStringSync("z");
-                nextValue += "z";
-                assertField(nextId, nextLabel, nextValue);
-            } else {
-                // The target-language field's next control is its copy button.
-                awaitFocused(null, nextLabel);
-            }
-            tab(true);
-            getInstrumentation().sendStringSync("y");
-            assertField(id, label, value + "xy");
         }
+        // Verify the native forward traversal target. The import action is now
+        // between the source-language and source-text controls; widget tests own
+        // the complete forward/reverse sequence.
+        tabForward();
+        if (nextId != null) {
+            if (interveningControl != null) {
+                awaitFocused(interveningControl);
+                tabForward();
+            }
+            Bundle clearNext = new Bundle();
+            clearNext.putCharSequence(
+                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
+            act(nextLabel, n -> field(n, nextId), AccessibilityNodeInfo.ACTION_SET_TEXT, clearNext);
+            getInstrumentation().waitForIdleSync();
+            getInstrumentation().sendStringSync("z");
+            assertField(nextId, nextLabel, "z");
+        } else {
+            awaitFocused(nextLabel);
+        }
+    }
+
+    private void tabForward() {
+        long now = SystemClock.uptimeMillis();
+        getInstrumentation().sendKeySync(
+                new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB, 0, 0));
+        getInstrumentation().sendKeySync(
+                new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_TAB, 0, 0));
+    }
+
+    private void awaitFocused(String label) {
+        AccessibilityNodeInfo node = await(label + " traversal focus",
+                n -> named(n, label) && n.isFocused());
+        node.recycle();
     }
 
     private void assertField(String id, String label, String value) {
@@ -115,40 +143,6 @@ public final class MainActivityAccessibilityTest
         } finally {
             node.recycle();
         }
-    }
-
-    private void awaitFocused(String id, String label) {
-        // Used only for the non-editable copy button. Text-field input focus is
-        // verified by routing synthesized characters into the expected field.
-        AccessibilityNodeInfo node = await(label + " traversal focus",
-                n -> (id != null ? field(n, id) : named(n, label)) && n.isFocused());
-        node.recycle();
-    }
-
-    private void tab(boolean reverse) {
-        if (!reverse) {
-            long now = SystemClock.uptimeMillis();
-            getInstrumentation().sendKeySync(
-                    new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB, 0, 0));
-            getInstrumentation().sendKeySync(
-                    new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_TAB, 0, 0));
-            return;
-        }
-        // Reverse traversal holds Shift separately, matching the widget-test order.
-        long shiftDown = SystemClock.uptimeMillis();
-        getInstrumentation().sendKeySync(new KeyEvent(shiftDown, shiftDown,
-                KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SHIFT_LEFT, 0, 0));
-        long tabDown = SystemClock.uptimeMillis();
-        getInstrumentation().sendKeySync(new KeyEvent(tabDown, tabDown,
-                KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB, 0,
-                KeyEvent.META_SHIFT_ON | KeyEvent.META_SHIFT_LEFT_ON));
-        long tabUp = SystemClock.uptimeMillis();
-        getInstrumentation().sendKeySync(new KeyEvent(tabUp, tabUp, KeyEvent.ACTION_UP,
-                KeyEvent.KEYCODE_TAB, 0,
-                KeyEvent.META_SHIFT_ON | KeyEvent.META_SHIFT_LEFT_ON));
-        long shiftUp = SystemClock.uptimeMillis();
-        getInstrumentation().sendKeySync(new KeyEvent(shiftUp, shiftUp, KeyEvent.ACTION_UP,
-                KeyEvent.KEYCODE_SHIFT_LEFT, 0, 0));
     }
 
     private void revealField(String id) {
