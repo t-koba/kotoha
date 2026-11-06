@@ -100,6 +100,14 @@ void main() {
             expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
           }
           expect(find.bySemanticsLabel(notice), findsOneWidget);
+          expect(
+            tester
+                .getSemantics(find.bySemanticsLabel(notice))
+                .getSemanticsData()
+                .flagsCollection
+                .isLiveRegion,
+            isTrue,
+          );
           expect(find.bySemanticsLabel(addLabel), findsOneWidget);
           for (final tooltip in tooltips) {
             final control = find.byTooltip(tooltip);
