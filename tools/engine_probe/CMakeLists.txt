@@ -2,9 +2,14 @@ cmake_minimum_required(VERSION 3.24)
 project(kotoha_engine_probe LANGUAGES C CXX)
 
 # Developer tooling only: no product target links this build.
-if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR
-   NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
-    message(FATAL_ERROR "This probe selects Windows x64 only")
+if(ANDROID)
+    if(NOT CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64" OR
+       NOT CMAKE_SYSTEM_VERSION EQUAL 35 OR NOT ANDROID_STL STREQUAL "c++_static")
+        message(FATAL_ERROR "Android probe requires API 35 x86_64 and c++_static")
+    endif()
+elseif(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR
+       NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64)$")
+    message(FATAL_ERROR "Probe selects Windows x64 or Android API 35 x86_64 only")
 endif()
 
 # Keep the selected closure CPU-only, static and independent of host ISA.
@@ -23,7 +28,7 @@ foreach(option IN ITEMS
     GGML_CUDA GGML_HIP GGML_VULKAN GGML_SYCL GGML_OPENCL
     GGML_CANN GGML_MUSA GGML_RPC GGML_ZDNN GGML_ZENDNN GGML_HEXAGON
     GGML_WEBGPU GGML_VIRTGPU GGML_VIRTGPU_BACKEND GGML_OPENVINO GGML_ET GGML_ET_SYSEMU)
-    set(${option} OFF CACHE BOOL "Disabled for the Windows x64 CPU probe" FORCE)
+    set(${option} OFF CACHE BOOL "Disabled for the static CPU probe" FORCE)
 endforeach()
 set(GGML_CPU ON CACHE BOOL "Selected probe backend" FORCE)
 

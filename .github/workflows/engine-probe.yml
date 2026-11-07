@@ -51,24 +51,11 @@ jobs:
           cmake --build build/engine-probe --config Release --target llama-simple --parallel $env:ENGINE_BUILD_JOBS -- /verbosity:normal 2>&1 | Tee-Object -FilePath build/engine-probe/build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Acquire only the reviewed public test fixtures outside the workspace
+        timeout-minutes: 10
         shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Path $env:ENGINE_MODEL_DIR | Out-Null
-          $manifest = Get-Content -Raw tools/engine_probe/model/fixtures.json | ConvertFrom-Json
-          $prefix = 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/'
-          $names = @('LICENSE', 'README.md', 'qwen2.5-0.5b-instruct-q4_k_m.gguf')
-          if ($manifest.files.Count -ne $names.Count) { throw 'Unexpected fixture count' }
-          foreach ($file in $manifest.files) {
-            if ($file.url -cnotin @($names | ForEach-Object { $prefix + $_ })) { throw 'Unreviewed fixture URL' }
-            if ($file.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Invalid fixture digest' }
-            $path = Join-Path $env:ENGINE_MODEL_DIR $file.sha256
-            Invoke-WebRequest -Uri $file.url -OutFile $path -TimeoutSec $env:ENGINE_DOWNLOAD_TIMEOUT_SECONDS
-            if ((Get-Item $path).Length -ne $file.size) { throw 'Fixture size mismatch' }
-            $hash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
-            if ($hash -cne $file.sha256) { throw 'Fixture SHA256 mismatch' }
-            Write-Output ('Acquired and verified: ' + ($file | ConvertTo-Json -Compress))
-          }
+          python tools/engine_probe/acquire.py --directory $env:ENGINE_MODEL_DIR --accept-terms-sha256 $env:ENGINE_ACCEPT_TERMS_SHA256 --timeout-seconds $env:ENGINE_DOWNLOAD_TIMEOUT_SECONDS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Exercise real loader rejections and consent-bound public translation smoke
         shell: pwsh
         run: |
@@ -138,3 +125,70 @@ jobs:
             build/engine-probe/_deps/llama_cpp-src/**/LICENSE*
             build/engine-probe/_deps/llama_cpp-src/**/COPYING*
             build/engine-probe/_deps/llama_cpp-src/**/NOTICE*
+
+  android-cpu:
+    name: Android API 35 x86_64 CPU feasibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      ENGINE_BUILD_ROOT: build/engine-probe-android
+      ENGINE_TEMP_ROOT: ${{ runner.temp }}
+      ENGINE_BUILD_JOBS: '2'
+      # Read from Flutter 3.47.9 FlutterExtension.kt, checked again before build.
+      ENGINE_NDK_VERSION: '28.2.13676358'
+      ENGINE_API: '35'
+      ENGINE_ABI: x86_64
+      ENGINE_SYSTEM_IMAGE: system-images;android-35;default;x86_64
+      ENGINE_AVD_DEVICE: pixel_2
+      ENGINE_EMULATOR_PORT: '5554'
+      ENGINE_BOOT_SECONDS: '180'
+      ENGINE_BOOT_POLL_SECONDS: '2'
+      ENGINE_ADB_SECONDS: '30'
+      ENGINE_PROBE_SECONDS: '180'
+      ENGINE_OUTPUT_BYTES: '8192'
+      ENGINE_TOKENS: '16'
+      ENGINE_DOWNLOAD_SECONDS: '300'
+      ENGINE_DEVICE_ROOT: /data/local/tmp
+      # Developer synthetic test ONLY, not stored product/user consent.
+      ENGINE_ACCEPT_TERMS_SHA256: '832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read pinned Flutter toolchain defaults
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+      - name: Set up Java for Android SDK tools
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Check orchestration (synthetic files/transport, not native evidence)
+        run: python3 -m unittest discover -s tools/engine_probe -p 'test_*.py' -v
+      - name: Cross-build, capture selected reads and run real owned-emulator inference
+        run: bash tools/engine_probe/android_ci.sh
+      - name: Retain Android developer build and audit inputs (never weights)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-api35-x86_64-engine-probe
+          include-hidden-files: true
+          path: |
+            tools/engine_probe/
+            build/engine-probe-android/*.log
+            build/engine-probe-android/*.txt
+            build/engine-probe-android/ndk.properties
+            build/engine-probe-android/compile_commands.json
+            build/engine-probe-android/build.ninja
+            build/engine-probe-android/.ninja_log
+            build/engine-probe-android/.ninja_deps
+            build/engine-probe-android/CMakeFiles/rules.ninja
+            build/engine-probe-android/CMakeFiles/CMakeConfigureLog.yaml
+            build/engine-probe-android/_deps/llama_cpp-build/src/CMakeFiles/llama.dir/Unity/*.cxx
+            build/engine-probe-android/_deps/llama_cpp-build/src/llama-version.h
+            build/engine-probe-android/_deps/llama_cpp-build/ggml/src/ggml-version.h

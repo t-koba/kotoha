@@ -2,9 +2,11 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-Windows x64 is the first engine candidate: it already has an app host, CMake and
-explicit copy/export. Linux has no application host. Native compilation and one
-public synthetic inference smoke passed exact Windows CI; adoption is blocked.
+Windows x64 has retained native build/inference evidence. Android is the next
+core feasibility target: **API 35, default x86_64 hosted emulator only**. Its job
+and transport are implemented, but no exact-publication Android native run has
+been observed yet. Neither probe adopts an engine into the app. Linux has no
+application host; no ARM or physical-device coverage is inferred.
 
 ## Pinned inputs and review
 
@@ -32,7 +34,7 @@ grant or warranty. This authorizes the separate unmodified developer experiment,
 not model bundling. The card's multilingual/0.49B description is upstream
 information, not measured quality or language coverage.
 
-## Running the experiment
+## Shared smoke and Windows invocation
 
 On Windows x64 with CMake, MSVC, Python and the digest-named reviewed fixtures:
 
@@ -42,7 +44,7 @@ cmake --build build/engine-probe --config Release --target llama-simple --parall
 python tools/engine_probe/smoke.py --executable build/engine-probe/bin/Release/llama-simple.exe --timeout-seconds 180 --output-bytes 8192 --fixture-dir C:/reviewed-fixtures --accept-terms-sha256 832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e --tokens 16
 ```
 
-The script never downloads or discovers models. It reads the complete terms
+`smoke.py` never downloads or discovers models. It reads the complete terms
 first and requires their exact SHA-256 as explicit acceptance **on each run**,
 then streams/verifies the card and weights. Missing/nonregular/link/reparse paths,
 size/hash mismatches and invalid 24-byte GGUF v3 headers fail before engine use.
@@ -68,17 +70,125 @@ backends, native ISA detection, AVX-family/FMA/F16C/SSE4.2/BMI2, accelerators,
 OpenMP/BLAS and optional CPU providers are disabled. Actual generated inputs,
 not cache booleans alone, determine the selected closure below.
 
-Only CI acquires the pinned public test files with explicit developer-only
-terms acceptance. They live outside artifact globs in runner temp, are removed
-by `always()` cleanup, and are never bundled; runner loss relies on teardown.
-Workflow settings are two build workers, 300 seconds/download, 180 seconds/call,
-16 tokens, 8192 bytes per stdout/stderr tail and a 15-minute deadline, not
-product limits. JSON escaping can expand tails; spool disk and engine memory
-are not capped. Artifacts retain scripts/manifests, logs, generated build inputs,
-source hashes/notices and executable hash/imports, not weights/executables.
-Actions retention applies; failures can leave partial inputs. Lightweight Python
-tests use synthetic files/processes for validation and failure boundaries, not
-simulated inference.
+`acquire.py` is explicit CI/developer tooling, never a product download path.
+It acquires/verifies the complete pinned LICENSE and checks that invocation's
+acceptance **before downloading, hashing or reading any weights**. Both native
+runners recheck complete terms, card and model before engine use; consent is not
+remembered. Fixtures live outside artifact globs, never in an APK or product.
+Windows `always()` cleanup and the Android owner trap remove them; runner loss
+or job cancellation ultimately relies on disposable runner teardown.
+
+Windows defaults remain two build workers, 300 seconds/network I/O, 180 seconds/
+call, 16 tokens, 8192 bytes per stdout/stderr tail, a 10-minute acquisition-step
+deadline (step `timeout-minutes`) and a 15-minute job deadline. `ENGINE_DOWNLOAD_TIMEOUT_SECONDS`
+remains per-I/O; the step deadline bounds the whole acquisition.
+Android has the explicit configuration below. JSON escaping expands printed tails;
+spool/build/emulator-log disk use and engine memory are **not hard capped**.
+Artifacts retain selected audit inputs, not model weights or executables. Actions
+retention applies; failed builds may retain partial raw evidence but cannot pass
+capture or inference. Unit tests use synthetic files/transport/processes only.
+
+## Android hosted-emulator invocation and evidence
+
+The `android-cpu` job in `.github/workflows/engine-probe.yml` runs
+`bash tools/engine_probe/android_ci.sh`. It reuses the app CI profile
+`system-images;android-35;default;x86_64`, `pixel_2`, hardware acceleration and
+headless/no-snapshot boot; it does not run or alter app instrumentation.
+Pinned Flutter **3.47.9**, revision
+`c197ca5199e9ee5661e865596c9c07294dfab51c`, declares NDK **28.2.13676358** in
+`packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt`. The script
+checks that source default and cached version JSON without invoking Flutter CLI.
+CMake uses that NDK's Android toolchain, API 35, `x86_64`, `c++_static`, Release
+and Ninja. Engine libraries are static; Android system runtime libraries are not.
+No extra engine, model, accelerator or third-party Python dependency is selected.
+
+All settings below are required environment variables (workflow values are
+documented defaults, not product limits); empty/invalid settings fail closed.
+Changing the reviewed target/toolchain requires updating the explicit selection
+checks, not silently falling back to a host compiler or latest NDK.
+
+| Workflow configuration | Default / meaning |
+| --- | --- |
+| `ENGINE_NDK_VERSION`, `ENGINE_API`, `ENGINE_ABI`, `ENGINE_SYSTEM_IMAGE` | `28.2.13676358`, `35`, `x86_64`, `system-images;android-35;default;x86_64`; exact selected profile |
+| `ENGINE_AVD_DEVICE`, `ENGINE_EMULATOR_PORT` | `pixel_2`, `5554`; port must be even, within emulator protocol range 5554–5682, and unused |
+| `ENGINE_BUILD_ROOT`, `ENGINE_TEMP_ROOT` | `build/engine-probe-android` (must not exist), runner temp base; fresh exclusive temp child owns fixtures and AVD data |
+| `ENGINE_DEVICE_ROOT` | `/data/local/tmp`; canonical, existing non-aliased directory, optionally beneath it with alphanumeric/underscore/hyphen components |
+| `ENGINE_BUILD_JOBS` | `2`, positive integer |
+| `ENGINE_BOOT_SECONDS`, `ENGINE_BOOT_POLL_SECONDS` | `180`, `2`, finite positive boot deadline/poll interval |
+| `ENGINE_ADB_SECONDS`, `ENGINE_PROBE_SECONDS` | `30`, `180`, finite positive transport allowance / per-engine device deadline |
+| `ENGINE_DOWNLOAD_SECONDS` | `300`, finite positive network-I/O and total Android acquisition deadline; no download retry |
+| `ENGINE_OUTPUT_BYTES`, `ENGINE_TOKENS` | `8192` per stream tail, `16` generated-token budget, positive integers |
+| `ENGINE_ACCEPT_TERMS_SHA256` | Complete LICENSE digest above, explicit developer-test-only acceptance |
+| `ANDROID_HOME`, `FLUTTER_ROOT` | Supplied SDK roots, required; no SDK installation is assumed locally |
+
+The Android job deadline is 25 minutes. `android.py --help` documents the matching
+explicit transport CLI: executable/fixture/ADB paths, serial, unique owned AVD
+name, device root, acceptance, token, output, engine and ADB budgets are required.
+It is **only** for an exclusively owned disposable emulator, never for attaching
+to a user's device. The CI script creates a unique AVD name; transport verifies
+that name, emulator property, API, ABI and nonempty build fingerprint. Every ADB
+operation selects the exact serial. No PTY is allocated, preserving separate
+stdout/stderr and remote exit codes; shell arguments use explicit POSIX quoting.
+
+After consent, a unique exclusive device directory receives the real binary,
+truncated GGUF and model. SHA-256 verifies every transfer, including binary and
+malformed fixture. The shared smoke invokes both real loader rejections and the
+same generated-only translation check, with no duplicate prompt/output logic.
+Android toybox `timeout -s KILL` watches **the device process**, with the host ADB
+timeout adding the transport allowance. Nonzero commands, timeouts, truncated
+control evidence, missing diagnostics/providers/hashes and cleanup errors fail.
+Device files are removed on success and failure. On any exit the outer CI trap
+kills/waits for **only its own session/process group** (`setsid` plus negative-PID
+kill) and deletes its exclusive AVD/fixture directory, even if ADB or remote
+cleanup fails. The kill ends the wrapper and descendants retaining its group;
+wait reaps the wrapper, and the host reaper collects orphaned children. Detached
+helpers, untrappable cancellation and runner loss rely on disposable runner
+teardown; no broad process-name kill or blind retry is used.
+
+The `android-api35-x86_64-engine-probe` artifact retains raw compile commands,
+verbose build log, Ninja commands/link inputs/log/dependency database, NDK version,
+compiler version/tool hashes, ELF headers/interpreter/NEEDED entries, executable
+hash, Unity units and generated `llama-version.h`/`ggml-version.h`. On-device
+linker `--list` output and hashes record the resolved system/APEX providers
+alongside runtime fingerprint in `smoke.log`. Pinned Android 15
+[`linker_main.cpp`](https://raw.githubusercontent.com/aosp-mirror/platform_bionic/android-15.0.0_r1/linker/linker_main.cpp)
+(sha256 `cf65df734b5e8235e6394e8556f74b2cd97ddec2779186a31ccdb6476be4688d`,
+lines 807-810 set `g_is_ldd`, 489-492 exit before constructors) and
+[`linker.cpp`](https://raw.githubusercontent.com/aosp-mirror/platform_bionic/android-15.0.0_r1/linker/linker.cpp)
+(sha256 `d19c5ace78827e3c12b3238778beacb51fe789768251726df3b4cc56b04ae62b`,
+lines 3336-3338 emit each non-main library as `\t<soname> => <realpath> (<base>)`)
+define the record syntax. A strict parser requires nonempty output, unique
+soname/path identities, canonical `/apex/` or `/system/` paths and no skipped
+rows; every represented provider is retained and hashed, and
+incomplete/unknown/malformed/truncated evidence fails. No mandatory library
+names are inferred from link flags (a host `--as-needed -ldl -lm` build can
+retain only `libc.so.6`, which warns against that inference without proving
+Android closure). These are runtime loader resolution evidence, **not live
+process mappings, all dlopen paths, static members or legal closure**.
+
+`ninja_reads.py` matches **actual built** valid Ninja dependency records to unique
+configured Clang object commands, cross-checks compiled outputs in the clean
+Ninja v5 build log, and requires each compiled source in its own read set. It
+rejects missing/empty/stale/malformed/unrepresented/colliding records,
+missing or non-file inputs, parent traversal, aliases escaping roots and unknown
+providers. Most-specific configured `source`, `generated`, `ndk`, `probe` roots
+produce sorted UTF-8/LF SHA-256 manifests (`android-selected-sha256.txt`,
+`android-compiled-sha256.txt`) and counts (`android-compiler-summary.txt`). POSIX
+case is preserved; Windows tlogs and case folding are not reused. Configured but
+unbuilt targets are not included in selected-read membership. Raw evidence remains
+available if strict capture fails. The script still attempts independent native
+smoke, but returns failure for incomplete capture, never inferred closure.
+
+**Pending native evidence:** exact-publication Android build, real loader and
+inference execution, ADB exit/stream behavior, device watchdog and cleanup, and
+Android-specific dependency/provider review. A tiny host Clang/Ninja experiment
+and synthetic tests validate capture/orchestration only. Header/source read hashes
+are not compiled/surviving binary closure, static runtime provenance or legal
+approval. Static archive membership, intrinsic branch applicability, full selected
+terms and notices, generated Unicode provenance and user-accessible notice delivery
+remain adoption gates on each platform independently. This probe establishes no
+Android app integration, ARM/physical-device, memory/disk cap, quality, performance,
+no-network/privacy, cancellation-in-app or release claim.
 
 ## Selected-source and runtime audit
 

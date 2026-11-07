@@ -149,7 +149,7 @@ def main():
     if args.fixture_dir is not None:
         if args.tokens is None:
             parser.error("--fixture-dir requires --tokens")
-        model = verify_fixtures(args.fixture_dir, args.accept_terms_sha256)
+        model = verify_fixtures(args.fixture_dir, args.accept_terms_sha256).absolute()
     elif args.tokens is not None or args.accept_terms_sha256 is not None:
         parser.error("--tokens/--accept-terms-sha256 require --fixture-dir")
     if not args.executable.is_file():
@@ -157,21 +157,29 @@ def main():
     executable = str(args.executable.resolve())
     with tempfile.TemporaryDirectory(prefix="kotoha-engine-probe-") as directory:
         root = Path(directory)
-        malformed = root / "truncated.gguf"
-        # GGUF magic and version 3, but missing mandatory header fields.
-        malformed.write_bytes(b"GGUF\x03\x00\x00\x00")
-        for invalid in (root / "missing.gguf", malformed):
-            print(f"Loader rejection: {invalid.name}", flush=True)
-            invoke([executable, "-m", str(invalid), "-n", "1", "-ngl", "0", "probe"],
-                   args.timeout_seconds, args.output_bytes, 1, load_failure=True)
-        print("PASS: missing and malformed GGUF rejected by the real upstream loader")
+        write_malformed(root / "truncated.gguf")
+        exercise(executable, root, model, args.tokens, args.timeout_seconds,
+                 args.output_bytes)
+
+
+def write_malformed(path):
+    # GGUF magic/version 3, missing mandatory header fields.
+    path.write_bytes(b"GGUF\x03\x00\x00\x00")
+
+
+def exercise(executable, root, model, tokens, timeout, output_bytes, run=invoke):
+    """Same real loader, prompt and generated-only checks on either transport."""
+    for invalid in (root / "missing.gguf", root / "truncated.gguf"):
+        print(f"Loader rejection: {invalid.name}", flush=True)
+        run([executable, "-m", str(invalid), "-n", "1", "-ngl", "0", "probe"],
+            timeout, output_bytes, 1, load_failure=True)
+    print("PASS: missing and malformed GGUF rejected by the real upstream loader")
     if model is None:
         print("REAL INFERENCE NOT RUN: no --fixture-dir supplied; loader evidence only")
     else:
         print("Real-model public synthetic sample, NOT language/quality coverage", flush=True)
-        output = invoke([executable, "-m", str(model.absolute()), "-n", str(args.tokens),
-                         "-ngl", "0", PROMPT],
-                        args.timeout_seconds, args.output_bytes, 0)
+        output = run([executable, "-m", str(model), "-n", str(tokens),
+                      "-ngl", "0", PROMPT], timeout, output_bytes, 0)
         sample = generated_sample(*output)
         print(f"PASS: generated-only narrow smoke sample: {json.dumps(sample, ensure_ascii=True)}")
 
