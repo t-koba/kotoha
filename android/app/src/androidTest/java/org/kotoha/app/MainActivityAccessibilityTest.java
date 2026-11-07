@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
@@ -198,8 +199,12 @@ public final class MainActivityAccessibilityTest
     }
 
     private void revealField(String id) {
-        // A phone viewport cannot show the entire editor. Scroll until the field is
-        // visible in the native tree, bounded by the configured wait.
+        // Flutter's Android bridge omits hidden children, so an absent field cannot
+        // be addressed with ACTION_SHOW_ON_SCREEN. Retain initial/final geometry
+        // and action outcomes to distinguish missing semantics from overscrolling.
+        String initial = null;
+        int scrollAttempts = 0;
+        int scrollAccepted = 0;
         long deadline = SystemClock.uptimeMillis() + timeoutMillis;
         do {
             AccessibilityNodeInfo node = findInApplication(
@@ -208,18 +213,46 @@ public final class MainActivityAccessibilityTest
                 node.recycle();
                 return;
             }
+            if (initial == null) initial = revealState(id);
             AccessibilityNodeInfo scroll = findInApplication(
                     n -> n.isScrollable() && !n.isEditable());
             if (scroll != null) {
                 try {
-                    scroll.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+                    scrollAttempts++;
+                    if (scroll.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) {
+                        scrollAccepted++;
+                    }
                 } finally {
                     scroll.recycle();
                 }
             }
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
-        fail("Native field unavailable after scrolling: " + id);
+        fail("Native field unavailable after scrolling: " + id
+                + "; initial=" + initial + "; final=" + revealState(id)
+                + "; forwardAccepted/attempted=" + scrollAccepted + "/" + scrollAttempts);
+    }
+
+    // Fixed-size snapshots of only the requested field, chosen scroll container
+    // and input focus; no labels, values or application/window tree dumps.
+    private String revealState(String id) {
+        return "{field=" + nodeGeometry(n -> field(n, id))
+                + "; scroll=" + nodeGeometry(n -> n.isScrollable() && !n.isEditable())
+                + "; focusedEditor=" + nodeGeometry(n -> n.isEditable() && n.isFocused()) + "}";
+    }
+
+    private String nodeGeometry(Predicate<AccessibilityNodeInfo> predicate) {
+        AccessibilityNodeInfo node = findInApplication(predicate);
+        if (node == null) return "missing";
+        try {
+            Rect bounds = new Rect();
+            node.getBoundsInScreen(bounds);
+            return "{id=" + node.getViewIdResourceName() + ", class=" + node.getClassName()
+                    + ", bounds=" + bounds.toShortString() + ", visible=" + node.isVisibleToUser()
+                    + ", focused=" + node.isFocused() + ", actions=" + node.getActions() + "}";
+        } finally {
+            node.recycle();
+        }
     }
 
     private void click(String description, Predicate<AccessibilityNodeInfo> predicate) {
