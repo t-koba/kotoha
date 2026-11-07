@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "sha256": "ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f",
+      "size": 2175362,
+      "url": "https://raw.githubusercontent.com/unicode-org/unicodetools/addf0c992050b10a0bfe8647f90fcc8fdbfe71fc/unicodetools/data/ucd/dev/UnicodeData.txt"
+    },
+    {
+      "sha256": "4d4c03892dea9146d674b686e495df2d55a28d071ac474041d73518f887abddc",
+      "size": 1372269,
+      "url": "https://raw.githubusercontent.com/unicode-org/unicodetools/addf0c992050b10a0bfe8647f90fcc8fdbfe71fc/unicodetools/data/ucd/dev/DerivedNormalizationProps.txt"
+    },
+    {
+      "sha256": "2fc713e6a31a87c4850a37fe2caffa4218180fadb5de86b43a143ddb4581fb86",
+      "size": 1914200,
+      "url": "https://raw.githubusercontent.com/unicode-org/unicodetools/addf0c992050b10a0bfe8647f90fcc8fdbfe71fc/unicodetools/data/ucd/15.1.0/UnicodeData.txt"
+    },
+    {
+      "sha256": "53d614508e2a0b2305a8aa21cd60d993de9326cdf65993660dfcce4503548583",
+      "size": 144253,
+      "url": "https://raw.githubusercontent.com/unicode-org/unicodetools/addf0c992050b10a0bfe8647f90fcc8fdbfe71fc/unicodetools/data/ucd/dev/PropList.txt"
+    },
+    {
+      "sha256": "fe5c62b543e287981db198f2acfa0ca732d12591a1024536dc8fd85dacd77104",
+      "size": 2033,
+      "url": "https://raw.githubusercontent.com/unicode-org/unicodetools/addf0c992050b10a0bfe8647f90fcc8fdbfe71fc/LICENSE"
+    }
+  ]
+}
