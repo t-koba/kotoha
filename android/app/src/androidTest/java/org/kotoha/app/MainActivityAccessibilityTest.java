@@ -4,17 +4,18 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.InstrumentationTestRunner;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import junit.framework.AssertionFailedError;
 
 /**
  * Native accessibility bridge and synthesized keyboard input on the pinned emulator only.
@@ -79,8 +80,7 @@ public final class MainActivityAccessibilityTest
         click("interface language menu", n -> named(n, "Interface language")
                 || named(n, "表示言語"));
         click(locale, n -> named(n, locale));
-        // The selection rebuilds localized Flutter semantics asynchronously; wait
-        // for that UI work before querying the native field tree.
+        // Native assertions poll for localized semantics beyond main-thread idle.
         getInstrumentation().waitForIdleSync();
         checkField("source-language", source, "source-text", sourceText, importSource);
         checkField("target-language-0", target, null, copy, null);
@@ -102,14 +102,19 @@ public final class MainActivityAccessibilityTest
             // Keyboard paste exercises the focused editor, not ACTION_SET_TEXT's
             // optimistic semantics prediction, without a Unicode key-map dependency.
             setClipboardText(value);
-            // Ctrl+A did not reliably select this Flutter editor's value on the emulator.
-            // CI showed a stale Arabic code point after a rapid delete burst, so wait for
-            // each expected value update before sending the next key across direction rebuilds.
+            // Delete one scalar per exact update: Ctrl+A and rapid key bursts were unreliable.
             while (!currentValue.isEmpty()) {
                 currentValue = currentValue.substring(0,
                         currentValue.offsetByCodePoints(currentValue.length(), -1));
+                String before = inputFocusState();
                 getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
-                assertField(id, label, currentValue);
+                try {
+                    assertField(id, label, currentValue);
+                } catch (AssertionFailedError failure) {
+                    failure.addSuppressed(new AssertionFailedError(
+                            "Backspace native focus before=" + before + "; after=" + inputFocusState()));
+                    throw failure;
+                }
             }
             controlKey(KeyEvent.KEYCODE_V);
             assertField(id, label, value);
@@ -118,8 +123,7 @@ public final class MainActivityAccessibilityTest
             controlKey(KeyEvent.KEYCODE_V);
             currentValue = value + "x";
             assertField(id, label, currentValue);
-            // Let the native text-input update drain after a live direction rebuild
-            // before injecting Backspace. Exact value/focus checks remain unchanged.
+            // Wait for Android main-thread idle, not asynchronous Dart/IME completion.
             getInstrumentation().waitForIdleSync();
         }
         // Verify the native forward traversal target. The import action is now
@@ -200,9 +204,7 @@ public final class MainActivityAccessibilityTest
 
     private void revealField(String id) {
         // Flutter's Android bridge omits hidden children, so an absent field cannot
-        // be addressed with ACTION_SHOW_ON_SCREEN. Retain initial/final geometry
-        // and action outcomes to distinguish missing semantics from overscrolling.
-        String initial = null;
+        // be addressed with ACTION_SHOW_ON_SCREEN.
         int scrollAttempts = 0;
         int scrollAccepted = 0;
         long deadline = SystemClock.uptimeMillis() + timeoutMillis;
@@ -213,7 +215,6 @@ public final class MainActivityAccessibilityTest
                 node.recycle();
                 return;
             }
-            if (initial == null) initial = revealState(id);
             AccessibilityNodeInfo scroll = findInApplication(
                     n -> n.isScrollable() && !n.isEditable());
             if (scroll != null) {
@@ -229,30 +230,25 @@ public final class MainActivityAccessibilityTest
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
         fail("Native field unavailable after scrolling: " + id
-                + "; initial=" + initial + "; final=" + revealState(id)
                 + "; forwardAccepted/attempted=" + scrollAccepted + "/" + scrollAttempts);
     }
 
-    // Fixed-size snapshots of only the requested field, chosen scroll container
-    // and input focus; no labels, values or application/window tree dumps.
-    private String revealState(String id) {
-        return "{field=" + nodeGeometry(n -> field(n, id))
-                + "; scroll=" + nodeGeometry(n -> n.isScrollable() && !n.isEditable())
-                + "; focusedEditor=" + nodeGeometry(n -> n.isEditable() && n.isFocused()) + "}";
-    }
-
-    private String nodeGeometry(Predicate<AccessibilityNodeInfo> predicate) {
-        AccessibilityNodeInfo node = findInApplication(predicate);
-        if (node == null) return "missing";
+    // Window/view focus only: IMM status getters can trigger checkFocus/startInput.
+    // Observation errors report unavailable, not false.
+    private String inputFocusState() {
+        String[] state = {"unavailable"};
         try {
-            Rect bounds = new Rect();
-            node.getBoundsInScreen(bounds);
-            return "{id=" + node.getViewIdResourceName() + ", class=" + node.getClassName()
-                    + ", bounds=" + bounds.toShortString() + ", visible=" + node.isVisibleToUser()
-                    + ", focused=" + node.isFocused() + ", actions=" + node.getActions() + "}";
-        } finally {
-            node.recycle();
-        }
+            getInstrumentation().runOnMainSync(() -> {
+                try {
+                    MainActivity activity = getActivity();
+                    View focus = activity.getCurrentFocus();
+                    state[0] = "{windowFocus=" + activity.hasWindowFocus()
+                            + ", currentFocusExists=" + (focus != null)
+                            + ", currentFocusHasFocus=" + (focus != null && focus.hasFocus()) + "}";
+                } catch (RuntimeException | AssertionError ignored) { /* Keep unavailable. */ }
+            });
+        } catch (RuntimeException | AssertionError ignored) { /* Keep unavailable. */ }
+        return state[0];
     }
 
     private void click(String description, Predicate<AccessibilityNodeInfo> predicate) {
