@@ -45,6 +45,23 @@ class NinjaReadsTest(unittest.TestCase):
         self.header.write_text('changed')
         self.assertNotEqual(manifest, self.capture()[ninja_reads.OUTPUTS[0]])
 
+    def test_link_target_dependency_record_is_not_a_compiler_read(self):
+        link_input = self.ndk / 'link-only.a'
+        link_input.write_bytes(b'archive')
+        (self.build / '.ninja_log').write_text(
+            '# ninja log v5\n'
+            '0\t1\t123\tselected.o\t0123456789abcdef\n'
+            '1\t2\t124\tbin/llama-simple\tfedcba9876543210\n')
+        self.records += (
+            'bin/llama-simple: #deps 2, deps mtime 124 (VALID)\n'
+            '    selected.o\n'
+            f'    {link_input}\n')
+        outputs = self.capture()
+        manifest = outputs[ninja_reads.OUTPUTS[0]]
+        self.assertIn('source/selected.cpp', manifest)
+        self.assertNotIn('ndk/link-only.a', manifest)
+        self.assertIn('represented: 1', outputs[ninja_reads.OUTPUTS[2]])
+
     def test_empty_unknown_stale_missing_escaping_and_unrepresented(self):
         valid = self.records
         for text in ('', '    header.h\n', valid.replace('(VALID)', '(STALE)'),

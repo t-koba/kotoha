@@ -98,10 +98,16 @@ def capture(build, source, ndk, probe):
         if active is None:
             return
         name = record_name(active)
+        if active not in commands:
+            # Ninja may keep depfile records for linker outputs as well as
+            # compiler outputs. The probe records the link target separately;
+            # keep rejecting any unrepresented object file, and below require
+            # a dependency record for every compiled object in the build log.
+            if active.suffix in ('.o', '.obj'):
+                raise ValueError(f'unrepresented Ninja dependency object {name}')
+            return
         if not expected:
             raise ValueError(f'empty Ninja dependency record for {name}')
-        if active not in commands:
-            raise ValueError(f'unrepresented Ninja dependency object {name}')
         if len(dependencies) != expected:
             raise ValueError(f'Ninja dependency count mismatch for {name}: '
                              f'expected {expected}, parsed {len(dependencies)}')

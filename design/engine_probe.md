@@ -2,19 +2,26 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-Windows x64 has exact native inference evidence. Android API 35 / x86_64 has a genuine
-hosted-emulator smoke, but strict selected-read capture has not passed. Latest exact
-publication `e4db5049dc6cbd79ce8210b77d511b3de216fb31ba989746c022321abc792e7` at
-SHA `e443153fffa469e437b470899c2038cd18b76a68` passed Windows job `128452818470`;
-Android job `128452818219` failed capture with `empty/malformed/unrepresented
-Ninja dependencies`, so no selected-read manifests were produced; its preserved
-smoke log still records rejection of missing/truncated models and generated-only
-`Bonjour.` output. This followed publication
-`0d94696cd2df2af8b75319e9393b0b47ed427bb857fa4716247fe4101d355979`, whose Android
-capture reported `colliding compiler dependencies`; commit `a20fa32` deduplicated
-validated canonical aliases, but the distinct latest failure is not yet localized.
-Neither probe result adopts an engine into the app. Linux has no application host;
-no ARM or physical-device coverage is inferred.
+Windows x64 and the Android 15/API 35 x86_64 hosted-emulator smoke both passed in
+the latest paired publication, but Android's strict selected-read capture still
+fails. Exact publication `28c4bd70e7e8ab65a9e32cfb7790c07b4858863d97c0b6eef02fc2052fd6167c`
+(SHA `b2dc629b476098cada2ed6141d9b02ad1c60b882`, source commit
+`cc6782ba158be88d07a7043bea24ea44d2e86e68`) passed Windows job `128457412922`;
+Android job `128457412615` failed with `unrepresented Ninja dependency object
+bin/llama-simple` after all 27 probe unit tests passed. The exact Android
+`ninja-deps.txt` (SHA-256
+`53ffa196706b1f54caa1f4e8e1b451f1de364b1ddd654959baed539533c59acd`) contains a
+16-input dependency record for the linked executable; `link-inputs.txt` (SHA-256
+`60627119fb6ee66e34f2bd37f342e6c20e28129ccb8e611e85091c4d499e3880`) identifies it
+as a `CXX_EXECUTABLE_LINKER` target. Its `smoke.log` (SHA-256
+`e6d143239c529ab510be31c07070241a707528710cd3c2c6544a418f9592f506`) records real
+loader rejection of missing/truncated models and generated-only `Bonjour.` output.
+The parser now excludes non-object linker-output dependency records from the
+compiler-read manifest, while still rejecting unmapped `.o`/`.obj` records and
+requiring every compiled output to have a validated read record. This fix has
+focused synthetic coverage but still needs the exact Android CI result. Neither
+probe result adopts an engine into the app. Linux has no application host; no ARM
+or physical-device coverage is inferred.
 
 ## Pinned inputs and review
 
@@ -174,38 +181,43 @@ retain only `libc.so.6`, which warns against that inference without proving
 Android closure). These are runtime loader resolution evidence, **not live
 process mappings, all dlopen paths, static members or legal closure**.
 
-`ninja_reads.py` matches **actual built** valid Ninja dependency records to unique
-configured Clang object commands, cross-checks compiled outputs in clean Ninja
-v5 or v7 build logs (both use the validated five-field record shape), and requires
-each compiled source in its own read set. Unknown log versions remain rejected. It
-rejects missing/empty/stale/malformed/unrepresented records, missing or non-file
-inputs, parent traversal, aliases escaping roots and unknown providers. Every raw
-dependency is resolved and checked; the output manifest deduplicates paths that
-resolve to the same canonical file. Most-specific configured `source`, `generated`,
-`ndk`, `probe` roots
-produce sorted UTF-8/LF SHA-256 manifests (`android-selected-sha256.txt`,
-`android-compiled-sha256.txt`) and counts (`android-compiler-summary.txt`). POSIX
-case is preserved; Windows tlogs and case folding are not reused. Configured but
-unbuilt targets are not included in selected-read membership. Raw evidence remains
-available if strict capture fails. The script still attempts independent native
-smoke, but returns failure for incomplete capture, never inferred closure.
+`ninja_reads.py` matches valid Ninja dependency records for **actual built** compiler
+objects to unique configured Clang commands, cross-checks compiled outputs in clean
+Ninja v5 or v7 build logs (both use the validated five-field record shape), and
+requires each compiled source in its own read set. Dependency records for non-object
+link outputs are outside compiler-read scope; the linked executable's target query
+is retained separately. Unmapped `.o`/`.obj` records still fail, and every compiled
+output in the build log must have its own validated dependency record. Unknown log
+versions remain rejected. Compiler records reject missing/empty/stale/malformed
+entries, missing or non-file inputs, parent traversal, aliases escaping roots and
+dependencies outside configured roots. Every raw compiler dependency is resolved and checked; the output
+manifest deduplicates paths that resolve to the same canonical file. Most-specific
+configured `source`, `generated`, `ndk`, `probe` roots produce sorted UTF-8/LF
+SHA-256 manifests (`android-selected-sha256.txt`, `android-compiled-sha256.txt`)
+and counts (`android-compiler-summary.txt`). POSIX case is preserved; Windows
+tlogs and case folding are not reused. Configured but unbuilt targets are not
+included in selected-read membership. Raw evidence remains available if strict
+capture fails. The script still attempts independent native smoke, but returns
+failure for incomplete capture, never inferred closure.
 
 **Pending native evidence:** successful strict selected-read capture and a green full
-Android probe job. The latest exact artifact's `smoke.log` records the Android 15/API
-35 x86_64 emulator fingerprint, executable/fixture/provider hashes, actual rejection
-of missing and truncated GGUFs, and generated-only `Bonjour.` output. The overall job
-still fails before producing selected-read manifests: `ninja_reads.py` reports
-`empty/malformed/unrepresented Ninja dependencies` (publication
-`e4db5049dc6cbd79ce8210b77d511b3de216fb31ba989746c022321abc792e7`, Android job
-`128452818219`). The previous capture error was `colliding compiler dependencies`;
-this distinct second condition is not localized yet. The parser recognizes only the
+Android probe job. In the latest exact publication, the smoke ran and produced the
+Android 15/API 35 x86_64 fingerprint, loader rejection and generated-only output, but
+job `128457412615` still failed before producing selected-read manifests: the
+16-input `bin/llama-simple` Ninja dependency record belongs to the executable link
+target, not a compiler object (publication
+`28c4bd70e7e8ab65a9e32cfb7790c07b4858863d97c0b6eef02fc2052fd6167c`, SHA
+`b2dc629b476098cada2ed6141d9b02ad1c60b882`). The local parser change excludes
+non-object linker-output records while continuing to require complete, valid
+compiler-object coverage; focused tests cover both that target and fail-closed
+unrepresented objects. The exact Android CI recheck is pending, so compiler-read
+capture and overall probe acceptance remain unmet. The parser recognizes only the
 exact kernel-vDSO pseudo-row separately from hashable `/apex/` and `/system/` providers;
-unknown/malformed provider rows still fail closed. It validates each raw dependency,
-then canonicalizes the validated paths into a unique input set. Its failure messages
-now distinguish empty records, missing/unrepresented objects and count mismatches,
-including only a build-relative object name and expected/observed counts; no evidence
-is filtered or accepted by this diagnostic change. Synthetic tests cover these errors;
-Android inference remains one narrow developer smoke, not quality evidence.
+unknown/malformed provider rows still fail closed. It validates each compiler
+dependency, then canonicalizes validated paths into a unique input set. Failure
+messages distinguish empty records, missing/unrepresented objects and count
+mismatches, including only a build-relative object name and expected/observed counts.
+Android inference is a narrow developer smoke, not quality evidence.
 Header/source read hashes are not compiled/surviving binary closure, static runtime
 provenance or legal approval. Static archive membership, intrinsic branch
 applicability, full selected terms and notices, generated Unicode provenance and
