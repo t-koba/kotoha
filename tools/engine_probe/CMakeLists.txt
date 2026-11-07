@@ -3,8 +3,8 @@ project(kotoha_engine_probe LANGUAGES C CXX)
 
 # Developer tooling only: no product target links this build.
 if(ANDROID)
-    if(NOT CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64" OR
-       NOT CMAKE_SYSTEM_VERSION EQUAL 35 OR NOT ANDROID_STL STREQUAL "c++_static")
+    if(NOT ANDROID_ABI STREQUAL "x86_64" OR
+       NOT ANDROID_PLATFORM STREQUAL "android-35" OR NOT ANDROID_STL STREQUAL "c++_static")
         message(FATAL_ERROR "Android probe requires API 35 x86_64 and c++_static")
     endif()
 elseif(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR
