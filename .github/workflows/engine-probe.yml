@@ -89,7 +89,7 @@ jobs:
           if (Test-Path $source) {
             Get-ChildItem $source -File -Recurse | Sort-Object FullName | ForEach-Object {
               $relative = [IO.Path]::GetRelativePath($source, $_.FullName).Replace('\', '/')
-              '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $relative
+              '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower(), $relative
             } | Set-Content build/engine-probe/source-sha256.txt
           }
           $exe = 'build/engine-probe/bin/Release/llama-simple.exe'
