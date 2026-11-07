@@ -8,6 +8,7 @@ kotoha／ことはの製品要求、システム構造、データ・処理契�
 | `kotoha_design.md` | 設計書の編集用原稿 |
 | [SQLCipher候補の監査](sqlcipher_audit.md) | sqlite3 3.9.0のネイティブ資産・プロバイダー・許諾根拠と未解決項目 |
 | [メモリー限定テキスト取込みの監査](text_import_audit.md) | デスクトップのピッカー採用根拠、依存許諾、データフロー、未対応プラットフォームの前提 |
+| [テキスト出力の上書き監査](text_export_audit.md) | 固定されたmacOS/Windows保存ダイアログの上書き確認根拠と残るmacOS実機確認 |
 | `specs/` | モデル、モード、イベント、依存方針、C ABI、保存構造、検査ツール |
 | `examples/` | データ契約を確認するための合成データ |
 | `appendices/acceptance_matrix.md` | 機能と受入確認の対応 |
