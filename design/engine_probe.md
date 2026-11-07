@@ -328,8 +328,14 @@ A reviewed strict comparison parsed the complete selected 288,635-byte C++ file
   uppercase 1,450, first-codepoint NFD 13,233; exact ordered compressed flags
   2,273 rows including terminal sentinel, NFD 1,828 including initial dummy sentinel.
 
+The pinned `src/unicode-data.cpp` records at line 7035 `Canonical normalization
+tables: Unicode 16.0.0`; its pinned generator derives that marker from Python's
+`unicodedata.unidata_version`. This identifies only the normalization tables, not
+the separately fetched `UnicodeData.txt` input: the generator fetches UCD `latest`,
+and its historical input bytes and interpreter environment remain unknown.
+
 The legacy flags differ from Unicode 16 at 5,185 code points; each case map lacks
-27 keys and NFD lacks 20, so the normalization comment cannot label the whole file.
+27 keys and NFD lacks 20. The normalization marker therefore cannot label the whole file.
 Different generator/output containers mean semantic equality, **not** byte-identical
 full regeneration, original generation history or supported-tokenization correctness.
 
