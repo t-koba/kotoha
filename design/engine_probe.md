@@ -392,34 +392,42 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 
 ### Windows runtime and delivery gate
 
-The latest retained `linkage.log` (SHA-256
-`6c37378410ba3ab8d5f7b3bde7adeeece15fd33bfeb13bebbb06a87402660285`)
-identifies x64 PE direct imports:
-`KERNEL32.dll`, `ADVAPI32.dll`, `MSVCP140.dll`, `VCRUNTIME140.dll`,
-`VCRUNTIME140_1.dll`, and `api-ms-win-crt-` contracts for runtime, stdio, locale,
-convert, string, heap, math, environment and utility. This is **dynamic** CRT
-linkage despite static engine libraries. It neither identifies all transitive
-providers/versions nor authorizes redistribution.
+The exact Windows x64 probe in publication
+`e4db5049dc6cbd79ce8210b77d511b3de216fb31ba989746c022321abc792e7` / published
+SHA `e443153fffa469e437b470899c2038cd18b76a68` passed job `128452818470`.
+Its `configure.log` (SHA-256
+`9db6ad2ff896d00f57f807889cbd9c0ebbb84820be8c3036c2173716f23b30a1`) records
+Visual Studio 18 / Enterprise 2026, MSVC `19.51.36260.0` and toolset
+`14.51.36231`. Its `linkage.log` (SHA-256
+`2cfe734a0a21ba318a611074ad37e557c1cb7d20d91ea8ae33c22b42ef938e45`) reports
+COFF Dumper `14.29.30159.0` and x64 PE direct imports `KERNEL32.dll`,
+`ADVAPI32.dll`, `MSVCP140.dll`, `VCRUNTIME140.dll`, `VCRUNTIME140_1.dll`, and
+`api-ms-win-crt-` contracts for runtime, stdio, locale, convert, string, heap,
+math, environment and utility. This is **dynamic** CRT linkage despite static
+engine libraries. The import record does not identify the actual runtime DLL
+paths, provider versions or hashes; the older dumper version is not runtime
+identity evidence.
 
-Microsoft's [DLL redistribution guide](https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute?view=msvc-170)
-says to compare actual imports with the installed `Redist.txt` or the applicable
-online REDIST list; only listed files may be redistributed. The [Visual Studio
-2022 REDIST list](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution)
-allows listed, unmodified Visual C++ runtime files from `VC\redist`, subject to
-the license terms, and limits distribution to licensed Visual Studio users. These
-sources bound a possible redistribution path, not the exact toolset, DLL providers,
-licensed edition or terms of this build; they do not establish permission here.
-They were retrieved 2026-11-07: DLL guide receipt `fe34504106e5de56d36bdcd78fb0642ceeb360b1f77d443fdc3d5282dcb8cd74`, SHA-256
-`7cb7d6379d3b2ebce5b5761f4dca475ad93a502f04db11eaa0c0dbef2e78b925`; VS 2022
-REDIST receipt `35cff59c95271dec3c8c3fd1c7bde907cca8fbf8d302d4500d2df0129b023e3e`,
-SHA-256 `e6b7a54c56e3d109035d58c827c20b89b7ece006e0c58959453ac8aa8ea3cc92`.
+Microsoft's [Visual Studio 2026 REDIST
+list](https://learn.microsoft.com/en-us/visualstudio/releases/2026/redistribution)
+is the edition-specific online list referenced by Visual Studio Enterprise,
+Professional, Community and Build Tools terms. It permits unmodified listed files
+for a validly licensed copy, subject to those terms; its Visual C++ section names
+the `Microsoft_VC145_CRT_[arch].msm` family and files under `VC\redist` (except
+the excluded debug folders), and limits distribution of the runtime package and
+individual files to licensed Visual Studio users. This is a possible route, not
+permission established for this runner: the build artifact does not identify the
+provider binaries or their hashes, and the applicable runner license terms are
+not captured. Page retrieved 2026-11-07: receipt
+`3b2a6113930dd4413738cd98383e577b9462473fea498d26fa8ea9bd7b7a7ef6`, SHA-256
+`0e91cdda4d1d224221b1559e72e70677d304859c296ceb2463ceb222850eb054`.
 
 KERNEL32/ADVAPI32 and UCRT contracts still require supported-Windows provider
 and terms review; VC C++/vcruntime DLLs are **not assumed OS-provided**. For any
-product runtime, capture the exact toolset/edition and provider binary identities,
-then match them to that installation's REDIST list and terms. Record provider,
-linkage, redistribution and approval under policy. Do not ship runner DLLs or
-infer redistribution permission from dumpbin.
+product runtime, capture the exact provider binary identities, then match them to
+the selected installation's REDIST list and terms. Record provider, linkage,
+redistribution and approval under policy. Do not ship runner DLLs or infer
+redistribution permission from dumpbin.
 
 Before adoption: close generated/header and selected-term gaps above, then ship
 complete selected notices alongside the engine and expose them through the app's
