@@ -90,16 +90,17 @@ public final class MainActivityAccessibilityTest
         revealField(id);
         click(label, n -> field(n, id));
         assertField(id, label, "");
-        // Verify initial native input focus by sending real keyboard input rather than
-        // relying on isFocused(), which is not consistently exposed for Flutter editors.
-        getInstrumentation().sendStringSync("p");
+        // Verify that input reaches the tapped field by pasting a synthetic marker.
+        // sendStringSync("p") failed to commit under the Japanese UI locale on the
+        // hosted emulator even though the native field remained focused.
+        setClipboardText("p");
+        controlKey(KeyEvent.KEYCODE_V);
         assertField(id, label, "p");
         String currentValue = "p";
         for (String value : new String[] {"العربية", "Latin"}) {
             // Keyboard paste exercises the focused editor, not ACTION_SET_TEXT's
             // optimistic semantics prediction, without a Unicode key-map dependency.
-            getInstrumentation().runOnMainSync(() ->
-                    clipboard.setPrimaryClip(ClipData.newPlainText("RTL test", value)));
+            setClipboardText(value);
             // Ctrl+A did not reliably select this Flutter editor's value on the emulator.
             // CI showed a stale Arabic code point after a rapid delete burst, so wait for
             // each expected value update before sending the next key across direction rebuilds.
@@ -112,7 +113,8 @@ public final class MainActivityAccessibilityTest
             controlKey(KeyEvent.KEYCODE_V);
             assertField(id, label, value);
             // No re-tap: input must still reach this field after its direction rebuild.
-            getInstrumentation().sendStringSync("x");
+            setClipboardText("x");
+            controlKey(KeyEvent.KEYCODE_V);
             currentValue = value + "x";
             assertField(id, label, currentValue);
         }
@@ -132,6 +134,11 @@ public final class MainActivityAccessibilityTest
         } else {
             awaitFocused(nextLabel);
         }
+    }
+
+    private void setClipboardText(String value) {
+        getInstrumentation().runOnMainSync(() ->
+                clipboard.setPrimaryClip(ClipData.newPlainText("RTL test", value)));
     }
 
     private void controlKey(int keyCode) {
