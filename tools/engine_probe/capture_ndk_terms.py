@@ -17,8 +17,8 @@ import xml.etree.ElementTree as ET
 _VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 _TERM_NAME = re.compile(r"(?:licenses?|licences?|notices?|copying|copyrights?)(?:[._-].*)?", re.IGNORECASE)
 _TOOLCHAIN = Path("toolchains/llvm/prebuilt/linux-x86_64")
-_SOURCE_INFO = _TOOLCHAIN / "clang-r530567/clang_source_info.md"
-_LLVM_NOTICE = _TOOLCHAIN / "clang-r530567/NOTICE"
+_SOURCE_INFO = _TOOLCHAIN / "clang_source_info.md"
+_LLVM_NOTICE = _TOOLCHAIN / "NOTICE"
 _REQUIRED_METADATA = (Path("source.properties"), Path("package.xml"))
 
 

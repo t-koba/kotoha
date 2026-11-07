@@ -356,10 +356,9 @@ class NdkTermCaptureTest(unittest.TestCase):
             '<repository><localPackage path="ndk;28.2.13676358"/></repository>')
         (self.root / 'NOTICE').write_text('NDK root notice')
         toolchain = self.root / 'toolchains/llvm/prebuilt/linux-x86_64'
-        clang = toolchain / 'clang-r530567'
-        clang.mkdir(parents=True)
-        (clang / 'clang_source_info.md').write_text('immutable clang source pin')
-        (clang / 'NOTICE').write_text('third-party notices')
+        toolchain.mkdir(parents=True)
+        (toolchain / 'clang_source_info.md').write_text('immutable clang source pin')
+        (toolchain / 'NOTICE').write_text('third-party notices')
         (toolchain / 'sysroot/usr/include/c++/v1').mkdir(parents=True)
         (toolchain / 'sysroot/usr/include/c++/v1/LICENSE.TXT').write_text('libc++ terms')
         (toolchain / 'not-a-license.txt').write_text('ignored by name')
@@ -371,8 +370,8 @@ class NdkTermCaptureTest(unittest.TestCase):
         paths = {record['path'] for record in manifest['files']}
         self.assertEqual(paths, {
             'source.properties', 'package.xml', 'NOTICE',
-            'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/clang_source_info.md',
-            'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/NOTICE',
+            'toolchains/llvm/prebuilt/linux-x86_64/clang_source_info.md',
+            'toolchains/llvm/prebuilt/linux-x86_64/NOTICE',
             'toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/LICENSE.TXT',
         })
         for record in manifest['files']:
@@ -384,7 +383,7 @@ class NdkTermCaptureTest(unittest.TestCase):
     def test_package_revision_and_required_notice_fail_closed(self):
         with self.assertRaisesRegex(RuntimeError, 'revision'):
             self.capture.capture(self.root, self.output, '28.2.13676359', 16, 4096)
-        (self.root / 'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/NOTICE').unlink()
+        (self.root / 'toolchains/llvm/prebuilt/linux-x86_64/NOTICE').unlink()
         with self.assertRaisesRegex(FileNotFoundError, 'NOTICE'):
             self.capture.capture(self.root, self.output, '28.2.13676358', 16, 4096)
 
@@ -393,7 +392,7 @@ class NdkTermCaptureTest(unittest.TestCase):
             self.capture.capture(self.root, self.output, '28.2.13676358', 2, 4096)
         with self.assertRaisesRegex(RuntimeError, 'byte bound'):
             self.capture.capture(self.root, self.output, '28.2.13676358', 16, 1)
-        link = self.root / 'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/COPYING'
+        link = self.root / 'toolchains/llvm/prebuilt/linux-x86_64/COPYING'
         target = self.root / 'outside'
         target.write_text('not in package')
         link.symlink_to(target)
