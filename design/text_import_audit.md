@@ -20,6 +20,54 @@ Linux remains separate because the project's designed Linux Flutter host must
 avoid GTK, while `file_selector_linux` links GTK. Neither prerequisite blocks
 the macOS/Windows slice.
 
+## GTK-free Linux portal candidate (not adopted)
+
+The repository intentionally has no Linux Flutter runner until the designed
+non-GTK host embedding exists. `ashpd` 0.14.0 exposes `file_chooser` as an
+opt-in feature: its manifest enables `serde_repr` for that feature, with Tokio
+defaulted; GTK, GDK, GLib, Wayland and PipeWire integrations are separate
+optional features. Its `SelectedFiles::uris()` API returns URIs, not file bytes.
+This is only evidence that a GTK-free feature selection may be possible; the
+complete resolved dependency/license closure, GTK-free build/link, and Flutter
+host bridge have not been verified. A bounded local probe found no Cargo
+executable (`experiments/c69b0215c0024aabac474640e132a9b6.json`), so no local
+feature-resolved build was possible. The full `ashpd` MIT license was inspected,
+but that does not establish the licenses of its transitive dependencies.
+
+The XDG FileChooser portal has different behavior for host and sandboxed apps.
+Its specification says selected files may be added to the Documents portal and
+that such entries remain accessible across sessions. FileChooser OpenFile
+offers no ephemeral-permission option; see XDG FileChooser search evidence
+`search-abbf315cb6271eb8b0de05cd0394af8f4ce8aaae5062a86a93bb7a9168147cf2`.
+The inspected
+`xdg-desktop-portal` source at commit `e3ca5567a2dbb5b763a383bba5ff1c0437a7e851`
+sets `DOCUMENT_ADD_FLAGS_PERSISTENT` and grants `read` and
+`grant-permissions` (plus optional `write`), not `delete`, when registering a
+selected file (`fetch/85c46777ca08db4548c9cbb7f50dc4c53fd5cd5ff697d1521506292a10bb4d35`,
+SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
+`ashpd` exposes `Documents::delete` as a separate API
+(`fetch/b546771bd6472d409f2b4d2dd9636ba33baf122c68f00d0a4fd58be4d45c8a97`),
+but the FileChooser registration path grants no `delete` permission, so there
+is no evidence that Kotoha could use it to remove that grant. Thus the
+inspected sandboxed portal path cannot meet Kotoha's no-retained-grant
+contract.
+
+For a host app, the portal source returns the original URI without registering
+a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
+SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),
+but Kotoha has no Linux host or packaging target to validate that mode.
+
+Linux import remains unsupported. Reconsider only after the product's Linux
+packaging target is explicit and a GTK-free host path passes the complete
+feature/license, build/link, and runtime permission/data-flow reviews. Evidence
+for the candidate client manifest/license is in fetch receipts
+`21e23ad1cc93bca164f2c1d05eb31ba282f4fe6d348a54c0725ed20a7d79947e` and
+`7c3d54f818e5e021d4dee59d8897a4e6e4d4c91aeda61ed40bdf066fd8359b13`
+(SHA-256 `ae26bc7b1bc91fb8648f6a298decbb1a77090a56c9d04e2c23b8365e5f54acb5`);
+the
+`SelectedFiles::uris()` API is documented in search receipt
+`38caafccf3bfe978ddeff875b3c0553feaa417c95f8b8ef83ebb2102bfb2ae93`.
+
 ## Selected desktop packages and exact resolution
 
 `pubspec.lock` resolves only the desktop implementations and their common
