@@ -40,17 +40,26 @@ def serial(value):
 # lines 3336-3338 (each non-main library as '\t%s => %s (%p)\n' with
 # get_soname(), get_realpath(), base).
 _LINKER_RECORD = re.compile(r'\t([A-Za-z0-9_+.~\-]+\.so) => (/[A-Za-z0-9_./+\-]+\.so) \(0x[0-9a-fA-F]+\)')
+# Android 15's linker --list includes this exact non-file kernel mapping. It is
+# retained in the raw smoke log but cannot be hashed like a shared-library path.
+_LINKER_VDSO_RECORD = re.compile(r'\tlinux-vdso\.so\.1 => \[vdso\] \(0x[0-9a-fA-F]+\)')
 
 
 def parse_linker_providers(raw):
-    """Strict complete linker --list capture: every row must be a supported
-    record. Nonempty output, unique soname/path identities, canonical allowed
-    runtime paths, no silently skipped rows. Returns sorted unique paths."""
+    """Strict complete linker --list capture. Accept file-backed providers and
+    at most one exact kernel-vDSO row; every row must match a known record.
+    Returns sorted unique file paths, not the vDSO pseudo-mapping."""
     text = raw.strip(' \r\n')
     if not text:
         raise RuntimeError('missing runtime linker provider evidence')
     names, seen = set(), set()
+    vdso_seen = False
     for line in text.splitlines():
+        if _LINKER_VDSO_RECORD.fullmatch(line):
+            if vdso_seen:
+                raise RuntimeError('duplicate/ambiguous runtime linker vDSO record')
+            vdso_seen = True
+            continue
         match = _LINKER_RECORD.fullmatch(line)
         if not match:
             raise RuntimeError('unknown/malformed runtime linker provider record')
@@ -63,6 +72,8 @@ def parse_linker_providers(raw):
             raise RuntimeError('duplicate/ambiguous runtime linker provider identity')
         names.add(name)
         seen.add(path)
+    if not seen:
+        raise RuntimeError('missing runtime linker file-provider evidence')
     return sorted(seen)
 
 

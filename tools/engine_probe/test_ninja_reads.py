@@ -64,9 +64,16 @@ class NinjaReadsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'colliding'):
             self.capture()
 
+    def test_v7_build_log_uses_supported_five_field_records(self):
+        text = '# ninja log v7\n0\t1\t123\tselected.o\t0123456789abcdef\n'
+        (self.build / '.ninja_log').write_text(text)
+        outputs = self.capture()
+        self.assertIn('source/selected.cpp', outputs[ninja_reads.OUTPUTS[0]])
+        self.assertIn('represented: 1', outputs[ninja_reads.OUTPUTS[2]])
+
     def test_build_log_requires_every_actual_compiler_object(self):
         for text in ('', '# ninja log v6\n', '# ninja log v5\nmalformed',
-                     '# ninja log v5\n',
+                     '# ninja log v7\nmalformed', '# ninja log v5\n',
                      '# ninja log v5\n0\t1\t123\tunbuilt.o\t1234\n',
                      '# ninja log v5\n0\t1\t123\tunknown.o\t1234\n'):
             (self.build / '.ninja_log').write_text(text)

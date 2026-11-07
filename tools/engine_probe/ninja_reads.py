@@ -65,7 +65,9 @@ def capture(build, source, ndk, probe):
         commands[output] = source_path
 
     log = (build / '.ninja_log').read_text(encoding='utf-8').splitlines()
-    if not log or log[0] != '# ninja log v5':
+    # Ninja v7 keeps the same five tab-separated fields as v5. Accept only
+    # these reviewed versions; unknown log formats remain fail-closed.
+    if not log or log[0] not in ('# ninja log v5', '# ninja log v7'):
         raise ValueError('missing/unknown Ninja build log')
     built = set()
     for line in log[1:]:

@@ -2,13 +2,17 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-Windows x64 has retained native build/inference evidence. Android is the next
-core feasibility target: **API 35, default x86_64 hosted emulator only**. The
-first exact-publication Android job failed during CMake target validation, before
-compilation or device execution; the guard now checks the explicit API/ABI/STL
-inputs, and its next exact-publication native run is pending. Neither probe adopts
-an engine into the app. Linux has no application host; no ARM or physical-device
-coverage is inferred.
+Windows x64 has exact native inference evidence, but Android is still unproven:
+**API 35, default x86_64 hosted emulator only**. Exact publication
+`820eba2fea04674dae6af0e4f296a730f4116248223915f4a375e94741ac1810` at SHA
+`0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` built and linked the Android target,
+started the Android 15 emulator and transferred the executable/fixtures, then
+failed before model loading because the strict provider parser rejected the
+linker's `linux-vdso.so.1 => [vdso]` pseudo-row. Independently, compiler-read
+capture rejected the actual Ninja v7 build-log header while only accepting v5.
+The same exact publication's Windows job passed; neither result adopts an engine
+into the app. Linux has no application host; no ARM or physical-device coverage
+is inferred.
 
 ## Pinned inputs and review
 
@@ -169,8 +173,9 @@ Android closure). These are runtime loader resolution evidence, **not live
 process mappings, all dlopen paths, static members or legal closure**.
 
 `ninja_reads.py` matches **actual built** valid Ninja dependency records to unique
-configured Clang object commands, cross-checks compiled outputs in the clean
-Ninja v5 build log, and requires each compiled source in its own read set. It
+configured Clang object commands, cross-checks compiled outputs in clean Ninja
+v5 or v7 build logs (both use the validated five-field record shape), and requires
+each compiled source in its own read set. Unknown log versions remain rejected. It
 rejects missing/empty/stale/malformed/unrepresented/colliding records,
 missing or non-file inputs, parent traversal, aliases escaping roots and unknown
 providers. Most-specific configured `source`, `generated`, `ndk`, `probe` roots
@@ -181,16 +186,20 @@ unbuilt targets are not included in selected-read membership. Raw evidence remai
 available if strict capture fails. The script still attempts independent native
 smoke, but returns failure for incomplete capture, never inferred closure.
 
-**Pending native evidence:** exact-publication Android build, real loader and
-inference execution, ADB exit/stream behavior, device watchdog and cleanup, and
-Android-specific dependency/provider review. A tiny host Clang/Ninja experiment
-and synthetic tests validate capture/orchestration only. Header/source read hashes
-are not compiled/surviving binary closure, static runtime provenance or legal
-approval. Static archive membership, intrinsic branch applicability, full selected
-terms and notices, generated Unicode provenance and user-accessible notice delivery
-remain adoption gates on each platform independently. This probe establishes no
-Android app integration, ARM/physical-device, memory/disk cap, quality, performance,
-no-network/privacy, cancellation-in-app or release claim.
+**Pending native evidence:** Android model-loader rejection and genuine inference
+on API 35, completion of strict selected-read capture, and end-to-end device cleanup
+on a passing run. The latest Android artifact confirms a real x86_64 executable,
+Android 15/API 35 emulator fingerprint, fixture transfer and runtime link resolution;
+it does **not** show a model load or inference. The parser now recognizes only the
+exact kernel-vDSO pseudo-row separately from hashable `/apex/` and `/system/`
+providers; unknown/malformed/duplicate rows still fail closed. A tiny host
+Clang/Ninja experiment and synthetic tests validate capture/orchestration only.
+Header/source read hashes are not compiled/surviving binary closure, static runtime
+provenance or legal approval. Static archive membership, intrinsic branch
+applicability, full selected terms and notices, generated Unicode provenance and
+user-accessible notice delivery remain adoption gates on each platform independently.
+This probe establishes no Android app integration, ARM/physical-device, memory/disk
+cap, quality, performance, no-network/privacy, cancellation-in-app or release claim.
 
 ## Selected-source and runtime audit
 
@@ -199,11 +208,17 @@ no-network/privacy, cancellation-in-app or release claim.
 
 ### Exact experiment and selected inputs
 
-The latest [automatic Windows capture](https://github.com/t-koba/kotoha/actions/runs/42384608530/job/128439253106)
-passed at exact published SHA `ef16f3cbc8a9d802ab7d676f6ec41cf93f275911`
-(publication `f679d5f55a5932db170300e9ed6fcb42949c877b37d84a81b7fbfbb25bee00c2`).
-The paired Android job at that SHA failed before compilation at CMake target
-guard validation; that is not Android native evidence. Current artifacts under
+The detailed selected-source Windows capture below is from exact publication
+`f679d5f55a5932db170300e9ed6fcb42949c877b37d84a81b7fbfbb25bee00c2` at SHA
+`ef16f3cbc8a9d802ab7d676f6ec41cf93f275911`; its paired Android job failed before
+compilation at the then-unfixed CMake target guard. A subsequent exact publication
+`820eba2fea04674dae6af0e4f296a730f4116248223915f4a375e94741ac1810` at SHA
+`0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` passed the Windows job
+[128441768229](https://github.com/t-koba/kotoha/actions/runs/42385456690/job/128441768229)
+and advanced Android through cross-compilation, emulator start and linker check
+before the parser failure described above. This later Windows pass confirms the
+probe still runs, but the byte-counted file manifest below remains the detailed
+capture from `f679d5f`; current artifacts under
 `windows-x64-engine-probe/build/engine-probe/`:
 
 | Retained file | Bytes / represented inputs | SHA-256 |

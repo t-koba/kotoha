@@ -111,17 +111,23 @@ class TransportTest(unittest.TestCase):
                 android.run(self.args)
 
     def test_linker_records_strict_unique_canonical_nonempty(self):
-        valid = ('\tlibc.so => /system/lib64/libc.so (0x71234567)\n'
-                 '\tlibm.so => /system/lib64/libm.so (0x71234568)')
+        valid = ('\tlinux-vdso.so.1 => [vdso] (0x71234566)\n'
+                 '\tlibc.so => /system/lib64/libc.so (0x71234567)\n'
+                 '\tlibm.so => /apex/com.android.runtime/lib64/bionic/libm.so (0x71234568)')
         self.assertEqual(android.parse_linker_providers(valid),
-                         ['/system/lib64/libc.so', '/system/lib64/libm.so'])
+                         ['/apex/com.android.runtime/lib64/bionic/libm.so',
+                          '/system/lib64/libc.so'])
         for raw in ('', '   \n',
                     valid + '\nUNRECOGNIZED PROVIDER RECORD',
-                    valid + '\n\tlibm.so => /system/lib64/libm.so (0x71234568)',
+                    valid + '\n\tlibm.so => /apex/com.android.runtime/lib64/bionic/libm.so (0x71234568)',
+                    valid + '\n\tlinux-vdso.so.1 => [vdso] (0x71234569)',
                     valid.replace('/system/lib64/libc.so', '/system/lib64/libc.so '),
-                    valid.replace('/system/lib64/libm.so', '/data/local/tmp/libm.so'),
-                    valid.replace('/system/lib64/libm.so', '/system/../libm.so'),
-                    'libc.so => /system/lib64/libc.so (0x71234567)'):
+                    valid.replace('/apex/com.android.runtime/lib64/bionic/libm.so', '/data/local/tmp/libm.so'),
+                    valid.replace('/apex/com.android.runtime/lib64/bionic/libm.so', '/system/../libm.so'),
+                    'libc.so => /system/lib64/libc.so (0x71234567)',
+                    '\tlinux-vdso.so.1 => [vdso] (0x71234566)',
+                    '\tlinux-vdso.so.1 => [vdso] (0x71234566)\n'
+                    '\tlinux-vdso.so.1 => [vdso] (0x71234567)'):
             with self.subTest(raw=raw), self.assertRaises(RuntimeError):
                 android.parse_linker_providers(raw)
 
@@ -191,11 +197,11 @@ class TransportTest(unittest.TestCase):
                     owner.mkdir()
                     (self.root / 'emulator.log').write_text('bounded synthetic emulator log')
                     # Owned wrapper in its own session with one descendant; FIFO
-                    # readiness avoids polling. Group kill must end both while an
-                    # unrelated process survives. This test is a Linux child
-                    # subreaper, so the killed orphan reparents here as a zombie;
-                    # kill(2) cannot distinguish it from live execution. Blocking
-                    # waitpid reaps it deterministically and proves SIGKILL.
+                    # readiness avoids startup polling. Group kill must end both
+                    # while an unrelated process survives. SIGKILL can terminate
+                    # the parent and child concurrently, so a supervisor may reap
+                    # the child before this subreaper can wait for it; check /proc
+                    # for a live survivor and assert SIGKILL whenever waitable.
                     inner = ('sleep 30 & echo $! > ' + shlex.quote(str(owner / 'child'))
                              + '; echo > ' + shlex.quote(str(owner / 'ready')) + '; wait')
                     command = ('set -e; owner=' + shlex.quote(str(owner))
@@ -222,12 +228,40 @@ class TransportTest(unittest.TestCase):
                         # Direct wrapper was waited by the outer shell; it is gone.
                         with self.assertRaises(ProcessLookupError):
                             os.kill(pid, 0)
-                        reaped, status = os.waitpid(child, 0)
-                        self.assertEqual(reaped, child)
-                        self.assertTrue(os.WIFSIGNALED(status), status)
-                        self.assertEqual(os.WTERMSIG(status), signal.SIGKILL)
-                        with self.assertRaises(ProcessLookupError):
+                        import time
+                        deadline = time.monotonic() + 2
+                        while True:
+                            try:
+                                reaped, status = os.waitpid(child, os.WNOHANG)
+                            except ChildProcessError:
+                                reaped, status = 0, None
+                            if reaped == child:
+                                self.assertTrue(os.WIFSIGNALED(status), status)
+                                self.assertEqual(os.WTERMSIG(status), signal.SIGKILL)
+                                break
+                            try:
+                                stat = Path(f'/proc/{child}/stat').read_text()
+                            except FileNotFoundError:
+                                break
+                            state = stat[stat.rfind(')') + 2:].split()[0]
+                            if state == 'Z':
+                                break
+                            if time.monotonic() >= deadline:
+                                self.fail(f'owned descendant {child} survived process-group cleanup')
+                            time.sleep(0.01)
+                        try:
                             os.kill(child, 0)
+                        except ProcessLookupError:
+                            pass
+                        else:
+                            # A zombie is not executing; a different reaper may
+                            # own it after concurrent SIGKILL delivery.
+                            try:
+                                stat = Path(f'/proc/{child}/stat').read_text()
+                            except FileNotFoundError:
+                                pass
+                            else:
+                                self.assertEqual(stat[stat.rfind(')') + 2:].split()[0], 'Z')
                         self.assertFalse(owner.exists())
                         self.assertIsNone(outsider.poll())
                     finally:
