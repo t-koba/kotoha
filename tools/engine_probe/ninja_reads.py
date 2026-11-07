@@ -90,11 +90,21 @@ def capture(build, source, ndk, probe):
     expected = 0
     dependencies = []
 
+    def record_name(path):
+        return (path.relative_to(build).as_posix()
+                if path.is_relative_to(build) else path.name)
+
     def finish():
         if active is None:
             return
-        if len(dependencies) != expected or not expected or active not in commands:
-            raise ValueError('empty/malformed/unrepresented Ninja dependencies')
+        name = record_name(active)
+        if not expected:
+            raise ValueError(f'empty Ninja dependency record for {name}')
+        if active not in commands:
+            raise ValueError(f'unrepresented Ninja dependency object {name}')
+        if len(dependencies) != expected:
+            raise ValueError(f'Ninja dependency count mismatch for {name}: '
+                             f'expected {expected}, parsed {len(dependencies)}')
         if not active.is_file() or active in objects:
             raise ValueError('missing or duplicate built object')
         # Ninja records a dependency multiset, while the selected-input manifest

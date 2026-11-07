@@ -2,19 +2,19 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-Windows x64 has exact native inference evidence. Android API 35 / x86_64 now has
-real hosted-emulator smoke evidence, but the native-probe job is not green because
-strict compiler-read capture failed on colliding canonical dependency paths. Exact
-publication `0d94696cd2df2af8b75319e9393b0b47ed427bb857fa4716247fe4101d355979` at
-SHA `85ce0d2e928eec5dd4732c66075e6ca2d557d867` passed Windows job `128449009098`;
-Android job `128449009216` built and ran the API 35 x86_64 executable on the Android
-15 hosted emulator, rejected missing/truncated models and produced one generated-only
-`Bonjour.` sample, but failed selected-read capture with `colliding compiler
-dependencies`. The prior exact publication `820eba2fea04674dae6af0e4f296a730f4116248223915f4a375e94741ac1810`
-at SHA `0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` failed earlier, before model
-loading, because its parsers rejected the vDSO row and Ninja v7 log. Neither probe
-result adopts an engine into the app. Linux has no application host; no ARM or
-physical-device coverage is inferred.
+Windows x64 has exact native inference evidence. Android API 35 / x86_64 has a genuine
+hosted-emulator smoke, but strict selected-read capture has not passed. Latest exact
+publication `e4db5049dc6cbd79ce8210b77d511b3de216fb31ba989746c022321abc792e7` at
+SHA `e443153fffa469e437b470899c2038cd18b76a68` passed Windows job `128452818470`;
+Android job `128452818219` failed capture with `empty/malformed/unrepresented
+Ninja dependencies`, so no selected-read manifests were produced; its preserved
+smoke log still records rejection of missing/truncated models and generated-only
+`Bonjour.` output. This followed publication
+`0d94696cd2df2af8b75319e9393b0b47ed427bb857fa4716247fe4101d355979`, whose Android
+capture reported `colliding compiler dependencies`; commit `a20fa32` deduplicated
+validated canonical aliases, but the distinct latest failure is not yet localized.
+Neither probe result adopts an engine into the app. Linux has no application host;
+no ARM or physical-device coverage is inferred.
 
 ## Pinned inputs and review
 
@@ -191,17 +191,21 @@ available if strict capture fails. The script still attempts independent native
 smoke, but returns failure for incomplete capture, never inferred closure.
 
 **Pending native evidence:** successful strict selected-read capture and a green full
-Android probe job. The exact artifact's `smoke.log` records the Android 15/API 35
-x86_64 emulator fingerprint, executable/fixture/provider hashes, actual rejection of
-missing and truncated GGUFs, and generated-only `Bonjour.` output; the Android smoke
-completed its own cleanup. The overall job still fails because `ninja_reads.py`
-reported `colliding compiler dependencies`, so no selected-read manifests were
-produced. The parser recognizes only the exact kernel-vDSO pseudo-row separately
-from hashable `/apex/` and `/system/` providers; unknown/malformed provider rows
-still fail closed. It now canonicalizes each validated dependency path into a unique
-input set, allowing duplicate spellings of one file without omitting distinct inputs.
-A tiny host Clang/Ninja experiment and synthetic tests validate capture/orchestration
-only; Android inference remains one narrow developer smoke, not quality evidence.
+Android probe job. The latest exact artifact's `smoke.log` records the Android 15/API
+35 x86_64 emulator fingerprint, executable/fixture/provider hashes, actual rejection
+of missing and truncated GGUFs, and generated-only `Bonjour.` output. The overall job
+still fails before producing selected-read manifests: `ninja_reads.py` reports
+`empty/malformed/unrepresented Ninja dependencies` (publication
+`e4db5049dc6cbd79ce8210b77d511b3de216fb31ba989746c022321abc792e7`, Android job
+`128452818219`). The previous capture error was `colliding compiler dependencies`;
+this distinct second condition is not localized yet. The parser recognizes only the
+exact kernel-vDSO pseudo-row separately from hashable `/apex/` and `/system/` providers;
+unknown/malformed provider rows still fail closed. It validates each raw dependency,
+then canonicalizes the validated paths into a unique input set. Its failure messages
+now distinguish empty records, missing/unrepresented objects and count mismatches,
+including only a build-relative object name and expected/observed counts; no evidence
+is filtered or accepted by this diagnostic change. Synthetic tests cover these errors;
+Android inference remains one narrow developer smoke, not quality evidence.
 Header/source read hashes are not compiled/surviving binary closure, static runtime
 provenance or legal approval. Static archive membership, intrinsic branch
 applicability, full selected terms and notices, generated Unicode provenance and

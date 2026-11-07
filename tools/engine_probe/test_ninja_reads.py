@@ -63,6 +63,22 @@ class NinjaReadsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'colliding'):
             self.capture()
 
+    def test_dependency_record_failures_name_object_and_counts(self):
+        valid = self.records
+        cases = (
+            (valid.replace('#deps 2', '#deps 0'),
+             r'empty Ninja dependency record for selected\.o'),
+            (valid.replace('#deps 2', '#deps 3'),
+             r'Ninja dependency count mismatch for selected\.o: expected 3, parsed 2'),
+            (valid.replace('selected.o:', 'unknown.o:'),
+             r'unrepresented Ninja dependency object unknown\.o'),
+        )
+        for records, message in cases:
+            self.records = records
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                self.capture()
+        self.records = valid
+
     def test_dependency_aliases_are_validated_and_deduplicated(self):
         alias = self.ndk / 'header-alias.h'
         alias.symlink_to(self.header)
