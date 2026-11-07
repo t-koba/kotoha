@@ -39,8 +39,52 @@ The manifest records the following archive files and exact build hashes:
 
 The manifest identifies selected members, including both `libc++_static.a` and
 `libc++abi.a`; neither the manifest nor archive hashes prove which linked
-sections survive or close licensing. Exact NDK source/license terms, notices,
-and their user-accessible delivery remain unresolved.
+sections survive or close licensing.
+
+### NDK archive-member source terms (partial)
+
+The exact manifest's four NDK archives name 47 members: one compiler-rt builtin,
+five libunwind objects, 26 libc++ objects, and 15 libc++abi objects. Mapping each
+member basename into its component's source directory at the compiler's pinned
+LLVM source revision `97a699bf4812a18fb657c2779f5296a4ab2694d2` identifies the
+selected source files (`compiler-rt/lib/builtins/emutls.c`, `libunwind/src/`,
+`libcxx/src/` including `filesystem/`, and `libcxxabi/src/`). The fetched source
+headers at that immutable upstream revision declare
+`SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`; under
+[dependency_policy.json](specs/dependency_policy.json), this is a permissive
+branch. The selected archive and member hashes are bound to the linker-manifest
+evidence above; the exact source revision is independently named by
+`compiler.log`.
+
+The full upstream terms were read at that same revision, including each
+component's own `LICENSE.TXT` (SHA-256 values are whole-file digests):
+
+| Upstream record | SHA-256 |
+| --- | --- |
+| LLVM `LICENSE.TXT` | `8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee` |
+| `compiler-rt/LICENSE.TXT` | `1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d` |
+| `libunwind/LICENSE.TXT` | `b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d` |
+| `libcxx/LICENSE.TXT` | `539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b` |
+| `libcxxabi/LICENSE.TXT` | `e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c` |
+
+The Apache 2.0 text plus LLVM exception classifies as permissive; the exception
+specifically relaxes Apache sections 4(a), 4(b) and 4(d) for portions embedded
+in object form. Some component `LICENSE.TXT` files also retain legacy UIUC/NCSA and MIT
+license text, so this source-level classification does not imply that every
+other file, included header, generated input, notice or linked section shares
+it. Exact package-record capture and member-to-input/section closure remain
+necessary. No product adoption or notice set is approved by this partial result.
+
+The next exact publication containing the NDK capture change,
+`596cf021caae6461bd383280d536c785105356a7182a44345be74ea3e6c4f6c2` at SHA
+`7b89fd95e88f03d1a6040bb5352ff3a743c00520`, failed before configuration: the
+capture required the absent path
+`toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/clang_source_info.md`.
+The r28c release describes `clang_source_info.md` as being in the toolchain
+directory. Commit `7940d5d` updates the required source-info and LLVM NOTICE
+paths to that toolchain root; its three capture tests pass, but that correction
+has not yet run in exact Android CI. Thus no installed NDK term records or
+notices have yet been captured/reviewed from a successful exact job.
 
 ## Pinned inputs and review
 
