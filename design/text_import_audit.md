@@ -47,10 +47,27 @@ selected file (`fetch/85c46777ca08db4548c9cbb7f50dc4c53fd5cd5ff697d1521506292a10
 SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
 `ashpd` exposes `Documents::delete` as a separate API
 (`fetch/b546771bd6472d409f2b4d2dd9636ba33baf122c68f00d0a4fd58be4d45c8a97`),
-but the FileChooser registration path grants no `delete` permission, so there
-is no evidence that Kotoha could use it to remove that grant. Thus the
-inspected sandboxed portal path cannot meet Kotoha's no-retained-grant
-contract.
+but the FileChooser registration path grants no `delete` permission. That
+alone does not establish that the app must retain its read access: the XDG
+Documents API defines `RevokePermissions`, available inside the sandbox when
+the app has `grant-permissions`, and specifies that it revokes listed
+permissions for an application (`search/16eee028f3c1a576da38435f7ac5da4a3ece6f3282eadb6132ee733108aa6823`).
+`ashpd` 0.14.0 likewise exposes `Documents::revoke_permissions` under that
+permission (`search/8fb9e29428f55a95b0b7e0b3d2c5de46f70b44586b1b28246a4d6cb2c5b8ad06`).
+Because FileChooser grants `grant-permissions`, a GTK-free sandboxed client
+may be able to revoke its own `read` and `grant-permissions` access after
+reading. This is an API-supported candidate, not verified Kotoha behavior:
+mapping the returned URI to a document ID and exact application ID, successful
+revocation on supported portal implementations, and loss of access after open
+handles close have not been tested.
+
+The FileChooser registration path also requests a persistent Documents entry.
+`RevokePermissions` revokes listed app permissions; it is distinct from
+`Delete`, and available evidence does not establish that revocation removes the
+persistent document-store entry. The sandboxed path is therefore not approved,
+but it is not ruled out solely by the missing `delete` permission. End-to-end
+runtime evidence must establish both the no-retained-grant behavior and what
+portal state remains before Linux import can be considered.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
