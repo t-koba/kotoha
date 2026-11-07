@@ -160,9 +160,15 @@ public final class MainActivityAccessibilityTest
         try {
             // Flutter may expose the localized name in the hint or description, optionally
             // combined with the field's example hint.
-            assertTrue("localized native field label: " + label,
-                    nameMatches(string(node.getHintText()), label)
-                            || nameMatches(string(node.getContentDescription()), label));
+            String hint = string(node.getHintText());
+            String description = string(node.getContentDescription());
+            assertTrue("localized native field label: " + label
+                            + "; hintCodePoints=" + codePoints(hint)
+                            + "; descriptionCodePoints=" + codePoints(description)
+                            + "; valueCodePoints=" + codePoints(string(node.getText()))
+                            + "; focused=" + node.isFocused()
+                            + "; accessibilityFocused=" + node.isAccessibilityFocused(),
+                    nameMatches(hint, label) || nameMatches(description, label));
             assertEquals("android.widget.EditText", string(node.getClassName()));
             assertTrue(node.isEnabled());
             assertTrue(node.isEditable());
