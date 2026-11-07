@@ -8,14 +8,15 @@ on:
       - mizu/dev
   pull_request:
   workflow_dispatch:
+    # Exact-publication dispatches carry no inputs, so defaults select the bounded profile.
     inputs:
       profile_bytes:
-        description: 'Synthetic profile bytes: 65536, 2097152, or 16777216; empty disables'
-        default: ''
+        description: 'Synthetic profile bytes: 65536, 2097152, or 16777216; no-input dispatch defaults to 65536'
+        default: '65536'
         type: string
       profile_editor:
-        description: 'Also run macOS editor profile (up to 2 MiB) under external watchdog'
-        default: false
+        description: 'Run macOS editor profile (up to 2 MiB); defaults: 60s, 4096 MiB RSS, 0.5s poll'
+        default: true
         type: boolean
       profile_seconds:
         description: 'macOS editor watchdog wall seconds'
