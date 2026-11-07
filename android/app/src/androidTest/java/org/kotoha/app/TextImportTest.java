@@ -93,15 +93,19 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         String configured = args.getString("profileBytes", "");
         if (configured.isEmpty()) return; // Normal CI does not run a large profile.
         int requested = Integer.parseInt(configured);
-        assertTrue(requested >= 1024);
+        assertEquals("Multilingual profile fixture is exactly 1 KiB", 1024,
+                ImportTestProvider.PROFILE_CHUNK.length);
+        assertTrue(requested >= ImportTestProvider.PROFILE_CHUNK.length);
         assertTrue("Profile fixture is bounded to 16 MiB", requested <= 16 * 1024 * 1024);
+        assertEquals("profileBytes must use complete UTF-8 fixture chunks", 0,
+                requested % ImportTestProvider.PROFILE_CHUNK.length);
         Uri selected = uri("ok").buildUpon().appendQueryParameter("profileBytes", configured).build();
         String before = memoryStatus();
         long start = System.nanoTime();
         Map<String, Object> result = TextImportPlugin.readDocument(
                 getInstrumentation().getContext().getContentResolver(), selected);
         byte[] bytes = (byte[]) result.get("bytes");
-        assertTrue(bytes.length > 0 && bytes.length <= requested);
+        assertEquals("Native profile fixture must match requested bytes exactly", requested, bytes.length);
         android.util.Log.i("KotohaImportProfile", "native-read bytes=" + bytes.length
                 + " nanos=" + (System.nanoTime() - start) + " sdk=" + android.os.Build.VERSION.SDK_INT
                 + " before=" + before + " after=" + memoryStatus());

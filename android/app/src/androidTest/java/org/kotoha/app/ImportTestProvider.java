@@ -16,6 +16,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Test APK only. Synthetic provider bytes live in a pipe, never a staged file. */
 public final class ImportTestProvider extends ContentProvider {
     static final byte[] BYTES = new byte[] {65, 10, (byte) 0xe6, (byte) 0x97, (byte) 0xa5};
+    // A complete multilingual UTF-8 fixture chunk divides all configured profile sizes.
+    static final byte[] PROFILE_CHUNK = (new String(new char[1003]).replace('\0', 'a')
+            + "日本語 مرحبا\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
     final AtomicInteger cursorsClosed = new AtomicInteger();
     final AtomicInteger streamsOpened = new AtomicInteger();
     final AtomicInteger streamsClosed = new AtomicInteger();
@@ -44,10 +47,14 @@ public final class ImportTestProvider extends ContentProvider {
                     String requested = uri.getQueryParameter("profileBytes");
                     if (requested == null) { out.write(BYTES); }
                     else {
-                        byte[] chunk = (new String(new char[1000]).replace('\0', 'a')
-                                + "日本語 مرحبا\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                        int length = Integer.parseInt(requested) / chunk.length * chunk.length;
-                        for (int n = 0; n < length; n += chunk.length) out.write(chunk);
+                        int requestedBytes = Integer.parseInt(requested);
+                        if (requestedBytes % PROFILE_CHUNK.length != 0) {
+                            throw new IOException(
+                                    "profileBytes must be divisible by the UTF-8 fixture chunk");
+                        }
+                        for (int n = 0; n < requestedBytes; n += PROFILE_CHUNK.length) {
+                            out.write(PROFILE_CHUNK);
+                        }
                     }
                 } catch (IOException ignored) { /* Reader may reject or detach. */ }
             }).start();
