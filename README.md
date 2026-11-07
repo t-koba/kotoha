@@ -72,5 +72,8 @@ or physical-keyboard behavior. Native execution requires those CI profiles; no l
 widget-test result substitutes for it. Wait budgets are configured in the workflow
 and passed to the native tests; missing profiles and inaccessible fields fail, not skip.
 These are validation builds, not signed release artifacts. Linux remains
-intentionally unscaffolded until its host can use the designed non-GTK Flutter
-Engine embedding; the Ubuntu test job does not claim a Linux desktop build.
+intentionally unscaffolded: Kotoha has not adopted or verified a GTK-free host
+against its pinned Flutter version, dependencies, accessibility needs, and CI.
+Flutter's generic Engine API is not a complete host, and Flutter's
+`file_selector_linux` package links GTK. The Ubuntu test job does not claim a Linux desktop build; see
+`design/text_import_audit.md` for the assessed host and import blockers.

@@ -16,9 +16,66 @@ remains outside this guarantee.
 The audited umbrella `file_selector` uses an Android cache copy and iOS
 `asCopy: true`; the app-owned mobile adapter below replaces those paths rather
 than attempting to delete copies afterward. No mobile dependency is added.
-Linux remains separate because the project's designed Linux Flutter host must
-avoid GTK, while `file_selector_linux` links GTK. Neither prerequisite blocks
-the macOS/Windows slice.
+Linux remains separate because `file_selector_linux` links GTK and Kotoha has
+no adopted Linux runner, packaging target, or import adapter. Flutter's
+engine-level embedder API is toolkit-agnostic, but is not itself a complete
+Linux host. This does not block the macOS/Windows slice.
+
+## GTK-free Linux host candidate (not adopted)
+
+A concrete upstream candidate beyond a bare custom embedder is Toyota Connected's
+`ivi-homescreen` v3.0 at commit
+`05fb91a0d0e09cd0fb099299dcf2202e1a4d21e4`. Its project documentation describes
+Wayland/EGL desktop support (including Ubuntu 22.04), C++ Flutter embedding,
+and optional AccessKit semantics exposed to screen readers over AT-SPI. Its
+`LICENSE` declares Apache-2.0. The `.flutter-version` in this exact source is
+3.47.2, while Kotoha CI pins Flutter 3.47.9; compatibility with Kotoha's patch
+version has not been tested. The candidate is not a Kotoha-supported runner.
+
+The accessibility path has a privacy-sensitive disk write: `BUILD_ACCESSIBILITY`
+and `BUILD_ACCESSKIT` are off by default, but enabling the semantics tree writes
+one `semantic_tree_init.json` snapshot under the user's config `accessibility`
+directory when the first root arrives. It serializes node labels, hints,
+tooltips, and values. This is an initial snapshot, not a per-edit journal, but
+the inspected path neither redacts text nor offers an opt-out; if the first tree
+arrives after text is present, it can persist editor content. Kotoha has not
+verified that lifecycle ordering. Treat this as an adoption blocker until a
+reviewed change disables the file write without disabling AT-SPI semantics.
+Evidence: CMake feature gates (`fetch/0b8652a95977fcd04e28728741133ca12ebc755f046ac9cdd2f59101f146c766`) and
+exact accessibility tree source (`fetch/6cf2cfba15a4604a7773c9951b5eaa4cf2d5c5321b91b1da6a00aa316530147a`).
+
+The upstream workflow has CMake build/CTest jobs on Ubuntu 22.04 for
+`BUILD_ACCESSIBILITY=ON` and `BUILD_ACCESSKIT=ON`; the AccessKit job selects
+`accesskit-c` 0.22.3. The workflow recipe is evidence of a build path, not an
+observed green run for Kotoha or this source revision. The candidate has ten
+source submodules; its CI generates a CycloneDX/OpenVEX SBOM for those pinned
+submodules. The desktop workflow also installs Wayland, xkbcommon, pugixml, and
+Mesa/EGL/GLES development packages. The AccessKit job fetches a separately
+distributed x86_64 static-library archive by version but does not check its
+content digest; the `.emb` configuration notes that other board builds compile
+AccessKit from Rust source. We have not reviewed a generated SBOM artifact or
+verified full license texts/notices for the candidate build and its system
+runtime. Nor have we reproduced the build here, linked a Kotoha bundle,
+exercised text input and screen-reader actions, or established a Kotoha Linux
+CI path. No GTK-free Kotoha build or runtime support is therefore claimed.
+Source evidence: commit/tag (`fetch/9acf96562b48a053af92363964d6d60d73c514c9bd07b6a032d1f92c922d7271`),
+README (`fetch/4f73e95eb0f48e7f1d98f0fb0ed676c6bb4bc6627e7a498bf3e4b49f72847ff2`),
+architecture (`fetch/0f37147b15dc9ef0a6b37704f86a54b9e157a3d6ae415b4464a7fd8c3107c907`),
+`.flutter-version` (`fetch/c9eebb962457ca2236d8d1972376f8ba7abdce7342ef22daeba4b7cfba0a20d3`),
+`LICENSE` (`fetch/8f355051b6bbe0fa649596835abe1c1030345c2468841c6fa5df4e638c61dbcf`),
+CI workflow (`fetch/e90d1c962ac422caf1e23688da294fedea65b0468273f99a8978ca97cdc8a26b`),
+SBOM generator (`fetch/aad6b217e2daf9751a14f75ffe0aa68f11ac4fd64c4596a1756c2c8f8abfe4b7`),
+`.emb` build manifest (`fetch/d99c22e5ef246980c29530e770c27c65f35cf4c44ee26e077307203d6c6e348d`),
+and submodule list (`fetch/18ab6880a998d3fe1ac8fd9d1fa1e8f011ddf04096b6b3e6d45dc1d2e92379d2`).
+Flutter's generic embedder C API and Linux GTK `FlView` are distinct
+(`273690fb58153d725062db635bc7357e20a18da1e26cb9862181b69ebb2a1cef`,
+`aa721ddb2009177bc3f918b7b31c7288f017cf3e929376b87cc957f5b13cef4f`).
+
+Kotoha's dependency manifest currently names macOS/Windows selector packages
+and the shared selector interface, not the umbrella or Linux GTK selector.
+Even with this host, Linux import would still need a separately reviewed
+read-in-place adapter. The XDG portal candidate below remains unverified and
+is not enabled.
 
 ## GTK-free Linux portal candidate (not adopted)
 
@@ -74,10 +131,13 @@ a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc
 SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),
 but Kotoha has no Linux host or packaging target to validate that mode.
 
-Linux import remains unsupported. Reconsider only after the product's Linux
-packaging target is explicit and a GTK-free host path passes the complete
-feature/license, build/link, and runtime permission/data-flow reviews. Evidence
-for the candidate client manifest/license is in fetch receipts
+Linux import remains unsupported. Reconsider only after an explicit product
+Linux target adopts a pinned GTK-free host, its complete feature-resolved
+license/runtime closure and reproducible Kotoha build/link/CI path are verified,
+and a supported import adapter demonstrates its data-flow and permission
+lifecycle end to end. The `ivi-homescreen` source and upstream build recipe are
+candidates for that assessment, not approval or evidence of Kotoha support.
+Evidence for the candidate client manifest/license is in fetch receipts
 `21e23ad1cc93bca164f2c1d05eb31ba282f4fe6d348a54c0725ed20a7d79947e` and
 `7c3d54f818e5e021d4dee59d8897a4e6e4d4c91aeda61ed40bdf066fd8359b13`
 (SHA-256 `ae26bc7b1bc91fb8648f6a298decbb1a77090a56c9d04e2c23b8365e5f54acb5`);
