@@ -8,6 +8,8 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.InstrumentationTestRunner;
+import android.view.InputDevice;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -107,7 +109,7 @@ public final class MainActivityAccessibilityTest
                 currentValue = currentValue.substring(0,
                         currentValue.offsetByCodePoints(currentValue.length(), -1));
                 String before = inputFocusState();
-                getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+                injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
                 try {
                     assertField(id, label, currentValue);
                 } catch (AssertionFailedError failure) {
@@ -136,7 +138,7 @@ public final class MainActivityAccessibilityTest
                 pressKey(KeyEvent.KEYCODE_TAB, 0);
             }
             controlKey(KeyEvent.KEYCODE_A);
-            getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+            injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
             getInstrumentation().sendStringSync("z");
             assertField(nextId, nextLabel, "z");
         } else {
@@ -159,6 +161,28 @@ public final class MainActivityAccessibilityTest
         } finally {
             getInstrumentation().sendKeySync(new KeyEvent(now, SystemClock.uptimeMillis(),
                     KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT, 0, 0));
+        }
+    }
+
+    // Instrumentation.sendKeyDownUpSync does not expose the input-system injection result.
+    // Keep the native keyboard event path, but assert that Android accepted each event before
+    // diagnosing a missing editor update as a Flutter/IME/input-connection problem.
+    private void injectKeyDownUpAndAssertAccepted(int keyCode) {
+        injectKeyEventAndAssertAccepted(KeyEvent.ACTION_DOWN, keyCode);
+        injectKeyEventAndAssertAccepted(KeyEvent.ACTION_UP, keyCode);
+    }
+
+    private void injectKeyEventAndAssertAccepted(int action, int keyCode) {
+        long now = SystemClock.uptimeMillis();
+        KeyEvent event = new KeyEvent(now, now, action, keyCode, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, KeyEvent.FLAG_FROM_SYSTEM,
+                InputDevice.SOURCE_KEYBOARD);
+        try {
+            assertTrue("Android rejected native key injection: action=" + action
+                    + ", keyCode=" + keyCode,
+                    automation.injectInputEvent(event, true));
+        } finally {
+            event.recycle();
         }
     }
 
