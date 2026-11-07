@@ -27,7 +27,6 @@ jobs:
       ENGINE_DOWNLOAD_TIMEOUT_SECONDS: '300'
       # Explicit acceptance of the reviewed complete terms for this developer test ONLY.
       ENGINE_ACCEPT_TERMS_SHA256: '832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e'
-      ENGINE_MODEL_DIR: ${{ runner.temp }}/kotoha-engine-model
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,6 +35,7 @@ jobs:
       - name: Check Python validation and output boundaries (synthetic files, not inference)
         shell: pwsh
         run: |
+          "ENGINE_MODEL_DIR=$env:RUNNER_TEMP/kotoha-engine-model" >> $env:GITHUB_ENV
           python -m unittest discover -s tools/engine_probe -p 'test_*.py' -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Configure developer-only Windows x64 CPU engine probe
@@ -78,7 +78,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          if (Test-Path $env:ENGINE_MODEL_DIR) {
+          if ($env:ENGINE_MODEL_DIR -and (Test-Path -LiteralPath $env:ENGINE_MODEL_DIR)) {
             Remove-Item -LiteralPath $env:ENGINE_MODEL_DIR -Recurse -Force -ErrorAction Stop
           }
       - name: Record source manifest and executable linkage for review
