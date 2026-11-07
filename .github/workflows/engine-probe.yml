@@ -92,6 +92,13 @@ jobs:
               '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower(), $relative
             } | Set-Content build/engine-probe/source-sha256.txt
           }
+          # MSBuild writes UTF-16 tracking logs; retain UTF-8 text for artifact review.
+          $build = 'build/engine-probe/_deps/llama_cpp-build'
+          if (Test-Path -LiteralPath $build) {
+            Get-ChildItem -LiteralPath $build -Recurse -File -Filter '*.read.1.tlog' | ForEach-Object {
+              Get-Content -LiteralPath $_.FullName | Set-Content -LiteralPath ($_.FullName + '.txt') -Encoding utf8
+            }
+          }
           $exe = 'build/engine-probe/bin/Release/llama-simple.exe'
           if (Test-Path $exe) {
             $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
@@ -115,6 +122,10 @@ jobs:
             build/engine-probe/CMakeFiles/CMakeConfigureLog.yaml
             build/engine-probe/.cmake/api/v1/reply/
             build/engine-probe/**/*.vcxproj
+            build/engine-probe/_deps/llama_cpp-build/src/CMakeFiles/llama.dir/Unity/*.cxx
+            build/engine-probe/_deps/llama_cpp-build/src/llama-version.h
+            build/engine-probe/_deps/llama_cpp-build/ggml/src/ggml-version.h
+            build/engine-probe/_deps/llama_cpp-build/**/*.read.1.tlog.txt
             build/engine-probe/_deps/llama_cpp-src/**/CMakeLists.txt
             build/engine-probe/_deps/llama_cpp-src/**/*.cmake
             build/engine-probe/_deps/llama_cpp-src/**/LICENSE*
