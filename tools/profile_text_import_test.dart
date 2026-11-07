@@ -24,7 +24,7 @@ class _SelectedFile extends FileSelectorPlatform {
 void main() {
   const requested = int.fromEnvironment('PROFILE_BYTES');
   const stage = String.fromEnvironment('PROFILE_STAGE', defaultValue: 'decode');
-  final chunk = utf8.encode('${'a' * 1000}日本語 مرحبا\n');
+  final chunk = utf8.encode('${'a' * 1003}日本語 مرحبا\n');
   const maximumProfileBytes = 16 * 1024 * 1024;
   const maximumEditorBytes = 2 * 1024 * 1024;
   final maximumBytes = stage == 'editor'
@@ -37,7 +37,12 @@ void main() {
       'Set PROFILE_BYTES between ${chunk.length} and $maximumBytes for stage $stage',
     );
   }
-  final length = requested ~/ chunk.length * chunk.length;
+  if (requested % chunk.length != 0) {
+    throw ArgumentError(
+      'PROFILE_BYTES must be divisible by the ${chunk.length}-byte UTF-8 fixture chunk',
+    );
+  }
+  final length = requested;
   testWidgets('synthetic import memory profile', (tester) async {
     try {
       final directory = (await tester.runAsync(
