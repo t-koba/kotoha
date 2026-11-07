@@ -197,67 +197,66 @@ no-network/privacy, cancellation-in-app or release claim.
 
 ### Exact experiment and selected inputs
 
-[Windows CPU probe](https://github.com/t-koba/kotoha/actions/runs/42362657964/job/128374088969)
-at published SHA `5553a4a6d749ffdc4d8e30b227bfacb3d0c32143` built the candidate.
-`smoke.log` verifies three fixture pins, both loader rejections and generated-only
-`Bonjour.`; feasibility only.
-Executable SHA-256:
-`c4ea7c3feb2f220c7387c247810f287c896929aa2af77156f9d8ee0c5b9c1e9f`.
+The [automatic Windows capture](https://github.com/t-koba/kotoha/actions/runs/42373381668/job/128405915232)
+passed at published SHA `8b6b675c0c3ddb8859059fa6eb390cf260db4b23`.
+Current artifacts under `windows-x64-engine-probe/build/engine-probe/`:
 
-Artifacts under `windows-x64-engine-probe/build/engine-probe/` at that SHA:
-`build.log` and file-API `target-llama-simple-Release-41f60bf4e9c1988c2228.json`
-select static `llama`, `ggml`, `ggml-cpu`, `ggml-base` and `examples/simple/simple.cpp`,
-not vendor-hash/common/optional backend libraries or configured-but-unlinked targets.
-MSVC 14.51.36231: `/MD` (dynamic CRT). Import-library defaults
-`kernel32 user32 gdi32 winspool shell32 ole32 oleaut32 uuid comdlg32 advapi32`
-do not prove DLL imports.
-
-| Target | Actual compiled translation units / archive source projection |
-| --- | --- |
-| `llama` | 33 `src/` core files enumerated by `LLAMA_CORE_SOURCES` in pinned `src/CMakeLists.txt`, plus 11 generated `src/CMakeFiles/llama.dir/Unity/unity_{0..10}_cxx.cxx` units. The CMake glob registers all 176 pinned `src/models/*.cpp`, not only Qwen2. Complete Unity inclusion review remains open. |
-| `ggml-base` | 9 under `ggml/src/`: `ggml.c`, `ggml.cpp`, `ggml-alloc.c`, `ggml-quants.c`, `ggml-backend.cpp`, `ggml-backend-meta.cpp`, `ggml-opt.cpp`, `ggml-threading.cpp`, `gguf.cpp` |
-| `ggml-cpu` | 16 under `ggml/src/ggml-cpu/`: `ggml-cpu.c`, `ggml-cpu.cpp`, `repack.cpp`, `quants.c`, `hbm.cpp`, `traits.cpp`, `binary-ops.cpp`, `unary-ops.cpp`, `vec.cpp`, `ops.cpp`, `amx/amx.cpp`, `amx/mmq.cpp`, `tiled/tiled.cpp`, `tiled/tiled-kernel.cpp`, `arch/x86/quants.c`, `arch/x86/repack.cpp` |
-| `ggml` | `ggml/src/ggml-backend-dl.cpp`, `ggml/src/ggml-backend-reg.cpp` (compiled even with dynamic backends disabled) |
-| `llama-simple` | `examples/simple/simple.cpp` |
-
-72 actual compile units project to **237 intended archive files**, not header or
-binary-member closure. AMX/HBM/tiled compiled conditionally; cache booleans cannot
-exclude them. The projection matches retained file-API/MSBuild commands to the
-pinned archive. Set SHA-256 `97c258eaed98d7f95ba8b67c123136da6e54008efeaab4f79d804aa04a8cfb10`
-uses sorted archive-relative `<lowercase SHA-256>  <path>\n`, UTF-8/LF.
-A lexical scan's 84 extra quoted includes are a superset, not selected reads.
-
-[Windows capture](https://github.com/t-koba/kotoha/actions/runs/42365199694/job/128381686713)
-`f7fe5b270e533902acef493f34aa8e9c5b417de0`; fully read files:
-
-| Retained file | Observed content | SHA-256 |
+| Retained file | Bytes / represented inputs | SHA-256 |
 | --- | --- | --- |
-| `unity_0_cxx.cxx` | 16 model includes, afmoe through clef | `6007c5e57ce9b7b2c24c36aadb0a997417705a402a6f5ce1dfa200a396fe64d2` |
-| `llama-version.h` | `LLAMA_VERSION 0.9.0-dev`, `LLAMA_COMMIT f7fe5b2` | `b9e4c5390266e46488e48ad05eb93d7ae12ae85a3f09c4dc9ba508610d64c692` |
-| `ggml-version.h` | `GGML_VERSION 0.29.0`, `GGML_COMMIT f7fe5b2` | `839c6d923428164b617e02b2c81400850f75ebef0cfc2072bcef513507734b6f` |
+| `source-sha256.txt` | 27,243 / 302 archive files: 237 C/C++ (including 176 model files), 65 headers | `faf08d710aacca675ffbebd3470592a9ae0efda170d6b4657fcb62fad446eb2c` |
+| `generated-sha256.txt` | 1,420 / 11 Unity units and 2 version headers | `86df47968cb693e08242ee0cc734819e94c00502f52254f3d0944587e3143d36` |
+| `compiler-summary.txt` | 1,022 / 72 source keys, 581 represented inputs: source 302, generated 13, MSVC 141, SDK 123, Windows 2; 5 tracking logs hashed separately | `a718e4643e5051dc2d444121d1252de869c0c8a1842a26f61a8d438e64dadfbe` |
 
-Macros name the workspace, **not upstream**. The 1,000-byte preview of
-`llama.dir/Release/llama.tlog/CL.read.1.tlog.txt` shows source/MSVC 14.51.36231/SDK
-10.0.26100.0 headers. The 600,419-byte log (SHA-256
-`e72a83ac2112285c565d1e8ac3f8544ec96b61e2dad0eaa09f0f85b3ddacf76d`) remains
-unparsed. This neither verifies the projection nor rebinds older inference/executable evidence.
+Both complete manifests and all 13 generated files were read at that SHA.
+Independent hashing of all 302 selected regular, nonlink archive members and
+UTF-8/LF assembly of their sorted hash/path pairs matched the actual manifest's
+full length and SHA-256. Traversal/casefold ambiguity guards found no collisions
+when matching Windows-canonicalized keys. No engine source was configured or run.
 
-`compiler_reads.py` hashes keys (`^source1|source2`) and reads in retained UTF-8
-`CL.read.*.tlog.txt`, including source-only keys (pinned `ggml/src/ggml-cpu/hbm.cpp`,
-`GGML_USE_CPU_HBM` off). Missing/empty/malformed logs, reads before keys and
-missing/non-file/relative/traversing/escaping/unmapped inputs fail closed.
-Key-only records may be valid or truncated; record shape cannot prove whole-build completeness.
-Roots: source, generated, MSVC (`vswhere`), SDK (Windows Kits registry),
-`--windows` (actual `$env:SystemRoot`; no blank/cwd/drive fallback).
-Canonical most-specific roots; sorted UTF-8/LF:
-`<lowercase SHA-256>  <lowercase path>\n`, no private paths.
+All 11 raw CRLF `src/CMakeFiles/llama.dir/Unity/unity_{0..10}_cxx.cxx`
+files beneath `_deps/llama_cpp-build/` matched their generated-manifest hashes.
+Each includes 16 model files: **176 unique inclusions**, exactly the actual source
+manifest's model set and the pinned archive's complete `src/models/*.cpp` glob,
+with no unexpected or omitted models. The pinned
+[`src/CMakeLists.txt`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/src/CMakeLists.txt)
+selects these models, not only Qwen2, and 33 separately compiled core files.
+The 72 compile units project to 237 archive C/C++ files: llama 33 core + 176
+models, ggml-base 9, ggml-cpu 16, ggml 2, simple 1. Projection SHA-256
+`97c258eaed98d7f95ba8b67c123136da6e54008efeaab4f79d804aa04a8cfb10`
+uses sorted `<lowercase SHA-256>  <archive-relative path>\n`, UTF-8/LF.
+The source-only `ggml/src/ggml-cpu/hbm.cpp` key is included, hash
+`e5cf5c8327f99ccb58461d8416e27bc38da01d9bd450e48f3df69bd34a81a47c`;
+it does not imply additional dependencies. AMX/HBM/tiled files are represented
+regardless of whether their conditional bodies survive preprocessing.
 
-Outputs `*-sha256.txt`: `source` (selected archive-relative), `generated`
-(build-relative), `toolchain` (`msvc/`, `sdk/`, `windows/`), `compiler-tracking`
-(build-relative log hashes). `compiler-summary.txt`: source-key/input and
-source/model/header counts, manifest/key hashes (`label/path` keys).
-OS reads (sortdefault.nls/tzres.dll) need not be code; labels are provenance,
-not legal approval. Native capture, Unity/read-set, provider terms and binary-member closure remain open.
+Both version headers also matched: `src/llama-version.h` declares `0.9.0-dev`,
+`ggml/src/ggml-version.h` declares `0.29.0`, and both commit macros say
+`8b6b675`: the **workspace**, not upstream. Generated-manifest keys lowercase
+`CMakeFiles`/`Unity`; artifact paths retain case. The summary's source-key
+fingerprint is `1bdca7142f8c67bf78ee76e00d819a86b4a2f09542828645ba859913d857d5d2`.
+
+`compiler_reads.py` hashes UTF-8 tracking-log keys and reads, including source-only
+keys; missing/empty/malformed logs and missing, non-file, relative, traversing,
+escaping or unmapped inputs fail closed. Most-specific canonical roots label
+source, generated, MSVC (`vswhere`), SDK (registry) and Windows (required actual
+`SystemRoot`, no fallback), with sorted lowercase relative paths. OS reads
+(sortdefault.nls/tzres.dll) need not be code; labels are not legal approval.
+Key-only records may be valid or truncated: shape alone cannot prove completeness.
+
+The earlier [Windows inference probe](https://github.com/t-koba/kotoha/actions/runs/42362657964/job/128374088969)
+at SHA `5553a4a6d749ffdc4d8e30b227bfacb3d0c32143` retains `smoke.log` evidence
+for three fixture pins, both loader rejections and generated-only `Bonjour.`;
+executable SHA-256 `c4ea7c3feb2f220c7387c247810f287c896929aa2af77156f9d8ee0c5b9c1e9f`.
+Its build/file-API evidence selects static llama/ggml/ggml-cpu/ggml-base and
+simple, not common/vendor/optional backend libraries. MSVC 14.51.36231 uses
+`/MD` (dynamic CRT); default import libraries alone do not prove DLL imports.
+This older executable/inference evidence is **not rebound** by the later capture.
+
+Verified compiler reads and source/Unity projection are not surviving binary
+membership, actual intrinsic preprocessing, complete static-provider/runtime
+redistribution or license/notice closure, Unicode production provenance, Android
+selection, product integration, quality or privacy evidence. Those adoption gates
+remain open, independently for each platform.
 
 ### Terms, provenance and notices
 
