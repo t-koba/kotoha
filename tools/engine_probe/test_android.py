@@ -31,7 +31,12 @@ class LinkerMapWorkflowTest(unittest.TestCase):
         self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map.sha256.json', workflow)
         self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map.archives.json', workflow)
         self.assertIn('build/engine-probe-android/ndk-terms/**', workflow)
+        self.assertIn('build/engine-probe-android/ndk-patch-sources/**', workflow)
+        self.assertIn('ENGINE_NDK_PATCH_MAX_BYTES', workflow)
+        self.assertIn('ENGINE_NDK_PATCH_FETCH_SECONDS', workflow)
         self.assertIn('capture_ndk_terms.py', script)
+        self.assertIn('capture_android_patch_sources.py', script)
+        self.assertIn('if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi', script)
         self.assertNotIn('build/engine-probe-android/*.map', workflow)
         self.assertNotIn('build/engine-probe-android/*.map.sha256.json', workflow)
 

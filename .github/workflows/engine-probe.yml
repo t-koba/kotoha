@@ -149,6 +149,8 @@ jobs:
       ENGINE_LINKER_MAP_MAX_BYTES: '134217728' # 128 MiB; reject rather than truncate
       ENGINE_NDK_TERMS_MAX_FILES: '64'
       ENGINE_NDK_TERMS_MAX_BYTES: '16777216' # 16 MiB; reject rather than omit records
+      ENGINE_NDK_PATCH_MAX_BYTES: '16777216' # 16 MiB for the fixed selected-source patch set
+      ENGINE_NDK_PATCH_FETCH_SECONDS: '120' # total pinned-source fetch/capture deadline
       ENGINE_TOKENS: '16'
       ENGINE_DOWNLOAD_SECONDS: '300'
       ENGINE_DEVICE_ROOT: /data/local/tmp
@@ -191,6 +193,7 @@ jobs:
             build/engine-probe-android/validated-linker-map/llama-simple.map.archives.json
             build/engine-probe-android/ndk.properties
             build/engine-probe-android/ndk-terms/**
+            build/engine-probe-android/ndk-patch-sources/**
             build/engine-probe-android/compile_commands.json
             build/engine-probe-android/build.ninja
             build/engine-probe-android/.ninja_log

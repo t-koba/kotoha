@@ -6,7 +6,7 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_BOOT_SECONDS ENGINE_BOOT_POLL_SECONDS ENGINE_ADB_SECONDS ENGINE_PROBE_SECONDS \
   ENGINE_OUTPUT_BYTES ENGINE_TOKENS ENGINE_DOWNLOAD_SECONDS ENGINE_DEVICE_ROOT ANDROID_HOME FLUTTER_ROOT \
   ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES ENGINE_NDK_TERMS_MAX_FILES \
-  ENGINE_NDK_TERMS_MAX_BYTES; do
+  ENGINE_NDK_TERMS_MAX_BYTES ENGINE_NDK_PATCH_MAX_BYTES ENGINE_NDK_PATCH_FETCH_SECONDS; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -20,7 +20,8 @@ for name in ('ENGINE_BUILD_ROOT', 'ENGINE_TEMP_ROOT'):
     if '..' in path.parts or path.resolve().parent == path.resolve():
         raise SystemExit('invalid root: ' + name)
 for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS',
-            'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES'):
+            'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES',
+            'NDK_PATCH_MAX_BYTES', 'NDK_PATCH_FETCH_SECONDS'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -88,6 +89,12 @@ cp "$ndk/source.properties" "$build/ndk.properties"
 python3 tools/engine_probe/capture_ndk_terms.py --ndk "$ndk" \
   --expected-version "$ENGINE_NDK_VERSION" --max-files "$ENGINE_NDK_TERMS_MAX_FILES" \
   --max-bytes "$ENGINE_NDK_TERMS_MAX_BYTES" --output "$build/ndk-terms"
+patch_capture_status=0
+python3 tools/engine_probe/capture_android_patch_sources.py \
+  --output "$build/ndk-patch-sources" --max-bytes "$ENGINE_NDK_PATCH_MAX_BYTES" \
+  --fetch-timeout-seconds "$ENGINE_NDK_PATCH_FETCH_SECONDS" \
+  > "$build/patch-source-capture.log" 2>&1 || patch_capture_status=$?
+cat "$build/patch-source-capture.log"
 cmake -S tools/engine_probe -B "$build" -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI="$ENGINE_ABI" -DANDROID_PLATFORM="android-$ENGINE_API" \
@@ -147,4 +154,5 @@ python3 tools/engine_probe/android.py --adb "$ANDROID_HOME/platform-tools/adb" \
   --timeout-seconds "$ENGINE_PROBE_SECONDS" --adb-timeout-seconds "$ENGINE_ADB_SECONDS" \
   --output-bytes "$ENGINE_OUTPUT_BYTES" > "$build/smoke.log" 2>&1
 if [[ "$capture_status" != 0 ]]; then exit "$capture_status"; fi
+if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi
 cat "$build/android-compiler-summary.txt"

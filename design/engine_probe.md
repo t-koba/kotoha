@@ -158,6 +158,31 @@ to selected runtime inputs. The capture does not contain every patch, installed
 runtime source file, or object/section-level provenance. Thus this is a useful
 crosswalk, not a patch-to-member closure or approval of the broad NDK notice set.
 
+### Pinned patch-source audit capture
+
+The Android probe now has a bounded audit-only capture for the three named patch
+payloads above, at the exact `llvm_android` repository commit
+`e727bfb014bd436f581a66a450c939a6983a1fc3` recorded by the installed NDK
+`clang_source_info.md`. It shallow-fetches that full commit ID into a temporary
+bare Git object store under one 120-second total deadline. It resolves the
+three exact filenames under `patches/`, rejects missing/duplicate/non-regular
+blobs, and records each path, Git blob ID, byte length and SHA-256 in
+`ndk-patch-sources/manifest.json`. The configured 16 MiB bound covers the patch
+tree index and selected payloads; the fetch pack itself has the time deadline but
+no separate hard byte cap. Raw patch payloads and other fetched repository
+objects remain only in the temporary store and are not uploaded, avoiding
+unreviewed source redistribution; no fetched source is executed. CI runs the
+native probe smoke even if this audit capture fails, retains the bounded failure
+log, then returns failure so missing patch evidence cannot look green. Local
+unit tests use synthetic Git repositories only.
+
+This capture change has not yet run in exact CI. The earlier successful
+publication contains no manifest for these pinned patch sources. Even after
+capture, matching patch paths to the installed archive's actual object
+bytes/surviving sections,
+reviewing all applicable terms and determining the required shipped notices
+remain open; this is not an adoption or distribution approval.
+
 ## Pinned inputs and review
 
 `tools/engine_probe/fixtures.json` pins llama.cpp b12183, commit
@@ -270,6 +295,7 @@ checks, not silently falling back to a host compiler or latest NDK.
 | `ENGINE_OUTPUT_BYTES`, `ENGINE_TOKENS` | `8192` per stream tail, `16` generated-token budget, positive integers |
 | `ENGINE_LINKER_MAP_MAX_BYTES` | `134217728` bytes (128 MiB); Android LLD map is retained whole or the probe fails, never truncated |
 | `ENGINE_NDK_TERMS_MAX_FILES`, `ENGINE_NDK_TERMS_MAX_BYTES` | `64` records, `16777216` bytes (16 MiB); installed-package record capture fails rather than silently omit files |
+| `ENGINE_NDK_PATCH_MAX_BYTES`, `ENGINE_NDK_PATCH_FETCH_SECONDS` | `16777216` bytes (tree index plus selected patch blobs), `120` seconds total fetch/capture deadline |
 | `ENGINE_ACCEPT_TERMS_SHA256` | Complete LICENSE digest above, explicit developer-test-only acceptance |
 | `ANDROID_HOME`, `FLUTTER_ROOT` | Supplied SDK roots, required; no SDK installation is assumed locally |
 
