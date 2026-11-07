@@ -2,26 +2,27 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-Windows x64 and the Android 15/API 35 x86_64 hosted-emulator smoke both passed in
-the latest paired publication, but Android's strict selected-read capture still
-fails. Exact publication `28c4bd70e7e8ab65a9e32cfb7790c07b4858863d97c0b6eef02fc2052fd6167c`
-(SHA `b2dc629b476098cada2ed6141d9b02ad1c60b882`, source commit
-`cc6782ba158be88d07a7043bea24ea44d2e86e68`) passed Windows job `128457412922`;
-Android job `128457412615` failed with `unrepresented Ninja dependency object
-bin/llama-simple` after all 27 probe unit tests passed. The exact Android
-`ninja-deps.txt` (SHA-256
-`53ffa196706b1f54caa1f4e8e1b451f1de364b1ddd654959baed539533c59acd`) contains a
-16-input dependency record for the linked executable; `link-inputs.txt` (SHA-256
-`60627119fb6ee66e34f2bd37f342e6c20e28129ccb8e611e85091c4d499e3880`) identifies it
-as a `CXX_EXECUTABLE_LINKER` target. Its `smoke.log` (SHA-256
-`e6d143239c529ab510be31c07070241a707528710cd3c2c6544a418f9592f506`) records real
-loader rejection of missing/truncated models and generated-only `Bonjour.` output.
-The parser now excludes non-object linker-output dependency records from the
-compiler-read manifest, while still rejecting unmapped `.o`/`.obj` records and
-requiring every compiled output to have a validated read record. This fix has
-focused synthetic coverage but still needs the exact Android CI result. Neither
-probe result adopts an engine into the app. Linux has no application host; no ARM
-or physical-device coverage is inferred.
+The latest completed native probe is exact publication
+`be0cb7c5e320ee13d609224f2d40a1f787a986ab4897fad54d28ad992e6dfb3e` (source commit
+`5fc562ac7ac7058bb4dc61f9368b6348ecffd3e8`, code digest
+`b2d2e57e5617ab532664f305462f5a101cc021c6c17cc6807e590217a7951f8b`, published SHA
+`4971f08d5555e69bd41e5a1e9b3c737f101284ff`). Both exact CI jobs passed:
+Android API 35 x86_64 CPU feasibility `128462384029` and Windows x64 CPU
+feasibility `128462384106`. Android's strict compiler-read capture now records 72
+compiled objects and 1,435 unique inputs; `android-selected-sha256.txt` is 207,842
+bytes (SHA-256 `7ca5b7ef9cd16b4d32b7ff320ee1da8336718d0c7d2f4bed979917f498b18941`)
+and `android-compiled-sha256.txt` is 7,599 bytes (SHA-256
+`399797e9bd52e0dd27c10c99fd64378f9a183f025f36cba0102e08ce507f05b3`). The emulator
+smoke used NDK `28.2.13676358`, LLVM 19.0.1, and Android 15/API 35 x86_64; it
+rejected missing/truncated GGUF and generated only the bounded synthetic sample
+`Bonjour.`. This remains developer feasibility evidence, not a product integration,
+quality, legal, device/ARM or release conclusion.
+
+This checkout adds Android-only LLD link-map capture so the selected static archive
+members and compiler runtime can be inspected. That new map output is not yet backed
+by an exact CI run; until it is, no map or additional archive-member closure is
+claimed. The probe remains developer-only; Linux has no application host, and no
+physical-device or ARM coverage is inferred.
 
 ## Pinned inputs and review
 
@@ -133,6 +134,7 @@ checks, not silently falling back to a host compiler or latest NDK.
 | `ENGINE_ADB_SECONDS`, `ENGINE_PROBE_SECONDS` | `30`, `180`, finite positive transport allowance / per-engine device deadline |
 | `ENGINE_DOWNLOAD_SECONDS` | `300`, finite positive network-I/O and total Android acquisition deadline; no download retry |
 | `ENGINE_OUTPUT_BYTES`, `ENGINE_TOKENS` | `8192` per stream tail, `16` generated-token budget, positive integers |
+| `ENGINE_LINKER_MAP_MAX_BYTES` | `134217728` bytes (128 MiB); Android LLD map is retained whole or the probe fails, never truncated |
 | `ENGINE_ACCEPT_TERMS_SHA256` | Complete LICENSE digest above, explicit developer-test-only acceptance |
 | `ANDROID_HOME`, `FLUTTER_ROOT` | Supplied SDK roots, required; no SDK installation is assumed locally |
 
@@ -160,7 +162,9 @@ wait reaps the wrapper, and the host reaper collects orphaned children. Detached
 helpers, untrappable cancellation and runner loss rely on disposable runner
 teardown; no broad process-name kill or blind retry is used.
 
-The `android-api35-x86_64-engine-probe` artifact retains raw compile commands,
+The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default) and writes `llama-simple.map.sha256.json` with its exact byte size and SHA-256; no partial map is accepted. The map is raw linker output, not a normalized inventory: LLD map formatting and member attribution may vary, so inspect its exact archive/member rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. It supplements, but does not establish, complete runtime or legal closure.
+
+The `android-api35-x86_64-engine-probe` artifact retains the linker map and its hash/size record alongside raw compile commands,
 verbose build log, Ninja commands/link inputs/log/dependency database, NDK version,
 compiler version/tool hashes, ELF headers/interpreter/NEEDED entries, executable
 hash, Unity units and generated `llama-version.h`/`ggml-version.h`. On-device
@@ -200,30 +204,17 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Pending native evidence:** successful strict selected-read capture and a green full
-Android probe job. In the latest exact publication, the smoke ran and produced the
-Android 15/API 35 x86_64 fingerprint, loader rejection and generated-only output, but
-job `128457412615` still failed before producing selected-read manifests: the
-16-input `bin/llama-simple` Ninja dependency record belongs to the executable link
-target, not a compiler object (publication
-`28c4bd70e7e8ab65a9e32cfb7790c07b4858863d97c0b6eef02fc2052fd6167c`, SHA
-`b2dc629b476098cada2ed6141d9b02ad1c60b882`). The local parser change excludes
-non-object linker-output records while continuing to require complete, valid
-compiler-object coverage; focused tests cover both that target and fail-closed
-unrepresented objects. The exact Android CI recheck is pending, so compiler-read
-capture and overall probe acceptance remain unmet. The parser recognizes only the
-exact kernel-vDSO pseudo-row separately from hashable `/apex/` and `/system/` providers;
-unknown/malformed provider rows still fail closed. It validates each compiler
-dependency, then canonicalizes validated paths into a unique input set. Failure
-messages distinguish empty records, missing/unrepresented objects and count
-mismatches, including only a build-relative object name and expected/observed counts.
-Android inference is a narrow developer smoke, not quality evidence.
-Header/source read hashes are not compiled/surviving binary closure, static runtime
-provenance or legal approval. Static archive membership, intrinsic branch
-applicability, full selected terms and notices, generated Unicode provenance and
-user-accessible notice delivery remain adoption gates on each platform independently.
-This probe establishes no Android app integration, ARM/physical-device, memory/disk
-cap, quality, performance, no-network/privacy, cancellation-in-app or release claim.
+**Current evidence limits:** the exact successful Android run demonstrates a
+strict selected compiler-read manifest and the native loader/inference smoke only.
+The 72 compiled objects are compiler units, not a complete list of surviving binary
+sections; the read manifest is not link membership or a legal conclusion. Runtime
+`NEEDED` providers are recorded separately. The new worktree-only LLD map is not
+included in that successful publication. Intrinsic branch applicability, full
+selected terms/notices, historical Unicode data provenance, the NDK static C++
+runtime closure, platform runtime terms and user-accessible notice delivery remain
+adoption gates for each platform independently. The probe establishes no app
+integration, ARM/physical-device coverage, resource cap, quality, performance,
+no-network/privacy, cancellation-in-app or release claim.
 
 ## Selected-source and runtime audit
 

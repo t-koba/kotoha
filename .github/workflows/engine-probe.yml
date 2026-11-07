@@ -146,6 +146,7 @@ jobs:
       ENGINE_ADB_SECONDS: '30'
       ENGINE_PROBE_SECONDS: '180'
       ENGINE_OUTPUT_BYTES: '8192'
+      ENGINE_LINKER_MAP_MAX_BYTES: '134217728' # 128 MiB; reject rather than truncate
       ENGINE_TOKENS: '16'
       ENGINE_DOWNLOAD_SECONDS: '300'
       ENGINE_DEVICE_ROOT: /data/local/tmp
@@ -183,6 +184,8 @@ jobs:
             tools/engine_probe/
             build/engine-probe-android/*.log
             build/engine-probe-android/*.txt
+            build/engine-probe-android/*.map
+            build/engine-probe-android/*.map.sha256.json
             build/engine-probe-android/ndk.properties
             build/engine-probe-android/compile_commands.json
             build/engine-probe-android/build.ninja

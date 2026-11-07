@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import io
 import json
+import hashlib
 import os
 import sys
 from pathlib import Path
@@ -15,7 +16,35 @@ from unittest.mock import patch
 import acquire
 import android
 import smoke
+import linker_map
 from test_smoke import HEADER, DECODED, pin
+
+
+class LinkerMapEvidenceTest(unittest.TestCase):
+    def test_map_is_bounded_and_recorded_without_truncation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'llama-simple.map'
+            data = b'LLD map\narchive(member.o)\n'
+            path.write_bytes(data)
+            expected = {'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+            self.assertEqual(linker_map.record(path, len(data)), expected)
+            self.assertEqual(json.loads((Path(str(path) + '.sha256.json')).read_text()), expected)
+            with self.assertRaisesRegex(RuntimeError, 'exceeds'):
+                linker_map.record(path, len(data) - 1)
+            path.write_bytes(b'')
+            with self.assertRaisesRegex(RuntimeError, 'empty'):
+                linker_map.record(path, 1)
+            path.unlink()
+            with self.assertRaisesRegex(RuntimeError, 'missing'):
+                linker_map.record(path, 1)
+
+    def test_invalid_byte_bounds_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'map'
+            path.write_bytes(b'x')
+            for limit in (0, -1, True):
+                with self.subTest(limit=limit), self.assertRaises(ValueError):
+                    linker_map.record(path, limit)
 
 
 class TransportTest(unittest.TestCase):

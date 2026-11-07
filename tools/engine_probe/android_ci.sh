@@ -5,7 +5,7 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_API ENGINE_ABI ENGINE_SYSTEM_IMAGE ENGINE_AVD_DEVICE ENGINE_EMULATOR_PORT \
   ENGINE_BOOT_SECONDS ENGINE_BOOT_POLL_SECONDS ENGINE_ADB_SECONDS ENGINE_PROBE_SECONDS \
   ENGINE_OUTPUT_BYTES ENGINE_TOKENS ENGINE_DOWNLOAD_SECONDS ENGINE_DEVICE_ROOT ANDROID_HOME FLUTTER_ROOT \
-  ENGINE_ACCEPT_TERMS_SHA256; do
+  ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -18,7 +18,7 @@ for name in ('ENGINE_BUILD_ROOT', 'ENGINE_TEMP_ROOT'):
     path = Path(os.environ[name])
     if '..' in path.parts or path.resolve().parent == path.resolve():
         raise SystemExit('invalid root: ' + name)
-for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS'):
+for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS', 'LINKER_MAP_MAX_BYTES'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -89,6 +89,7 @@ cmake -S tools/engine_probe -B "$build" -G Ninja \
   -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   > "$build/configure.log" 2>&1
 cmake --build "$build" --target llama-simple --parallel "$ENGINE_BUILD_JOBS" --verbose > "$build/build.log" 2>&1
+python3 tools/engine_probe/linker_map.py "$build/llama-simple.map" --max-bytes "$ENGINE_LINKER_MAP_MAX_BYTES"
 ninja -C "$build" -t deps > "$build/ninja-deps.txt"
 ninja -C "$build" -t commands llama-simple > "$build/selected-commands.txt"
 ninja -C "$build" -t query bin/llama-simple > "$build/link-inputs.txt"
