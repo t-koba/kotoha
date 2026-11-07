@@ -177,13 +177,9 @@ public final class MainActivityAccessibilityTest
         KeyEvent event = new KeyEvent(now, now, action, keyCode, 0, 0,
                 KeyCharacterMap.VIRTUAL_KEYBOARD, 0, KeyEvent.FLAG_FROM_SYSTEM,
                 InputDevice.SOURCE_KEYBOARD);
-        try {
-            assertTrue("Android rejected native key injection: action=" + action
-                    + ", keyCode=" + keyCode,
-                    automation.injectInputEvent(event, true));
-        } finally {
-            event.recycle();
-        }
+        assertTrue("Android rejected native key injection: action=" + action
+                + ", keyCode=" + keyCode,
+                automation.injectInputEvent(event, true));
     }
 
     private void pressKey(int keyCode, int meta) {
