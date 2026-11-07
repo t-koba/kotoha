@@ -89,23 +89,30 @@ public final class MainActivityAccessibilityTest
             String interveningControl) {
         revealField(id);
         click(label, n -> field(n, id));
-        controlKey(KeyEvent.KEYCODE_A);
-        getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+        assertField(id, label, "");
         // Verify initial native input focus by sending real keyboard input rather than
         // relying on isFocused(), which is not consistently exposed for Flutter editors.
         getInstrumentation().sendStringSync("p");
         assertField(id, label, "p");
+        String currentValue = "p";
         for (String value : new String[] {"العربية", "Latin"}) {
             // Keyboard paste exercises the focused editor, not ACTION_SET_TEXT's
             // optimistic semantics prediction, without a Unicode key-map dependency.
             getInstrumentation().runOnMainSync(() ->
                     clipboard.setPrimaryClip(ClipData.newPlainText("RTL test", value)));
-            controlKey(KeyEvent.KEYCODE_A);
+            // Ctrl+A did not reliably select this Flutter editor's value on the emulator:
+            // replace the known test value with actual delete key events instead.
+            int deleteCount = currentValue.codePointCount(0, currentValue.length());
+            for (int i = 0; i < deleteCount; i++) {
+                getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+            }
+            assertField(id, label, "");
             controlKey(KeyEvent.KEYCODE_V);
             assertField(id, label, value);
             // No re-tap: input must still reach this field after its direction rebuild.
             getInstrumentation().sendStringSync("x");
-            assertField(id, label, value + "x");
+            currentValue = value + "x";
+            assertField(id, label, currentValue);
         }
         // Verify the native forward traversal target. The import action is now
         // between the source-language and source-text controls; widget tests own
@@ -300,7 +307,8 @@ public final class MainActivityAccessibilityTest
     }
 
     private static boolean nameMatches(String name, String label) {
-        return name.equals(label) || name.startsWith(label + ", ");
+        return name.equals(label) || name.startsWith(label + ", ")
+                || name.startsWith(label + "\n");
     }
 
     private static boolean named(AccessibilityNodeInfo node, String label) {
