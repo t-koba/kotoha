@@ -106,7 +106,7 @@ belong to this link closure.
 
 | Target | Actual compiled translation units / archive source projection |
 | --- | --- |
-| `llama` | 33 `src/` core files enumerated by `LLAMA_CORE_SOURCES` in pinned `src/CMakeLists.txt`, plus 11 generated `src/CMakeFiles/llama.dir/Unity/unity_{0..10}_cxx.cxx` units. The CMake glob registers all 176 pinned `src/models/*.cpp`, not only Qwen2. Unity inclusion contents remain unverified. |
+| `llama` | 33 `src/` core files enumerated by `LLAMA_CORE_SOURCES` in pinned `src/CMakeLists.txt`, plus 11 generated `src/CMakeFiles/llama.dir/Unity/unity_{0..10}_cxx.cxx` units. The CMake glob registers all 176 pinned `src/models/*.cpp`, not only Qwen2. Complete Unity inclusion review remains open. |
 | `ggml-base` | 9 under `ggml/src/`: `ggml.c`, `ggml.cpp`, `ggml-alloc.c`, `ggml-quants.c`, `ggml-backend.cpp`, `ggml-backend-meta.cpp`, `ggml-opt.cpp`, `ggml-threading.cpp`, `gguf.cpp` |
 | `ggml-cpu` | 16 under `ggml/src/ggml-cpu/`: `ggml-cpu.c`, `ggml-cpu.cpp`, `repack.cpp`, `quants.c`, `hbm.cpp`, `traits.cpp`, `binary-ops.cpp`, `unary-ops.cpp`, `vec.cpp`, `ops.cpp`, `amx/amx.cpp`, `amx/mmq.cpp`, `tiled/tiled.cpp`, `tiled/tiled-kernel.cpp`, `arch/x86/quants.c`, `arch/x86/repack.cpp` |
 | `ggml` | `ggml/src/ggml-backend-dl.cpp`, `ggml/src/ggml-backend-reg.cpp` (compiled even with dynamic backends disabled) |
@@ -125,27 +125,63 @@ The source projection comes from retained file-API/MSBuild inputs and actual
 build commands, matched against the pinned archive. A lexical scan found 84
 additional quoted includes: a conditional superset, not selected-header evidence.
 
-The completed artifact inventory lacks Unity contents, configured
-`llama-version.h`/`ggml-version.h`, and compiler header-read sets. The current
-workflow requests these files and UTF-8 conversions of built targets' MSBuild
-`*.read.1.tlog` (MSBuild writes UTF-16). That additional retention needs a new
-Windows run. Review actual Unity includes/read sets against the archive, not a
-reconstruction claimed as historical evidence. SDK/MSVC inputs still need
-provider evidence; static linking does not identify surviving library members.
+A later [Windows capture](https://github.com/t-koba/kotoha/actions/runs/42365199694/job/128381686713)
+at SHA `f7fe5b270e533902acef493f34aa8e9c5b417de0` completed successfully at
+10:48:14Z on 2026-11-07. Only the first Unity file and two configured headers
+have been fully read:
+
+| Retained file | Observed content | SHA-256 |
+| --- | --- | --- |
+| `unity_0_cxx.cxx` | 16 actual model includes, afmoe through clef | `6007c5e57ce9b7b2c24c36aadb0a997417705a402a6f5ce1dfa200a396fe64d2` |
+| `llama-version.h` | `LLAMA_VERSION 0.9.0-dev`, `LLAMA_COMMIT f7fe5b2` | `b9e4c5390266e46488e48ad05eb93d7ae12ae85a3f09c4dc9ba508610d64c692` |
+| `ggml-version.h` | `GGML_VERSION 0.29.0`, `GGML_COMMIT f7fe5b2` | `839c6d923428164b617e02b2c81400850f75ebef0cfc2072bcef513507734b6f` |
+
+These commit macros name the enclosing workspace, **not** the pinned upstream
+revision; they cannot establish engine provenance. A 1,000-byte preview of the
+UTF-8 `llama.dir/Release/llama.tlog/CL.read.1.tlog.txt` confirms source and
+MSVC 14.51.36231 / Windows SDK 10.0.26100.0 header paths. The complete file is
+600,419 bytes, SHA-256
+`e72a83ac2112285c565d1e8ac3f8544ec96b61e2dad0eaa09f0f85b3ddacf76d`;
+it has not been fully parsed. Complete Unity/read-set review against the archive
+is next; the intended 237-file projection is unchanged, not verified closure.
+SDK/MSVC inputs still need provider evidence; static linking does not identify
+surviving library members. This capture does not rebind the older inference or
+executable/import evidence to the new SHA.
 
 ### Terms, provenance and notices
 
 Scope: prospective Windows engine/helper and generated code, not current app
 distribution. Models stay separately user-acquired. Unknown AND terms fail closed.
+The three complete MIT licenses reviewed below grant unrestricted
+use/copy/modify/merge/publish/distribute/sublicense/sell, require copyright and
+permission notices in all copies/substantial portions, and include the full
+AS-IS warranty/liability disclaimer, without additional restrictions/exceptions.
+Retain each full original notice alongside ggml MIT for prospective distribution.
 
 | Component / selected terms | Classification from available full evidence; required notice or missing evidence |
 | --- | --- |
-| Root `LICENSE`, MIT; copyright 2023–2026 The ggml authors | **permissive** from full text: unrestricted use/copy/modify/merge/publish/distribute/sublicense/sell with copyright/permission notice retention and AS-IS warranty/liability disclaimer. SHA-256 `94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d`. Retain full text; this does not settle adaptations/data below. |
-| YaRN in `ggml/src/ggml-cpu/ops.cpp:6169–6170`, declared MIT, copyright 2023 Jeffrey Quesnelle and Bowen Peng; source points to `jquesnelle/yarn` / `LlamaYaRNScaledRotaryEmbedding.py` | Preserve attribution with root notice. **Unknown closure**: archive has an MIT declaration, not full origin notice. Obtain immutable origin revision and complete applicable MIT text/copyright. |
-| BPE in `src/llama-vocab.cpp:244`, declared MIT, adapted from `cmp-nct/ggllm.cpp` | **Unknown closure**: moving repository pointer only. Preserve attribution; obtain immutable origin and complete terms/copyright. |
+| Root `LICENSE`, MIT; copyright 2023–2026 The ggml authors | **permissive** from complete MIT text. SHA-256 `94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d`. Retain full text; this does not settle adaptations/data below. |
+| YaRN in [`ggml/src/ggml-cpu/ops.cpp:6169–6208`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/ggml/src/ggml-cpu/ops.cpp#L6169-L6208), declared MIT, copyright 2023 Jeffrey Quesnelle and Bowen Peng | **permissive MIT origin terms** from the complete reviewed YaRN license below. Retain `Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng` and the full permission/warranty notice. Compared origin correction dim/range, linear ramp, log magnitude scaling, interpolation/extrapolation mix and cos/sin with pinned `ops.cpp:6164–6186` and `ggml.c:4528–4546`; not an identical whole-file translation. |
+| BPE in [`src/llama-vocab.cpp:242–245`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/src/llama-vocab.cpp#L242-L245), declared MIT, adapted from `cmp-nct/ggllm.cpp` | **permissive MIT origin terms** from the complete reviewed ggllm license below. Retain both copyright lines: `Copyright (c) 2023 https://github.com/cmp-nct`; `This project includes work that is Copyright (c) 2023 by Georgi Gerganov` Retain the full permission/warranty notice. Origin `libfalcon.cpp:2590–2620,2622–2752,2755–2776` matches the rank/left tie-break, symbol merge/outdated-bigram check and linked neighbors in pinned `llama-vocab.cpp:265–279,741–771,827–850`; later regex/tokenizer extensions remain unresolved. |
 | Z-algorithm in `src/llama-sampler.cpp:3485–3486`, declared public domain, points to `ivanyu/string-algorithms/blob/master/z_algorithm.py` | **unknown**: comment alone is not a complete dedication. Obtain immutable origin and complete dedication/applicable terms. |
 | `ggml/src/ggml-cpu/vec.h`, “adapted from arm limited optimized routine” (including SSE2 branch at 1306/1316) | **unknown**: disabling Arm/KleidiAI does not exclude this x86 branch. Establish branch selection for MSVC from compiler/preprocessor evidence; if selected identify originating routine/revision and full terms/notices, not a guessed Arm license. |
 | Generated `src/unicode-data.cpp` and generator `scripts/gen-unicode-data.py` | **unknown**. Output labels canonical normalization Unicode **16.0.0**, not the other tables. Generator combines moving UCD `latest/ucd/UnicodeData.txt` with Python `unicodedata` (NFD/normalization), without exact UCD/Python pins. Generator/output container declarations differ: regeneration is not established byte-identical. Obtain immutable UCD/Python data/tool provenance and full applicable notices, or reviewed pinned regeneration with equivalence validation. The app's UCD 17 bidi notice does not establish these inputs' terms. |
+
+Reviewed immutable origin evidence (not proof of the exact historical adaptation
+revision):
+
+| Origin file | SHA-256 |
+| --- | --- |
+| [YaRN LICENSE at 995db5b575e75230b3384d658f8b944c9662f775](https://raw.githubusercontent.com/jquesnelle/yarn/995db5b575e75230b3384d658f8b944c9662f775/LICENSE) | `c3ec00ded224ebaaa673373961babc2d79f3081914897f3325cb7927a76234c1` |
+| [YaRN scaled_rope/LlamaYaRNScaledRotaryEmbedding.py at the same revision](https://raw.githubusercontent.com/jquesnelle/yarn/995db5b575e75230b3384d658f8b944c9662f775/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py) | `fa097066e5792239ff4375dd84ed65d6c01bce8a2b6f1083dd4504151210a4af` |
+| [ggllm LICENSE at 0dc65eb735f90f82143ead9dedb66e73fa25d114](https://raw.githubusercontent.com/cmp-nct/ggllm.cpp/0dc65eb735f90f82143ead9dedb66e73fa25d114/LICENSE) | `03871befb92d000a22dd5d5fe89381afe4ae461a219d2d4f79912dfdb5e56a23` |
+| [ggllm libfalcon.cpp at the same revision](https://raw.githubusercontent.com/cmp-nct/ggllm.cpp/0dc65eb735f90f82143ead9dedb66e73fa25d114/libfalcon.cpp) | `eb8c6af6bbfcba7b217abde03d42c2da6fc4cb867481b1d93d50af8843e9597a` |
+
+The reviewed origin files and their directory listings add no other applicable
+notices; `libfalcon.cpp` also declares MIT in its header. These comparisons settle
+the original attributed routines' terms, not later additions or exact historical
+provenance. Root MIT does not replace either origin notice; all other closure
+and user-accessible notice-delivery gates remain open.
 
 Immutable evidence for these intrinsic declarations is the source commit/archive
 above, not the moving URLs in comments. Relevant file SHA-256 values:
