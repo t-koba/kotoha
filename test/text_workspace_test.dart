@@ -283,4 +283,36 @@ void main() {
     expect(find.text('クリップボードにコピーできませんでした'), findsOneWidget);
     expect(find.text('訳文をコピーしました'), findsNothing);
   });
+
+  testWidgets('supports multiple targets at narrow width and large text', (
+    tester,
+  ) async {
+    binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    binding.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(binding.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const KotohaApp());
+    final scrollable = find.byType(Scrollable).first;
+    await tester.dragUntilVisible(
+      find.text('Add translation'),
+      scrollable,
+      const Offset(0, -400),
+    );
+    await tester.tap(find.text('Add translation'));
+    await tester.pumpAndSettle();
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('target-language-1')),
+      scrollable,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('copy-translation-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('remove-translation-1')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
