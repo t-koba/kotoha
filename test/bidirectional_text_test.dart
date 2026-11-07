@@ -267,6 +267,55 @@ void main() {
     expect(secondParagraphCaret.top, greaterThan(firstParagraphCaret.top));
   });
 
+  testWidgets('language field deletes after an RTL direction rebuild', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const KotohaApp());
+    final field = find.byKey(const ValueKey('source-language'));
+    await tester.ensureVisible(field);
+    await tester.pumpAndSettle();
+    await tester.tap(field);
+    await tester.pump();
+
+    final controller = tester.widget<TextField>(field).controller!;
+    const arabic = 'العربية';
+    await tester.enterText(field, 'p');
+    await tester.pump();
+    expect(tester.widget<TextField>(field).textDirection, TextDirection.ltr);
+
+    // Mimic an IME update that flips direction, followed by another committed
+    // character; then exercise hardware Backspace without refocusing the field.
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: arabic,
+        selection: TextSelection.collapsed(offset: arabic.length),
+      ),
+    );
+    await tester.pump();
+    expect(tester.widget<TextField>(field).textDirection, TextDirection.rtl);
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '${arabic}x',
+        selection: TextSelection.collapsed(offset: arabic.length + 1),
+      ),
+    );
+    await tester.pump();
+    expect(controller.text, '${arabic}x');
+    expect(controller.selection.baseOffset, arabic.length + 1);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await tester.pump();
+    expect(controller.text, arabic);
+    expect(controller.selection.baseOffset, arabic.length);
+    expect(tester.widget<TextField>(field).textDirection, TextDirection.rtl);
+    final editable = find.descendant(
+      of: field,
+      matching: find.byType(EditableText),
+    );
+    expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isTrue);
+  });
+
   testWidgets('source field preserves composing input across edit rebuilds', (
     tester,
   ) async {

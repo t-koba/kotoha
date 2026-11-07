@@ -249,6 +249,8 @@ public final class MainActivityAccessibilityTest
         if (node == null) return "field missing";
         try {
             return "textCodePoints=" + codePoints(string(node.getText()))
+                    + ", selection=" + node.getTextSelectionStart()
+                    + ".." + node.getTextSelectionEnd()
                     + ", focused=" + node.isFocused()
                     + ", visible=" + node.isVisibleToUser();
         } finally {
