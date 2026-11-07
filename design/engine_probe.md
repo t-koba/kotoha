@@ -142,11 +142,30 @@ UTF-8 `llama.dir/Release/llama.tlog/CL.read.1.tlog.txt` confirms source and
 MSVC 14.51.36231 / Windows SDK 10.0.26100.0 header paths. The complete file is
 600,419 bytes, SHA-256
 `e72a83ac2112285c565d1e8ac3f8544ec96b61e2dad0eaa09f0f85b3ddacf76d`;
-it has not been fully parsed. Complete Unity/read-set review against the archive
-is next; the intended 237-file projection is unchanged, not verified closure.
-SDK/MSVC inputs still need provider evidence; static linking does not identify
-surviving library members. This capture does not rebind the older inference or
-executable/import evidence to the new SHA.
+it has not been fully parsed. The intended 237-file projection is not verified
+closure, and this capture does not rebind older inference/executable evidence.
+
+For the **next Windows run**, `compiler_reads.py` replaces whole-archive hashing
+with the deduplicated union of compiler source keys (`^source1|source2`) and read
+dependencies across candidate-build `CL.read.*.tlog.txt` files. Missing/empty or
+malformed tracking, missing files and unmapped paths fail the audit step; complete
+converted UTF-8 tracking stays retained. New outputs use sorted lowercase paths,
+`<SHA-256>  <path>\n`, UTF-8/LF, without absolute runner paths:
+
+- `source-sha256.txt`: **selected reads only**, archive-relative, not the old
+  whole-archive enumeration. The pinned archive digest still binds all bytes.
+- `generated-sha256.txt`: candidate-build-relative selected Unity/version/etc.
+- `toolchain-sha256.txt`: selected reads relative to configured `msvc/` or `sdk/`
+  roots (vswhere's installed `VC/Tools/MSVC` and Windows Kits registry root).
+- `compiler-tracking-sha256.txt`: input tracking digests, candidate-build-relative.
+- `compiler-summary.txt`: distinct source-key versus total-input counts,
+  source/model/header counts and manifest/source-key fingerprints. The source-key
+  fingerprint uses the same row format with `label/path` keys.
+
+Nested roots use the most specific scope. Labels classify paths only, not terms
+or providers' redistribution rights. Compact output has not yet been measured on
+Windows or derived from the historical capture; Unity/read-set review, SDK/MSVC
+provider terms and binary-member closure remain open.
 
 ### Terms, provenance and notices
 

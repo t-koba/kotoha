@@ -81,24 +81,29 @@ jobs:
           if ($env:ENGINE_MODEL_DIR -and (Test-Path -LiteralPath $env:ENGINE_MODEL_DIR)) {
             Remove-Item -LiteralPath $env:ENGINE_MODEL_DIR -Recurse -Force -ErrorAction Stop
           }
-      - name: Record source manifest and executable linkage for review
+      - name: Record selected actual compiler reads for review
         if: always()
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $source = Join-Path $pwd 'build/engine-probe/_deps/llama_cpp-src'
-          if (Test-Path $source) {
-            Get-ChildItem $source -File -Recurse | Sort-Object FullName | ForEach-Object {
-              $relative = [IO.Path]::GetRelativePath($source, $_.FullName).Replace('\', '/')
-              '{0}  {1}' -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLower(), $relative
-            } | Set-Content build/engine-probe/source-sha256.txt
-          }
-          # MSBuild writes UTF-16 tracking logs; retain UTF-8 text for artifact review.
+          # Preserve complete UTF-8 tracking text, including split read logs.
           $build = 'build/engine-probe/_deps/llama_cpp-build'
           if (Test-Path -LiteralPath $build) {
-            Get-ChildItem -LiteralPath $build -Recurse -File -Filter '*.read.1.tlog' | ForEach-Object {
+            Get-ChildItem -LiteralPath $build -Recurse -File -Filter '*.read.*.tlog' | ForEach-Object {
               Get-Content -LiteralPath $_.FullName | Set-Content -LiteralPath ($_.FullName + '.txt') -Encoding utf8
             }
           }
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'MSVC provider root missing' }
+          $sdk = Get-ItemPropertyValue 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' -Name KitsRoot10
+          python tools/engine_probe/compiler_reads.py --source $source --generated $build --msvc (Join-Path $vs 'VC/Tools/MSVC') --sdk $sdk --output build/engine-probe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record executable linkage for review
+        if: always()
+        shell: pwsh
+        run: |
           $exe = 'build/engine-probe/bin/Release/llama-simple.exe'
           if (Test-Path $exe) {
             $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
@@ -118,6 +123,7 @@ jobs:
             tools/engine_probe/
             build/engine-probe/*.log
             build/engine-probe/*sha256.txt
+            build/engine-probe/compiler-summary.txt
             build/engine-probe/CMakeCache.txt
             build/engine-probe/CMakeFiles/CMakeConfigureLog.yaml
             build/engine-probe/.cmake/api/v1/reply/
@@ -125,7 +131,7 @@ jobs:
             build/engine-probe/_deps/llama_cpp-build/src/CMakeFiles/llama.dir/Unity/*.cxx
             build/engine-probe/_deps/llama_cpp-build/src/llama-version.h
             build/engine-probe/_deps/llama_cpp-build/ggml/src/ggml-version.h
-            build/engine-probe/_deps/llama_cpp-build/**/*.read.1.tlog.txt
+            build/engine-probe/_deps/llama_cpp-build/**/*.read.*.tlog.txt
             build/engine-probe/_deps/llama_cpp-src/**/CMakeLists.txt
             build/engine-probe/_deps/llama_cpp-src/**/*.cmake
             build/engine-probe/_deps/llama_cpp-src/**/LICENSE*
