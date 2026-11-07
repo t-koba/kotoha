@@ -2,30 +2,45 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-The latest completed native probe is exact publication
-`e9d1b9920dffbdb5825e5a0d8aa6751fc838b4e28fc2e575e104f9adc3c80464` (published SHA
-`e91f1c4218dbc3e69cee2bd1d122fcd2b43b3ead`). Both exact probe jobs passed:
-Windows x64 CPU feasibility `128479487945` and Android API 35 x86_64 CPU
-feasibility `128479488127`. Android's strict compiler-read capture records 72
-actual built objects, 72 source keys and 1,435 unique selected inputs. Its smoke
-used NDK `28.2.13676358`, LLVM 19.0.1 and Android 15/API 35 x86_64; it rejected
-missing/truncated GGUF and generated only the bounded synthetic sample `Bonjour.`.
+The latest exact native probe is publication
+`4897dfdbfc2450afec7e399fe6f76665fdbc5a39efe197621fcc419a14c3faaa` at SHA
+`25d236df1416460b06575c44105fbd079b24afea`. Windows x64 job `128497598415` and
+Android API 35 x86_64 job `128497598639` passed. Android recorded 72 actual
+compiled objects, 1,435 unique selected compiler inputs, NDK `28.2.13676358`
+(r28c), and LLVM clang 19.0.1 based on `r530567e`, source commit
+`97a699bf4812a18fb657c2779f5296a4ab2694d2`. The owned Android 15/API 35 x86_64
+emulator rejected missing/truncated GGUF and generated the narrow synthetic
+`Bonjour.` sample. This is developer-probe evidence only, not app integration,
+quality, ARM or physical-device coverage.
 
-The exact Android artifact's validated LLD map sidecar asserts 4,660,773 bytes
-and SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`.
-The VCS reader verified returned page digests and echoed the whole-file size/hash,
-but the complete map was not assembled and independently re-hashed. `link-inputs.txt`
-identifies `libllama.a`, `libggml.a`, `libggml-cpu.a` and `libggml-base.a`; inspected
-map rows include NDK `libc++_static.a`. `linkage.log` records ELF64 x86_64, interpreter
-`/system/bin/linker64` and direct imports `libc.so`, `libm.so` and `libdl.so`.
-The map is evidence for this developer `llama-simple` build only, not a product
-integration, full binary/legal closure, quality, ARM or physical-device conclusion.
+The exact `android-api35-x86_64-engine-probe` artifact includes the map and a
+link-map-bound archive manifest. The complete manifest is 5,417 bytes and its
+verified artifact-page SHA-256 is
+`309fdd64696da9b61c7b426a522c38a0ec273a91c8932f6e7f95df0f90647409`
+(`vcs-read/e1ab11916d09450da5bd169bda3f2913`). Its declared map size/hash
+(4,660,773 bytes; SHA-256
+`2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`) matches
+the separately read 96-byte sidecar (`vcs-read/db9807de80f34ebaa872780b0d1d01b5`).
+This confirms internal manifest/sidecar agreement, not an independent re-hash
+of the 4.66 MB raw map, which has not been fully assembled here.
 
-This workspace adds link-map-bound hashes and member names for every unique `.a`
-archive referenced by the Android LLD map. The manifest is staged with the map
-and digest as one atomic artifact; this change is not in the last successful exact
-probe publication, so its output still requires exact CI validation. The NDK
-archive hashes/terms and any separate `libc++abi.a` selection remain unverified.
+The manifest records the following archive files and exact build hashes:
+
+| Archive | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `libggml-base.a` | 10,016,748 | `f45dca0adba31928e2ecb50f12acc6603a3b1ad85db0bd8ccb297042112f9271` |
+| `libggml-cpu.a` | 8,072,970 | `303132d570d054729a74ec1d1c7023ecacc31e0c52779d527e4c9002e2544110` |
+| `libggml.a` | 823,710 | `c05c0b4b2a4880e613862fdafe5d79080f1f760587509f11792c74fedd895be4` |
+| `libllama.a` | 83,403,538 | `665926e6210e5b33d291e9e7efd5b2114204d58552616295f8168c04eabeab43` |
+| NDK `libclang_rt.builtins-x86_64-android.a` | 303,678 | `82419d3e4735288342b2042c7418c3f49e352a721f43ce3966918a835580326a` |
+| NDK `libunwind.a` | 94,182 | `a1d9a8a7242c22c32c1ce57108f2c4f6687f4af5c0526b207e394f2099e8482a` |
+| NDK `libc++_static.a` | 14,336,094 | `893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099` |
+| NDK `libc++abi.a` | 2,792,306 | `11ff6729a881f3d1a2e72c2a9c4bd2c096e02c5dfb3858d942405e0514b7b95c` |
+
+The manifest identifies selected members, including both `libc++_static.a` and
+`libc++abi.a`; neither the manifest nor archive hashes prove which linked
+sections survive or close licensing. Exact NDK source/license terms, notices,
+and their user-accessible delivery remain unresolved.
 
 ## Pinned inputs and review
 
@@ -207,7 +222,18 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Current evidence limits:** exact publication `e9d1b9920dffbdb5825e5a0d8aa6751fc838b4e28fc2e575e104f9adc3c80464` includes the Android LLD map, its sidecar, strict selected compiler-read manifest and native loader/inference smoke. The 72 compiled objects are compiler units, not a complete list of surviving binary sections; the read manifest is not link membership or a legal conclusion. The exact map identifies archive-member rows, but its complete bytes were not independently assembled/re-hashed and the current publication has no hashes for those archive files; the new archive manifest awaits exact CI. Runtime `NEEDED` providers are recorded separately. Intrinsic branch applicability, full selected terms/notices, historical Unicode data provenance, the NDK static C++ runtime closure, platform runtime terms and user-accessible notice delivery remain adoption gates for each platform independently. The probe establishes no app integration, ARM/physical-device coverage, resource cap, quality, performance, no-network/privacy, cancellation-in-app or release claim.
+**Current evidence limits:** the exact Android probe above now captures all
+map-referenced static archives with per-archive SHA-256 and member names. The
+ELF artifact reports `/system/bin/linker64` and direct imports `libm.so`,
+`libdl.so`, and `libc.so`; the owned API 35 x86_64 emulator's loader output
+resolves these to `/apex/com.android.runtime/lib64/bionic/` and records provider
+hashes in `smoke.log` (`vcs-read/12c2282f35cb42bbba66492999c0f250`,
+`vcs-read/fed9e003654c46edb91d72c34596b3f2`). This does not establish other
+ABIs/OS versions, live application mappings, all `dlopen` paths, Android
+system-provider license notices, or product linkage. The raw linker map still
+needs independent complete-byte verification; selected runtime terms and notices
+remain open. Nothing here authorizes engine adoption, model distribution,
+persistence, privacy, quality, or platform-support claims.
 
 ## Selected-source and runtime audit
 
@@ -285,11 +311,52 @@ consumer, not common/vendor/optional backend libraries. The exact captured PE
 imports below provide runtime-provider evidence for this build, not license or
 redistribution approval.
 
-Verified compiler reads and source/Unity projection are not surviving binary
+The Windows compiler reads and source/Unity projection are not surviving binary
 membership, actual intrinsic preprocessing, complete static-provider/runtime
-redistribution or license/notice closure, Unicode production provenance, Android
-selection, product integration, quality or privacy evidence. Those adoption gates
-remain open, independently for each platform.
+redistribution or license/notice closure, or Unicode production provenance. The
+separate Android archive/member inventory below identifies its map-selected
+archives, but not surviving executable sections or legal/runtime closure. Product
+integration, quality and privacy are also unverified. Adoption gates remain open
+independently for each platform.
+
+### Android API 35 x86_64 selected archives and runtime
+
+The exact publication and archive inventory above establish this **developer
+probe** selection only. `ndk.properties` records NDK r28c (`28.2.13676358`;
+`vcs-read/a4ed2e3e281e435599b585f534797afc`). `compiler.log` identifies clang
+19.0.1 based on `r530567e` and Android LLVM project commit
+`97a699bf4812a18fb657c2779f5296a4ab2694d2`
+(`vcs-read/66f8fe7be295487b87338a4c2567bcfc`). `link-inputs.txt` names the four
+engine archives; the map-derived manifest additionally records the selected NDK
+builtins, `libunwind.a`, `libc++_static.a`, and `libc++abi.a`, with exact member
+sets and archive hashes. The linker-map sidecar and manifest agree, but the
+complete raw map has not been independently assembled/rehashed, and map members
+are not proof of retained executable sections.
+
+`linkage.log` identifies ELF64 x86_64, interpreter `/system/bin/linker64`, and
+`DT_NEEDED` imports `libm.so`, `libdl.so`, and `libc.so`. The smoke's explicit
+Android linker query records `linux-vdso.so.1` and maps those imports to the
+Android 15 runtime APEX, with provider hashes (`vcs-read/fed9e003654c46edb91d72c34596b3f2`).
+These are emulator-provided libraries, not bundled NDK archives; this observation
+is limited to this exact API 35 x86_64 system image.
+
+The NDK r28c release page identifies `clang-r530567e` and directs users to the
+installed `clang_source_info.md`. The Android Clang toolchain guide explains that
+this file identifies the LLVM project commit, cherry-picks and downstream changes.
+Android NDK C++ documentation describes `libc++` as LLVM's standard library and
+states the LLVM Project is under Apache License 2.0 with LLVM Exceptions. These
+general statements are not a hash-bound license record for the selected archive
+members. The exact `clang_source_info.md`,
+NDK license/NOTICE files, member/source mapping, all applicable per-file terms,
+and the final user-facing notice-delivery plan were not retained in this probe
+artifact. Do not infer a complete license classification from the docs or from
+`libc++`'s name. **Android engine adoption remains disabled** pending exact
+source/terms/notices, any third-party exceptions, binary/runtime closure, and
+platform-specific review. The official reference points are the
+[NDK r28c release](https://github.com/android/ndk/releases/tag/r28c), the
+[Android Clang toolchain guide](https://android.googlesource.com/toolchain/llvm_android/+/main/README.md),
+and the [NDK C++ library support guide](https://developer.android.com/ndk/guides/cpp-support);
+these guides are explanatory, not substitutes for the exact package records.
 
 ### Terms, provenance and notices
 
