@@ -45,13 +45,12 @@ class NinjaReadsTest(unittest.TestCase):
         self.header.write_text('changed')
         self.assertNotEqual(manifest, self.capture()[ninja_reads.OUTPUTS[0]])
 
-    def test_empty_unknown_stale_missing_escaping_collision_unrepresented(self):
+    def test_empty_unknown_stale_missing_escaping_and_unrepresented(self):
         valid = self.records
         for text in ('', '    header.h\n', valid.replace('(VALID)', '(STALE)'),
                      valid.replace('#deps 2', '#deps 0'), valid + valid,
                      valid.replace(str(self.header), str(self.root / 'missing')),
                      valid.replace(str(self.header), str(self.root / 'outside.h')),
-                     valid.replace(str(self.header), str(self.cpp)),
                      valid.replace(str(self.cpp), str(self.header)),
                      valid.replace('selected.o:', 'unbuilt.o:'),
                      valid.replace(str(self.header), '../ndk/header.h')):
@@ -63,6 +62,22 @@ class NinjaReadsTest(unittest.TestCase):
         self.commands.append(self.commands[0])
         with self.assertRaisesRegex(ValueError, 'colliding'):
             self.capture()
+
+    def test_dependency_aliases_are_validated_and_deduplicated(self):
+        alias = self.ndk / 'header-alias.h'
+        alias.symlink_to(self.header)
+        cases = (
+            (self.cpp, self.header, alias),
+            (self.cpp, self.header, self.header),
+        )
+        for dependencies in cases:
+            self.records = (
+                f'selected.o: #deps {len(dependencies)}, deps mtime 123 (VALID)\n'
+                + ''.join(f'    {path}\n' for path in dependencies)
+            )
+            manifest = self.capture()[ninja_reads.OUTPUTS[0]]
+            self.assertEqual(manifest.count('ndk/header.h'), 1)
+            self.assertNotIn('header-alias.h', manifest)
 
     def test_v7_build_log_uses_supported_five_field_records(self):
         text = '# ninja log v7\n0\t1\t123\tselected.o\t0123456789abcdef\n'

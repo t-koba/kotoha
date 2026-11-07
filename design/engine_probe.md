@@ -2,17 +2,19 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-Windows x64 has exact native inference evidence, but Android is still unproven:
-**API 35, default x86_64 hosted emulator only**. Exact publication
-`820eba2fea04674dae6af0e4f296a730f4116248223915f4a375e94741ac1810` at SHA
-`0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` built and linked the Android target,
-started the Android 15 emulator and transferred the executable/fixtures, then
-failed before model loading because the strict provider parser rejected the
-linker's `linux-vdso.so.1 => [vdso]` pseudo-row. Independently, compiler-read
-capture rejected the actual Ninja v7 build-log header while only accepting v5.
-The same exact publication's Windows job passed; neither result adopts an engine
-into the app. Linux has no application host; no ARM or physical-device coverage
-is inferred.
+Windows x64 has exact native inference evidence. Android API 35 / x86_64 now has
+real hosted-emulator smoke evidence, but the native-probe job is not green because
+strict compiler-read capture failed on colliding canonical dependency paths. Exact
+publication `0d94696cd2df2af8b75319e9393b0b47ed427bb857fa4716247fe4101d355979` at
+SHA `85ce0d2e928eec5dd4732c66075e6ca2d557d867` passed Windows job `128449009098`;
+Android job `128449009216` built and ran the API 35 x86_64 executable on the Android
+15 hosted emulator, rejected missing/truncated models and produced one generated-only
+`Bonjour.` sample, but failed selected-read capture with `colliding compiler
+dependencies`. The prior exact publication `820eba2fea04674dae6af0e4f296a730f4116248223915f4a375e94741ac1810`
+at SHA `0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` failed earlier, before model
+loading, because its parsers rejected the vDSO row and Ninja v7 log. Neither probe
+result adopts an engine into the app. Linux has no application host; no ARM or
+physical-device coverage is inferred.
 
 ## Pinned inputs and review
 
@@ -176,9 +178,11 @@ process mappings, all dlopen paths, static members or legal closure**.
 configured Clang object commands, cross-checks compiled outputs in clean Ninja
 v5 or v7 build logs (both use the validated five-field record shape), and requires
 each compiled source in its own read set. Unknown log versions remain rejected. It
-rejects missing/empty/stale/malformed/unrepresented/colliding records,
-missing or non-file inputs, parent traversal, aliases escaping roots and unknown
-providers. Most-specific configured `source`, `generated`, `ndk`, `probe` roots
+rejects missing/empty/stale/malformed/unrepresented records, missing or non-file
+inputs, parent traversal, aliases escaping roots and unknown providers. Every raw
+dependency is resolved and checked; the output manifest deduplicates paths that
+resolve to the same canonical file. Most-specific configured `source`, `generated`,
+`ndk`, `probe` roots
 produce sorted UTF-8/LF SHA-256 manifests (`android-selected-sha256.txt`,
 `android-compiled-sha256.txt`) and counts (`android-compiler-summary.txt`). POSIX
 case is preserved; Windows tlogs and case folding are not reused. Configured but
@@ -186,14 +190,18 @@ unbuilt targets are not included in selected-read membership. Raw evidence remai
 available if strict capture fails. The script still attempts independent native
 smoke, but returns failure for incomplete capture, never inferred closure.
 
-**Pending native evidence:** Android model-loader rejection and genuine inference
-on API 35, completion of strict selected-read capture, and end-to-end device cleanup
-on a passing run. The latest Android artifact confirms a real x86_64 executable,
-Android 15/API 35 emulator fingerprint, fixture transfer and runtime link resolution;
-it does **not** show a model load or inference. The parser now recognizes only the
-exact kernel-vDSO pseudo-row separately from hashable `/apex/` and `/system/`
-providers; unknown/malformed/duplicate rows still fail closed. A tiny host
-Clang/Ninja experiment and synthetic tests validate capture/orchestration only.
+**Pending native evidence:** successful strict selected-read capture and a green full
+Android probe job. The exact artifact's `smoke.log` records the Android 15/API 35
+x86_64 emulator fingerprint, executable/fixture/provider hashes, actual rejection of
+missing and truncated GGUFs, and generated-only `Bonjour.` output; the Android smoke
+completed its own cleanup. The overall job still fails because `ninja_reads.py`
+reported `colliding compiler dependencies`, so no selected-read manifests were
+produced. The parser recognizes only the exact kernel-vDSO pseudo-row separately
+from hashable `/apex/` and `/system/` providers; unknown/malformed provider rows
+still fail closed. It now canonicalizes each validated dependency path into a unique
+input set, allowing duplicate spellings of one file without omitting distinct inputs.
+A tiny host Clang/Ninja experiment and synthetic tests validate capture/orchestration
+only; Android inference remains one narrow developer smoke, not quality evidence.
 Header/source read hashes are not compiled/surviving binary closure, static runtime
 provenance or legal approval. Static archive membership, intrinsic branch
 applicability, full selected terms and notices, generated Unicode provenance and
@@ -213,12 +221,14 @@ The detailed selected-source Windows capture below is from exact publication
 `ef16f3cbc8a9d802ab7d676f6ec41cf93f275911`; its paired Android job failed before
 compilation at the then-unfixed CMake target guard. A subsequent exact publication
 `820eba2fea04674dae6af0e4f296a730f4116248223915f4a375e94741ac1810` at SHA
-`0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` passed the Windows job
-[128441768229](https://github.com/t-koba/kotoha/actions/runs/42385456690/job/128441768229)
-and advanced Android through cross-compilation, emulator start and linker check
-before the parser failure described above. This later Windows pass confirms the
-probe still runs, but the byte-counted file manifest below remains the detailed
-capture from `f679d5f`; current artifacts under
+`0e08c89d1022a51ad4c815b25bdc46ca20c3a2a8` passed the Windows job and advanced
+Android through cross-compilation, emulator start and linker check before the
+initial parser failures described above. Newer exact publication
+`0d94696cd2df2af8b75319e9393b0b47ed427bb857fa4716247fe4101d355979` at SHA
+`85ce0d2e928eec5dd4732c66075e6ca2d557d867` again passed Windows and completed a
+narrow Android loader/inference smoke, but strict Android selected-read capture
+failed with duplicate canonical dependencies. The Windows byte-counted file manifest
+below remains the detailed capture from `f679d5f`; current artifacts under
 `windows-x64-engine-probe/build/engine-probe/`:
 
 | Retained file | Bytes / represented inputs | SHA-256 |

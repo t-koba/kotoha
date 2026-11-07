@@ -97,9 +97,10 @@ def capture(build, source, ndk, probe):
             raise ValueError('empty/malformed/unrepresented Ninja dependencies')
         if not active.is_file() or active in objects:
             raise ValueError('missing or duplicate built object')
+        # Ninja records a dependency multiset, while the selected-input manifest
+        # represents the canonical set of files. Validate every spelling above;
+        # duplicate or symlink-aliased paths to one real file add no new input.
         keys = {select(absolute(raw, build)) for raw in dependencies}
-        if len(keys) != expected:
-            raise ValueError('colliding compiler dependencies')
         source_key = select(commands[active])
         if source_key not in keys:
             raise ValueError('compiled source absent from actual dependency record')
