@@ -127,14 +127,25 @@ whose terms fit the permissive dependency category.
 The exact repository's `build-test.yml` installs system packages and downloads
 `elinux-x64-release.zip` through a floating GitHub `releases/latest` URL without
 verifying a content digest. That recipe is not a pinned engine/toolchain input
-or a reproducible Kotoha build. The companion SDK and plugin repositories,
-feature-resolved dependency/license closure, platform runtime, and compatibility
-with Kotoha's pinned Flutter 3.47.9 have not been reviewed or tested. No
-Kotoha Linux plugin registration, read-in-place portal adapter, privacy or
-accessibility behavior, or supported CI path is demonstrated. Keep Linux
-unscaffolded; compare this candidate with the designed Engine + SDL/AccessKit
-host only after obtaining pinned artifacts, complete license/runtime closure,
-and reproducible integration evidence.
+or a reproducible Kotoha build. A current-source check on 2026-11-07 found that
+the upstream `master` ref still points to `1653fa656bf9fe9fa5f84789a59b0c07671a8fc8`,
+dated 2025-05-09. Open PR #450, based on that exact master revision, proposes
+adding direct `<cstdint>` includes to two client-wrapper headers because GCC 15
+no longer accepts their transitive-include assumptions; its July 2026 head is
+`4d3d077fc70afe6ebb879ceba7fe70e89b2e2aa4`. The associated workflow was
+listed as awaiting maintainer approval; the commit checks API returned zero
+check runs, and its status API returned `pending` with zero statuses. No
+completed build result is evidenced. This indicates unresolved toolchain
+compatibility in the candidate, not evidence that the proposed fix builds or
+has merged.
+
+The companion SDK and plugin repositories, feature-resolved dependency/license
+closure, platform runtime, and compatibility with Kotoha's pinned Flutter 3.47.9
+have not been reviewed or tested. No Kotoha Linux plugin registration,
+read-in-place portal adapter, privacy or accessibility behavior, or supported
+CI path is demonstrated. Keep Linux unscaffolded; compare this candidate with
+the designed Engine + SDL/AccessKit host only after obtaining pinned artifacts,
+complete license/runtime closure, and reproducible integration evidence.
 
 Source evidence: repository commit record (`fetch/051309ebd8c3f99d38d6d605423dc43e695f7636482658a3ca40d979a8ef6b59`),
 README (`fetch/ab8865016d89ecefb9ae9bf3f230ec947f61b2bd4fe6ff476af68b3844194736`),
@@ -143,6 +154,15 @@ support matrix (`fetch/4e8ae1865a278105efc7569776eff511581deb4582cd3376b9263f45b
 plugin API wiki (`fetch/7898c6750057c6da88a0bcb4c336535966a640d317009ca6c33fe797ffd46d7e`),
 CMake (`fetch/54004f08dd017d99ae937300f3dd48a8912b8cdfcba78033661dcec59e45e0db`),
 and build workflow (`fetch/ec8059f79fdfe7b09be58161b097cca16d889ee472a8c261e01f87bdcce60f9b`).
+Current upstream evidence: `master` commit API (`fetch/a1689677dba38603d5ee5afbd07c7edc03cfa278a1d9c810e8bde6d927387f08`)
+and commit feed (`fetch/031fb13267d956021e4ba2c68c3c92355abaf90f09eedcc7513a7ade1b14bd93`),
+current `master` build workflow (`fetch/271caa0a3ae7e5f22281cbdbfb0d1b2dc0e2cb1507ef68defbeb2f9c47995766`),
+PR #450 state/base/head (`fetch/a932ac3f66fdfc3c188a2aa69ed45d9aba9a3e37ecbff8c18605a146fd2f70ff`),
+proposed client-wrapper headers (`fetch/d2e8f687ec11e6c521918c4b8dd939b5bf14ae75df51d89f3084ff62d7f05118`,
+`fetch/85898143a4fec09cd6794b98a7adede56868b7c3e1fb962cf81e9e947f3332d1`),
+the Actions approval status (`search/3cdedbb06f712296b1b1a94c9f104857c00b4b500b8b483ddd80748f4a8a4c60`),
+and the exact head's check/status APIs (`fetch/8bf2eafcd09997a3bf85fc51e92c4804f2c07fd05a3d46e6216888bc2a283fc7`,
+`fetch/b3c99e05e8ba61aab821d227ed82ff12a5a5fd402db4a2a2d3ee3183aa302401`).
 
 ## GTK-free Linux portal candidate (not adopted)
 
