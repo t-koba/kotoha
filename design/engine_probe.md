@@ -172,7 +172,7 @@ provider terms and binary-member closure remain open.
 
 Scope: prospective Windows engine/helper and generated code, not current app
 distribution. Models stay separately user-acquired. Unknown AND terms fail closed.
-The three complete MIT licenses reviewed below grant unrestricted
+The complete selected MIT branches reviewed below grant unrestricted
 use/copy/modify/merge/publish/distribute/sublicense/sell, require copyright and
 permission notices in all copies/substantial portions, and include the full
 AS-IS warranty/liability disclaimer, without additional restrictions/exceptions.
@@ -182,9 +182,9 @@ Retain each full original notice alongside ggml MIT for prospective distribution
 | --- | --- |
 | Root `LICENSE`, MIT; copyright 2023–2026 The ggml authors | **permissive** from complete MIT text. SHA-256 `94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d`. Retain full text; this does not settle adaptations/data below. |
 | YaRN in [`ggml/src/ggml-cpu/ops.cpp:6169–6208`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/ggml/src/ggml-cpu/ops.cpp#L6169-L6208), declared MIT, copyright 2023 Jeffrey Quesnelle and Bowen Peng | **permissive MIT origin terms** from the complete reviewed YaRN license below. Retain `Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng` and the full permission/warranty notice. Compared origin correction dim/range, linear ramp, log magnitude scaling, interpolation/extrapolation mix and cos/sin with pinned `ops.cpp:6164–6186` and `ggml.c:4528–4546`; not an identical whole-file translation. |
-| BPE in [`src/llama-vocab.cpp:242–245`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/src/llama-vocab.cpp#L242-L245), declared MIT, adapted from `cmp-nct/ggllm.cpp` | **permissive MIT origin terms** from the complete reviewed ggllm license below. Retain both copyright lines: `Copyright (c) 2023 https://github.com/cmp-nct`; `This project includes work that is Copyright (c) 2023 by Georgi Gerganov` Retain the full permission/warranty notice. Origin `libfalcon.cpp:2590–2620,2622–2752,2755–2776` matches the rank/left tie-break, symbol merge/outdated-bigram check and linked neighbors in pinned `llama-vocab.cpp:265–279,741–771,827–850`; later regex/tokenizer extensions remain unresolved. |
-| Z-algorithm in `src/llama-sampler.cpp:3485–3486`, declared public domain, points to `ivanyu/string-algorithms/blob/master/z_algorithm.py` | **unknown**: comment alone is not a complete dedication. Obtain immutable origin and complete dedication/applicable terms. |
-| `ggml/src/ggml-cpu/vec.h`, “adapted from arm limited optimized routine” (including SSE2 branch at 1306/1316) | **unknown**: disabling Arm/KleidiAI does not exclude this x86 branch. Establish branch selection for MSVC from compiler/preprocessor evidence; if selected identify originating routine/revision and full terms/notices, not a guessed Arm license. |
+| BPE in [`src/llama-vocab.cpp:242–245`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/src/llama-vocab.cpp#L242-L245), declared MIT, adapted from `cmp-nct/ggllm.cpp` | **permissive MIT origin terms** from the complete reviewed ggllm license below. Retain both copyright lines: `Copyright (c) 2023 https://github.com/cmp-nct`; `This project includes work that is Copyright (c) 2023 by Georgi Gerganov`. Retain the full permission/warranty notice. Origin `libfalcon.cpp:2590–2620,2622–2752,2755–2776` matches the rank/left tie-break, symbol merge/outdated-bigram check and linked neighbors in pinned `llama-vocab.cpp:265–279,741–771,827–850`; later regex/tokenizer extensions remain unresolved. |
+| Z-algorithm in `src/llama-sampler.cpp:3485–3539`, attributed to Ivan Yurchenko | **public-domain**, selected Unlicense: complete origin terms dedicate all copyright to the public domain in perpetuity for public benefit and permit anyone to copy/modify/publish/use/compile/sell/distribute source or binary for any commercial/noncommercial purpose, by any means, with full AS-IS warranty/liability disclaimer and no added conditions. No legal notice-retention requirement; project notice policy will retain the complete text and existing attribution. Origin `z_algorithm.py` matches the lt/rt Z-box bounds and inside/outside cases, adapted for reversed tokens and range limits, not an identical whole file. |
+| Arm exponential adaptation in `ggml/src/ggml-cpu/vec.h:1320–1348` (SSE2 branch at 1306/1316) | **permissive MIT origin terms**, selecting only MIT from `MIT OR Apache-2.0 WITH LLVM-exception`. Retain root `Copyright (c) 1999-2022, Arm Limited.` and originating file `Copyright (c) 2019-2023, Arm Limited.` with the complete MIT permission/warranty notice. Origin `math/aarch64/v_expf.c` matches five exact polynomial coefficients, `0x1.8p23f` rounding shift, split ln2 range reduction, exponent construction, 126/192 bounds and special-scale biases. This is an attributed intrinsic-algorithm adaptation, not an Arm library/header dependency; no unrelated Arm EULA or glibc copy is selected. **MSVC branch applicability remains unverified**: disabled Arm/AVX flags do not establish `__SSE2__` selection/exclusion; actual compiler/preprocessor evidence is required. |
 | Generated `src/unicode-data.cpp` and generator `scripts/gen-unicode-data.py` | **unknown**. Output labels canonical normalization Unicode **16.0.0**, not the other tables. Generator combines moving UCD `latest/ucd/UnicodeData.txt` with Python `unicodedata` (NFD/normalization), without exact UCD/Python pins. Generator/output container declarations differ: regeneration is not established byte-identical. Obtain immutable UCD/Python data/tool provenance and full applicable notices, or reviewed pinned regeneration with equivalence validation. The app's UCD 17 bidi notice does not establish these inputs' terms. |
 
 Reviewed immutable origin evidence (not proof of the exact historical adaptation
@@ -196,12 +196,18 @@ revision):
 | [YaRN scaled_rope/LlamaYaRNScaledRotaryEmbedding.py at the same revision](https://raw.githubusercontent.com/jquesnelle/yarn/995db5b575e75230b3384d658f8b944c9662f775/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py) | `fa097066e5792239ff4375dd84ed65d6c01bce8a2b6f1083dd4504151210a4af` |
 | [ggllm LICENSE at 0dc65eb735f90f82143ead9dedb66e73fa25d114](https://raw.githubusercontent.com/cmp-nct/ggllm.cpp/0dc65eb735f90f82143ead9dedb66e73fa25d114/LICENSE) | `03871befb92d000a22dd5d5fe89381afe4ae461a219d2d4f79912dfdb5e56a23` |
 | [ggllm libfalcon.cpp at the same revision](https://raw.githubusercontent.com/cmp-nct/ggllm.cpp/0dc65eb735f90f82143ead9dedb66e73fa25d114/libfalcon.cpp) | `eb8c6af6bbfcba7b217abde03d42c2da6fc4cb867481b1d93d50af8843e9597a` |
+| [string-algorithms LICENSE at 70a15fdbb1705250891479b0f3f52ca2afffd48b](https://raw.githubusercontent.com/ivanyu/string-algorithms/70a15fdbb1705250891479b0f3f52ca2afffd48b/LICENSE) | `7e12e5df4bae12cb21581ba157ced20e1986a0508dd10d0e8a4ab9a4cf94e85c` |
+| [string-algorithms z_algorithm.py at the same revision](https://raw.githubusercontent.com/ivanyu/string-algorithms/70a15fdbb1705250891479b0f3f52ca2afffd48b/z_algorithm.py) | `b67658546b153e0fe7eec1abf43b6ed1e5680966fd9b6d2f9254d60977d58f2c` |
+| [optimized-routines LICENSE at 7999fd9f7ed482dc663befc16f56321344c0de1d](https://raw.githubusercontent.com/ARM-software/optimized-routines/7999fd9f7ed482dc663befc16f56321344c0de1d/LICENSE) | `650afbf29f214451e02241adc42534e82c9d6ae2b38e2444b92b5a1ffcaf9346` |
+| [optimized-routines math/aarch64/v_expf.c at the same revision](https://raw.githubusercontent.com/ARM-software/optimized-routines/7999fd9f7ed482dc663befc16f56321344c0de1d/math/aarch64/v_expf.c) | `ee23ed7c8589559bf875e14ff46127d0dbf707fea6e35f414d00dcace7471ada` |
 
-The reviewed origin files and their directory listings add no other applicable
-notices; `libfalcon.cpp` also declares MIT in its header. These comparisons settle
-the original attributed routines' terms, not later additions or exact historical
-provenance. Root MIT does not replace either origin notice; all other closure
-and user-accessible notice-delivery gates remain open.
+Complete origin terms, relevant routines and directory listings were reviewed;
+no additional applicable notices were found. `libfalcon.cpp` declares MIT;
+`v_expf.c` declares the dual terms above. The Arm origin is a matching preexisting
+2023-06-15 revision, not a proven historical adaptation revision. These comparisons
+settle origin terms, not later tokenizer extensions, exact historical provenance
+or selected binary applicability. Root MIT does not replace origin notices;
+all other closure and user-accessible notice-delivery gates remain open.
 
 Immutable evidence for these intrinsic declarations is the source commit/archive
 above, not the moving URLs in comments. Relevant file SHA-256 values:
