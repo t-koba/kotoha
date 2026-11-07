@@ -397,13 +397,25 @@ convert, string, heap, math, environment and utility. This is **dynamic** CRT
 linkage despite static engine libraries. It neither identifies all transitive
 providers/versions nor authorizes redistribution.
 
-KERNEL32/ADVAPI32 and UCRT contracts require supported-Windows provider and
-applicable-terms review. VC C++/vcruntime DLLs are **not assumed OS-provided**.
-Obtain exact provider binary identities, matching MSVC/Windows SDK full license
-and permitted redistributable list; determine whether the platform supplies them
-or separately licensed installation is required. Record policy's provider,
-linkage, redistribution, applicable terms and approval. Do not ship runner DLLs
-or infer redistribution permission from dumpbin.
+Microsoft's [DLL redistribution guide](https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute?view=msvc-170)
+says to compare actual imports with the installed `Redist.txt` or the applicable
+online REDIST list; only listed files may be redistributed. The [Visual Studio
+2022 REDIST list](https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution)
+allows listed, unmodified Visual C++ runtime files from `VC\redist`, subject to
+the license terms, and limits distribution to licensed Visual Studio users. These
+sources bound a possible redistribution path, not the exact toolset, DLL providers,
+licensed edition or terms of this build; they do not establish permission here.
+They were retrieved 2026-11-07: DLL guide receipt `fe34504106e5de56d36bdcd78fb0642ceeb360b1f77d443fdc3d5282dcb8cd74`, SHA-256
+`7cb7d6379d3b2ebce5b5761f4dca475ad93a502f04db11eaa0c0dbef2e78b925`; VS 2022
+REDIST receipt `35cff59c95271dec3c8c3fd1c7bde907cca8fbf8d302d4500d2df0129b023e3e`,
+SHA-256 `e6b7a54c56e3d109035d58c827c20b89b7ece006e0c58959453ac8aa8ea3cc92`.
+
+KERNEL32/ADVAPI32 and UCRT contracts still require supported-Windows provider
+and terms review; VC C++/vcruntime DLLs are **not assumed OS-provided**. For any
+product runtime, capture the exact toolset/edition and provider binary identities,
+then match them to that installation's REDIST list and terms. Record provider,
+linkage, redistribution and approval under policy. Do not ship runner DLLs or
+infer redistribution permission from dumpbin.
 
 Before adoption: close generated/header and selected-term gaps above, then ship
 complete selected notices alongside the engine and expose them through the app's
