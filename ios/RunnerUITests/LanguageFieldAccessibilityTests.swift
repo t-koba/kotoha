@@ -56,13 +56,27 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     let source = reveal("source-text")
     source.tap()
     app.typeText("unsaved source")
-    for _ in 0..<2 {
+    for round in 1...2 {
       let importButton = app.buttons["Import text or Markdown"]
       if !importButton.isHittable { app.swipeDown() }
       XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
+      let beforeTap = "enabled=\(importButton.isEnabled), hittable=\(importButton.isHittable)"
       importButton.tap()
       let cancel = app.buttons["Cancel"]
-      XCTAssertTrue(cancel.waitForExistence(timeout: timeout), "System document picker must be presented")
+      guard cancel.waitForExistence(timeout: timeout) else {
+        // Bounded state only: never log picker contents, UI trees or draft text.
+        let importerExists = importButton.exists
+        let errorNotice = app.descendants(matching: .any).matching(NSPredicate(
+          format: "label == %@",
+          "Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.")).firstMatch.exists
+        XCTFail("System document picker must be presented; round=\(round), "
+          + "beforeTap=[\(beforeTap)], importerExists=\(importerExists), "
+          + "enabled=\(importerExists && importButton.isEnabled), "
+          + "hittable=\(importerExists && importButton.isHittable), errorNotice=\(errorNotice), "
+          + "alerts=\(app.alerts.count), cancelButtons=\(app.buttons.matching(identifier: "Cancel").count), "
+          + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count)")
+        return
+      }
       cancel.tap()
       assertField("source-text", label: "Source text", value: "unsaved source")
     }
