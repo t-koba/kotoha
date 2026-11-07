@@ -117,6 +117,9 @@ public final class MainActivityAccessibilityTest
             controlKey(KeyEvent.KEYCODE_V);
             currentValue = value + "x";
             assertField(id, label, currentValue);
+            // Let the native text-input update drain after a live direction rebuild
+            // before injecting Backspace. Exact value/focus checks remain unchanged.
+            getInstrumentation().waitForIdleSync();
         }
         // Verify the native forward traversal target. The import action is now
         // between the source-language and source-text controls; widget tests own
