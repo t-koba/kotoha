@@ -68,14 +68,18 @@ class RunnerTests: XCTestCase {
     let validProfileSize = (1024...(16 * 1024 * 1024)).contains(requested)
     XCTAssertTrue(validProfileSize, "Profile fixture is bounded to 16 MiB")
     guard validProfileSize else { return }
-    let chunk = Data((String(repeating: "a", count: 1000) + "日本語 مرحبا\n").utf8)
-    let length = requested / chunk.count * chunk.count
+    let chunk = Data((String(repeating: "a", count: 1003) + "日本語 مرحبا\n").utf8)
+    XCTAssertEqual(chunk.count, 1024, "Multilingual profile chunk must be exactly 1 KiB")
+    guard requested % chunk.count == 0 else {
+      XCTFail("KOTOHA_IMPORT_PROFILE_BYTES must use complete 1-KiB UTF-8 fixture chunks")
+      return
+    }
     let local = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".txt")
     defer { try? FileManager.default.removeItem(at: local) }
     XCTAssertTrue(FileManager.default.createFile(atPath: local.path, contents: nil))
     let file = try FileHandle(forWritingTo: local)
     do {
-      for _ in 0..<(length / chunk.count) { try file.write(contentsOf: chunk) }
+      for _ in 0..<(requested / chunk.count) { try file.write(contentsOf: chunk) }
       try file.close()
     } catch { try? file.close(); throw error }
     var before = rusage()
@@ -83,10 +87,10 @@ class RunnerTests: XCTestCase {
     let start = ProcessInfo.processInfo.systemUptime
     let result = try TextDocumentReader().read(local)
     let bytes = try XCTUnwrap(result["bytes"] as? FlutterStandardTypedData)
-    XCTAssertEqual(bytes.data.count, length)
+    XCTAssertEqual(bytes.data.count, requested, "Native profile must return exactly the requested bytes")
     var after = rusage()
     XCTAssertEqual(getrusage(RUSAGE_SELF, &after), 0)
-    print("KotohaImportProfile native-read bytes=\(length) seconds=\(ProcessInfo.processInfo.systemUptime - start) peakBeforeBytes=\(before.ru_maxrss) peakAfterBytes=\(after.ru_maxrss) os=\(ProcessInfo.processInfo.operatingSystemVersionString)")
+    print("KotohaImportProfile native-read bytes=\(bytes.data.count) seconds=\(ProcessInfo.processInfo.systemUptime - start) peakBeforeBytes=\(before.ru_maxrss) peakAfterBytes=\(after.ru_maxrss) os=\(ProcessInfo.processInfo.operatingSystemVersionString)")
   }
 
   func testTextImportReaderScopeAndReadFailures() throws {
