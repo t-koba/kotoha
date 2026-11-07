@@ -234,9 +234,8 @@ jobs:
           set -euo pipefail
           # Require the software keyboard for XCUI text input; no physical keyboard is used.
           defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
-          # Scheme test-action variables expand from xcodebuild's process environment.
-          KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" \
-          KOTOHA_IMPORT_PROFILE_BYTES="$PROFILE_BYTES" \
+          # Xcode forwards TEST_RUNNER_* to XCTest with the prefix stripped.
+          TEST_RUNNER_KOTOHA_IMPORT_PROFILE_BYTES="$PROFILE_BYTES" \
           xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
             -configuration Debug -sdk iphonesimulator \
             -destination "platform=iOS Simulator,OS=$IOS_SIMULATOR_OS,name=$IOS_SIMULATOR_DEVICE" \
@@ -246,7 +245,7 @@ jobs:
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
-            KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" KOTOHA_IMPORT_PROFILE_BYTES="$PROFILE_BYTES" CODE_SIGNING_ALLOWED=NO
+            KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
       - name: Profile desktop disk read and strict decode
         if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
         timeout-minutes: 5
