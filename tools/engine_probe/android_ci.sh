@@ -5,7 +5,8 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_API ENGINE_ABI ENGINE_SYSTEM_IMAGE ENGINE_AVD_DEVICE ENGINE_EMULATOR_PORT \
   ENGINE_BOOT_SECONDS ENGINE_BOOT_POLL_SECONDS ENGINE_ADB_SECONDS ENGINE_PROBE_SECONDS \
   ENGINE_OUTPUT_BYTES ENGINE_TOKENS ENGINE_DOWNLOAD_SECONDS ENGINE_DEVICE_ROOT ANDROID_HOME FLUTTER_ROOT \
-  ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES; do
+  ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES ENGINE_NDK_TERMS_MAX_FILES \
+  ENGINE_NDK_TERMS_MAX_BYTES; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -18,7 +19,8 @@ for name in ('ENGINE_BUILD_ROOT', 'ENGINE_TEMP_ROOT'):
     path = Path(os.environ[name])
     if '..' in path.parts or path.resolve().parent == path.resolve():
         raise SystemExit('invalid root: ' + name)
-for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS', 'LINKER_MAP_MAX_BYTES'):
+for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS',
+            'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -83,6 +85,9 @@ mkdir "$ANDROID_AVD_HOME"
 ndk="$ANDROID_HOME/ndk/$ENGINE_NDK_VERSION"
 sdkmanager "platform-tools" "emulator" "ndk;$ENGINE_NDK_VERSION" "$ENGINE_SYSTEM_IMAGE" > "$build/sdk.log" 2>&1
 cp "$ndk/source.properties" "$build/ndk.properties"
+python3 tools/engine_probe/capture_ndk_terms.py --ndk "$ndk" \
+  --expected-version "$ENGINE_NDK_VERSION" --max-files "$ENGINE_NDK_TERMS_MAX_FILES" \
+  --max-bytes "$ENGINE_NDK_TERMS_MAX_BYTES" --output "$build/ndk-terms"
 cmake -S tools/engine_probe -B "$build" -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI="$ENGINE_ABI" -DANDROID_PLATFORM="android-$ENGINE_API" \

@@ -153,6 +153,7 @@ checks, not silently falling back to a host compiler or latest NDK.
 | `ENGINE_DOWNLOAD_SECONDS` | `300`, finite positive network-I/O and total Android acquisition deadline; no download retry |
 | `ENGINE_OUTPUT_BYTES`, `ENGINE_TOKENS` | `8192` per stream tail, `16` generated-token budget, positive integers |
 | `ENGINE_LINKER_MAP_MAX_BYTES` | `134217728` bytes (128 MiB); Android LLD map is retained whole or the probe fails, never truncated |
+| `ENGINE_NDK_TERMS_MAX_FILES`, `ENGINE_NDK_TERMS_MAX_BYTES` | `64` records, `16777216` bytes (16 MiB); installed-package record capture fails rather than silently omit files |
 | `ENGINE_ACCEPT_TERMS_SHA256` | Complete LICENSE digest above, explicit developer-test-only acceptance |
 | `ANDROID_HOME`, `FLUTTER_ROOT` | Supplied SDK roots, required; no SDK installation is assumed locally |
 
@@ -346,17 +347,39 @@ this file identifies the LLVM project commit, cherry-picks and downstream change
 Android NDK C++ documentation describes `libc++` as LLVM's standard library and
 states the LLVM Project is under Apache License 2.0 with LLVM Exceptions. These
 general statements are not a hash-bound license record for the selected archive
-members. The exact `clang_source_info.md`,
-NDK license/NOTICE files, member/source mapping, all applicable per-file terms,
-and the final user-facing notice-delivery plan were not retained in this probe
-artifact. Do not infer a complete license classification from the docs or from
-`libc++`'s name. **Android engine adoption remains disabled** pending exact
-source/terms/notices, any third-party exceptions, binary/runtime closure, and
-platform-specific review. The official reference points are the
-[NDK r28c release](https://github.com/android/ndk/releases/tag/r28c), the
-[Android Clang toolchain guide](https://android.googlesource.com/toolchain/llvm_android/+/main/README.md),
+members. Earlier probe artifacts omitted the exact `clang_source_info.md`, NDK
+package metadata and license/NOTICE files. The workflow now runs a bounded capture
+of `source.properties`, `package.xml`, required
+`clang-r530567/clang_source_info.md` and `clang-r530567/NOTICE`, plus regular
+license/notice/copying/copyright-named records at the NDK root and under
+`toolchains/llvm/prebuilt/linux-x86_64`. It retains `ndk-terms/manifest.json`
+and the original bytes under `ndk-terms/records/`; the manifest hashes and sizes
+every record. The configured 64-file/16-MiB bounds fail closed. Until the next
+exact Android job passes and its records are reviewed, this is a capture
+implementation, not source/terms evidence. It does not classify archive members
+or prove which source terms apply. The member/source mapping and complete
+applicable per-file terms remain open. Do not infer complete license
+classification from docs or from `libc++`'s name. **Android engine adoption
+remains disabled** pending exact source/terms/notices, any third-party exceptions,
+binary/runtime closure, and platform-specific review. The official reference
+points are the [NDK r28c release](https://github.com/android/ndk/releases/tag/r28c),
+the [Android Clang toolchain guide](https://android.googlesource.com/toolchain/llvm_android/+/main/README.md),
 and the [NDK C++ library support guide](https://developer.android.com/ndk/guides/cpp-support);
 these guides are explanatory, not substitutes for the exact package records.
+
+### Planned user-accessible notice delivery
+
+The app already registers its Unicode notice with Flutter's `LicenseRegistry` and
+exposes the standard `LicensePage` from its existing `show-licenses` action;
+`test/licenses_test.dart` checks that notice end to end. Once the applicable
+engine/runtime notice set is established, package each complete required notice
+as an offline app asset, register it by component through `LicenseRegistry`, and
+reuse that in-app Licenses page. Extend the widget test to open each component
+and compare its displayed complete text with the bundled source. This keeps
+notices available without network access and uses Flutter's platform-standard
+scrollable license surface rather than an external link or a separate custom
+viewer. No new engine notice asset is added until its applicability and exact
+text are established.
 
 ### Terms, provenance and notices
 

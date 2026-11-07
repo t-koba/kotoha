@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import io
 import json
+import hashlib
 import os
 import sys
 from pathlib import Path
@@ -29,6 +30,8 @@ class LinkerMapWorkflowTest(unittest.TestCase):
         self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map', workflow)
         self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map.sha256.json', workflow)
         self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map.archives.json', workflow)
+        self.assertIn('build/engine-probe-android/ndk-terms/**', workflow)
+        self.assertIn('capture_ndk_terms.py', script)
         self.assertNotIn('build/engine-probe-android/*.map', workflow)
         self.assertNotIn('build/engine-probe-android/*.map.sha256.json', workflow)
 
@@ -338,3 +341,61 @@ class TransportTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class NdkTermCaptureTest(unittest.TestCase):
+    def setUp(self):
+        import capture_ndk_terms
+        self.capture = capture_ndk_terms
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / 'ndk'
+        self.root.mkdir()
+        (self.root / 'source.properties').write_text('Pkg.Revision = 28.2.13676358\n')
+        (self.root / 'package.xml').write_text(
+            '<repository><localPackage path="ndk;28.2.13676358"/></repository>')
+        (self.root / 'NOTICE').write_text('NDK root notice')
+        toolchain = self.root / 'toolchains/llvm/prebuilt/linux-x86_64'
+        clang = toolchain / 'clang-r530567'
+        clang.mkdir(parents=True)
+        (clang / 'clang_source_info.md').write_text('immutable clang source pin')
+        (clang / 'NOTICE').write_text('third-party notices')
+        (toolchain / 'sysroot/usr/include/c++/v1').mkdir(parents=True)
+        (toolchain / 'sysroot/usr/include/c++/v1/LICENSE.TXT').write_text('libc++ terms')
+        (toolchain / 'not-a-license.txt').write_text('ignored by name')
+        self.output = Path(self.temp.name) / 'capture'
+        self.output.mkdir()
+
+    def test_captures_exact_required_and_candidate_records_with_hashes(self):
+        manifest = self.capture.capture(self.root, self.output, '28.2.13676358', 16, 4096)
+        paths = {record['path'] for record in manifest['files']}
+        self.assertEqual(paths, {
+            'source.properties', 'package.xml', 'NOTICE',
+            'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/clang_source_info.md',
+            'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/NOTICE',
+            'toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/LICENSE.TXT',
+        })
+        for record in manifest['files']:
+            copied = self.output / 'records' / record['path']
+            self.assertEqual(copied.stat().st_size, record['bytes'])
+            self.assertEqual(hashlib.sha256(copied.read_bytes()).hexdigest(), record['sha256'])
+        self.assertIn('not a legal classification', manifest['capture_scope'])
+
+    def test_package_revision_and_required_notice_fail_closed(self):
+        with self.assertRaisesRegex(RuntimeError, 'revision'):
+            self.capture.capture(self.root, self.output, '28.2.13676359', 16, 4096)
+        (self.root / 'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/NOTICE').unlink()
+        with self.assertRaisesRegex(FileNotFoundError, 'NOTICE'):
+            self.capture.capture(self.root, self.output, '28.2.13676358', 16, 4096)
+
+    def test_bounds_and_symlinked_records_fail_closed(self):
+        with self.assertRaisesRegex(RuntimeError, 'count exceeds'):
+            self.capture.capture(self.root, self.output, '28.2.13676358', 2, 4096)
+        with self.assertRaisesRegex(RuntimeError, 'byte bound'):
+            self.capture.capture(self.root, self.output, '28.2.13676358', 16, 1)
+        link = self.root / 'toolchains/llvm/prebuilt/linux-x86_64/clang-r530567/COPYING'
+        target = self.root / 'outside'
+        target.write_text('not in package')
+        link.symlink_to(target)
+        with self.assertRaisesRegex(RuntimeError, 'linked NDK term record'):
+            self.capture.capture(self.root, self.output, '28.2.13676358', 16, 4096)
