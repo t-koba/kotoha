@@ -132,26 +132,22 @@ Macros name the workspace, **not upstream**. The 1,000-byte preview of
 `e72a83ac2112285c565d1e8ac3f8544ec96b61e2dad0eaa09f0f85b3ddacf76d`) remains
 unparsed. This neither verifies the projection nor rebinds older inference/executable evidence.
 
-`compiler_reads.py` hashes unique source keys (`^source1|source2`) and reads
-from candidate-build `CL.read.*.tlog.txt`. Missing/empty/malformed tracking and
-missing/non-file/escaping/unmapped inputs fail closed; full UTF-8 tracking is
-retained. Required roots: source, generated build,
-MSVC (`vswhere`), SDK (Windows Kits registry), `--windows` (actual `$env:SystemRoot`,
-required; no blank/cwd/drive fallback). Canonical paths use the most specific
-nested root. Outputs use sorted UTF-8/LF `<lowercase SHA-256>  <lowercase path>\n`
-rows without runner paths:
+`compiler_reads.py` hashes keys (`^source1|source2`) and reads in retained UTF-8
+`CL.read.*.tlog.txt`, including source-only keys (pinned `ggml/src/ggml-cpu/hbm.cpp`,
+`GGML_USE_CPU_HBM` off). Missing/empty/malformed logs, reads before keys and
+missing/non-file/relative/traversing/escaping/unmapped inputs fail closed.
+Key-only records may be valid or truncated; record shape cannot prove whole-build completeness.
+Roots: source, generated, MSVC (`vswhere`), SDK (Windows Kits registry),
+`--windows` (actual `$env:SystemRoot`; no blank/cwd/drive fallback).
+Canonical most-specific roots; sorted UTF-8/LF:
+`<lowercase SHA-256>  <lowercase path>\n`, no private paths.
 
-- `source-sha256.txt`: selected archive-relative reads, not whole-archive hashes.
-- `generated-sha256.txt`: build-relative reads (Unity/version/etc.).
-- `toolchain-sha256.txt`: selected `msvc/`, `sdk/`, `windows/` provider reads.
-- `compiler-tracking-sha256.txt`: build-relative tracking digests.
-- `compiler-summary.txt`: source-key/total-input and source/model/header counts,
-  manifest/source-key hashes (same row format, `label/path` for source keys).
-
-OS environment/runtime reads (`windows/globalization/sorting/sortdefault.nls`,
-`windows/system32/tzres.dll`) need not be headers or compiled/linked code. Labels
-show provenance, not legal approval. Windows output evidence, Unity/read-set,
-provider terms and binary-member closure remain open.
+Outputs `*-sha256.txt`: `source` (selected archive-relative), `generated`
+(build-relative), `toolchain` (`msvc/`, `sdk/`, `windows/`), `compiler-tracking`
+(build-relative log hashes). `compiler-summary.txt`: source-key/input and
+source/model/header counts, manifest/key hashes (`label/path` keys).
+OS reads (sortdefault.nls/tzres.dll) need not be code; labels are provenance,
+not legal approval. Native capture, Unity/read-set, provider terms and binary-member closure remain open.
 
 ### Terms, provenance and notices
 

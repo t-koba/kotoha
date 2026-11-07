@@ -48,32 +48,35 @@ class CompilerReadsTest(unittest.TestCase):
     def test_selected_union_and_deterministic_manifests(self):
         self.put(self.source / 'unused.cpp', 'not selected')
         self.put(self.windows / 'unused.dll', 'not selected')
-        # BOM/CRLF, composite keys and repeated reads; uppercase on Windows only.
-        text = f'^{self.cpp}|{self.unity}\n{self.header}\n{self.version}\n{self.tool}\n{self.win}\n{self.nls}\n{self.tz}\n'
+        empty = self.put(self.source / 'src/empty.cpp', 'source-only')
+        # Source-only records, BOM/CRLF and composite keys.
+        text = f'^{empty}\n^{self.cpp}|{self.unity}\n{self.header}\n{self.version}\n{self.tool}\n{self.win}\n{self.nls}\n{self.tz}\n'
         if os.name == 'nt':
             text = text.upper()
         self.log.parent.mkdir(parents=True)
         self.log.write_bytes(('\ufeff' + text.replace('\n', '\r\n')).encode())
         other = self.put(self.generated / 'other/CL.read.2.tlog.txt',
-                         f'^{self.cpp}\n{self.header}\n{self.win}\n')
+                         f'^{self.cpp}\n{self.header}\n{self.win}\n^{empty}\n')
         outputs = capture(*self.roots)
-        self.assertEqual(outputs['source-sha256.txt'], self.source_rows)
+        self.assertEqual(outputs['source-sha256.txt'], self.source_rows + row(empty, 'src/empty.cpp'))
         self.assertEqual(outputs['generated-sha256.txt'], row(self.unity, 'unity/u.cxx') + row(self.version, 'version.h'))
         self.assertEqual(outputs['toolchain-sha256.txt'], row(self.tool, 'msvc/v/include/tool.h') + row(self.win, 'sdk/include/v/windows.h') +
                          row(self.nls, 'windows/globalization/sorting/sortdefault.nls') + row(self.tz, 'windows/system32/tzres.dll'))
         self.assertEqual(outputs['compiler-tracking-sha256.txt'], row(other, 'other/cl.read.2.tlog.txt') + row(self.log, 'target/release/cl.read.1.tlog.txt'))
-        source_keys = row(self.unity, 'generated/unity/u.cxx') + row(self.cpp, 'source/src/a.cpp')
+        source_keys = row(self.unity, 'generated/unity/u.cxx') + row(self.cpp, 'source/src/a.cpp') + row(empty, 'source/src/empty.cpp')
         fingerprint = hashlib.sha256(source_keys.encode()).hexdigest()
         self.assertIn(f'Compiler source-key manifest SHA256: {fingerprint}\n', outputs[SUMMARY])
-        self.assertIn('Unique compiler source keys: 2\n', outputs[SUMMARY])
-        self.assertIn('Unique compiler inputs (keys plus dependencies): 8\n', outputs[SUMMARY])
+        self.assertIn('Unique compiler source keys: 3\n', outputs[SUMMARY])
+        self.assertIn('Unique compiler inputs (keys plus dependencies): 9\n', outputs[SUMMARY])
         self.assertIn('windows: 2 inputs; 0 compiler source keys\n', outputs[SUMMARY])
         self.assertNotIn(str(self.base), ''.join(outputs.values()))
         # Reordering/repeating records changes raw evidence, not selected hashes.
         self.put(self.log, f'^{self.unity}|{self.cpp}\n{self.win}\n{self.tool}\n{self.version}\n{self.header}\n{self.header}\n{self.tz}\n{self.nls}\n')
+        self.put(other, f'^{empty}\n')  # Key-only log.
         repeated = capture(*self.roots)
         for name in MANIFESTS[:3]:
             self.assertEqual(outputs[name], repeated[name])
+        self.assertIn(f'Compiler source-key manifest SHA256: {fingerprint}\n', repeated[SUMMARY])
         self.assertNotEqual(outputs[MANIFESTS[3]], repeated[MANIFESTS[3]])
         self.assertEqual(identity(r'C:\SOURCE\src\A.cpp'), 'c:/source/src/a.cpp')
 
@@ -115,14 +118,15 @@ class CompilerReadsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             capture(*self.roots)
         outside = self.put(self.base / 'outside.h', 'unrelated provider')
-        for text in ('', '\n', '^\n', f'{self.header}\n', f'^{self.cpp}\n',
+        for text in ('', '\n', '\ufeff', '^\n', f'{self.header}\n',
+                     '^relative.cpp\n', f'^{outside}\n', f'^{self.windows}\n',
                      f'^{self.cpp}|\n{self.header}\n',
                      f'^{self.cpp}\nrelative.h\n',
                      f'^{self.cpp}\n{self.source}/../outside.h\n',
                      f'^{self.cpp}\n{outside}\n',
                      f'^{self.cpp}\n{self.windows}\n',
                      f'^{self.cpp}\n{self.source}/missing.h\n',
-                     f'^{self.source}/missing.cpp\n{self.header}\n'):
+                     f'^{self.source}/missing.cpp\n'):
             with self.subTest(text=text):
                 self.put(self.log, text)
                 with self.assertRaises((ValueError, OSError)):

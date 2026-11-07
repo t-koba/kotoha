@@ -64,23 +64,20 @@ def capture(source, generated, msvc, sdk, windows):
         if relative in tracking:
             raise ValueError('Ambiguous tracking path')
         tracking[relative] = digest(log)
-        active, reads = False, 0
+        active = False
         for line in log.read_text(encoding='utf-8-sig').splitlines():
             if not line:
                 continue
             if line.startswith('^'):
-                if active and not reads:
-                    raise ValueError('Compiler source key without read dependencies')
                 for raw in line[1:].split('|'):
                     compiled.add(select(raw))
-                active, reads = True, 0
+                active = True
             else:
                 if not active:
                     raise ValueError('Read dependency before compiler source key')
                 select(line)
-                reads += 1
-        if not active or not reads:
-            raise ValueError('Empty or incomplete compiler tracking evidence')
+        if not active:
+            raise ValueError('Empty compiler tracking evidence')
 
     source_rows, generated_rows, toolchain_rows = {}, {}, {}
     for key, value in selected.items():
