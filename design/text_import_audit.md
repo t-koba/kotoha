@@ -275,18 +275,27 @@ widget/editor path, not picker/reader overhead, dominates these small local
 profiles. This does not predict release or mobile behavior, nor justify a size
 limit; native target measurements are still required.
 
-### Opt-in hosted stage harness
+### Hosted profile workflow
 
-Manual `CI` dispatch accepts `profile_bytes` (empty by default: no profile).
-Only `65536`, `2097152`, and `16777216` are accepted; each stage rounds down to
-complete 1,021-byte synthetic lines (1,000 ASCII letters, Japanese/Arabic text,
-newline), and reports actual bytes. The 16 MiB ceiling is a profiling-fixture
-bound, not an application import limit. The optional editor trial rejects 16
-MiB because the earlier sandbox widget run did not complete and the sampled RSS
-watchdog is not a hard allocation limit; start with 64 KiB and review its
-headroom before opting into 2 MiB. Dispatch a fresh run for each size so peaks
-do not carry across sizes. These are debug test profiles, not release/device
-benchmarks.
+`CI` workflow dispatch defaults to `profile_bytes=65536` and
+`profile_editor=true`. An exact-publication VCS request carries no inputs and
+therefore runs the 64 KiB profile; ordinary push/PR jobs skip all profile
+stages. A direct GitHub workflow dispatch can clear `profile_bytes` to skip the
+profile stages, or keep a size selected and set `profile_editor=false` to skip
+only the macOS editor trial. The VCS request surface cannot override these
+defaults.
+
+Workflow validation accepts only `65536`, `2097152`, and `16777216`. The
+synthetic fixture repeats an exact 1,024-byte UTF-8 line (1,003 ASCII `a`
+bytes plus Japanese/Arabic text and newline), so each supported profile size is
+exact; the test rejects a request that would otherwise require rounding. For a
+nonempty size, Android and iOS jobs include native reader profiles, macOS and
+Windows run desktop decode profiles, and `profile_editor=true` adds the macOS
+editor stage. The 16 MiB ceiling is a profiling-fixture bound, not an
+application import limit. The editor trial rejects 16 MiB because the earlier
+sandbox widget run did not complete and the sampled RSS watchdog is not a hard
+allocation limit. Dispatch a fresh run for each size so peaks do not carry
+across sizes. These are debug test profiles, not release/device benchmarks.
 
 - Android `TextImportTest.testOptInNativeReadMemoryProfile` calls production
   `readDocument` through `ContentResolver` and a pipe-backed test-APK provider.
@@ -298,8 +307,9 @@ benchmarks.
   file in chunks, then calls production `TextDocumentReader` with real Foundation
   coordination/loading. XCTest logs include OS version, elapsed seconds, bytes
   and before/after process `ru_maxrss` (bytes on Darwin). The fixture is removed
-  with `defer`. The Debug setting is empty by default; the scheme passes the CI
-  build setting into tests. This is not an external-provider/scope measurement.
+  with `defer`. Outside profile dispatches the Debug setting is empty; the CI
+  workflow passes its selected profile bytes through the scheme into tests.
+  This is not an external-provider/scope measurement.
 - macOS and Windows run `tools/profile_text_import_test.dart` in fresh Flutter
   test processes for disk `XFile.readAsBytes` plus strict UTF-8 decode. JSON
   records OS/Dart runtime, bytes, code units, elapsed microseconds, current RSS
@@ -336,13 +346,16 @@ python3 tools/watch_import_profile.py --seconds 45 --rss-mib 1536 --poll-seconds
   --dart-define=PROFILE_BYTES=8192 --dart-define=PROFILE_STAGE=editor
 ```
 
-Local harness validation only: 8,168 bytes / 8,080 code units completed in both
-stages on Linux. Editor/decode smoke, wall-time clipping, SIGTERM child
-termination and fixture cleanup, RSS stop behavior, design validation (93/93),
-and all four watchdog tests passed (`df4421713bce4466b30c0bb5f052ee21`).
-These are not supported-platform memory evidence. A 768 MiB group budget
-stopped startup before measurement (`dfdf508b3eb542b4a1e53d4ab107f856`),
-demonstrating that the budget includes compilation, not only editor memory.
+Local harness validation only: the exact 65,536-byte fixture completed both
+decode and editor stages with 64,832 code units on Linux (commands
+`232346d9c81941dd929e7c75c8e6cb85` and
+`7b4a74c060944c9fbc49e47569fbeccf`). These debug runs validate fixture sizing
+and stage execution, not supported-platform memory behavior. Editor/decode
+smoke, wall-time clipping, SIGTERM child termination and fixture cleanup, RSS
+stop behavior, design validation (93/93), and all four watchdog tests passed
+(`df4421713bce4466b30c0bb5f052ee21`). A 768 MiB group budget stopped startup
+before measurement (`dfdf508b3eb542b4a1e53d4ab107f856`), demonstrating that the
+budget includes compilation, not only editor memory.
 
 All stage peaks are process-wide and may include startup, fixture preparation,
 framework work and unrelated allocations. Zero peak delta does not mean zero
