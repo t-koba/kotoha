@@ -90,7 +90,8 @@ cmake -S tools/engine_probe -B "$build" -G Ninja \
   > "$build/configure.log" 2>&1
 cmake --build "$build" --target llama-simple --parallel "$ENGINE_BUILD_JOBS" --verbose > "$build/build.log" 2>&1
 python3 tools/engine_probe/linker_map.py "$build/llama-simple.map.pending" \
-  --max-bytes "$ENGINE_LINKER_MAP_MAX_BYTES" --output-dir "$build/validated-linker-map"
+  --max-bytes "$ENGINE_LINKER_MAP_MAX_BYTES" --output-dir "$build/validated-linker-map" \
+  --build-root "$build" --ndk-root "$ndk"
 ninja -C "$build" -t deps > "$build/ninja-deps.txt"
 ninja -C "$build" -t commands llama-simple > "$build/selected-commands.txt"
 ninja -C "$build" -t query bin/llama-simple > "$build/link-inputs.txt"

@@ -3,26 +3,29 @@
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
 The latest completed native probe is exact publication
-`be0cb7c5e320ee13d609224f2d40a1f787a986ab4897fad54d28ad992e6dfb3e` (source commit
-`5fc562ac7ac7058bb4dc61f9368b6348ecffd3e8`, code digest
-`b2d2e57e5617ab532664f305462f5a101cc021c6c17cc6807e590217a7951f8b`, published SHA
-`4971f08d5555e69bd41e5a1e9b3c737f101284ff`). Both exact CI jobs passed:
-Android API 35 x86_64 CPU feasibility `128462384029` and Windows x64 CPU
-feasibility `128462384106`. Android's strict compiler-read capture now records 72
-compiled objects and 1,435 unique inputs; `android-selected-sha256.txt` is 207,842
-bytes (SHA-256 `7ca5b7ef9cd16b4d32b7ff320ee1da8336718d0c7d2f4bed979917f498b18941`)
-and `android-compiled-sha256.txt` is 7,599 bytes (SHA-256
-`399797e9bd52e0dd27c10c99fd64378f9a183f025f36cba0102e08ce507f05b3`). The emulator
-smoke used NDK `28.2.13676358`, LLVM 19.0.1, and Android 15/API 35 x86_64; it
-rejected missing/truncated GGUF and generated only the bounded synthetic sample
-`Bonjour.`. This remains developer feasibility evidence, not a product integration,
-quality, legal, device/ARM or release conclusion.
+`e9d1b9920dffbdb5825e5a0d8aa6751fc838b4e28fc2e575e104f9adc3c80464` (published SHA
+`e91f1c4218dbc3e69cee2bd1d122fcd2b43b3ead`). Both exact probe jobs passed:
+Windows x64 CPU feasibility `128479487945` and Android API 35 x86_64 CPU
+feasibility `128479488127`. Android's strict compiler-read capture records 72
+actual built objects, 72 source keys and 1,435 unique selected inputs. Its smoke
+used NDK `28.2.13676358`, LLVM 19.0.1 and Android 15/API 35 x86_64; it rejected
+missing/truncated GGUF and generated only the bounded synthetic sample `Bonjour.`.
 
-This checkout adds Android-only LLD link-map capture so the selected static archive
-members and compiler runtime can be inspected. That new map output is not yet backed
-by an exact CI run; until it is, no map or additional archive-member closure is
-claimed. The probe remains developer-only; Linux has no application host, and no
-physical-device or ARM coverage is inferred.
+The exact Android artifact's validated LLD map sidecar asserts 4,660,773 bytes
+and SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`.
+The VCS reader verified returned page digests and echoed the whole-file size/hash,
+but the complete map was not assembled and independently re-hashed. `link-inputs.txt`
+identifies `libllama.a`, `libggml.a`, `libggml-cpu.a` and `libggml-base.a`; inspected
+map rows include NDK `libc++_static.a`. `linkage.log` records ELF64 x86_64, interpreter
+`/system/bin/linker64` and direct imports `libc.so`, `libm.so` and `libdl.so`.
+The map is evidence for this developer `llama-simple` build only, not a product
+integration, full binary/legal closure, quality, ARM or physical-device conclusion.
+
+This workspace adds link-map-bound hashes and member names for every unique `.a`
+archive referenced by the Android LLD map. The manifest is staged with the map
+and digest as one atomic artifact; this change is not in the last successful exact
+probe publication, so its output still requires exact CI validation. The NDK
+archive hashes/terms and any separate `libc++abi.a` selection remain unverified.
 
 ## Pinned inputs and review
 
@@ -162,9 +165,9 @@ wait reaps the wrapper, and the host reaper collects orphaned children. Detached
 helpers, untrappable cancellation and runner loss rely on disposable runner
 teardown; no broad process-name kill or blind retry is used.
 
-The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default) and writes `llama-simple.map.sha256.json` with its exact byte size and SHA-256; no partial map is accepted. The map is raw linker output, not a normalized inventory: LLD map formatting and member attribution may vary, so inspect its exact archive/member rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. It supplements, but does not establish, complete runtime or legal closure.
+The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default). `linker_map.py` parses and hashes the map in one bounded pass, resolves every `.a(member)` row within the configured build or NDK root, hashes each unique regular archive, and stages `llama-simple.map`, its byte-size/SHA-256 sidecar and `llama-simple.map.archives.json` together before one directory rename. The archive manifest lists root-relative paths, exact archive sizes/digests and the member names named by the map; it does not prove source licensing or which sections survive. The map remains raw linker output, not a normalized inventory: inspect its exact rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. This new inventory needs an exact CI run before it is evidence; neither it nor the existing map establishes complete runtime or legal closure.
 
-The `android-api35-x86_64-engine-probe` artifact retains the linker map and its hash/size record alongside raw compile commands,
+The `android-api35-x86_64-engine-probe` artifact retains the linker map, its hash/size record and, on successful capture, the archive manifest alongside raw compile commands,
 verbose build log, Ninja commands/link inputs/log/dependency database, NDK version,
 compiler version/tool hashes, ELF headers/interpreter/NEEDED entries, executable
 hash, Unity units and generated `llama-version.h`/`ggml-version.h`. On-device
@@ -204,17 +207,7 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Current evidence limits:** the exact successful Android run demonstrates a
-strict selected compiler-read manifest and the native loader/inference smoke only.
-The 72 compiled objects are compiler units, not a complete list of surviving binary
-sections; the read manifest is not link membership or a legal conclusion. Runtime
-`NEEDED` providers are recorded separately. The new worktree-only LLD map is not
-included in that successful publication. Intrinsic branch applicability, full
-selected terms/notices, historical Unicode data provenance, the NDK static C++
-runtime closure, platform runtime terms and user-accessible notice delivery remain
-adoption gates for each platform independently. The probe establishes no app
-integration, ARM/physical-device coverage, resource cap, quality, performance,
-no-network/privacy, cancellation-in-app or release claim.
+**Current evidence limits:** exact publication `e9d1b9920dffbdb5825e5a0d8aa6751fc838b4e28fc2e575e104f9adc3c80464` includes the Android LLD map, its sidecar, strict selected compiler-read manifest and native loader/inference smoke. The 72 compiled objects are compiler units, not a complete list of surviving binary sections; the read manifest is not link membership or a legal conclusion. The exact map identifies archive-member rows, but its complete bytes were not independently assembled/re-hashed and the current publication has no hashes for those archive files; the new archive manifest awaits exact CI. Runtime `NEEDED` providers are recorded separately. Intrinsic branch applicability, full selected terms/notices, historical Unicode data provenance, the NDK static C++ runtime closure, platform runtime terms and user-accessible notice delivery remain adoption gates for each platform independently. The probe establishes no app integration, ARM/physical-device coverage, resource cap, quality, performance, no-network/privacy, cancellation-in-app or release claim.
 
 ## Selected-source and runtime audit
 
@@ -392,6 +385,31 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 | `src/llama-sampler.cpp` | `6313214bf0a4146036f3d62846299cba4fa9804757c353140a04de52130cf496` |
 | `src/unicode-data.cpp` | `5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29` |
 | `scripts/gen-unicode-data.py` | `a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55` |
+
+### Android selected runtime and delivery gate
+
+The exact Android API 35 x86_64 probe is publication
+`e9d1b9920dffbdb5825e5a0d8aa6751fc838b4e28fc2e575e104f9adc3c80464` / SHA
+`e91f1c4218dbc3e69cee2bd1d122fcd2b43b3ead`, job `128479488127`. `link-inputs.txt`
+selects static `libllama.a`, `libggml.a`, `libggml-cpu.a` and `libggml-base.a`; the
+LLD map includes NDK `libc++_static.a` rows. The map sidecar asserts size 4,660,773
+and SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`.
+The exact ELF output has `/system/bin/linker64` and direct `NEEDED` entries
+`libc.so`, `libm.so`, `libdl.so`; those names do not identify the runtime providers'
+versions, terms or redistribution rights. The map was read in verified pages but
+not fully assembled/re-hashed; the archive files themselves have no hashes in this
+publication. `libc++abi.a` is not asserted selected without an exact map row.
+
+The new probe implementation emits `llama-simple.map.archives.json`, containing
+the exact hash/size of every unique archive referenced in the map and its listed
+member names. That capture remains pending exact CI. NDK `28.2.13676358` r28c is the selected
+toolchain, but its actual static C++ archive identity, complete applicable license
+terms/notices and delivery path have not been established. Prior official Android
+license-source fetches were refused; do not infer NDK runtime terms from the
+compiler version or root llama.cpp MIT. Complete platform-provider/runtime review
+and a user-accessible notice action remain required before any app adoption. This
+is x86_64 emulator evidence only; it does not establish ARM, physical-device or
+system-image/OEM runtime behavior.
 
 ### Windows runtime and delivery gate
 
