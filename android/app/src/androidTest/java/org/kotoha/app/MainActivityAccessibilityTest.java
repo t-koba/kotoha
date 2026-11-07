@@ -2,6 +2,8 @@ package org.kotoha.app;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
@@ -11,6 +13,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Native accessibility bridge and synthesized keyboard input on the pinned emulator only.
@@ -21,6 +24,7 @@ import java.util.function.Predicate;
 public final class MainActivityAccessibilityTest
         extends ActivityInstrumentationTestCase2<MainActivity> {
     private UiAutomation automation;
+    private ClipboardManager clipboard;
     private long timeoutMillis;
     private long pollMillis;
 
@@ -43,7 +47,20 @@ public final class MainActivityAccessibilityTest
         service.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
                 | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
         automation.setServiceInfo(service);
-        getActivity();
+        clipboard = getActivity().getSystemService(ClipboardManager.class);
+        assertNotNull(clipboard);
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        try {
+            // Only synthetic test input is placed on the clipboard.
+            if (clipboard != null) {
+                getInstrumentation().runOnMainSync(() -> clipboard.clearPrimaryClip());
+            }
+        } finally {
+            super.tearDown();
+        }
     }
 
     public void testEnglishLanguageFields() {
@@ -58,9 +75,9 @@ public final class MainActivityAccessibilityTest
 
     private void checkLocale(String locale, String source, String sourceText,
             String target, String copy, String importSource) {
-        act("interface language menu", n -> named(n, "Interface language")
-                || named(n, "表示言語"), AccessibilityNodeInfo.ACTION_CLICK, null);
-        act(locale, n -> named(n, locale), AccessibilityNodeInfo.ACTION_CLICK, null);
+        click("interface language menu", n -> named(n, "Interface language")
+                || named(n, "表示言語"));
+        click(locale, n -> named(n, locale));
         // The selection rebuilds localized Flutter semantics asynchronously; wait
         // for that UI work before querying the native field tree.
         getInstrumentation().waitForIdleSync();
@@ -71,19 +88,20 @@ public final class MainActivityAccessibilityTest
     private void checkField(String id, String label, String nextId, String nextLabel,
             String interveningControl) {
         revealField(id);
-        act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_CLICK, null);
-        Bundle clear = new Bundle();
-        clear.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
-        act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_SET_TEXT, clear);
-        getInstrumentation().waitForIdleSync();
+        click(label, n -> field(n, id));
+        controlKey(KeyEvent.KEYCODE_A);
+        getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
         // Verify initial native input focus by sending real keyboard input rather than
         // relying on isFocused(), which is not consistently exposed for Flutter editors.
         getInstrumentation().sendStringSync("p");
         assertField(id, label, "p");
         for (String value : new String[] {"العربية", "Latin"}) {
-            Bundle text = new Bundle();
-            text.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
-            act(label, n -> field(n, id), AccessibilityNodeInfo.ACTION_SET_TEXT, text);
+            // Keyboard paste exercises the focused editor, not ACTION_SET_TEXT's
+            // optimistic semantics prediction, without a Unicode key-map dependency.
+            getInstrumentation().runOnMainSync(() ->
+                    clipboard.setPrimaryClip(ClipData.newPlainText("RTL test", value)));
+            controlKey(KeyEvent.KEYCODE_A);
+            controlKey(KeyEvent.KEYCODE_V);
             assertField(id, label, value);
             // No re-tap: input must still reach this field after its direction rebuild.
             getInstrumentation().sendStringSync("x");
@@ -92,17 +110,14 @@ public final class MainActivityAccessibilityTest
         // Verify the native forward traversal target. The import action is now
         // between the source-language and source-text controls; widget tests own
         // the complete forward/reverse sequence.
-        tabForward();
+        pressKey(KeyEvent.KEYCODE_TAB, 0);
         if (nextId != null) {
             if (interveningControl != null) {
                 awaitFocused(interveningControl);
-                tabForward();
+                pressKey(KeyEvent.KEYCODE_TAB, 0);
             }
-            Bundle clearNext = new Bundle();
-            clearNext.putCharSequence(
-                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "");
-            act(nextLabel, n -> field(n, nextId), AccessibilityNodeInfo.ACTION_SET_TEXT, clearNext);
-            getInstrumentation().waitForIdleSync();
+            controlKey(KeyEvent.KEYCODE_A);
+            getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
             getInstrumentation().sendStringSync("z");
             assertField(nextId, nextLabel, "z");
         } else {
@@ -110,12 +125,25 @@ public final class MainActivityAccessibilityTest
         }
     }
 
-    private void tabForward() {
+    private void controlKey(int keyCode) {
+        long now = SystemClock.uptimeMillis();
+        int meta = KeyEvent.META_CTRL_ON | KeyEvent.META_CTRL_LEFT_ON;
+        getInstrumentation().sendKeySync(
+                new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CTRL_LEFT, 0, meta));
+        try {
+            pressKey(keyCode, meta);
+        } finally {
+            getInstrumentation().sendKeySync(new KeyEvent(now, SystemClock.uptimeMillis(),
+                    KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT, 0, 0));
+        }
+    }
+
+    private void pressKey(int keyCode, int meta) {
         long now = SystemClock.uptimeMillis();
         getInstrumentation().sendKeySync(
-                new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB, 0, 0));
+                new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, meta));
         getInstrumentation().sendKeySync(
-                new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_TAB, 0, 0));
+                new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, meta));
     }
 
     private void awaitFocused(String label) {
@@ -169,11 +197,10 @@ public final class MainActivityAccessibilityTest
         fail("Native field unavailable after scrolling: " + id);
     }
 
-    private void act(String description, Predicate<AccessibilityNodeInfo> predicate,
-            int action, Bundle args) {
+    private void click(String description, Predicate<AccessibilityNodeInfo> predicate) {
         AccessibilityNodeInfo node = await(description, predicate);
         try {
-            assertTrue(description + " action " + action, node.performAction(action, args));
+            assertTrue(description + " click", node.performAction(AccessibilityNodeInfo.ACTION_CLICK));
         } finally {
             node.recycle();
         }
@@ -208,19 +235,10 @@ public final class MainActivityAccessibilityTest
     }
 
     private static String codePoints(String value) {
-        StringBuilder result = new StringBuilder("[");
-        int offset = 0;
-        int count = 0;
-        while (offset < value.length() && count < 32) {
-            int codePoint = value.codePointAt(offset);
-            if (count > 0) result.append(' ');
-            result.append("U+").append(Integer.toHexString(codePoint));
-            offset += Character.charCount(codePoint);
-            count++;
-        }
-        if (offset < value.length()) result.append(" …");
-        return result.append(']').append(" (scalars=")
-                .append(value.codePointCount(0, value.length())).append(')').toString();
+        return value.codePoints().limit(32)
+                .mapToObj(codePoint -> "U+" + Integer.toHexString(codePoint))
+                .collect(Collectors.joining(" ", "[", "]"))
+                + " (scalars=" + value.codePointCount(0, value.length()) + ")";
     }
 
     private AccessibilityNodeInfo await(String description,

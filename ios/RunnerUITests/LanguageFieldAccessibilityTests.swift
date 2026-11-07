@@ -6,11 +6,6 @@ import XCTest
 // own direction/caret policy and the complete forward/reverse Flutter focus order.
 final class LanguageFieldAccessibilityTests: XCTestCase {
   private let app = XCUIApplication()
-  private static let bidiFormattingControls: Set<UInt32> = [
-    0x061C, 0x200E, 0x200F,
-    0x202A, 0x202B, 0x202C, 0x202D, 0x202E,
-    0x2066, 0x2067, 0x2068, 0x2069,
-  ]
   // Test policy default, overridable in the Runner scheme/build setting.
   private var timeout: TimeInterval = 10
 
@@ -31,14 +26,28 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     app.terminate()
   }
 
-  func testEnglishLanguageFields() {
-    checkLocale("English", source: "Source language", sourceText: "Source text",
-                target: "Target language", translation: "Manual translation")
+  // Keep each locale/field sequence within the existing per-test execution budget.
+  func testEnglishSourceLanguageField() {
+    selectLocale("English")
+    checkField("source-language", label: "Source language", nextID: "source-text",
+               nextLabel: "Source text")
   }
 
-  func testJapaneseLanguageFields() {
-    checkLocale("日本語", source: "原文の言語", sourceText: "原文",
-                target: "訳先の言語", translation: "手入力した訳文")
+  func testEnglishTargetLanguageField() {
+    selectLocale("English")
+    checkField("target-language-0", label: "Target language", nextID: "translation-text-0",
+               nextLabel: "Manual translation")
+  }
+
+  func testJapaneseSourceLanguageField() {
+    selectLocale("日本語")
+    checkField("source-language", label: "原文の言語", nextID: "source-text", nextLabel: "原文")
+  }
+
+  func testJapaneseTargetLanguageField() {
+    selectLocale("日本語")
+    checkField("target-language-0", label: "訳先の言語", nextID: "translation-text-0",
+               nextLabel: "手入力した訳文")
   }
 
   func testImportChannelPresentsSystemPickerAndCancellationKeepsDraft() {
@@ -59,8 +68,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     }
   }
 
-  private func checkLocale(_ locale: String, source: String, sourceText: String,
-                           target: String, translation: String) {
+  private func selectLocale(_ locale: String) {
     let menu = app.buttons["Interface language"]
     XCTAssertTrue(menu.waitForExistence(timeout: timeout))
     menu.tap()
@@ -68,9 +76,6 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       NSPredicate(format: "label == %@", locale)).firstMatch
     XCTAssertTrue(choice.waitForExistence(timeout: timeout))
     choice.tap()
-    checkField("source-language", label: source, nextID: "source-text", nextLabel: sourceText)
-    checkField("target-language-0", label: target, nextID: "translation-text-0",
-               nextLabel: translation)
   }
 
   // A focused empty field can include its example hint in the label. Locate by
@@ -142,11 +147,10 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   }
 
   private func assertField(_ id: String, label: String, value: String) {
-    let expected = Self.withoutBidiFormattingControls(value)
     let state = NSPredicate { [self] _, _ in
       // Resolve the identity on each poll; Flutter can replace its semantics node
       // when the field direction changes from RTL to LTR.
-      matchesField(field(id), label: label, expected: expected)
+      matchesField(field(id), label: label, expected: value)
     }
     let expectation = XCTNSPredicateExpectation(predicate: state, object: nil)
     let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
@@ -155,7 +159,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       // UI reaches the expected state. Check one fresh snapshot without polling
       // again; the exact label/value remains the acceptance condition.
       let current = field(id)
-      if matchesField(current, label: label, expected: expected) {
+      if matchesField(current, label: label, expected: value) {
         return
       }
       // Keep failure details bounded while preserving scalar-level clues.
@@ -179,18 +183,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   private func matchesField(_ current: XCUIElement, label: String, expected: String) -> Bool {
     guard current.exists, current.isEnabled,
           let actual = current.value as? String else { return false }
-    // Some native accessibility bridges include bidi formatting controls in the
-    // exposed value. They change presentation, not the underlying editor text; the
-    // Flutter tests independently assert exact controller contents.
-    return current.label == label
-      && Self.withoutBidiFormattingControls(actual) == expected
-  }
-
-  private static func withoutBidiFormattingControls(_ text: String) -> String {
-    let scalars = text.unicodeScalars.filter {
-      !bidiFormattingControls.contains($0.value)
-    }
-    return String(String.UnicodeScalarView(scalars))
+    return current.label == label && actual == expected
   }
 
   private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
@@ -212,8 +205,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     // No re-tap through the RTL-to-LTR edit: delete the known RTL value, then type
     // Latin. The exact final value checks input focus survived both direction rebuilds.
     // This is input-focus evidence, not VoiceOver/accessibility focus.
-    app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "العربية".count))
-    app.typeText("Latin")
+    app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "العربية".count) + "Latin")
     assertField(id, label: label, value: "Latin")
     // Tap the next native field and verify it receives keyboard input. Flutter widget
     // tests separately cover keyboard traversal order; iPhone XCUI has no Tab key API.
