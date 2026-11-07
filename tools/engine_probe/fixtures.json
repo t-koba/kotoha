@@ -1,0 +1,9 @@
+{
+  "files": [
+    {
+      "sha256": "541aeea240dbceb48de352122b30a26ac32ec5fd936c62442037bf04310a0270",
+      "size": 39104147,
+      "url": "https://github.com/ggml-org/llama.cpp/archive/31424b7cf14604ca65a9195123da1413f31c4472.tar.gz"
+    }
+  ]
+}

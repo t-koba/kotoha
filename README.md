@@ -64,6 +64,9 @@ Flutter analysis and tests on pushes to `dev` and `mizu/dev`, pull requests, and
 manual dispatch. The `mizu` integration branch is excluded from automatic push
 runs; reviewed `mizu` publications use explicit exact-publication CI requests.
 The workflow also builds debug apps on Android, iOS/macOS, and Windows runners.
+A separate, path-scoped `Native engine probe` workflow runs on reviewed `mizu`
+publications with changed probe inputs; it builds an isolated Windows CPU candidate,
+not product inference. See `design/engine_probe.md` for its evidence and gates.
 On the same pinned mobile profiles used for privacy callback tests,
 native tests inspect localized source/target language-field names and values during
 Arabic-to-Latin edits under English and Japanese app UI locales, and check

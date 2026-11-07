@@ -1,0 +1,85 @@
+name: Native engine probe
+
+# Only changed probe/source inputs trigger this developer experiment.
+# Automatic runs on reviewed publications also provide exact-SHA evidence.
+on:
+  push:
+    branches: [mizu]
+    paths:
+      - .github/workflows/engine-probe.yml
+      - tools/engine_probe/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-cpu:
+    name: Windows x64 CPU feasibility
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      ENGINE_BUILD_JOBS: '2'
+      ENGINE_PROBE_TIMEOUT_SECONDS: '30'
+      ENGINE_PROBE_OUTPUT_BYTES: '8192'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Configure developer-only Windows x64 CPU engine probe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/engine-probe/.cmake/api/v1/query | Out-Null
+          New-Item -ItemType File -Force build/engine-probe/.cmake/api/v1/query/codemodel-v2 | Out-Null
+          cmake -S tools/engine_probe -B build/engine-probe -A x64 2>&1 | Tee-Object -FilePath build/engine-probe/configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build upstream llama-simple (not linked to Flutter)
+        shell: pwsh
+        run: |
+          cmake --build build/engine-probe --config Release --target llama-simple --parallel $env:ENGINE_BUILD_JOBS -- /verbosity:normal 2>&1 | Tee-Object -FilePath build/engine-probe/build.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Exercise actual missing and malformed GGUF loader
+        shell: pwsh
+        run: |
+          python tools/engine_probe/smoke.py --executable build/engine-probe/bin/Release/llama-simple.exe --timeout-seconds $env:ENGINE_PROBE_TIMEOUT_SECONDS --output-bytes $env:ENGINE_PROBE_OUTPUT_BYTES 2>&1 | Tee-Object -FilePath build/engine-probe/smoke.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record source manifest and executable linkage for review
+        if: always()
+        shell: pwsh
+        run: |
+          $source = Join-Path $pwd 'build/engine-probe/_deps/llama_cpp-src'
+          if (Test-Path $source) {
+            Get-ChildItem $source -File -Recurse | Sort-Object FullName | ForEach-Object {
+              $relative = [IO.Path]::GetRelativePath($source, $_.FullName).Replace('\', '/')
+              '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $relative
+            } | Set-Content build/engine-probe/source-sha256.txt
+          }
+          $exe = 'build/engine-probe/bin/Release/llama-simple.exe'
+          if (Test-Path $exe) {
+            $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+            $dumpbin = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC/Tools/MSVC/**/bin/Hostx64/x64/dumpbin.exe' | Select-Object -First 1
+            if (-not $dumpbin) { throw 'dumpbin not found; linkage evidence missing' }
+            & $dumpbin /HEADERS /DEPENDENTS $exe 2>&1 | Tee-Object -FilePath build/engine-probe/linkage.log
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            Get-FileHash $exe -Algorithm SHA256 | Format-List | Out-File build/engine-probe/executable-sha256.txt
+          }
+      - name: Retain developer engine build and audit inputs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-x64-engine-probe
+          include-hidden-files: true
+          path: |
+            tools/engine_probe/
+            build/engine-probe/*.log
+            build/engine-probe/*sha256.txt
+            build/engine-probe/CMakeCache.txt
+            build/engine-probe/CMakeFiles/CMakeConfigureLog.yaml
+            build/engine-probe/.cmake/api/v1/reply/
+            build/engine-probe/**/*.vcxproj
+            build/engine-probe/_deps/llama_cpp-src/**/CMakeLists.txt
+            build/engine-probe/_deps/llama_cpp-src/**/*.cmake
+            build/engine-probe/_deps/llama_cpp-src/**/LICENSE*
+            build/engine-probe/_deps/llama_cpp-src/**/COPYING*
+            build/engine-probe/_deps/llama_cpp-src/**/NOTICE*
