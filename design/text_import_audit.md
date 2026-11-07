@@ -108,6 +108,42 @@ root CMake plugin dispatch (`fetch/2f3df394cd29553a3d95c3fd3cefe0098c647951b1249
 `cmake/options.cmake` (`fetch/67049d4213f4c819ae92a1bb80a2d4edc6ed62e9c2a09fc01cc172861209aaf3`),
 and `.emb` build manifest (`fetch/d99c22e5ef246980c29530e770c27c65f35cf4c44ee26e077307203d6c6e348d`).
 
+### Alternative GTK-free host: Sony eLinux embedder (not adopted)
+
+A second concrete candidate is Sony's `flutter-embedded-linux` at repository
+revision `1653fa656bf9fe9fa5f84789a59b0c07671a8fc8` (the GitHub commit record
+dates it 2025-05-09). The README explicitly calls it a non-official,
+embedded-Linux-focused Flutter embedder, separate from the `flutter-elinux`
+SDK extension and `flutter-elinux-plugins`. It claims x64 and ARM64 support
+with Wayland or DRM backends; the support-status page lists x86_64 Ubuntu 20.04
+tests on Wayland, DRM, and X11. Its CMake also exposes Wayland, DRM-GBM,
+DRM-EGLStream, and X11 backend choices. The project describes a single-window,
+full-screen default (with flexible sizing on Wayland/X11). Its plugin API wiki
+lists Flutter channels, `BinaryMessenger`, `PluginRegistrar`, and
+`TextureRegistrar`; this is a plausible GTK-free engine host path, not proof of
+a Kotoha runner or import plugin. The exact repository `LICENSE` is BSD-3-Clause,
+whose terms fit the permissive dependency category.
+
+The exact repository's `build-test.yml` installs system packages and downloads
+`elinux-x64-release.zip` through a floating GitHub `releases/latest` URL without
+verifying a content digest. That recipe is not a pinned engine/toolchain input
+or a reproducible Kotoha build. The companion SDK and plugin repositories,
+feature-resolved dependency/license closure, platform runtime, and compatibility
+with Kotoha's pinned Flutter 3.47.9 have not been reviewed or tested. No
+Kotoha Linux plugin registration, read-in-place portal adapter, privacy or
+accessibility behavior, or supported CI path is demonstrated. Keep Linux
+unscaffolded; compare this candidate with the designed Engine + SDL/AccessKit
+host only after obtaining pinned artifacts, complete license/runtime closure,
+and reproducible integration evidence.
+
+Source evidence: repository commit record (`fetch/051309ebd8c3f99d38d6d605423dc43e695f7636482658a3ca40d979a8ef6b59`),
+README (`fetch/ab8865016d89ecefb9ae9bf3f230ec947f61b2bd4fe6ff476af68b3844194736`),
+exact BSD-3-Clause license (`fetch/69ff4894b1d51fc31050194608f699095837950ab93942a945da719555958e6e`),
+support matrix (`fetch/4e8ae1865a278105efc7569776eff511581deb4582cd3376b9263f45b6148c64`),
+plugin API wiki (`fetch/7898c6750057c6da88a0bcb4c336535966a640d317009ca6c33fe797ffd46d7e`),
+CMake (`fetch/54004f08dd017d99ae937300f3dd48a8912b8cdfcba78033661dcec59e45e0db`),
+and build workflow (`fetch/ec8059f79fdfe7b09be58161b097cca16d889ee472a8c261e01f87bdcce60f9b`).
+
 ## GTK-free Linux portal candidate (not adopted)
 
 The repository intentionally has no Linux Flutter runner until the designed
