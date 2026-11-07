@@ -71,11 +71,42 @@ Flutter's generic embedder C API and Linux GTK `FlView` are distinct
 (`273690fb58153d725062db635bc7357e20a18da1e26cb9862181b69ebb2a1cef`,
 `aa721ddb2009177bc3f918b7b31c7288f017cf3e929376b87cc957f5b13cef4f`).
 
-Kotoha's dependency manifest currently names macOS/Windows selector packages
-and the shared selector interface, not the umbrella or Linux GTK selector.
-Even with this host, Linux import would still need a separately reviewed
-read-in-place adapter. The XDG portal candidate below remains unverified and
-is not enabled.
+Kotoha has no Linux picker registered or exposed in the UI. `lib/main.dart`
+shows the import action only on macOS, Windows, Android, and iOS. The picker
+routes Android/iOS through Kotoha's `org.kotoha/text_import` channel and routes
+other targets through `FileSelectorPlatform.openFile`; `pubspec.yaml` declares
+only the macOS and Windows selector implementations plus their shared interface.
+A future Linux UI would therefore need a Linux implementation registered for
+that platform interface, not just an embedder. Kotoha's explicit export action
+is also limited to macOS/Windows.
+
+The candidate's documented plugin surfaces do not supply that adapter.
+`docs/PLUGIN_ABI.md` describes `ihs_shared` as a C ABI for logging, tracing,
+surface negotiation, and configuration; it explicitly does not provide a
+Flutter registrar or messenger. The document identifies the separate
+`FlutterDesktopPluginRegistrar`/messenger surface for in-tree or statically
+registered Flutter plugins. The public `flutter_homescreen.h` declares a
+registrar lookup by engine and unique plugin name and includes the messenger
+and registrar headers. This is a host API a future Kotoha plugin would need to
+integrate with, not a ready Kotoha file-picker implementation; no compatible
+Linux `FileSelectorPlatform` implementation or `org.kotoha/text_import`
+handler has been verified. Its `.emb` manifest sets
+`DISABLE_PLUGINS=ON`. At this exact source, `cmake/options.cmake` maps that to
+`ENABLE_PLUGINS=OFF`, and the root `CMakeLists.txt` skips the configured
+`PLUGINS_DIR` and `EXT_PLUGINS_DIRS`; the core homescreen host is still added.
+Thus the manifest does not demonstrate a Kotoha picker or plugin path. A Linux
+target would need an explicit plugin-enabled build configuration, a separately
+reviewed non-GTK adapter, and a demonstrated registration and method-channel
+path before any import action is exposed.
+
+The XDG portal candidate below remains unverified and is not enabled. Source
+references: Kotoha `lib/main.dart`, `lib/text_document_picker.dart`, and
+`pubspec.yaml`; candidate architecture (`fetch/0f37147b15dc9ef0a6b37704f86a54b9e157a3d6ae415b4464a7fd8c3107c907`),
+plugin ABI at exact v3.0 commit (`fetch/d7f24b683aef2ad815e1aee8a706ccb23e8d607e2f0fcef5d5c1bbb0195237e5`),
+public host plugin header (`fetch/58aa7945afabd0ee0c21d51bc2bfa1a002f18f339301998ea4679b379bed3dc7`),
+root CMake plugin dispatch (`fetch/2f3df394cd29553a3d95c3fd3cefe0098c647951b12497a733508a9373b0d2ce`),
+`cmake/options.cmake` (`fetch/67049d4213f4c819ae92a1bb80a2d4edc6ed62e9c2a09fc01cc172861209aaf3`),
+and `.emb` build manifest (`fetch/d99c22e5ef246980c29530e770c27c65f35cf4c44ee26e077307203d6c6e348d`).
 
 ## GTK-free Linux portal candidate (not adopted)
 
