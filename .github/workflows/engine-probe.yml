@@ -19,14 +19,25 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 15
     env:
+      PYTHONDONTWRITEBYTECODE: '1'
       ENGINE_BUILD_JOBS: '2'
-      ENGINE_PROBE_TIMEOUT_SECONDS: '30'
+      ENGINE_PROBE_TIMEOUT_SECONDS: '180'
       ENGINE_PROBE_OUTPUT_BYTES: '8192'
+      ENGINE_PROBE_TOKENS: '16'
+      ENGINE_DOWNLOAD_TIMEOUT_SECONDS: '300'
+      # Explicit acceptance of the reviewed complete terms for this developer test ONLY.
+      ENGINE_ACCEPT_TERMS_SHA256: '832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e'
+      ENGINE_MODEL_DIR: ${{ runner.temp }}/kotoha-engine-model
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check Python validation and output boundaries (synthetic files, not inference)
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tools/engine_probe -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Configure developer-only Windows x64 CPU engine probe
         shell: pwsh
         run: |
@@ -39,11 +50,37 @@ jobs:
         run: |
           cmake --build build/engine-probe --config Release --target llama-simple --parallel $env:ENGINE_BUILD_JOBS -- /verbosity:normal 2>&1 | Tee-Object -FilePath build/engine-probe/build.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Exercise actual missing and malformed GGUF loader
+      - name: Acquire only the reviewed public test fixtures outside the workspace
         shell: pwsh
         run: |
-          python tools/engine_probe/smoke.py --executable build/engine-probe/bin/Release/llama-simple.exe --timeout-seconds $env:ENGINE_PROBE_TIMEOUT_SECONDS --output-bytes $env:ENGINE_PROBE_OUTPUT_BYTES 2>&1 | Tee-Object -FilePath build/engine-probe/smoke.log
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path $env:ENGINE_MODEL_DIR | Out-Null
+          $manifest = Get-Content -Raw tools/engine_probe/model/fixtures.json | ConvertFrom-Json
+          $prefix = 'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/'
+          $names = @('LICENSE', 'README.md', 'qwen2.5-0.5b-instruct-q4_k_m.gguf')
+          if ($manifest.files.Count -ne $names.Count) { throw 'Unexpected fixture count' }
+          foreach ($file in $manifest.files) {
+            if ($file.url -cnotin @($names | ForEach-Object { $prefix + $_ })) { throw 'Unreviewed fixture URL' }
+            if ($file.sha256 -cnotmatch '^[0-9a-f]{64}$') { throw 'Invalid fixture digest' }
+            $path = Join-Path $env:ENGINE_MODEL_DIR $file.sha256
+            Invoke-WebRequest -Uri $file.url -OutFile $path -TimeoutSec $env:ENGINE_DOWNLOAD_TIMEOUT_SECONDS
+            if ((Get-Item $path).Length -ne $file.size) { throw 'Fixture size mismatch' }
+            $hash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($hash -cne $file.sha256) { throw 'Fixture SHA256 mismatch' }
+            Write-Output ('Acquired and verified: ' + ($file | ConvertTo-Json -Compress))
+          }
+      - name: Exercise real loader rejections and consent-bound public translation smoke
+        shell: pwsh
+        run: |
+          python tools/engine_probe/smoke.py --executable build/engine-probe/bin/Release/llama-simple.exe --timeout-seconds $env:ENGINE_PROBE_TIMEOUT_SECONDS --output-bytes $env:ENGINE_PROBE_OUTPUT_BYTES --fixture-dir $env:ENGINE_MODEL_DIR --accept-terms-sha256 $env:ENGINE_ACCEPT_TERMS_SHA256 --tokens $env:ENGINE_PROBE_TOKENS 2>&1 | Tee-Object -FilePath build/engine-probe/smoke.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Remove downloaded test weights, complete terms and card
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path $env:ENGINE_MODEL_DIR) {
+            Remove-Item -LiteralPath $env:ENGINE_MODEL_DIR -Recurse -Force -ErrorAction Stop
+          }
       - name: Record source manifest and executable linkage for review
         if: always()
         shell: pwsh
