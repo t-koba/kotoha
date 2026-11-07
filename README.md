@@ -58,9 +58,11 @@ python3 design/specs/validate_specs.py
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs the design-contract validator, Dart formatting,
-Flutter analysis and tests on pushes to `dev`, `mizu`, or `mizu/dev`, pull requests,
-and manual dispatch. It also builds debug apps on Android, iOS/macOS, and Windows
-runners. On the same pinned mobile profiles used for privacy callback tests,
+Flutter analysis and tests on pushes to `dev` and `mizu/dev`, pull requests, and
+manual dispatch. The `mizu` integration branch is excluded from automatic push
+runs; reviewed `mizu` publications use explicit exact-publication CI requests.
+The workflow also builds debug apps on Android, iOS/macOS, and Windows runners.
+On the same pinned mobile profiles used for privacy callback tests,
 native tests inspect localized source/target language-field names and values during
 Arabic-to-Latin edits under English and Japanese app UI locales, and check
 synthesized text input/focus continuity (Android also checks forward/reverse Tab).
