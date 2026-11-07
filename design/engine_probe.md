@@ -3,10 +3,12 @@
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
 Windows x64 has retained native build/inference evidence. Android is the next
-core feasibility target: **API 35, default x86_64 hosted emulator only**. Its job
-and transport are implemented, but no exact-publication Android native run has
-been observed yet. Neither probe adopts an engine into the app. Linux has no
-application host; no ARM or physical-device coverage is inferred.
+core feasibility target: **API 35, default x86_64 hosted emulator only**. The
+first exact-publication Android job failed during CMake target validation, before
+compilation or device execution; the guard now checks the explicit API/ABI/STL
+inputs, and its next exact-publication native run is pending. Neither probe adopts
+an engine into the app. Linux has no application host; no ARM or physical-device
+coverage is inferred.
 
 ## Pinned inputs and review
 
@@ -197,27 +199,32 @@ no-network/privacy, cancellation-in-app or release claim.
 
 ### Exact experiment and selected inputs
 
-The [automatic Windows capture](https://github.com/t-koba/kotoha/actions/runs/42373381668/job/128405915232)
-passed at published SHA `8b6b675c0c3ddb8859059fa6eb390cf260db4b23`.
-Current artifacts under `windows-x64-engine-probe/build/engine-probe/`:
+The latest [automatic Windows capture](https://github.com/t-koba/kotoha/actions/runs/42384608530/job/128439253106)
+passed at exact published SHA `ef16f3cbc8a9d802ab7d676f6ec41cf93f275911`
+(publication `f679d5f55a5932db170300e9ed6fcb42949c877b37d84a81b7fbfbb25bee00c2`).
+The paired Android job at that SHA failed before compilation at CMake target
+guard validation; that is not Android native evidence. Current artifacts under
+`windows-x64-engine-probe/build/engine-probe/`:
 
 | Retained file | Bytes / represented inputs | SHA-256 |
 | --- | --- | --- |
 | `source-sha256.txt` | 27,243 / 302 archive files: 237 C/C++ (including 176 model files), 65 headers | `faf08d710aacca675ffbebd3470592a9ae0efda170d6b4657fcb62fad446eb2c` |
-| `generated-sha256.txt` | 1,420 / 11 Unity units and 2 version headers | `86df47968cb693e08242ee0cc734819e94c00502f52254f3d0944587e3143d36` |
-| `compiler-summary.txt` | 1,022 / 72 source keys, 581 represented inputs: source 302, generated 13, MSVC 141, SDK 123, Windows 2; 5 tracking logs hashed separately | `a718e4643e5051dc2d444121d1252de869c0c8a1842a26f61a8d438e64dadfbe` |
+| `generated-sha256.txt` | 1,420 / 11 Unity units and 2 version headers | `878e6081ada8c2be995b98bf382e7b30b3e27c3d77e0cd469e36688ddca9547f` |
+| `compiler-summary.txt` | 1,022 / 72 source keys, 581 represented inputs: source 302, generated 13, MSVC 141, SDK 123, Windows 2; 5 tracking logs hashed separately | `3e641af006b845ff846f35ab079d66a9962acb7378d98bb2fa343a6b95612522` |
+| `smoke.log` | 10,610 / pinned-fixture validation, loader rejections and one synthetic inference sample | `c38c28a073b4e8b64971c0395685a09636bc6e6e1c27ee22e677abe4380d8736` |
+| `linkage.log` | 6,588 / x64 PE headers and direct imports | `6c37378410ba3ab8d5f7b3bde7adeeece15fd33bfeb13bebbb06a87402660285` |
 
-Both complete manifests and all 13 generated files were read at that SHA.
-Independent hashing of all 302 selected regular, nonlink archive members and
-UTF-8/LF assembly of their sorted hash/path pairs matched the actual manifest's
-full length and SHA-256. Traversal/casefold ambiguity guards found no collisions
-when matching Windows-canonicalized keys. No engine source was configured or run.
+The latest source-manifest digest is unchanged from the independently checked
+302-file archive manifest. All 11 raw Unity units and both version headers were
+read at this SHA and matched the 13-entry generated manifest. Each Unity unit
+includes 16 model files: **176 unique inclusions**, matching the model entries
+in the unchanged source manifest and the pinned archive's complete
+`src/models/*.cpp` set. The archive-manifest review hashed all 302 selected
+regular, nonlink members, matched their sorted UTF-8/LF hash/path projection, and
+found no Windows-canonicalized traversal/casefold collisions. This independent
+source check and the actual CI build are separate evidence.
 
-All 11 raw CRLF `src/CMakeFiles/llama.dir/Unity/unity_{0..10}_cxx.cxx`
-files beneath `_deps/llama_cpp-build/` matched their generated-manifest hashes.
-Each includes 16 model files: **176 unique inclusions**, exactly the actual source
-manifest's model set and the pinned archive's complete `src/models/*.cpp` glob,
-with no unexpected or omitted models. The pinned
+The pinned
 [`src/CMakeLists.txt`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/src/CMakeLists.txt)
 selects these models, not only Qwen2, and 33 separately compiled core files.
 The 72 compile units project to 237 archive C/C++ files: llama 33 core + 176
@@ -229,11 +236,11 @@ The source-only `ggml/src/ggml-cpu/hbm.cpp` key is included, hash
 it does not imply additional dependencies. AMX/HBM/tiled files are represented
 regardless of whether their conditional bodies survive preprocessing.
 
-Both version headers also matched: `src/llama-version.h` declares `0.9.0-dev`,
-`ggml/src/ggml-version.h` declares `0.29.0`, and both commit macros say
-`8b6b675`: the **workspace**, not upstream. Generated-manifest keys lowercase
-`CMakeFiles`/`Unity`; artifact paths retain case. The summary's source-key
-fingerprint is `1bdca7142f8c67bf78ee76e00d819a86b4a2f09542828645ba859913d857d5d2`.
+Both current version headers declare llama `0.9.0-dev` and ggml `0.29.0`,
+with commit macros `ef16f3c` (the published probe source, not the pinned upstream
+llama.cpp commit). Generated-manifest keys lowercase `CMakeFiles`/`Unity`;
+artifact paths retain case. The summary's source-key fingerprint is
+`1bdca7142f8c67bf78ee76e00d819a86b4a2f09542828645ba859913d857d5d2`.
 
 `compiler_reads.py` hashes UTF-8 tracking-log keys and reads, including source-only
 keys; missing/empty/malformed logs and missing, non-file, relative, traversing,
@@ -243,14 +250,15 @@ source, generated, MSVC (`vswhere`), SDK (registry) and Windows (required actual
 (sortdefault.nls/tzres.dll) need not be code; labels are not legal approval.
 Key-only records may be valid or truncated: shape alone cannot prove completeness.
 
-The earlier [Windows inference probe](https://github.com/t-koba/kotoha/actions/runs/42362657964/job/128374088969)
-at SHA `5553a4a6d749ffdc4d8e30b227bfacb3d0c32143` retains `smoke.log` evidence
-for three fixture pins, both loader rejections and generated-only `Bonjour.`;
-executable SHA-256 `c4ea7c3feb2f220c7387c247810f287c896929aa2af77156f9d8ee0c5b9c1e9f`.
-Its build/file-API evidence selects static llama/ggml/ggml-cpu/ggml-base and
-simple, not common/vendor/optional backend libraries. MSVC 14.51.36231 uses
-`/MD` (dynamic CRT); default import libraries alone do not prove DLL imports.
-This older executable/inference evidence is **not rebound** by the later capture.
+At the same exact publication, `smoke.log` records the complete pinned model
+terms/card/weight checks, real-loader rejection of missing and truncated GGUFs,
+and one generated-only `Bonjour.` sample; it is not a language or quality
+evaluation. `executable-sha256.txt` records the tested executable as
+`6e697bcc371771d7a0a97947c7c4db110902d8992a9fdd4ee6666edd7d07e881`. Its
+file-API evidence selects static llama/ggml/ggml-cpu/ggml-base and the simple
+consumer, not common/vendor/optional backend libraries. The exact captured PE
+imports below provide runtime-provider evidence for this build, not license or
+redistribution approval.
 
 Verified compiler reads and source/Unity projection are not surviving binary
 membership, actual intrinsic preprocessing, complete static-provider/runtime
@@ -349,8 +357,8 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 
 ### Windows runtime and delivery gate
 
-Retained `linkage.log` (SHA-256
-`739a4c820e2493d1f958f6cd6d9e43ad3abcf664757360c5085ece9fc65683ab`)
+The latest retained `linkage.log` (SHA-256
+`6c37378410ba3ab8d5f7b3bde7adeeece15fd33bfeb13bebbb06a87402660285`)
 identifies x64 PE direct imports:
 `KERNEL32.dll`, `ADVAPI32.dll`, `MSVCP140.dll`, `VCRUNTIME140.dll`,
 `VCRUNTIME140_1.dll`, and `api-ms-win-crt-` contracts for runtime, stdio, locale,
