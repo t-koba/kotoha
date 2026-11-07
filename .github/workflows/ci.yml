@@ -267,6 +267,23 @@ jobs:
           --dart-define=PROFILE_BYTES="$PROFILE_BYTES" --dart-define=PROFILE_STAGE=editor
       - name: Build unsigned macOS app
         run: flutter build macos --debug --no-pub
+      - name: Probe macOS native export panel through XCUI
+        timeout-minutes: 5
+        env:
+          MACOS_PANEL_TIMEOUT_SECONDS: '15'
+          MACOS_UI_TEST_TIMEOUT_SECONDS: '30'
+        run: |
+          set -euo pipefail
+          # Xcode strips TEST_RUNNER_ when forwarding environment to the test process.
+          TEST_RUNNER_KOTOHA_PANEL_TIMEOUT_SECONDS="$MACOS_PANEL_TIMEOUT_SECONDS" \
+          xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner \
+            -configuration Debug -sdk macosx \
+            -destination "platform=macOS" -destination-timeout 60 \
+            -only-testing:RunnerUITests/NativeExportPanelUITests/testNativeSavePanelIsAccessibleAndCancelPreservesDraft \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance "$MACOS_UI_TEST_TIMEOUT_SECONDS" \
+            -maximum-test-execution-time-allowance "$MACOS_UI_TEST_TIMEOUT_SECONDS" \
+            CODE_SIGN_IDENTITY="-"
 
   windows:
     name: Windows debug build
