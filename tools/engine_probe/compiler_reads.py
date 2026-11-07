@@ -28,12 +28,15 @@ def manifest(rows):
     return ''.join(f'{value}  {key}\n' for key, value in sorted(rows.items()))
 
 
-def capture(source, generated, msvc, sdk):
+def capture(source, generated, msvc, sdk, windows):
+    identity(windows)  # Never resolve a missing/relative OS root against the cwd.
     roots = {name: path.resolve(strict=True) for name, path in
-             zip(('source', 'generated', 'msvc', 'sdk'), (source, generated, msvc, sdk))}
+             zip(('source', 'generated', 'msvc', 'sdk', 'windows'),
+                 (source, generated, msvc, sdk, windows))}
     scopes = {identity(path): name for name, path in roots.items()}
-    if len(scopes) != len(roots) or not all(path.is_dir() for path in roots.values()):
-        raise ValueError('Configured provider roots must be distinct directories')
+    if (len(scopes) != len(roots) or not all(path.is_dir() for path in roots.values())
+            or roots['windows'].parent == roots['windows']):
+        raise ValueError('Provider roots must be distinct directories; Windows root cannot be a drive root')
     # A nested generated root wins over any enclosing source/provider root.
     scopes = sorted(scopes.items(), key=lambda item: len(item[0]), reverse=True)
     selected, compiled, tracking = {}, set(), {}
@@ -111,7 +114,7 @@ def capture(source, generated, msvc, sdk):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('source', 'generated', 'msvc', 'sdk', 'output'):
+    for name in ('source', 'generated', 'msvc', 'sdk', 'windows', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
@@ -119,7 +122,7 @@ def main():
     for name in (*MANIFESTS, SUMMARY):
         (args.output / name).unlink(missing_ok=True)
     try:
-        outputs = capture(args.source, args.generated, args.msvc, args.sdk)
+        outputs = capture(args.source, args.generated, args.msvc, args.sdk, args.windows)
         for name, text in outputs.items():
             (args.output / name).write_text(text, encoding='utf-8', newline='\n')
     except (OSError, ValueError) as error:

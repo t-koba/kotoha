@@ -89,20 +89,18 @@ simulated inference.
 
 [Windows CPU probe](https://github.com/t-koba/kotoha/actions/runs/42362657964/job/128374088969)
 at published SHA `5553a4a6d749ffdc4d8e30b227bfacb3d0c32143` built the candidate.
-Retained `smoke.log` verifies all three fixture pins, both loader rejections and
-prompt-separated `Bonjour.`; this remains developer feasibility only.
+`smoke.log` verifies three fixture pins, both loader rejections and generated-only
+`Bonjour.`; feasibility only.
 Executable SHA-256:
 `c4ea7c3feb2f220c7387c247810f287c896929aa2af77156f9d8ee0c5b9c1e9f`.
 
-Artifact paths below are relative to
-`windows-x64-engine-probe/build/engine-probe/` at that SHA. Actual `build.log`
-commands and file-API `target-llama-simple-Release-41f60bf4e9c1988c2228.json`
-select four static engine libraries: `llama`, `ggml`, `ggml-cpu`, `ggml-base`,
-plus `examples/simple/simple.cpp`; no vendor-hash/common/optional backend library.
-MSVC 14.51.36231 uses `/MD` (dynamic CRT). Default Windows import-library inputs
-are `kernel32 user32 gdi32 winspool shell32 ole32 oleaut32 uuid comdlg32 advapi32`;
-these are not all surviving DLL imports. Configured-but-unlinked targets do not
-belong to this link closure.
+Artifacts under `windows-x64-engine-probe/build/engine-probe/` at that SHA:
+`build.log` and file-API `target-llama-simple-Release-41f60bf4e9c1988c2228.json`
+select static `llama`, `ggml`, `ggml-cpu`, `ggml-base` and `examples/simple/simple.cpp`,
+not vendor-hash/common/optional backend libraries or configured-but-unlinked targets.
+MSVC 14.51.36231: `/MD` (dynamic CRT). Import-library defaults
+`kernel32 user32 gdi32 winspool shell32 ole32 oleaut32 uuid comdlg32 advapi32`
+do not prove DLL imports.
 
 | Target | Actual compiled translation units / archive source projection |
 | --- | --- |
@@ -112,60 +110,47 @@ belong to this link closure.
 | `ggml` | `ggml/src/ggml-backend-dl.cpp`, `ggml/src/ggml-backend-reg.cpp` (compiled even with dynamic backends disabled) |
 | `llama-simple` | `examples/simple/simple.cpp` |
 
-This is 72 actual compile units and an **intended 237-file archive-source
-projection**, not a complete preprocessed/header or binary-member closure.
-AMX/HBM/tiled filenames must not be discarded based on cache booleans: they
-were compiled with conditional implementations. SHA-256 of the projected set is
-`97c258eaed98d7f95ba8b67c123136da6e54008efeaab4f79d804aa04a8cfb10`:
-serialize sorted archive-relative paths as `<lowercase file SHA-256>  <path>\n`,
-UTF-8/LF. This compact fingerprint binds the table's projection without copying
-the unrelated whole-archive manifest.
+72 actual compile units project to **237 intended archive files**, not header or
+binary-member closure. AMX/HBM/tiled compiled conditionally; cache booleans cannot
+exclude them. The projection matches retained file-API/MSBuild commands to the
+pinned archive. Set SHA-256 `97c258eaed98d7f95ba8b67c123136da6e54008efeaab4f79d804aa04a8cfb10`
+uses sorted archive-relative `<lowercase SHA-256>  <path>\n`, UTF-8/LF.
+A lexical scan's 84 extra quoted includes are a superset, not selected reads.
 
-The source projection comes from retained file-API/MSBuild inputs and actual
-build commands, matched against the pinned archive. A lexical scan found 84
-additional quoted includes: a conditional superset, not selected-header evidence.
-
-A later [Windows capture](https://github.com/t-koba/kotoha/actions/runs/42365199694/job/128381686713)
-at SHA `f7fe5b270e533902acef493f34aa8e9c5b417de0` completed successfully at
-10:48:14Z on 2026-11-07. Only the first Unity file and two configured headers
-have been fully read:
+[Windows capture](https://github.com/t-koba/kotoha/actions/runs/42365199694/job/128381686713)
+`f7fe5b270e533902acef493f34aa8e9c5b417de0`; fully read files:
 
 | Retained file | Observed content | SHA-256 |
 | --- | --- | --- |
-| `unity_0_cxx.cxx` | 16 actual model includes, afmoe through clef | `6007c5e57ce9b7b2c24c36aadb0a997417705a402a6f5ce1dfa200a396fe64d2` |
+| `unity_0_cxx.cxx` | 16 model includes, afmoe through clef | `6007c5e57ce9b7b2c24c36aadb0a997417705a402a6f5ce1dfa200a396fe64d2` |
 | `llama-version.h` | `LLAMA_VERSION 0.9.0-dev`, `LLAMA_COMMIT f7fe5b2` | `b9e4c5390266e46488e48ad05eb93d7ae12ae85a3f09c4dc9ba508610d64c692` |
 | `ggml-version.h` | `GGML_VERSION 0.29.0`, `GGML_COMMIT f7fe5b2` | `839c6d923428164b617e02b2c81400850f75ebef0cfc2072bcef513507734b6f` |
 
-These commit macros name the enclosing workspace, **not** the pinned upstream
-revision; they cannot establish engine provenance. A 1,000-byte preview of the
-UTF-8 `llama.dir/Release/llama.tlog/CL.read.1.tlog.txt` confirms source and
-MSVC 14.51.36231 / Windows SDK 10.0.26100.0 header paths. The complete file is
-600,419 bytes, SHA-256
-`e72a83ac2112285c565d1e8ac3f8544ec96b61e2dad0eaa09f0f85b3ddacf76d`;
-it has not been fully parsed. The intended 237-file projection is not verified
-closure, and this capture does not rebind older inference/executable evidence.
+Macros name the workspace, **not upstream**. The 1,000-byte preview of
+`llama.dir/Release/llama.tlog/CL.read.1.tlog.txt` shows source/MSVC 14.51.36231/SDK
+10.0.26100.0 headers. The 600,419-byte log (SHA-256
+`e72a83ac2112285c565d1e8ac3f8544ec96b61e2dad0eaa09f0f85b3ddacf76d`) remains
+unparsed. This neither verifies the projection nor rebinds older inference/executable evidence.
 
-For the **next Windows run**, `compiler_reads.py` replaces whole-archive hashing
-with the deduplicated union of compiler source keys (`^source1|source2`) and read
-dependencies across candidate-build `CL.read.*.tlog.txt` files. Missing/empty or
-malformed tracking, missing files and unmapped paths fail the audit step; complete
-converted UTF-8 tracking stays retained. New outputs use sorted lowercase paths,
-`<SHA-256>  <path>\n`, UTF-8/LF, without absolute runner paths:
+`compiler_reads.py` hashes unique source keys (`^source1|source2`) and reads
+from candidate-build `CL.read.*.tlog.txt`. Missing/empty/malformed tracking and
+missing/non-file/escaping/unmapped inputs fail closed; full UTF-8 tracking is
+retained. Required roots: source, generated build,
+MSVC (`vswhere`), SDK (Windows Kits registry), `--windows` (actual `$env:SystemRoot`,
+required; no blank/cwd/drive fallback). Canonical paths use the most specific
+nested root. Outputs use sorted UTF-8/LF `<lowercase SHA-256>  <lowercase path>\n`
+rows without runner paths:
 
-- `source-sha256.txt`: **selected reads only**, archive-relative, not the old
-  whole-archive enumeration. The pinned archive digest still binds all bytes.
-- `generated-sha256.txt`: candidate-build-relative selected Unity/version/etc.
-- `toolchain-sha256.txt`: selected reads relative to configured `msvc/` or `sdk/`
-  roots (vswhere's installed `VC/Tools/MSVC` and Windows Kits registry root).
-- `compiler-tracking-sha256.txt`: input tracking digests, candidate-build-relative.
-- `compiler-summary.txt`: distinct source-key versus total-input counts,
-  source/model/header counts and manifest/source-key fingerprints. The source-key
-  fingerprint uses the same row format with `label/path` keys.
+- `source-sha256.txt`: selected archive-relative reads, not whole-archive hashes.
+- `generated-sha256.txt`: build-relative reads (Unity/version/etc.).
+- `toolchain-sha256.txt`: selected `msvc/`, `sdk/`, `windows/` provider reads.
+- `compiler-tracking-sha256.txt`: build-relative tracking digests.
+- `compiler-summary.txt`: source-key/total-input and source/model/header counts,
+  manifest/source-key hashes (same row format, `label/path` for source keys).
 
-Canonical input/root paths use the most specific nested scope. Labels classify
-paths only, not terms
-or providers' redistribution rights. Compact output has not yet been measured on
-Windows or derived from the historical capture; Unity/read-set review, SDK/MSVC
+OS environment/runtime reads (`windows/globalization/sorting/sortdefault.nls`,
+`windows/system32/tzres.dll`) need not be headers or compiled/linked code. Labels
+show provenance, not legal approval. Windows output evidence, Unity/read-set,
 provider terms and binary-member closure remain open.
 
 ### Terms, provenance and notices

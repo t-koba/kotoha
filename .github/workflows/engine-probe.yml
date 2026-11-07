@@ -97,8 +97,9 @@ jobs:
           $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
           $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vs) { throw 'MSVC provider root missing' }
+          if ([string]::IsNullOrWhiteSpace($env:SystemRoot)) { throw 'Windows provider SystemRoot missing' }
           $sdk = Get-ItemPropertyValue 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' -Name KitsRoot10
-          python tools/engine_probe/compiler_reads.py --source $source --generated $build --msvc (Join-Path $vs 'VC/Tools/MSVC') --sdk $sdk --output build/engine-probe
+          python tools/engine_probe/compiler_reads.py --source $source --generated $build --msvc (Join-Path $vs 'VC/Tools/MSVC') --sdk $sdk --windows $env:SystemRoot --output build/engine-probe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record executable linkage for review
         if: always()
