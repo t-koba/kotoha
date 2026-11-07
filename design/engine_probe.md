@@ -116,6 +116,48 @@ section is mapped to its source, terms and distribution obligation.
 The compiler log reports Android clang 19.0.1, based on r530567e, repository
 commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` (`vcs-read/c2129f0d0cae49969429c6c18adadfde`). An exact upstream commit-metadata read identifies this as “Merge 3b5e7c83… for LLVM update to 530567”, with `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` as its second parent. The installed `clang_source_info.md` instead names that `3b5e7c83…` commit as its base revision and lists Android toolchain patches from repository revision `e727bfb014bd436f581a66a450c939a6983a1fc3`. The component `LICENSE.TXT` hashes recorded above were re-fetched at base revision `3b5e7c83…` and match, but this verifies only identical license-text bytes, not that the patched installed archives' selected object code matches the mapped source files. Patch-to-member/source closure remains open.
 
+### Installed patch overlap (partial)
+
+The exact `clang_source_info.md` artifact names patches at the immutable Android
+LLVM toolchain revision `e727bfb014bd436f581a66a450c939a6983a1fc3`
+(`vcs-read/5a60708a01b74460876c8a8e9ec0ecb9`,
+`vcs-read/af0cdd28285b41128da2817ec8144328`). Comparing those names with the
+exact map manifest and compiler-selected-input manifest identifies two direct
+review targets:
+
+- **LLVM `[libc++][regex]`, commit
+  `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`** ([upstream patch](https://github.com/llvm/llvm-project/commit/e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch)). The map selects
+  `libc++_static.a` member `regex.cpp.o`; the compiler-read manifest also
+  includes NDK `sysroot/usr/include/c++/v1/regex`, SHA-256
+  `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
+  (`vcs-read/0c02cedb3b654a8c9337056fd789694a`,
+  `vcs-read/6b5d012196944a40b1d34698e6ada3f2`). The upstream patch modifies
+  `libcxx/include/regex` and tests; its patch SHA-256 is
+  `8f3f35279594e3999168d21ab51ede6a8e7f8769ecefe66efd9fb1c1625951bc`
+  (fetch receipt `44b03fac704e9f67d999f318e51617cbea6806aca11e878ca8ea2865ca7bcd81`).
+  Its source/header terms are LLVM Apache-2.0 WITH LLVM-exception. But the
+  installed header digest differs from both the unpatched base/merge header
+  (`897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`) and
+  the file at the single upstream patch commit
+  (`60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`). The
+  exact installed header therefore is not reconciled to that patch alone; this
+  does not prove whether or how it changes the selected archive object's
+  surviving code.
+- **`move-cxa-demangle-into-libcxxdemangle.patch`.** The map selects
+  `libc++abi.a` member `cxa_demangle.cpp.o`
+  (`vcs-read/0c02cedb3b654a8c9337056fd789694a`). `clang_source_info.md` names
+  this patch, but its payload is absent from the bounded CI capture. Its changed
+  files, authorship, terms, and effect on the selected object/archive cannot
+  yet be established.
+
+The source-info list also contains opaque patch filenames including
+`9a2fd97d391caf1060e303f636d7113501788d2f-r530567.patch` and
+`b433076fcbacba8a3b91446390bbea5843322bcd-v2.patch`; their payloads were not
+captured. Patch titles or a source basename are not enough to rule out changes
+to selected runtime inputs. The capture does not contain every patch, installed
+runtime source file, or object/section-level provenance. Thus this is a useful
+crosswalk, not a patch-to-member closure or approval of the broad NDK notice set.
+
 ## Pinned inputs and review
 
 `tools/engine_probe/fixtures.json` pins llama.cpp b12183, commit
