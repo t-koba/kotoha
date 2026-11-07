@@ -50,5 +50,5 @@ add_subdirectory("${llama_cpp_SOURCE_DIR}/examples/simple"
 if(ANDROID)
     # Android-only linker evidence; keep the map within the configured build root.
     target_link_options(llama-simple PRIVATE
-        "-Wl,-Map,${CMAKE_BINARY_DIR}/llama-simple.map")
+        "-Wl,-Map,${CMAKE_BINARY_DIR}/llama-simple.map.pending")
 endif()

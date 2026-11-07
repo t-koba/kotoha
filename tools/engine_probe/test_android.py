@@ -23,28 +23,54 @@ from test_smoke import HEADER, DECODED, pin
 class LinkerMapEvidenceTest(unittest.TestCase):
     def test_map_is_bounded_and_recorded_without_truncation(self):
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'llama-simple.map'
+            root = Path(directory)
+            path = root / 'llama-simple.map.pending'
+            output = root / 'validated-linker-map'
             data = b'LLD map\narchive(member.o)\n'
             path.write_bytes(data)
             expected = {'size': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
-            self.assertEqual(linker_map.record(path, len(data)), expected)
-            self.assertEqual(json.loads((Path(str(path) + '.sha256.json')).read_text()), expected)
+            self.assertEqual(linker_map.record(path, len(data), output), expected)
+            self.assertFalse(path.exists())
+            self.assertEqual((output / 'llama-simple.map').read_bytes(), data)
+            self.assertEqual(json.loads((output / 'llama-simple.map.sha256.json').read_text()), expected)
+
+            oversized = root / 'oversized.map.pending'
+            rejected = root / 'rejected-map'
+            oversized.write_bytes(b'oversized')
             with self.assertRaisesRegex(RuntimeError, 'exceeds'):
-                linker_map.record(path, len(data) - 1)
-            path.write_bytes(b'')
+                linker_map.record(oversized, len(b'oversiz'), rejected)
+            self.assertTrue(oversized.exists())
+            self.assertFalse(rejected.exists())
+
+            empty = root / 'empty.map.pending'
+            empty.write_bytes(b'')
             with self.assertRaisesRegex(RuntimeError, 'empty'):
-                linker_map.record(path, 1)
-            path.unlink()
+                linker_map.record(empty, 1, root / 'empty-rejected')
+            self.assertFalse((root / 'empty-rejected').exists())
+
+            missing = root / 'missing.map.pending'
             with self.assertRaisesRegex(RuntimeError, 'missing'):
-                linker_map.record(path, 1)
+                linker_map.record(missing, 1, root / 'missing-rejected')
+            self.assertFalse((root / 'missing-rejected').exists())
 
     def test_invalid_byte_bounds_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / 'map'
+            root = Path(directory)
+            path = root / 'map.pending'
             path.write_bytes(b'x')
             for limit in (0, -1, True):
                 with self.subTest(limit=limit), self.assertRaises(ValueError):
-                    linker_map.record(path, limit)
+                    linker_map.record(path, limit, root / f'invalid-{limit}')
+
+    def test_workflow_only_uploads_the_validated_map_directory(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/engine-probe.yml').read_text(encoding='utf-8')
+        cmake = (root / 'tools/engine_probe/CMakeLists.txt').read_text(encoding='utf-8')
+        self.assertIn('llama-simple.map.pending', cmake)
+        self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map', workflow)
+        self.assertIn('build/engine-probe-android/validated-linker-map/llama-simple.map.sha256.json', workflow)
+        self.assertNotIn('build/engine-probe-android/*.map', workflow)
+        self.assertNotIn('build/engine-probe-android/*.map.sha256.json', workflow)
 
 
 class TransportTest(unittest.TestCase):

@@ -184,8 +184,8 @@ jobs:
             tools/engine_probe/
             build/engine-probe-android/*.log
             build/engine-probe-android/*.txt
-            build/engine-probe-android/*.map
-            build/engine-probe-android/*.map.sha256.json
+            build/engine-probe-android/validated-linker-map/llama-simple.map
+            build/engine-probe-android/validated-linker-map/llama-simple.map.sha256.json
             build/engine-probe-android/ndk.properties
             build/engine-probe-android/compile_commands.json
             build/engine-probe-android/build.ninja
