@@ -100,13 +100,15 @@ public final class MainActivityAccessibilityTest
             // optimistic semantics prediction, without a Unicode key-map dependency.
             getInstrumentation().runOnMainSync(() ->
                     clipboard.setPrimaryClip(ClipData.newPlainText("RTL test", value)));
-            // Ctrl+A did not reliably select this Flutter editor's value on the emulator:
-            // replace the known test value with actual delete key events instead.
-            int deleteCount = currentValue.codePointCount(0, currentValue.length());
-            for (int i = 0; i < deleteCount; i++) {
+            // Ctrl+A did not reliably select this Flutter editor's value on the emulator.
+            // CI showed a stale Arabic code point after a rapid delete burst, so wait for
+            // each expected value update before sending the next key across direction rebuilds.
+            while (!currentValue.isEmpty()) {
+                currentValue = currentValue.substring(0,
+                        currentValue.offsetByCodePoints(currentValue.length(), -1));
                 getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+                assertField(id, label, currentValue);
             }
-            assertField(id, label, "");
             controlKey(KeyEvent.KEYCODE_V);
             assertField(id, label, value);
             // No re-tap: input must still reach this field after its direction rebuild.
