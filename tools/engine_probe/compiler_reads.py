@@ -39,16 +39,16 @@ def capture(source, generated, msvc, sdk):
     selected, compiled, tracking = {}, set(), {}
 
     def select(raw):
-        key = identity(raw)
+        identity(raw)  # Reject relative/traversing records before canonicalization.
+        resolved = Path(raw).resolve(strict=True)
+        key = identity(resolved)
         for scope, label in scopes:
             if key.startswith(scope.rstrip('/') + '/'):
-                relative = key[len(scope.rstrip('/')) + 1:]
-                qualified = f'{label}/{relative}'
+                qualified = f'{label}/{key[len(scope.rstrip("/")) + 1:]}'
                 if qualified not in selected:
-                    path = roots[label] / relative
-                    if not path.resolve(strict=True).is_relative_to(roots[label]) or not path.is_file():
+                    if not resolved.is_relative_to(roots[label]) or not resolved.is_file():
                         raise ValueError('Compiler input is not a file within its configured root')
-                    selected[qualified] = digest(path)
+                    selected[qualified] = digest(resolved)
                 return qualified
         raise ValueError('Compiler input outside configured roots; closure incomplete')
 

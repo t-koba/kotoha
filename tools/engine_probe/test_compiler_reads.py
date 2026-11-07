@@ -1,11 +1,13 @@
 """Synthetic tracking files: no compiler, SDK or inference required."""
 
 import hashlib
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from compiler_reads import capture, identity, MANIFESTS, SUMMARY
 
@@ -37,10 +39,14 @@ class CompilerReadsTest(unittest.TestCase):
 
     def test_selected_union_and_deterministic_manifests(self):
         self.put(self.source / 'unused.cpp', 'not selected')
-        # Uppercase Windows spelling, BOM, CRLF, composite roots and repeated reads.
+        # BOM, CRLF, composite roots and repeated reads. Uppercase spelling only
+        # where the filesystem is case-insensitive (Windows); portable hosts use
+        # native case to honor real filesystem semantics.
         text = f'^{self.cpp}|{self.unity}\n{self.header}\n{self.version}\n{self.tool}\n{self.win}\n'
+        if os.name == 'nt':
+            text = text.upper()
         self.log.parent.mkdir(parents=True)
-        self.log.write_bytes(('\ufeff' + text.upper().replace('\n', '\r\n')).encode())
+        self.log.write_bytes(('\ufeff' + text.replace('\n', '\r\n')).encode())
         other = self.put(self.generated / 'other/CL.read.2.tlog.txt',
                          f'^{self.cpp}\n{self.header}\n{self.win}\n')
         outputs = capture(*self.roots)
@@ -63,6 +69,46 @@ class CompilerReadsTest(unittest.TestCase):
             self.assertEqual(outputs[name], repeated[name])
         self.assertNotEqual(outputs[MANIFESTS[3]], repeated[MANIFESTS[3]])
         self.assertEqual(identity(r'C:\SOURCE\src\A.cpp'), 'c:/source/src/a.cpp')
+
+    def test_canonical_alias_resolves_to_configured_root(self):
+        # Native filesystem alias: logged spelling differs lexically but names the
+        # same file; capture must compare canonical identities (bounded native evidence).
+        alias = self.base / 'alias_source'
+        try:
+            alias.symlink_to(self.source, target_is_directory=True)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f'symlink alias unavailable: {error}')
+        alias_cpp = alias / 'src/a.cpp'
+        self.assertNotEqual(identity(str(alias_cpp)), identity(str(self.cpp)))
+        self.assertTrue(alias_cpp.is_file())
+        self.put(self.log, f'^{alias_cpp}\n{self.header}\n')
+        outputs = capture(*self.roots)
+        def row(path, key):
+            return f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {key}\n'
+        self.assertEqual(outputs['source-sha256.txt'], row(self.cpp, 'src/a.cpp') + row(self.header, 'src/a.h'))
+        # A genuinely outside canonical target must still fail closed.
+        outside = self.put(self.base / 'outside/evil.h', 'evil')
+        escape = self.source / 'escape.h'
+        escape.symlink_to(outside)
+        self.put(self.log, f'^{alias_cpp}\n{escape}\n')
+        with self.assertRaises(ValueError):
+            capture(*self.roots)
+
+    def test_mocked_short_spelling_canonicalization(self):
+        # Mocked 8.3-style alias: no filesystem alias required (mock evidence only).
+        # Simulates Windows short spelling expanding to the canonical file.
+        short = self.base / 'SHORT~1/src/a.cpp'
+        real_resolve = Path.resolve
+        def fake_resolve(path, strict=False):
+            if str(path).lower() == str(short).lower():
+                return real_resolve(self.cpp, strict=strict)
+            return real_resolve(path, strict=strict)
+        with mock.patch.object(Path, 'resolve', fake_resolve):
+            self.put(self.log, f'^{short}\n{self.header}\n')
+            outputs = capture(*self.roots)
+        def row(path, key):
+            return f'{hashlib.sha256(path.read_bytes()).hexdigest()}  {key}\n'
+        self.assertEqual(outputs['source-sha256.txt'], row(self.cpp, 'src/a.cpp') + row(self.header, 'src/a.h'))
 
     def test_missing_malformed_and_unmapped_evidence_fails(self):
         with self.assertRaises(ValueError):

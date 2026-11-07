@@ -162,7 +162,8 @@ converted UTF-8 tracking stays retained. New outputs use sorted lowercase paths,
   source/model/header counts and manifest/source-key fingerprints. The source-key
   fingerprint uses the same row format with `label/path` keys.
 
-Nested roots use the most specific scope. Labels classify paths only, not terms
+Canonical input/root paths use the most specific nested scope. Labels classify
+paths only, not terms
 or providers' redistribution rights. Compact output has not yet been measured on
 Windows or derived from the historical capture; Unity/read-set review, SDK/MSVC
 provider terms and binary-member closure remain open.
