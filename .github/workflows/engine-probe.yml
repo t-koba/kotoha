@@ -133,7 +133,6 @@ jobs:
     env:
       PYTHONDONTWRITEBYTECODE: '1'
       ENGINE_BUILD_ROOT: build/engine-probe-android
-      ENGINE_TEMP_ROOT: ${{ runner.temp }}
       ENGINE_BUILD_JOBS: '2'
       # Read from Flutter 3.47.9 FlutterExtension.kt, checked again before build.
       ENGINE_NDK_VERSION: '28.2.13676358'
@@ -171,6 +170,8 @@ jobs:
       - name: Check orchestration (synthetic files/transport, not native evidence)
         run: python3 -m unittest discover -s tools/engine_probe -p 'test_*.py' -v
       - name: Cross-build, capture selected reads and run real owned-emulator inference
+        env:
+          ENGINE_TEMP_ROOT: ${{ runner.temp }}
         run: bash tools/engine_probe/android_ci.sh
       - name: Retain Android developer build and audit inputs (never weights)
         if: always()
