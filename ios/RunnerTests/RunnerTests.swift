@@ -172,10 +172,17 @@ class RunnerTests: XCTestCase {
     reader.load = { _ in Data([65, 10, 66]) }
     plugin.reader = reader
     var simulatedPresentation: UIDocumentPickerViewController?
+    var simulatedPresentationController: UIPresentationController?
     plugin.presentPicker = { selectedPresenter, picker, completion in
       XCTAssertTrue(selectedPresenter === presenter)
       simulatedPresentation = picker
-      completion()
+      // This is a real UIKit controller object, but not a presented Files scene.
+      // The test exercises the production delegate assignment and cleanup without
+      // starting DocumentManager; XCUI retains the actual picker/cancel coverage.
+      let presentationController = UIPresentationController(presentedViewController: picker,
+                                                            presenting: selectedPresenter)
+      simulatedPresentationController = presentationController
+      completion(presentationController)
     }
     plugin.pickerIsPresented = { $0 === simulatedPresentation }
 
@@ -206,14 +213,15 @@ class RunnerTests: XCTestCase {
       XCTAssertFalse(picker.allowsMultipleSelection)
       XCTAssertEqual(picker.modalPresentationStyle, .formSheet) // iPad-safe sheet; no unanchored popover.
       XCTAssertTrue(picker.delegate === plugin)
+      let presentationController = try XCTUnwrap(simulatedPresentationController)
+      XCTAssertTrue(presentationController.delegate === plugin,
+                    "The plugin must be installed as the actual presentation-controller delegate")
       plugin.handle(FlutterMethodCall(methodName: "open", arguments: nil)) { value in
         XCTAssertEqual((value as? FlutterError)?.code, "busy")
       }
       if outcome == "cancel" { plugin.documentPickerWasCancelled(picker) }
       else if outcome == "dismiss" {
-        let presentation = UIPresentationController(presentedViewController: picker,
-                                                    presenting: presenter)
-        plugin.presentationControllerDidDismiss(presentation)
+        plugin.presentationControllerDidDismiss(presentationController)
       } else {
         plugin.documentPicker(picker, didPickDocumentsAt: outcome == "invalid" ? [] : [
           URL(fileURLWithPath: "/synthetic/sample.md")
@@ -223,6 +231,8 @@ class RunnerTests: XCTestCase {
       XCTAssertEqual(completions, 1)
       XCTAssertNil(plugin.picker)
       XCTAssertNil(picker.delegate)
+      XCTAssertNil(presentationController.delegate,
+                   "Completion must clear the same presentation-controller delegate")
       plugin.documentPickerWasCancelled(picker) // Late delegate callback is ignored.
       XCTAssertEqual(completions, 1)
     }
@@ -232,10 +242,14 @@ class RunnerTests: XCTestCase {
     let registrar = try XCTUnwrap(engine.registrar(forPlugin: "TextImportDetachTest"))
     let detachedPlugin = TextImportPlugin()
     var detachedPresentation: UIDocumentPickerViewController?
+    var detachedPresentationController: UIPresentationController?
     var detachedDismissals = 0
-    detachedPlugin.presentPicker = { _, picker, completion in
+    detachedPlugin.presentPicker = { selectedPresenter, picker, completion in
       detachedPresentation = picker
-      completion()
+      let presentationController = UIPresentationController(presentedViewController: picker,
+                                                            presenting: selectedPresenter)
+      detachedPresentationController = presentationController
+      completion(presentationController)
     }
     detachedPlugin.pickerIsPresented = { $0 === detachedPresentation }
     detachedPlugin.dismissPicker = { _ in detachedDismissals += 1 }
@@ -246,9 +260,12 @@ class RunnerTests: XCTestCase {
     }
     let detachedPicker = try XCTUnwrap(detachedPlugin.picker)
     XCTAssertTrue(detachedPresentation === detachedPicker)
+    let detachedController = try XCTUnwrap(detachedPresentationController)
+    XCTAssertTrue(detachedController.delegate === detachedPlugin)
     detachedPlugin.detachFromEngine(for: registrar)
     XCTAssertEqual(detachedDismissals, 1)
     XCTAssertNil(detachedPicker.delegate)
+    XCTAssertNil(detachedController.delegate)
     XCTAssertNil(detachedPlugin.picker)
     detachedPlugin.documentPickerWasCancelled(detachedPicker)
     XCTAssertEqual(detachCompletions, 1)

@@ -42,11 +42,15 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
   private var attached = true
   private var pending: Request?
   private(set) var picker: UIDocumentPickerViewController?
+  private weak var activePresentationController: UIPresentationController?
   var reader = TextDocumentReader()
   // The default uses UIKit. Native unit tests inject a non-presenting boundary so
   // they can exercise request/delegate lifecycle without launching Files UI.
-  var presentPicker: (UIViewController, UIDocumentPickerViewController, @escaping () -> Void) -> Void = {
-    presenter, picker, completion in presenter.present(picker, animated: true, completion: completion)
+  // Pass the controller created by UIKit back through the same delegate path.
+  var presentPicker: (UIViewController, UIDocumentPickerViewController,
+                      @escaping (UIPresentationController?) -> Void) -> Void = {
+    presenter, picker, completion in
+    presenter.present(picker, animated: true) { completion(picker.presentationController) }
   }
   var pickerIsPresented: (UIDocumentPickerViewController) -> Bool = { $0.presentingViewController != nil }
   var dismissPicker: (UIDocumentPickerViewController) -> Void = { $0.dismiss(animated: false) }
@@ -98,7 +102,7 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
     let picker = Self.makePicker(presenter: presenter)
     self.picker = picker
     picker.delegate = self
-    presentPicker(presenter, picker) { [weak self, weak picker] in
+    presentPicker(presenter, picker) { [weak self, weak picker] presentationController in
       // Detach or a failed presentation must not leave a pending channel call.
       guard let picker = picker else { return }
       guard let self = self else { picker.dismiss(animated: false); return }
@@ -111,8 +115,10 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
         return
       }
       // UIKit creates this controller during presentation; install dismissal
-      // handling only after that creation is complete.
-      picker.presentationController?.delegate = self
+      // handling only after that creation is complete. Retain it weakly so the
+      // same delegate assignment is cleared when this request finishes.
+      self.activePresentationController = presentationController
+      presentationController?.delegate = self
     }
   }
 
@@ -149,7 +155,8 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
     guard pending === request else { return }
     pending = nil
     picker?.delegate = nil
-    picker?.presentationController?.delegate = nil
+    activePresentationController?.delegate = nil
+    activePresentationController = nil
     picker = nil
     let result = request.result
     request.result = nil
