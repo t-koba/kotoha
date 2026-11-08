@@ -534,8 +534,18 @@ NDK 28.2.13676358 / r28c (108 bytes, SHA-256
 `vcs-read/52917ab1d9064711bb26316fb4d73726`). `package.xml` records the same
 package revision and `uses-license ref="android-sdk-license"` (18,351 bytes,
 whole-file SHA-256 `1d901b6452ef3f759a7d7a09b0c3ea5d745a60a8ae9a5be06db24b893ebf8a9a`;
-`vcs-read/da7142b4dc9e411486fedcda2b3bc383`, final page; first page
-`vcs-read/47d58a05d9c84bd6ae47b91624f4fa80`).
+exact captured artifact `vcs-read/e71cf72fea54473c81e5ed9c0fea84a2`; prior pages
+`vcs-read/da7142b4dc9e411486fedcda2b3bc383` and
+`vcs-read/47d58a05d9c84bd6ae47b91624f4fa80`). The embedded Android SDK
+agreement says §§3.1–3.4 limit SDK use to Android-app development and restrict
+copying or redistribution of the SDK except backup or where third-party
+licenses require it; §3.5 says components licensed under open-source licenses
+are governed solely by those licenses, and §3.8 prohibits removing proprietary
+notices. This package-use condition is neither an open-source license for the
+entire NDK nor a redistribution grant for the selected runtime archives. It
+also does not determine which archive members qualify as open-source components
+or which member-specific terms/notices apply; those still require exact
+source/member/section mapping.
 The manifest also identifies the following broad candidate notices; their
 presence does not establish that every included notice applies to linked members:
 
