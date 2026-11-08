@@ -22,16 +22,23 @@ final class NativeExportPanelUITests: XCTestCase {
   }
 
   private func logScrollDiagnostics(target: XCUIElement) {
+    func describe(_ identifier: String, element: XCUIElement) -> String {
+      guard element.exists else { return "\(identifier){exists=false}" }
+      return "\(identifier){exists=true,hittable=\(element.isHittable)," +
+        "frame=\(element.frame)}"
+    }
+
     let window = app.windows.firstMatch
+    let windowFrame = window.exists ? "\(window.frame)" : "unavailable"
     let visibleFields = ["source-language", "source-text"].map { identifier in
       let element = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
-      return "\(identifier){exists=\(element.exists),frame=\(element.frame)}"
+      return describe(identifier, element: element)
     }
     // Deliberately omit element values: these diagnostics report only geometry
     // and accessibility availability, never draft contents.
-    print("KotohaScrollDiagnostic windowFrame=\(window.frame) " +
-          "scrollViews=\(app.scrollViews.count) target={exists=\(target.exists)," +
-          "hittable=\(target.isHittable),frame=\(target.frame)} " +
+    print("KotohaScrollDiagnostic windowFrame=\(windowFrame) " +
+          "scrollViews=\(app.scrollViews.count) " +
+          describe("target", element: target) + " " +
           visibleFields.joined(separator: " "))
   }
 

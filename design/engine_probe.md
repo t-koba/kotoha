@@ -1,68 +1,67 @@
 # Native-engine feasibility probe
 
 This is **developer tooling only**, not product inference or distribution
-approval. The latest exact native-engine probe publication is
-`a717c516acc2cd60945b93cc65c6d9d37387033e1116a0aeae897794c08f77e8` at SHA
-`1af9fc2853ff8998c261c7ad8b7f5302873c240e`. Status receipt
-`vcs-read/2f4fe246230a47c9b589a1d7409a5428` reports successful Android API 35
-x86_64 (job `128771063706`) and Windows x64 (job `128771063475`) checks in run
-`42493623648`. The exact Android capture log
-(`vcs-read/03dd9d0d46f84909b2a4376ac5b4de65`) reports that all 26 selected
-`libc++_static.a` members contain DWARF compile units. Its 12,917-byte report,
-SHA-256
-`5a0764d6fb9c795d4f80998a40dfdc347fe65180b63743e3cd856f763ab080ec`
-(`vcs-read/c5ff83d15f9046859a8826ccef35f323`), binds the exact archive
-(14,336,094 bytes, SHA-256
-`893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`) and
-link map (4,660,773 bytes, SHA-256
-`2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`) to
-archive-manifest SHA-256
-`b719960457cadde93b80ea95b8d90d8c875be0e0e520a3e217179739cdfd45cd`
-(`vcs-read/dee886e7086e477f9eebf22206f08d78`). Each record has a hashed
-selected member object and a component-relative `libcxx/src/...` DWARF path;
-the reduced producer is `clang version 19.0.1`. The report sums 12,120,952
-member bytes and 65,517,398 bytes of DWARF-tool output. Extracted objects and
-raw DWARF are not retained. The exact linked-section contribution artifact
-is 459,104 bytes, SHA-256
-`504654291e47812ef7883f7f124879e921382fcd9ed4e0a4d08f88be3aefb6b5`
-(`vcs-read/c017d0011315425ca607cad010b4733a`); it records 1,563 structured
-input-section contributions from the 26 selected libc++ members, not all
-archive contents or legal obligations.
+approval. The latest exact probe snapshot is publication
+`4d308e4977d9e0a1b93c13ef33949fa7a2b4a5c4dd0bde33beda2e777f5a3f17` / SHA
+`c9dd460d9392485594a5fa6b0a8b92ae6d66da08` (code digest
+`e37277d8604d07c131770c7496edd5f175e6d9db88c1b4dadc34307832c597dd`). Its
+receipt-bound status (`vcs-read/bc41719ae9674b2a997346fe315c8cf2`) reports the
+Android API 35 x86_64 and Windows x64 native-probe checks successful (run
+`42507155054`, jobs `128812145179` and `128812145091`), plus Android debug
+instrumentation successful (run `42507418922`, job `128813286801`). Android
+instrumentation passed 20/20 with no failure-only accessibility diagnostics
+(`vcs-read/3ef29a22329542efab356b8449988f4d`); this is a non-reproduction, not a
+demonstrated correction. The exact `CI / iOS and macOS debug builds` job
+`128813286787` failed in run `42507418922`. Its full job log
+(`vcs-read/b3d9679b90fa4268ab1e4b55d392f8e4`) shows
+`NativeExportPanelUITests.testNativeSavePanelIsAccessibleAndCancelPreservesDraft`
+failing at `NativeExportPanelUITests.swift:28` while the failure-only helper
+queries `source-language`; the helper's interpolation reads `.frame` even when
+`.exists` is false. No `KotohaScrollDiagnostic` record was emitted, so this run
+does not establish whether the translation field was visible after scrolling
+or exercise the native save panel. The failure-only helper now checks element
+availability before reading frames for the window, target and fields; the exact
+native CI must still validate this diagnostic change with the existing
+assertions and deadline unchanged.
 
-The selected-member capture also invokes the pinned NDK `llvm-dwarfdump --debug-line`
-and retains only compact per-member line-table metadata: version, sanitized
-source path/state, and MD5 when present. Missing MD5 is explicitly
-`unavailable`; it is not synthesized, used as an identity match, or passed to a
-later source comparison. Added line output has its own workflow-configured 32
-MiB budget, and aggregate tool output is bounded by the existing 64 MiB budget
-plus exactly that configured addition. Malformed or over-budget output fails
-capture. Extracted archive objects and raw DWARF/line-table output are temporary
-and deleted, not artifacts. The DWARF MD5 field is a debug-information checksum, not a security or
-integrity proof; it can only help compare candidate source bytes. By itself
-it does not establish selected source, build or patch identity, surviving
-executable code, applicable notices, rights, or device behavior. Existing
-compile-unit metadata remains unchanged.
+The exact Android pinned-NDK line-table report `ndk-member-debug.json` is
+307,893 bytes, SHA-256
+`b638280b8a8fbfe2bd732715e0c7b69dd6dcfab56fc2ebff99481fbba3226e07`
+(`vcs-read/ba330e53d9984ff8879edfbf29735f2e`). It records line tables for all
+26 selected `libc++_static.a` members and 1,506 file entries, but zero MD5
+checksums; no candidate-byte comparison is possible. The exact NDK patch-source
+manifest is 1,526 bytes, SHA-256
+`d8dc351b4d2a681fa16997a47c02b01f3921970c62146aa3c776b1dd048ef0b1`
+(`vcs-read/b6c42f82da224c018d25e4f05414d175`): it names four patch blobs at
+`llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`, but retains
+only hashes, sizes and Git blob IDs, not raw patches. The exact NDK terms
+manifest is 2,735 bytes, SHA-256
+`6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`
+(`vcs-read/a030cba6c6e64ba286d505d325278ffb`); it identifies broad r28c
+package/toolchain/host notices, not their applicability to selected archive
+members. The earlier exact patch-effect and terms analysis below remains
+bounded: neither these manifests, DWARF paths, member hashes nor successful
+probes establish installed source identity, patch application, surviving code,
+applicable notice obligations, redistribution authorization or device behavior.
+The capture invokes the pinned NDK `llvm-dwarfdump --debug-line` and retains
+only compact per-member line-table metadata: version, sanitized source
+path/state, and MD5 when present. Missing MD5 remains explicitly unavailable;
+it is neither synthesized nor passed to source comparison. Line output has a
+workflow-configured 32 MiB budget, with aggregate tool output bounded by the
+existing 64 MiB budget plus that configured addition. Malformed or over-budget
+output fails capture. Extracted objects and raw DWARF/line-table output are
+temporary and deleted. A DWARF MD5 is debug metadata, not an integrity proof or
+evidence of build/patch identity, surviving code, licensing, rights or device
+behavior.
 
-The same Android job ran 86 engine-probe tests and captured build, source-read,
-NDK-term and patch inputs. Its retained smoke log
-(`vcs-read/abd14e30c5864542aaee4617b5d8723d`) reports Android 15 API 35 x86_64
-emulator execution, missing/truncated GGUF rejection, and one generated-only
-`Bonjour.` sample. This is narrow feasibility evidence, not translation-quality
-coverage or physical-device behavior. The separate application CI run `42495360208` on this SHA failed its combined
-iOS/macOS job at `LanguageFieldAccessibilityTests.testEnglishSourceLanguageField`
-(status `vcs-read/1328301edd6544d78d262d53c172d522`; log
-`vcs-read/4162d68aa4f24c348fab642c945999d6`); the failure is unrelated to engine
-feasibility, and the workflow did not reach macOS tests.
-
-The exact Windows provider capture remains one CI-runner observation, not
-redistribution authorization. The operator confirms there is no Visual Studio
-license entitlement or agreement, no basis to redistribute Microsoft VC++
-runtime DLLs, and no Windows runtime distribution path is chosen
-(`operator/kotoha/a-e1ceeae8-r1-1794137634`). CI success, DWARF, source paths,
-linker maps and provider signatures do not establish installed-object/source
-identity, patch application, applicable notices, licensing closure,
-redistribution rights or physical-device behavior. Engine adoption remains
-disabled.
+The separate Android smoke log reports emulator-only loader rejection and one
+`Bonjour.` sample (`vcs-read/ebd8643b34544a958045fe6b1802c8b0`), not translation
+quality or physical-device coverage. The exact Windows provider capture remains
+one CI-runner observation, not redistribution authorization. The operator
+confirms no Visual Studio license entitlement or agreement, no basis to
+redistribute Microsoft VC++ runtime DLLs, and no Windows runtime distribution
+path is chosen (`operator/kotoha/a-e1ceeae8-r1-1794137634`). Engine adoption
+remains disabled.
 
 The detailed archive/member inventory below is historical evidence from exact
 publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
