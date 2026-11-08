@@ -113,12 +113,36 @@ member. Neither path comparison establishes member bytes, surviving code,
 notice applicability or redistribution authorization. The exact NDK terms
 manifest is 2,735 bytes, SHA-256
 `6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`
-(`vcs-read/9fe473f9e8a943bb9ac788de1b705690`); it identifies broad r28c
+(`vcs-read/9b520d01d9504a7c8779de4ff303ee66`); it identifies broad r28c
 package/toolchain/host notices, not their applicability to selected archive
-members. The earlier exact patch-effect and terms analysis below remains
-bounded: neither these manifests, DWARF paths, member hashes nor successful
-probes establish installed source identity, patch application, surviving code,
-applicable notice obligations, redistribution authorization or device behavior.
+members. The same installed-package manifest records
+`toolchains/llvm/prebuilt/linux-x86_64/clang_source_info.md` at 11,370 bytes,
+SHA-256 `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`
+(manifest `vcs-read/9b520d01d9504a7c8779de4ff303ee66`; source-info pages
+`vcs-read/61750e27275b4599b03cd64cfeedc49b`,
+`vcs-read/7d07b5818ac4447ab9d1b1be8281926c`). It declares LLVM base revision
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and lists patch URLs at
+`llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`, including
+the regex and demangler patches. The separate retained patch manifest covers
+four selected blobs only; the source-info listing is broader and is metadata,
+not proof that any patch was applied to an installed object or header.
+
+The exact Android API 35 x86_64 selected-input artifact records the installed
+NDK `sysroot/usr/include/c++/v1/regex` header at SHA-256
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
+(`vcs-read/793221f35a6e416a9e8b95cb3ea25c91`). The upstream candidate header
+at the declared base revision has SHA-256
+`897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
+(`mizu_fetch/3c81f1fa1b71d4bb1611d87266176b37591367abf6b61636bfe2d14f48aa0709`);
+the file at upstream commit `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`,
+whose ID is named by the listed regex patch, has SHA-256
+`60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`
+(`mizu_fetch/d681c8b6981951da65b7055c52e033a8aa250a7b18dfd44357de8bd296785fd8`).
+The installed-header digest differs from both candidates; neither is byte-
+identical under this SHA-256 comparison. This does not identify the installed
+header's source or show which patches or transformations produced it. Source
+identity, patch application, surviving code, applicable notice obligations,
+redistribution authorization, and device behavior remain unresolved.
 The capture invokes the pinned NDK `llvm-dwarfdump --debug-line` and retains
 only compact per-member line-table metadata: version, sanitized source
 path/state, and MD5 when present. Missing MD5 remains explicitly unavailable;
