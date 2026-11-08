@@ -2,28 +2,52 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. The latest exact native-engine probe publication is
-`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` at SHA
-`678896ce4c8d9b73ba56d897e0d575e36e67ea7e`. Exact status receipt
-`vcs-read/5a236a4c8e744409b5d9c738a9be587e` records successful Android API 35
-x86_64 (job `128682924723`) and Windows x64 (job `128682924884`) probe jobs in
-workflow run `42465180585`. The Android smoke reached an Android 15 x86_64
-emulator over ADB, resolved `libm.so`, `libdl.so` and `libc.so` under the runtime
-APEX, rejected missing/truncated GGUF inputs, and passed one narrow synthetic
-sample (`vcs-read/d2d9c8c109204b76be8751b864483a15`,
-`vcs-read/36fdc1d714a342e3a83e8d784703e037`). This is neither language-quality
-coverage nor physical-device evidence. The exact Windows provider capture is
-one CI runner observation and establishes no redistribution rights. This
-publication includes the Android map and archive inventory but predates the
-linked-section contribution capture; that change still needs exact Android CI.
-The earlier publication `def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7`
-/ SHA `8f19233e7da006a9e857b09452cc1158920c5996` is historical, not latest.
-The operator confirms there is no Visual Studio license entitlement or
-agreement, no basis to redistribute Microsoft VC++ runtime DLLs, and no
-Windows runtime distribution path is chosen
-(`operator/kotoha/a-e1ceeae8-r1-1794137634`). CI success, DWARF and linker-map
-paths do not establish source or patch identity, notice applicability,
-licensing closure, redistribution authorization or physical-device behavior.
-Engine adoption remains disabled.
+`a717c516acc2cd60945b93cc65c6d9d37387033e1116a0aeae897794c08f77e8` at SHA
+`1af9fc2853ff8998c261c7ad8b7f5302873c240e`. Status receipt
+`vcs-read/2f4fe246230a47c9b589a1d7409a5428` reports successful Android API 35
+x86_64 (job `128771063706`) and Windows x64 (job `128771063475`) checks in run
+`42493623648`. The exact Android capture log
+(`vcs-read/03dd9d0d46f84909b2a4376ac5b4de65`) reports that all 26 selected
+`libc++_static.a` members contain DWARF compile units. Its 12,917-byte report,
+SHA-256
+`5a0764d6fb9c795d4f80998a40dfdc347fe65180b63743e3cd856f763ab080ec`
+(`vcs-read/c5ff83d15f9046859a8826ccef35f323`), binds the exact archive
+(14,336,094 bytes, SHA-256
+`893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`) and
+link map (4,660,773 bytes, SHA-256
+`2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`) to
+archive-manifest SHA-256
+`b719960457cadde93b80ea95b8d90d8c875be0e0e520a3e217179739cdfd45cd`
+(`vcs-read/dee886e7086e477f9eebf22206f08d78`). Each record has a hashed
+selected member object and a component-relative `libcxx/src/...` DWARF path;
+the reduced producer is `clang version 19.0.1`. The report sums 12,120,952
+member bytes and 65,517,398 bytes of DWARF-tool output. Extracted objects and
+raw DWARF are not retained. The exact linked-section contribution artifact
+is 459,104 bytes, SHA-256
+`504654291e47812ef7883f7f124879e921382fcd9ed4e0a4d08f88be3aefb6b5`
+(`vcs-read/c017d0011315425ca607cad010b4733a`); it records 1,563 structured
+input-section contributions from the 26 selected libc++ members, not all
+archive contents or legal obligations.
+
+The same Android job ran 86 engine-probe tests and captured build, source-read,
+NDK-term and patch inputs. Its retained smoke log
+(`vcs-read/abd14e30c5864542aaee4617b5d8723d`) reports Android 15 API 35 x86_64
+emulator execution, missing/truncated GGUF rejection, and one generated-only
+`Bonjour.` sample. This is narrow feasibility evidence, not translation-quality
+coverage or physical-device behavior. Exact CI request `f1e2c4a619799ce42eee1ba44bfe851faafad361f4380477de1ab00cdc688591` dispatched
+workflow `CI` on this same SHA as run `42495360208`; its Apple/iOS and macOS
+result is not yet reviewed here. The previously observed iOS picker and macOS
+export assertions must be checked on that exact run.
+
+The exact Windows provider capture remains one CI-runner observation, not
+redistribution authorization. The operator confirms there is no Visual Studio
+license entitlement or agreement, no basis to redistribute Microsoft VC++
+runtime DLLs, and no Windows runtime distribution path is chosen
+(`operator/kotoha/a-e1ceeae8-r1-1794137634`). CI success, DWARF, source paths,
+linker maps and provider signatures do not establish installed-object/source
+identity, patch application, applicable notices, licensing closure,
+redistribution rights or physical-device behavior. Engine adoption remains
+disabled.
 
 The detailed archive/member inventory below is historical evidence from exact
 publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
