@@ -11,7 +11,7 @@ Android API 35 x86_64 and Windows x64 native-probe checks successful in run
 observations only, not source, license, redistribution, adoption, or physical-
 device approval.
 
-The later full CI publication `523041581cee6bae793cc1ec6be19f5debbdad74b74a0078cbb2a99c49d8b823`
+The previous exact full-CI publication `523041581cee6bae793cc1ec6be19f5debbdad74b74a0078cbb2a99c49d8b823`
 / SHA `38abcdd872705ec2471008098954abd6c85900a7` (run `42511182547`; status
 `vcs-read/715ab52343a140a88ea34f3b46058920`) passed Flutter, Design, and Windows
 checks but failed Android and Apple. Android instrumentation completed 20/20
@@ -19,14 +19,31 @@ tests, then `emulator-5554` went offline and the emulator segfaulted; the
 profile-enabled EXIT trap's unbounded `adb logcat -d` waited for a device until
 the 15-minute step timeout (`vcs-read/da49a97da804433f8cffbfe98da192a8`,
 `vcs-read/61ec684a2b6f40d7be81760512a14098`). Commit `f325740` bounds only that
-failure-only diagnostic capture; its exact Android CI is pending, and the
-emulator segfault itself remains unexplained. The Apple test reached one
-window-coordinate gesture, then reported source-language, source-text,
-scrollViews, and target absent and failed at `NativeExportPanelUITests.swift:76`
-before field entry or native save-panel presentation
-(`vcs-read/e04aec26a5544d0882844dab0d036c87`). Save-panel, cancellation, and
-draft-preservation behavior therefore remain unestablished; assertions and
-deadlines were not weakened.
+failure-only diagnostic capture. Its exact descendant publication
+`cbf0b61c94cf751c9bd5b9ceb762a5a33cd16e8f185f9d75f0c01e5a972181c0` / SHA
+`a21fec460dccca6deaa21cf6f39f6f4dcbc31039` passed `CI / Android debug build`
+in run `42518891353` (job `128848195312`; status
+`vcs-read/241617f0fc3e4580a1790e03c927cb31`). The job finished in 294 seconds
+with 20/20 tests. Its exact log shows `adb logcat -d` is guarded by a 10-second
+timeout plus a 1-second kill-after. The retrieved log is truncated, so it does
+not establish whether logcat completed or reached that bound; the successful
+check does show no long teardown hang on this run. The earlier emulator
+segfault remains unexplained and is not attributed to this cleanup change.
+
+The same exact publication passed Flutter, Design, and Windows checks, but
+`CI / iOS and macOS debug builds` failed in run `42518891353`, job
+`128848195290` (status `vcs-read/98dac5be6afa40f28a9042f0f0e3b3d9`). The
+failure occurred before the native save-panel UI test: the macOS probe's
+`osascript -e 'tell application "VoiceOver" to activate'` ended with
+`VoiceOver got an error: AppleEvent timed out. (-1712)` at 20:22:36, before the
+subsequent `xcodebuild test` command (log `vcs-read/a29b60558b414990b38eeb8b8c8c180d`).
+Because the step uses `set -e`, the native panel test did not run in that job.
+The earlier exact Apple failure reached one window-coordinate gesture, then
+reported source-language, source-text, scrollViews, and target absent at
+`NativeExportPanelUITests.swift:76` before field entry or native save-panel
+presentation (`vcs-read/e04aec26a5544d0882844dab0d036c87`). The VoiceOver
+hypothesis and save-panel, cancellation, and draft-preservation behavior remain
+unvalidated; assertions and deadlines were not weakened.
 
 The exact Android pinned-NDK line-table report `ndk-member-debug.json` is
 307,893 bytes, SHA-256
