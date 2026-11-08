@@ -213,6 +213,7 @@ jobs:
             build/engine-probe-android/validated-linker-map/llama-simple.map
             build/engine-probe-android/validated-linker-map/llama-simple.map.sha256.json
             build/engine-probe-android/validated-linker-map/llama-simple.map.archives.json
+            build/engine-probe-android/validated-linker-map/llama-simple.map.contributions.json
             build/engine-probe-android/ndk.properties
             build/engine-probe-android/ndk-terms/**
             build/engine-probe-android/ndk-patch-sources/**

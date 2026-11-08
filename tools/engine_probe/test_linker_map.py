@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -32,7 +33,10 @@ class LinkerMapTests(unittest.TestCase):
             content = (
                 f'  62d18 62d18 c 4 {self.build_archive.relative_to(self.build)}(llama.cpp.o):(.text)\n'
                 f'  62d1c 62d1c 4 4 .rodata {self.build_archive.relative_to(self.build)}(llama-context.cpp.o):(.text)\n'
+                '  62d20 62d20 8 4 .text\n'
                 f'  62d20 62d20 8 4 {self.ndk_archive}(string.cpp.o):(.text)\n'
+                f'  62d28 62d28 4 4 .rodata {self.ndk_archive}(locale.cpp.o):(.rodata)\n'
+                f'  62d2c 62d2c 2 2 {self.ndk_archive}(wchar.cpp.o):(.rodata)\n'
             )
         self.map_path.write_text(content, encoding='utf-8')
 
@@ -43,7 +47,7 @@ class LinkerMapTests(unittest.TestCase):
         self.write_map()
         expected_bytes = self.map_path.read_bytes()
 
-        result = self.capture(max_bytes=len(expected_bytes))
+        result = self.capture(max_bytes=max(4096, len(expected_bytes)))
 
         map_bytes = (self.output_dir / 'llama-simple.map').read_bytes()
         manifest = json.loads((self.output_dir / 'llama-simple.map.archives.json').read_text())
@@ -65,7 +69,38 @@ class LinkerMapTests(unittest.TestCase):
                 'path': 'toolchains/libc++_static.a',
                 'size': self.ndk_archive.stat().st_size,
                 'sha256': hashlib.sha256(self.ndk_archive.read_bytes()).hexdigest(),
-                'members': ['string.cpp.o'],
+                'members': ['locale.cpp.o', 'string.cpp.o', 'wchar.cpp.o'],
+            },
+        ])
+        contributions = json.loads(
+            (self.output_dir / 'llama-simple.map.contributions.json').read_text())
+        self.assertEqual(contributions['schema'], 1)
+        self.assertEqual(contributions['link_map'], result)
+        self.assertEqual(contributions['archive'], {
+            'path': 'ndk/toolchains/libc++_static.a',
+            'size': self.ndk_archive.stat().st_size,
+            'sha256': hashlib.sha256(self.ndk_archive.read_bytes()).hexdigest(),
+        })
+        self.assertEqual(contributions['counts'], {
+            'members': 3, 'members_with_contributions': 3, 'contributions': 3})
+        self.assertEqual(contributions['contributions'], [
+            {
+                'line': 4, 'member': 'string.cpp.o',
+                'output_section': '.text', 'input_section': '.text',
+                'vma': '0x62d20', 'lma': '0x62d20',
+                'size_bytes': 8, 'align_bytes': 4,
+            },
+            {
+                'line': 5, 'member': 'locale.cpp.o',
+                'output_section': '.rodata', 'input_section': '.rodata',
+                'vma': '0x62d28', 'lma': '0x62d28',
+                'size_bytes': 4, 'align_bytes': 4,
+            },
+            {
+                'line': 6, 'member': 'wchar.cpp.o',
+                'output_section': '.rodata', 'input_section': '.rodata',
+                'vma': '0x62d2c', 'lma': '0x62d2c',
+                'size_bytes': 2, 'align_bytes': 2,
             },
         ])
 
@@ -95,6 +130,24 @@ class LinkerMapTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'no archive-member rows'):
             self.capture()
         self.assertFalse(self.output_dir.exists())
+
+    def test_rejects_libcxx_rows_without_a_valid_section_mapping(self):
+        cases = (
+            (f'  62d20 62d20 8 4 {self.ndk_archive}(string.cpp.o):(.text)\n',
+             'missing or malformed libc++ section mapping'),
+            (f'  62d20 62d20 8 4 .text {self.ndk_archive}(string.cpp.o):(bad)\n',
+             'missing or malformed libc++ section mapping'),
+            (f'  nope 62d20 8 4 .text {self.ndk_archive}(string.cpp.o):(.text)\n',
+             'malformed libc++ address/size/alignment'),
+        )
+        for index, (content, message) in enumerate(cases):
+            with self.subTest(content=content):
+                self.map_path.unlink(missing_ok=True)
+                self.output_dir = self.build / ('validated-' + str(index))
+                self.write_map(content)
+                with self.assertRaisesRegex(RuntimeError, re.escape(message)):
+                    self.capture()
+                self.assertFalse(self.output_dir.exists())
 
     def test_rejects_invalid_map_bounds_and_symlink_map(self):
         self.write_map()
