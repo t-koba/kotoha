@@ -21,7 +21,12 @@ _PATCH_BASENAMES = (
     "move-cxa-demangle-into-libcxxdemangle.patch",
     "9a2fd97d391caf1060e303f636d7113501788d2f-r530567.patch",
     "b433076fcbacba8a3b91446390bbea5843322bcd-v2.patch",
+    "e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch",
 )
+_EXACT_PATCH_PATHS = {
+    "e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch":
+        "patches/cherry/e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch",
+}
 _OBJECT_ID = re.compile(r"[0-9a-f]{40}")
 
 
@@ -102,6 +107,9 @@ def _capture(repository, revision, output, max_bytes, source_url, deadline):
         if basename not in wanted:
             continue
         path = recorded_path.decode("utf-8", errors="strict")
+        basename_text = basename.decode("ascii")
+        if _EXACT_PATCH_PATHS.get(basename_text, path) != path:
+            continue
         if (basename in selected or fields[0] != b"100644" or fields[1] != b"blob"
                 or not _OBJECT_ID.fullmatch(fields[2].decode("ascii", errors="replace"))):
             raise RuntimeError(f"pinned patch is duplicate or not a regular Git blob: {path}")
@@ -141,7 +149,7 @@ def _capture(repository, revision, output, max_bytes, source_url, deadline):
         "repository": source_url,
         "revision": commit,
         "tree": tree,
-        "capture_scope": "hash and size metadata for three patch blobs named by the exact NDK clang_source_info.md/source crosswalk; raw blobs are not retained in the artifact and no fetched code is executed",
+        "capture_scope": "hash and size metadata for four selected patch blobs; raw blobs are not retained in the artifact and no fetched code is executed",
         "max_bytes": max_bytes,
         "tree_index_bytes": tree_index_bytes,
         "patch_bytes": total_bytes,

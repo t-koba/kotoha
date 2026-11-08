@@ -55,6 +55,11 @@ class CaptureAndroidPatchSourcesTests(unittest.TestCase):
             self.repository.as_uri(), self.revision, output, max_bytes=4096, timeout_seconds=10,
         )
         self.assertEqual(manifest["revision"], self.revision)
+        self.assertEqual(
+            [record["path"] for record in manifest["files"]],
+            [self.paths[name] for name in _PATCH_BASENAMES],
+        )
+        self.assertIn("four selected patch blobs", manifest["capture_scope"])
         self.assertEqual(len(manifest["files"]), len(_PATCH_BASENAMES))
         self.assertEqual(manifest["patch_bytes"], sum(record["bytes"] for record in manifest["files"]))
         self.assertEqual(manifest["total_bytes"], manifest["tree_index_bytes"] + manifest["patch_bytes"])
@@ -66,7 +71,15 @@ class CaptureAndroidPatchSourcesTests(unittest.TestCase):
             self.assertFalse((output / record["path"]).exists())
         stored = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(stored["tree"], manifest["tree"])
+        self.assertEqual(stored["files"], [
+            {key: record[key] for key in ("path", "git_blob_id", "bytes", "sha256")}
+            for record in manifest["files"]
+        ])
         self.assertNotIn("content", stored["files"][0])
+        self.assertEqual(
+            stored["files"][-1]["path"],
+            "patches/cherry/e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch",
+        )
 
     def test_rejects_an_unavailable_revision_without_output(self):
         output = self.root / "captured"
@@ -76,8 +89,13 @@ class CaptureAndroidPatchSourcesTests(unittest.TestCase):
             )
         self.assertFalse(output.exists())
 
-    def test_missing_selected_patch_fails_without_partial_output(self):
-        (self.repository / self.paths[_PATCH_BASENAMES[-1]]).unlink()
+    def test_wrong_exact_patch_path_fails_without_partial_output(self):
+        selected = self.repository / self.paths[_PATCH_BASENAMES[-1]]
+        content = selected.read_bytes()
+        selected.unlink()
+        wrong = self.repository / "patches" / "other" / _PATCH_BASENAMES[-1]
+        wrong.parent.mkdir(parents=True)
+        wrong.write_bytes(content)
         revision = self._commit()
         output = self.root / "captured"
         with self.assertRaises(RuntimeError):
