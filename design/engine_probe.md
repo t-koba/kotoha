@@ -51,6 +51,15 @@ retained. The observed non-test diff targets are:
 | `b433076fcbacba8a3b91446390bbea5843322bcd-v2.patch` | 18,250; `2f6b8beec77bfb2bff02b6cf341ff31ec424834aa28c23f30ce18bb12945d8eb` | `clang/lib/CodeGen/CGDecl.cpp` | `experiments/97f297c42c93471bacd504eed6af32bf` |
 | `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` | 15,251; `4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d` | `libcxx/include/regex` | `experiments/e34b5a63a6c9455ebd58426e5909a5fe` |
 
+The exact selected-input artifact page for SHA `c9dd460d9392485594a5fa6b0a8b92ae6d66da08`
+records `sysroot/usr/include/c++/v1/regex` with SHA-256
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
+(`vcs-read/92c4b4eeddd64179a6da1b12793ce79f`); its selected archive manifest
+also names `regex.cpp.o`. This is a direct compiler-read/member path overlap,
+not proof that the installed header matches an upstream patch postimage or that
+the patch was applied. The pinned-source comparisons below retain distinct
+base, patch-commit and installed-input hashes.
+
 The archive manifest names `cxa_demangle.cpp.o` and `regex.cpp.o`; the
 source-info/compiler-read comparison below also identifies the regex header as
 a selected input. These are candidate overlaps only: the CMake patch's
