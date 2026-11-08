@@ -165,6 +165,21 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         }
     }
 
+    public void testSharedPickerPoolAllocatesDistinctCodes() {
+        ActivityRequestCodePool pool = SharedActivityRequestCodes.INSTANCE.getPool();
+        Integer textPicker = pool.acquire();
+        Integer modelPicker = pool.acquire();
+        try {
+            assertNotNull(textPicker);
+            assertNotNull(modelPicker);
+            assertTrue("Concurrent picker requests never collide",
+                    textPicker.intValue() != modelPicker.intValue());
+        } finally {
+            if (textPicker != null) pool.release(textPicker);
+            if (modelPicker != null) pool.release(modelPicker);
+        }
+    }
+
     public void testRequestCodesRecycleAfterCompletedCycles() {
         ActivityRequestCodePool codes = new ActivityRequestCodePool(0xffff);
         int first = -1;

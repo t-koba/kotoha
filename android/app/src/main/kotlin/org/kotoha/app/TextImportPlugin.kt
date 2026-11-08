@@ -15,40 +15,6 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener
 import java.util.Locale
 
-/** Reuses 16-bit activity-result codes after completion; abandoned requests stay reserved. */
-class ActivityRequestCodePool(firstCode: Int = 0) {
-    private val active = HashSet<Int>()
-    private val abandoned = HashSet<Int>()
-    private var nextCode = firstCode.also { require(it in 0..CODE_MASK) }
-
-    fun acquire(): Int? {
-        repeat(CODE_COUNT) {
-            val code = nextCode
-            nextCode = (code + 1) and CODE_MASK
-            if (code !in active && code !in abandoned) {
-                active.add(code)
-                return code
-            }
-        }
-        return null
-    }
-
-    fun release(code: Int) {
-        active.remove(code)
-    }
-
-    fun abandon(code: Int) {
-        if (active.remove(code)) abandoned.add(code)
-    }
-
-    fun consumeAbandoned(code: Int): Boolean = abandoned.remove(code)
-
-    companion object {
-        private const val CODE_COUNT = 1 shl 16
-        private const val CODE_MASK = CODE_COUNT - 1
-    }
-}
-
 /** One-shot, read-in-place import. No paths, copies, persisted grants or recovery state. */
 class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler,
     ActivityResultListener {
@@ -94,7 +60,7 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
         if (activity == null) { result.error("detached", "No active activity.", null); return }
         // Uniqueness is needed only while a result can still arrive. Completed requests
         // release their code; detached requests remain reserved as late-result tombstones.
-        val code = requestCodes.acquire()
+        val code = SharedActivityRequestCodes.pool.acquire()
         if (code == null) { result.error("unavailable", "Request codes exhausted.", null); return }
         val request = Request(code, result)
         pending = request
@@ -111,7 +77,7 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        if (requestCodes.consumeAbandoned(requestCode)) return true
+        if (SharedActivityRequestCodes.pool.consumeAbandoned(requestCode)) return true
         val request = pending ?: return false
         if (request.code != requestCode) return false
         if (request.reading) return true
@@ -144,7 +110,7 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
     ) {
         if (pending !== request) return
         pending = null
-        if (preserveLateResult) requestCodes.abandon(request.code) else requestCodes.release(request.code)
+        if (preserveLateResult) SharedActivityRequestCodes.pool.abandon(request.code) else SharedActivityRequestCodes.pool.release(request.code)
         val result = request.result
         request.result = null
         if (error == null) result?.success(document)
@@ -152,8 +118,6 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
     }
 
     companion object {
-        private val requestCodes = ActivityRequestCodePool()
-
         @JvmStatic
         fun readDocument(resolver: ContentResolver, uri: Uri): Map<String, Any> {
             val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)

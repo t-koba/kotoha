@@ -9,12 +9,19 @@ import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
 import 'text_document_exporter.dart';
 import 'text_document_picker.dart';
+import 'model_terms_import.dart';
+import 'model_package_android.dart';
 
 void main() {
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
       'Unicode Bidi Data',
     ], await rootBundle.loadString('assets/licenses/Unicode-3.0.txt'));
+  });
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks([
+      'crypto',
+    ], await rootBundle.loadString('assets/licenses/crypto-3.0.8.txt'));
   });
   runApp(const KotohaApp());
 }
@@ -78,10 +85,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   bool _allowImePersonalizedLearning = false;
   bool _importing = false;
+  bool _reviewingModel = false;
+  // Volatile session-only digest binding; never persisted. Cleared on a new,
+  // declined, failed, or released review and on dispose.
+  EphemeralModelAuthorization? _sessionModelAuthorization;
   final List<_TranslationFields> _translations = [_TranslationFields()];
 
   @override
   void dispose() {
+    _sessionModelAuthorization = null;
     _sourceLanguage.dispose();
     _sourceText.dispose();
     _addTranslationFocusNode.dispose();
@@ -100,7 +112,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   }
 
   Future<void> _importSource() async {
-    if (_importing) return;
+    if (_importing || _reviewingModel) return;
     setState(() => _importing = true);
     // Watch text edits, not selection/focus changes caused by the OS dialog.
     final snapshot = _sourceText.text;
@@ -159,6 +171,117 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
     } finally {
       _sourceText.removeListener(watchSource);
       if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  Future<bool> _reviewModelTerms(VerifiedTerms review) async {
+    final strings = AppLocalizations.of(context)!;
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(strings.modelTermsTitle(review.modelName)),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(strings.modelRuntimeDisabled),
+                    const SizedBox(height: 8),
+                    Text(strings.modelIntegrityOnly),
+                    const SizedBox(height: 8),
+                    Text(strings.modelPackageId(review.modelId)),
+                    const SizedBox(height: 4),
+                    Text(strings.modelDeclaredPublisher(review.publisher)),
+                    const SizedBox(height: 8),
+                    Text(
+                      strings.modelAllTermsVerified(
+                        review.verifiedTermsFileCount,
+                      ),
+                    ),
+                    for (final document in review.documents) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        document.id,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      SelectableText(document.text),
+                      if (document.usageRequirements.isNotEmpty) ...[
+                        Text(strings.modelUsageRequirements),
+                        for (final value in document.usageRequirements)
+                          Text('• $value'),
+                      ],
+                      if (document.attributions.isNotEmpty) ...[
+                        Text(strings.modelAttributions),
+                        for (final value in document.attributions)
+                          Text('• $value'),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                key: const ValueKey('decline-model-terms'),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(strings.modelDecline),
+              ),
+              FilledButton(
+                key: const ValueKey('accept-model-terms'),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(strings.modelAccept),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _importModelTerms() async {
+    if (_reviewingModel || _importing) return;
+    setState(() {
+      _reviewingModel = true;
+      // A new review invalidates any prior session binding.
+      _sessionModelAuthorization = null;
+    });
+    try {
+      if (!await AndroidPackageReader.select() || !mounted) return;
+      final authorization = await const ModelTermsImport().run(
+        AndroidPackageReader(),
+        _reviewModelTerms,
+      );
+      if (!mounted) return;
+      // Hold only the digest binding in volatile state; never persist it.
+      setState(() => _sessionModelAuthorization = authorization);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authorization == null
+                ? AppLocalizations.of(context)!.modelTermsDeclined
+                : AppLocalizations.of(context)!.modelConsentSessionOnly,
+          ),
+        ),
+      );
+    } on Exception {
+      if (mounted) {
+        setState(() => _sessionModelAuthorization = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.modelPackageFailure),
+          ),
+        );
+      }
+    } finally {
+      // Releasing the temporary directory grant does not persist or revoke the
+      // accepted digest binding; it remains only in volatile session state.
+      try {
+        await AndroidPackageReader.release();
+      } on Exception {
+        if (mounted) setState(() => _sessionModelAuthorization = null);
+      } finally {
+        if (mounted) setState(() => _reviewingModel = false);
+      }
     }
   }
 
@@ -339,11 +462,34 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
                     alignment: Alignment.centerLeft,
                     child: OutlinedButton.icon(
                       key: const ValueKey('import-source'),
-                      onPressed: _importing ? null : _importSource,
+                      onPressed: _importing || _reviewingModel
+                          ? null
+                          : _importSource,
                       icon: const Icon(Icons.file_open_outlined),
                       label: Text(strings.importSource),
                     ),
                   ),
+                if (defaultTargetPlatform == TargetPlatform.android) ...[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('review-model-terms'),
+                      onPressed: _reviewingModel || _importing
+                          ? null
+                          : _importModelTerms,
+                      icon: const Icon(Icons.policy_outlined),
+                      label: Text(strings.reviewModelTerms),
+                    ),
+                  ),
+                  if (_sessionModelAuthorization != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        strings.modelSessionActive,
+                        key: const ValueKey('model-session-active'),
+                      ),
+                    ),
+                ],
                 _manualTextField(
                   key: const ValueKey('source-text'),
                   controller: _sourceText,

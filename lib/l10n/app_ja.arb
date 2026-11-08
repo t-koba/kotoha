@@ -61,5 +61,48 @@
   "cancelImport": "キャンセル",
   "replaceSource": "置き換える",
   "importFailureNotice": "読み込めませんでした。UTF-8の.txt、.md、.markdownファイルを選択してください。",
-  "importSourceChangedNotice": "読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。"
+  "importSourceChangedNotice": "読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。",
+  "reviewModelTerms": "モデルパッケージの利用条件を確認",
+  "modelTermsTitle": "{name} の利用条件",
+  "modelRuntimeDisabled": "利用条件の確認・同意はモデルのインストールや実行を有効にしません。マニフェストと宣言された利用条件のみを読み込みます。",
+  "modelUsageRequirements": "利用要件",
+  "modelAttributions": "必要な帰属表示",
+  "modelAccept": "このセッションで同意",
+  "modelDecline": "同意しない",
+  "modelTermsDeclined": "利用条件に同意しませんでした。承認は記録されていません。",
+  "modelConsentSessionOnly": "このセッションのみ利用条件に同意しました。実行機能は有効ではありません。",
+  "modelPackageFailure": "パッケージを安全に検証できませんでした。",
+  "modelIntegrityOnly": "SHA-256ハッシュは読み込んだファイルがマニフェストと一致することのみを確認します。出所・真正性・ライセンス承認を証明するものではありません。",
+  "modelPackageId": "パッケージID: {id}",
+  "modelDeclaredPublisher": "申告された発行者（未検証）: {publisher}",
+  "modelAllTermsVerified": "宣言された利用条件ファイル{count}件すべてを検証してから表示しています。",
+  "modelSessionActive": "セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。",
+  "@modelTermsTitle": {
+    "description": "確認するモデル利用条件のタイトル。",
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "@modelPackageId": {
+    "description": "選択したモデルパッケージに記載された未検証の識別子。",
+    "placeholders": {
+      "id": { "type": "String" }
+    }
+  },
+  "@modelDeclaredPublisher": {
+    "description": "選択したパッケージに記載された未検証の発行者名。",
+    "placeholders": {
+      "publisher": { "type": "String" }
+    }
+  },
+  "@modelAllTermsVerified": {
+    "description": "表示前に宣言された利用条件ファイルをすべて検証した旨。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

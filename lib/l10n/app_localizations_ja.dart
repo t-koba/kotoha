@@ -134,4 +134,60 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get importSourceChangedNotice =>
       '読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。';
+
+  @override
+  String get reviewModelTerms => 'モデルパッケージの利用条件を確認';
+
+  @override
+  String modelTermsTitle(Object name) {
+    return '$name の利用条件';
+  }
+
+  @override
+  String get modelRuntimeDisabled =>
+      '利用条件の確認・同意はモデルのインストールや実行を有効にしません。マニフェストと宣言された利用条件のみを読み込みます。';
+
+  @override
+  String get modelUsageRequirements => '利用要件';
+
+  @override
+  String get modelAttributions => '必要な帰属表示';
+
+  @override
+  String get modelAccept => 'このセッションで同意';
+
+  @override
+  String get modelDecline => '同意しない';
+
+  @override
+  String get modelTermsDeclined => '利用条件に同意しませんでした。承認は記録されていません。';
+
+  @override
+  String get modelConsentSessionOnly => 'このセッションのみ利用条件に同意しました。実行機能は有効ではありません。';
+
+  @override
+  String get modelPackageFailure => 'パッケージを安全に検証できませんでした。';
+
+  @override
+  String get modelIntegrityOnly =>
+      'SHA-256ハッシュは読み込んだファイルがマニフェストと一致することのみを確認します。出所・真正性・ライセンス承認を証明するものではありません。';
+
+  @override
+  String modelPackageId(String id) {
+    return 'パッケージID: $id';
+  }
+
+  @override
+  String modelDeclaredPublisher(String publisher) {
+    return '申告された発行者（未検証）: $publisher';
+  }
+
+  @override
+  String modelAllTermsVerified(int count) {
+    return '宣言された利用条件ファイル$count件すべてを検証してから表示しています。';
+  }
+
+  @override
+  String get modelSessionActive =>
+      'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。';
 }

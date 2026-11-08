@@ -12,6 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: any
+  crypto: 3.0.8
   win32: 6.4.0
   path_provider: 2.1.6
   ffi: 2.2.0
@@ -29,3 +30,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/licenses/Unicode-3.0.txt
+    - assets/licenses/crypto-3.0.8.txt

@@ -137,9 +137,9 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Build Android debug APK
         run: flutter build apk --debug --no-pub
-      # Callback/flag + native accessibility/input coverage, not OS thumbnails,
-      # TalkBack speech/gestures, physical devices/keyboards, or every launcher/OEM.
-      - name: Check privacy callbacks and accessibility on Android Emulator
+      # Privacy callbacks, accessibility/input, and bounded model-terms import
+      # coverage; not live DocumentsUI/provider behavior or physical-device coverage.
+      - name: Check privacy, accessibility, and model import on Android Emulator
         timeout-minutes: 15
         env:
           ANDROID_SYSTEM_IMAGE: system-images;android-35;default;x86_64
@@ -191,7 +191,7 @@ jobs:
           fi
           cd android
           timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
-            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest,org.kotoha.app.MainActivityAccessibilityTest,org.kotoha.app.TextImportTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=org.kotoha.app.MainActivityPrivacyTest,org.kotoha.app.MainActivityAccessibilityTest,org.kotoha.app.TextImportTest,org.kotoha.app.ModelPackageTest \
             -Pandroid.testInstrumentationRunnerArguments.axTimeoutMillis="$ANDROID_AX_TIMEOUT_MILLIS" \
             -Pandroid.testInstrumentationRunnerArguments.axPollMillis="$ANDROID_AX_POLL_MILLIS" \
             -Pandroid.testInstrumentationRunnerArguments.profileBytes="$PROFILE_BYTES"

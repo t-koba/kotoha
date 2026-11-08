@@ -138,4 +138,61 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get importSourceChangedNotice =>
       'Source text changed during import. Your edits were kept; import again to retry.';
+
+  @override
+  String get reviewModelTerms => 'Review model package terms';
+
+  @override
+  String modelTermsTitle(Object name) {
+    return 'Terms for $name';
+  }
+
+  @override
+  String get modelRuntimeDisabled =>
+      'Reviewing and accepting terms does not install a model or enable runtime use. Only the manifest and declared terms are read.';
+
+  @override
+  String get modelUsageRequirements => 'Usage requirements';
+
+  @override
+  String get modelAttributions => 'Required attributions';
+
+  @override
+  String get modelAccept => 'Accept for this session';
+
+  @override
+  String get modelDecline => 'Decline';
+
+  @override
+  String get modelTermsDeclined => 'Terms declined; no approval was recorded.';
+
+  @override
+  String get modelConsentSessionOnly =>
+      'Terms accepted for this session only. Runtime is not enabled.';
+
+  @override
+  String get modelPackageFailure => 'Could not safely verify this package.';
+
+  @override
+  String get modelIntegrityOnly =>
+      'SHA-256 hashes confirm the files read match the manifest. They do not prove origin, authenticity, or license approval.';
+
+  @override
+  String modelPackageId(String id) {
+    return 'Package ID: $id';
+  }
+
+  @override
+  String modelDeclaredPublisher(String publisher) {
+    return 'Declared publisher (unverified): $publisher';
+  }
+
+  @override
+  String modelAllTermsVerified(int count) {
+    return 'All $count declared terms files were verified before review.';
+  }
+
+  @override
+  String get modelSessionActive =>
+      'Session acceptance recorded (digests only). No model is installed and runtime is not enabled.';
 }

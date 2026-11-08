@@ -10,6 +10,9 @@ class MainActivity : FlutterActivity() {
         if (!flutterEngine.plugins.has(TextImportPlugin::class.java)) {
             flutterEngine.plugins.add(TextImportPlugin())
         }
+        if (!flutterEngine.plugins.has(ModelPackagePlugin::class.java)) {
+            flutterEngine.plugins.add(ModelPackagePlugin())
+        }
     }
 
     private var secureFlagCaptured = false

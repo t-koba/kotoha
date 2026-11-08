@@ -325,6 +325,96 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。'**
   String get importSourceChangedNotice;
+
+  /// No description provided for @reviewModelTerms.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルパッケージの利用条件を確認'**
+  String get reviewModelTerms;
+
+  /// 確認するモデル利用条件のタイトル。
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} の利用条件'**
+  String modelTermsTitle(Object name);
+
+  /// No description provided for @modelRuntimeDisabled.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用条件の確認・同意はモデルのインストールや実行を有効にしません。マニフェストと宣言された利用条件のみを読み込みます。'**
+  String get modelRuntimeDisabled;
+
+  /// No description provided for @modelUsageRequirements.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用要件'**
+  String get modelUsageRequirements;
+
+  /// No description provided for @modelAttributions.
+  ///
+  /// In ja, this message translates to:
+  /// **'必要な帰属表示'**
+  String get modelAttributions;
+
+  /// No description provided for @modelAccept.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションで同意'**
+  String get modelAccept;
+
+  /// No description provided for @modelDecline.
+  ///
+  /// In ja, this message translates to:
+  /// **'同意しない'**
+  String get modelDecline;
+
+  /// No description provided for @modelTermsDeclined.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用条件に同意しませんでした。承認は記録されていません。'**
+  String get modelTermsDeclined;
+
+  /// No description provided for @modelConsentSessionOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションのみ利用条件に同意しました。実行機能は有効ではありません。'**
+  String get modelConsentSessionOnly;
+
+  /// No description provided for @modelPackageFailure.
+  ///
+  /// In ja, this message translates to:
+  /// **'パッケージを安全に検証できませんでした。'**
+  String get modelPackageFailure;
+
+  /// No description provided for @modelIntegrityOnly.
+  ///
+  /// In ja, this message translates to:
+  /// **'SHA-256ハッシュは読み込んだファイルがマニフェストと一致することのみを確認します。出所・真正性・ライセンス承認を証明するものではありません。'**
+  String get modelIntegrityOnly;
+
+  /// 選択したモデルパッケージに記載された未検証の識別子。
+  ///
+  /// In ja, this message translates to:
+  /// **'パッケージID: {id}'**
+  String modelPackageId(String id);
+
+  /// 選択したパッケージに記載された未検証の発行者名。
+  ///
+  /// In ja, this message translates to:
+  /// **'申告された発行者（未検証）: {publisher}'**
+  String modelDeclaredPublisher(String publisher);
+
+  /// 表示前に宣言された利用条件ファイルをすべて検証した旨。
+  ///
+  /// In ja, this message translates to:
+  /// **'宣言された利用条件ファイル{count}件すべてを検証してから表示しています。'**
+  String modelAllTermsVerified(int count);
+
+  /// No description provided for @modelSessionActive.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。'**
+  String get modelSessionActive;
 }
 
 class _AppLocalizationsDelegate
