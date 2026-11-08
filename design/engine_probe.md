@@ -1,28 +1,32 @@
 # Native-engine feasibility probe
 
 This is **developer tooling only**, not product inference or distribution
-approval. The latest exact probe snapshot is publication
-`4d308e4977d9e0a1b93c13ef33949fa7a2b4a5c4dd0bde33beda2e777f5a3f17` / SHA
-`c9dd460d9392485594a5fa6b0a8b92ae6d66da08` (code digest
-`e37277d8604d07c131770c7496edd5f175e6d9db88c1b4dadc34307832c597dd`). Its
-receipt-bound status (`vcs-read/bc41719ae9674b2a997346fe315c8cf2`) reports the
-Android API 35 x86_64 and Windows x64 native-probe checks successful (run
-`42507155054`, jobs `128812145179` and `128812145091`), plus Android debug
-instrumentation successful (run `42507418922`, job `128813286801`). Android
-instrumentation passed 20/20 with no failure-only accessibility diagnostics
-(`vcs-read/3ef29a22329542efab356b8449988f4d`); this is a non-reproduction, not a
-demonstrated correction. The exact `CI / iOS and macOS debug builds` job
-`128813286787` failed in run `42507418922`. Its full job log
-(`vcs-read/b3d9679b90fa4268ab1e4b55d392f8e4`) shows
-`NativeExportPanelUITests.testNativeSavePanelIsAccessibleAndCancelPreservesDraft`
-failing at `NativeExportPanelUITests.swift:28` while the failure-only helper
-queries `source-language`; the helper's interpolation reads `.frame` even when
-`.exists` is false. No `KotohaScrollDiagnostic` record was emitted, so this run
-does not establish whether the translation field was visible after scrolling
-or exercise the native save panel. The failure-only helper now checks element
-availability before reading frames for the window, target and fields; the exact
-native CI must still validate this diagnostic change with the existing
-assertions and deadline unchanged.
+approval. The latest exact native-probe publication is
+`e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16` / SHA
+`5752035ff2adb68a51b78c020f1d52ec7d5be1ba` (code digest
+`3279e24928491426c61a0b1302ac17e993677965d74e7bef4ebf2c96ebd48417`). Its
+receipt-bound status (`vcs-read/fdd6c0cbcb9b423ab5f26928b9b85175`) reports the
+Android API 35 x86_64 and Windows x64 native-probe checks successful in run
+`42515261841` (jobs `128836792623` and `128836792802`). These are feasibility
+observations only, not source, license, redistribution, adoption, or physical-
+device approval.
+
+The later full CI publication `523041581cee6bae793cc1ec6be19f5debbdad74b74a0078cbb2a99c49d8b823`
+/ SHA `38abcdd872705ec2471008098954abd6c85900a7` (run `42511182547`; status
+`vcs-read/715ab52343a140a88ea34f3b46058920`) passed Flutter, Design, and Windows
+checks but failed Android and Apple. Android instrumentation completed 20/20
+tests, then `emulator-5554` went offline and the emulator segfaulted; the
+profile-enabled EXIT trap's unbounded `adb logcat -d` waited for a device until
+the 15-minute step timeout (`vcs-read/da49a97da804433f8cffbfe98da192a8`,
+`vcs-read/61ec684a2b6f40d7be81760512a14098`). Commit `f325740` bounds only that
+failure-only diagnostic capture; its exact Android CI is pending, and the
+emulator segfault itself remains unexplained. The Apple test reached one
+window-coordinate gesture, then reported source-language, source-text,
+scrollViews, and target absent and failed at `NativeExportPanelUITests.swift:76`
+before field entry or native save-panel presentation
+(`vcs-read/e04aec26a5544d0882844dab0d036c87`). Save-panel, cancellation, and
+draft-preservation behavior therefore remain unestablished; assertions and
+deadlines were not weakened.
 
 The exact Android pinned-NDK line-table report `ndk-member-debug.json` is
 307,893 bytes, SHA-256
@@ -93,20 +97,39 @@ existing 64 MiB budget plus that configured addition. Malformed or over-budget
 output fails capture. Extracted objects and raw DWARF/line-table output are
 temporary and deleted. A DWARF MD5 is debug metadata, not an integrity proof or
 evidence of build/patch identity, surviving code, licensing, rights or device
-behavior. The next exact Android API 35 x86_64 native-probe run additionally
-selects only `libc++abi.a(cxa_demangle.cpp.o)` into
-`ndk-member-debug/libcxxabi-demangler.json`. It binds to one matching NDK archive
-record and the validated selected-member manifest, uses the pinned NDK tools,
-and rechecks the linker-map and archive digests after capture. Workflow bounds
-for this one-member capture are 8 MiB of object bytes, 16 MiB of aggregate
-`llvm-ar`/DWARF-info output, 8 MiB of line-table output, and 30 seconds. The
-report retains only the in-memory-derived member digest and reduced,
-path-sanitized DWARF metadata; component-relative paths are emitted only when
-the debug records support them. Unmapped absolute paths are not retained, and
-absent line-table MD5 remains
-`unavailable`. Temporary objects and raw tool output are deleted. This narrows
-provenance only and does not establish source identity, patch/notice scope,
-licensing, redistribution rights, device behavior or adoption.
+behavior. The exact Android API 35 x86_64 probe publication
+`e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16` / SHA
+`5752035ff2adb68a51b78c020f1d52ec7d5be1ba` additionally captured only
+`libc++abi.a(cxa_demangle.cpp.o)` into
+`ndk-member-debug/libcxxabi-demangler.json`. The sanitized report is 14,944
+bytes (SHA-256
+`7dd2e92b9d477770e78f178efc00036c64154ddfabcdceedbf1cb3126ad1c17`, pages
+`vcs-read/1ee9e785319f47019eedc06df22a2b4b` and
+`vcs-read/cd540580aa0b42edbb2f1de49ce63f58`). Its `archive_manifest_sha256`
+matches the exact 5,417-byte selected-member manifest (SHA-256
+`2cafd537db2a905e0cb4a746ae365a38c0f4c74aaf5e4bf45ff3772e140c27fc`,
+`vcs-read/75b1787d57d04335946967b739a6eed7`), where the `libc++abi.a`
+archive (2,792,306 bytes, SHA-256
+`11ff6729a881f3d1a2e72c2a9c4bd2c096e02c5dfb3858d942405e0514b7b95c`) lists
+`cxa_demangle.cpp.o` once. The report binds the same map SHA-256
+`2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd` and size
+4,660,773 recorded by its 96-byte sidecar (`vcs-read/ba0e778911104ed9aa05e3f92018ac4c`).
+It records the extracted member's in-memory SHA-256
+`8807afd3edd4b1dd569cefe42bfc7596060fdd7313a46003632db2d62a492930` and size
+2,158,776; one compile unit names component-relative
+`libcxxabi/src/cxa_demangle.cpp` (producer `clang version 19.0.1`), and one
+line table contains 69 file entries, with zero MD5 checksums. The report retains
+only sanitized component-relative or relative-name paths, including
+`libcxxabi/src/cxa_demangle.cpp` and
+`libcxxabi/src/demangle/ItaniumDemangle.h`; absolute paths are not retained.
+Tool output (8,538,151 bytes), line-table output (1,212,242 bytes), and member
+bytes remain under the configured 16 MiB, 8 MiB, and 8 MiB limits respectively;
+the elapsed-time limit is 30 seconds. The CI check passed in run `42515261841`,
+job `128836792623` (`vcs-read/fdd6c0cbcb9b423ab5f26928b9b85175`). The reduced report and bounded capture summary are retained; temporary objects
+and raw tool output are deleted.
+This narrows provenance only: it does not establish source-byte identity,
+patch application, surviving linked sections, notice applicability, licensing,
+redistribution rights, device behavior, or adoption.
 
 The separate Android smoke log reports emulator-only loader rejection and one
 `Bonjour.` sample (`vcs-read/ebd8643b34544a958045fe6b1802c8b0`), not translation
@@ -165,11 +188,12 @@ headers at that immutable revision declare
 `SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`; under
 [dependency_policy.json](specs/dependency_policy.json), this is a permissive
 branch. The exact Android link-map manifest records archive-level hashes and
-selected member names, not per-member hashes. The bounded DWARF report described
-below hashes only the 26 members of `libc++_static.a`, not the 15 members of
-`libc++abi.a`. A member-name-to-source path match alone does not prove the
-compiled object bytes or surviving sections correspond to those unmodified
-source files.
+selected member names, not per-member hashes. Separate bounded DWARF reports
+now hash 26 `libc++_static.a` objects and the single selected
+`libc++abi.a(cxa_demangle.cpp.o)`; the other 14 selected libc++abi objects have
+no per-member hash or DWARF capture. A member-name or DWARF-path match alone
+does not prove source-byte identity, patch application, or surviving linked
+sections.
 
 For the demangler candidate, the exact manifest lists `cxa_demangle.cpp.o` in
 `libc++abi.a` (archive SHA-256
@@ -181,16 +205,14 @@ SHA-256
 (`mizu_fetch/de3ddede7537ac4215831d91a33be537c549f63e70d6d341ab11c00e5a67743c`);
 its reviewed header declares `Apache-2.0 WITH LLVM-exception`. This is an
 upstream candidate source read, not a source-read record for the prebuilt NDK
-object. The retained member-DWARF report's archive field is
-`libc++_static.a`, and its capture log confirms 26 selected libc++ members
-(`vcs-read/d05fe7df2bc84c2795ee6dbf91731320`,
-`vcs-read/7436fe292764417095664a2a9160d64b`). No cxa-demangler member hash or
-DWARF source record is retained here.
-The separate demangler patch changes libc++abi CMake files, while the map-bound
-manifest still lists this member in `libc++abi.a`; neither fact identifies the
-configured build-graph effect or proves patch application. Member identity,
-surviving sections, exact notice applicability, and redistribution rights
-remain unresolved.
+object. The separate exact report now records the archive-member byte digest
+and a component-relative DWARF path for this one selected object; it still does
+not compare the object with this candidate source. The other 14 libc++abi
+members remain uncaptured. The separate demangler patch changes libc++abi CMake
+files, while the map-bound manifest still lists this member in `libc++abi.a`;
+neither fact identifies the configured build-graph effect or proves patch
+application. Source-byte identity, surviving sections, exact notice
+applicability, and redistribution rights remain unresolved.
 
 The full upstream terms were read at that same revision, including each
 component's own `LICENSE.TXT` (SHA-256 values are whole-file digests):
