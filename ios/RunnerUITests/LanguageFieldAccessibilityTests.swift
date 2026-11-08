@@ -188,11 +188,15 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       } ?? "<non-string>"
       let scalarCount = actual?.unicodeScalars.count ?? 0
       let valueType = current.value.map { String(describing: type(of: $0)) } ?? "nil"
+      let focusedField = app.descendants(matching: .any).matching(NSPredicate(
+        format: "identifier == %@ AND hasKeyboardFocus == 1", id)).firstMatch
+      let keyboardVisible = app.keyboards.firstMatch.exists
       XCTFail(
         "Expected native field \(label) value=\(value); wait=\(result). "
           + "Post-wait observation: exists=\(current.exists), enabled=\(current.isEnabled), "
           + "label=\(current.label), valueType=\(valueType), "
-          + "scalarPrefix=[\(scalarPrefix)], scalarCount=\(scalarCount)")
+          + "scalarPrefix=[\(scalarPrefix)], scalarCount=\(scalarCount), "
+          + "fieldKeyboardFocus=\(focusedField.exists), keyboardVisible=\(keyboardVisible)")
       return
     }
   }
