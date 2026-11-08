@@ -187,9 +187,21 @@ def _run(argv, deadline, max_output_bytes, operation, *, capture_stderr=False,
         except subprocess.TimeoutExpired as error:
             raise ValueError(operation + ' exceeded its configured timeout') from error
         if return_code != 0:
-            diagnostic = _safe_tool_diagnostic(
-                bytes(stderr_output), max_diagnostic_bytes,
-                truncated=stderr_bytes > len(stderr_output)) if capture_stderr else ''
+            diagnostic = ''
+            if capture_stderr:
+                # Keep the existing stderr-first priority while using one strict
+                # raw-byte budget across both streams. Only bounded, sanitized
+                # diagnostics are returned; raw DWARF output is not retained.
+                stderr_kept = bytes(stderr_output[:max_diagnostic_bytes])
+                stdout_budget = max_diagnostic_bytes - len(stderr_kept)
+                separator = b' ' if stderr_kept and output and stdout_budget else b''
+                stdout_budget -= len(separator)
+                stdout_kept = bytes(output[:stdout_budget])
+                diagnostic_bytes = stderr_kept + separator + stdout_kept
+                truncated = (stderr_bytes > len(stderr_kept) or
+                             len(output) > len(stdout_kept))
+                diagnostic = _safe_tool_diagnostic(
+                    diagnostic_bytes, max_diagnostic_bytes, truncated=truncated)
             suffix = '; diagnostic: ' + diagnostic if diagnostic else ''
             raise ValueError(operation + ' returned exit status ' + str(return_code) +
                              suffix + '; capture incomplete')

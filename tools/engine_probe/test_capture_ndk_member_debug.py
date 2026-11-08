@@ -215,11 +215,12 @@ class CaptureMemberDebugTest(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_nonzero_debug_tool_reports_bounded_path_redacted_stderr(self):
-        self.dwarfdump.write_text(
-            '#!/usr/bin/env python3\nimport sys\n'
-            'sys.stderr.write("error: /home/runner/private/member.o: unsupported DWARF; '
-            'C:\\\\agent\\_work\\object.o\\n")\n'
-            'sys.exit(7)\n', encoding='utf-8')
+        stderr = ('error: /home/runner/private/member.o: unsupported DWARF; '
+                  'C:\\agent\\_work\\object.o\n')
+        script = ('#!/usr/bin/env python3\nimport sys\n'
+                  'sys.stderr.write(' + repr(stderr) + ')\n'
+                  'sys.exit(7)\n')
+        self.dwarfdump.write_text(script, encoding='utf-8')
         self.dwarfdump.chmod(0o755)
         with self.assertRaisesRegex(
                 ValueError,
@@ -231,6 +232,41 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertNotIn('/home/runner', message)
         self.assertNotIn('C:\\agent', message)
         self.assertNotIn(str(self.root), message)
+        self.assertNotIn('[truncated]', message)
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_nonzero_debug_tool_reports_sanitized_stdout_with_total_byte_bound(self):
+        stdout = 'error: /home/runner/private/object.o: ' + 'x' * 512
+        stderr = 'warning: /private/diagnostic.log\n'
+        script = ('#!/usr/bin/env python3\nimport sys\n'
+                  'sys.stdout.write(' + repr(stdout) + ')\n'
+                  'sys.stderr.write(' + repr(stderr) + ')\n'
+                  'sys.exit(1)\n')
+        self.dwarfdump.write_text(script, encoding='utf-8')
+        self.dwarfdump.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'exit status 1') as caught:
+            self.run_capture(max_diagnostic_bytes=64)
+        message = str(caught.exception)
+        diagnostic = message.split('; diagnostic: ', 1)[1].split('; capture incomplete', 1)[0]
+        self.assertLessEqual(len(diagnostic.encode('utf-8')), 64)
+        self.assertIn('[path]', diagnostic)
+        self.assertIn('error:', diagnostic)  # The stdout stream is included after stderr.
+        self.assertIn('warning:', diagnostic)
+        self.assertNotIn('/home/runner', message)
+        self.assertNotIn('/private/diagnostic.log', message)
+        self.assertTrue(diagnostic.endswith('[truncated]'))
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_nonzero_debug_tool_reports_stdout_only_failure(self):
+        stdout = 'no debug section\n'
+        script = ('#!/usr/bin/env python3\nimport sys\n'
+                  'sys.stdout.write(' + repr(stdout) + ')\n'
+                  'sys.exit(1)\n')
+        self.dwarfdump.write_text(script, encoding='utf-8')
+        self.dwarfdump.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'exit status 1') as caught:
+            self.run_capture()
+        self.assertIn('no debug section', str(caught.exception))
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_debug_tool_stderr_counts_against_output_bound(self):
