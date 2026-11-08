@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -94,6 +95,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         args.update(overrides)
         return capture.capture(**args)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_hashes_selected_members_and_sanitizes_compile_unit_paths(self):
         result = self.run_capture()
         self.assertEqual(result['link_map']['sha256'], digest(self.map.read_bytes()))
@@ -121,6 +123,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertEqual(unit['dwarf_name_path'], 'libcxx/src/regex.cpp')
         self.assertEqual(unit['producer_version'], 'clang version 19.0.1')
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_member_listing_duplicate_fails_closed(self):
         self.listing.write_bytes(b'regex.cpp.o\nregex.cpp.o\nalgorithm.cpp.o\n')
         with self.assertRaisesRegex(ValueError, 'ambiguous'):
@@ -135,14 +138,17 @@ class CaptureMemberDebugTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'archive digest changed'):
             self.run_capture()
 
-    def test_unsafe_archive_path_and_wrong_member_bytes_fail_closed(self):
+    def test_unsafe_archive_path_fails_closed(self):
         self.write_manifest(path='../escape/libc++_static.a')
         with self.assertRaisesRegex(ValueError, 'unsafe'):
             self.run_capture()
-        self.write_manifest()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_object_byte_limit_is_enforced(self):
         with self.assertRaisesRegex(ValueError, 'configured byte bound'):
             self.run_capture(max_object_bytes=1)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_no_dwarf_is_a_recorded_finding_not_a_false_mapping(self):
         self.dwarf_file.write_bytes(b'')
         result = self.run_capture()
@@ -154,11 +160,13 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertIsNone(path)
         self.assertEqual(state, 'absolute-unmapped')
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_tool_output_limit_is_enforced_while_streaming(self):
         self.dwarf_file.write_bytes(b'x' * 4096)
         with self.assertRaisesRegex(ValueError, 'configured byte bound'):
             self.run_capture(max_tool_output_bytes=1024)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_tool_timeout_terminates_capture(self):
         self.readelf.write_text(
             '#!/usr/bin/env python3\nimport time\ntime.sleep(2)\n', encoding='utf-8')

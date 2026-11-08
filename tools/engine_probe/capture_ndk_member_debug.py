@@ -386,8 +386,8 @@ def main():
               str(manifest['counts']['members_with_compile_units']) + ' contain DWARF compile units')
     except Exception as error:
         args.output.unlink(missing_ok=True)
-        parser.exit(1, 'NDK member-debug capture failed: ' + type(error).__name__ +
-                    '; evidence incomplete\n')
+        detail = str(error) if isinstance(error, ValueError) else type(error).__name__
+        parser.exit(1, 'NDK member-debug capture failed: ' + detail + '; evidence incomplete\n')
 
 
 if __name__ == '__main__':
