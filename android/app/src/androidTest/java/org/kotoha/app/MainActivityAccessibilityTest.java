@@ -69,27 +69,29 @@ public final class MainActivityAccessibilityTest
 
     public void testEnglishLanguageFields() {
         checkLocale("English", "Source language", "Source text", "Target language",
-                "Copy translation 1", "Import text or Markdown");
+                "Copy translation 1", "Import text or Markdown", "Review model package terms");
     }
 
     public void testJapaneseLanguageFields() {
         checkLocale("日本語", "原文の言語", "原文", "訳先の言語",
-                "1件目の訳文をコピー", "テキスト・Markdownを読み込む");
+                "1件目の訳文をコピー", "テキスト・Markdownを読み込む",
+                "モデルパッケージの利用条件を確認");
     }
 
     private void checkLocale(String locale, String source, String sourceText,
-            String target, String copy, String importSource) {
+            String target, String copy, String importSource, String reviewModelTerms) {
         click("interface language menu", n -> named(n, "Interface language")
                 || named(n, "表示言語"));
         click(locale, n -> named(n, locale));
         // Native assertions poll for localized semantics beyond main-thread idle.
         getInstrumentation().waitForIdleSync();
-        checkField("source-language", source, "source-text", sourceText, importSource);
-        checkField("target-language-0", target, null, copy, null);
+        checkField("source-language", source, "source-text", sourceText,
+                importSource, reviewModelTerms);
+        checkField("target-language-0", target, null, copy);
     }
 
     private void checkField(String id, String label, String nextId, String nextLabel,
-            String interveningControl) {
+            String... interveningControls) {
         revealField(id);
         click(label, n -> field(n, id));
         assertField(id, label, "");
@@ -133,7 +135,7 @@ public final class MainActivityAccessibilityTest
         // the complete forward/reverse sequence.
         pressKey(KeyEvent.KEYCODE_TAB, 0);
         if (nextId != null) {
-            if (interveningControl != null) {
+            for (String interveningControl : interveningControls) {
                 awaitFocused(interveningControl);
                 pressKey(KeyEvent.KEYCODE_TAB, 0);
             }
