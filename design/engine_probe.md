@@ -2,34 +2,29 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
-The latest exact native-engine probe is publication
+The latest exact native-engine probe publication is
+`ba2e0cbad9a7b2fc1b95e63014e65a02a6f008a1df61c8c72c324e784569ea6b` at SHA
+`913b8384fcca653287098c50999f434ee9b806d9` (source commit
+`f54bab3a0403adc18183469379d3e8a141fcd2eb`). Exact status receipt
+`vcs-read/3d46288028aa456e9a7924e418da16a1` records Windows x64 success (job
+`128674035254`) and Android API 35 x86_64 failure (job `128674035071`). The
+Android job passed its 80 Python probe tests, then reported `llvm-readelf ...
+unknown argument '--debug-dump=info'` in bounded, path-redacted stderr
+(`vcs-read/3a7f8344b4aa49efa21d9cb6931c835f`). Its emulator also remained
+ADB-offline and was killed at the bounded timeout. This is a tool-interface
+failure, not evidence that DWARF is absent; neither platform result closes
+source identity, patch identity, licensing, notice obligations, runtime
+redistribution, or physical-device behavior. Engine adoption remains disabled.
+
+The detailed archive/member evidence below is from the earlier exact Android
+probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` at SHA
 `59cdc16f38ab3d18cf5a91aeff383b168e7792c4` (source commit
-`8753061739347d911648e75977fc4fe9c80e4a5e`; publication receipt
-`vcs-read/01c12fe34b7643dabf6e163e661ca49f`). Exact status receipt
-`vcs-read/437a9c0a9b7c425c86ec1a59e62350c1` records Windows x64 success
-(job `128662333216`) and Android API 35 x86_64 failure (job `128662333478`).
-The Windows report records 14 direct imports, 9 API-set contracts, 11 resolved
-providers and zero redacted paths; the three directly imported Visual C++
-runtime DLLs are classified `windows/system32`, version `14.51.36247.0`, and
-`WinVerifyTrust` reports `Valid` under cache-only revocation settings
-(`vcs-read/7fb6fc5305ca46aebf519fd901c30186`, report SHA-256
-`79e810f07cded92a1c22cf06823c859964d8cf17bc74f83880bdd5e40bd376dc`; summary
-`vcs-read/7ddabedd84774bd1b8c397e1940f5653`). This is a single-runner
-observation, not runtime redistribution authorization.
-Android passed all 76 probe tests and produced build, link-map/compiler,
-package-term and patch records, but its exact DWARF capture failed on the
-`llvm-readelf` scan of selected member `algorithm.cpp.o` (exit status 1); the
-capture log and complete paginated artifact inventory contain no
-`ndk-member-debug.json` (`vcs-read/2384db20bae24a92bbc161eb8fa660b9`,
-`vcs-read/7e2e95a3e76545a18644dbfef1225529`, `vcs-read/b5d6539719b04b2bb41625846b104085`).
-The emulator separately remained ADB-offline and was killed, so this run gives no
-Android runtime observation. The tool failure does not establish that DWARF is
-absent. No engine adoption, source identity, licensing closure or notice set is
-approved.
+`8753061739347d911648e75977fc4fe9c80e4a5e`); it remains bounded historical
+probe evidence rather than a fresh read of the later publication.
 
-The exact `android-api35-x86_64-engine-probe` artifact for this publication
-includes the map and a link-map-bound archive manifest. The complete manifest is
+The earlier `android-api35-x86_64-engine-probe` artifact includes the map
+and a link-map-bound archive manifest. The complete manifest is
 5,417 bytes, with locally verified artifact SHA-256
 `77989f7a3172bedbd86b23a6f7fa2f5ab4dccef696ebe2657cf1dcad13df09fd`
 (`vcs-read/a0174cd30958445f915a379412d958c5`). Its declared map size/hash
@@ -91,40 +86,45 @@ other file, included header, generated input, notice or linked section shares
 it. Exact package-record capture and member-to-input/section closure remain
 necessary. No product adoption or notice set is approved by this partial result.
 
-#### Selected libc++ member DWARF (instrumented; failure characterized, no report)
+#### Selected libc++ member DWARF (bounded capture; corrected tool pending exact CI)
 
-The Android probe includes `capture_ndk_member_debug.py`, wired after the
-link-map-bound archive manifest is produced. It rechecks the exact map and
-`libc++_static.a` hashes, enumerates selected members, hashes each extracted
-object in memory, and runs the pinned NDK `llvm-readelf --debug-dump=info` on a
-temporarily staged object. The report retains no object bytes or raw absolute
-`DW_AT_comp_dir`; it records member hashes, sanitized DWARF paths only when safe,
-basename and reduced compiler version. Temporary objects are removed; configured
-limits bound member count, extracted bytes, combined tool output and elapsed time.
-For a failing `llvm-readelf` invocation, stderr is drained under the same tool-output
-budget and only a diagnostic capped by `ENGINE_OUTPUT_BYTES` is retained after
-C0/C1-control and path redaction; successful stderr is discarded. Synthetic
-tests cover indexed DWARF strings, path redaction, archive/map binding, duplicate
-members, bounds, timeout and bounded, path-redacted failure context.
+The Android probe's capture rechecks the exact link-map and `libc++_static.a`
+hashes, enumerates selected members, hashes each extracted object in memory,
+and runs the pinned NDK `llvm-dwarfdump --debug-info` on a temporarily staged
+object. The NDK r28c release identifies version `28.2.13676358` and LLVM
+`clang-r530567e`; its Linux x86_64 prebuilt tool directory contains
+`llvm-dwarfdump` (Gitiles listing receipt
+`mizu_fetch/d17b244233de0cf5d7ddfcca89f4b418a3d8a168fcb7e8a2577ae5730e9dddc1`,
+entry blob `1132c55545f1a580a3ad3118adcfe55b53adfaa7`). The LLVM 19.1.7
+command guide documents `--debug-info` as the `.debug_info` section selector
+(`mizu_fetch/29e5c5536faefdcca094d298adaedd86638a91324438742214054f7ef5b082e2`,
+SHA-256 `4b6cd335bdaaf9e05f2af1229643d8f3f8ac046631ac65d81bfb0d01789b6d89`).
+This source/tool-inventory evidence supports the selected replacement, but the
+pinned NDK binary's execution on the exact captured objects still requires the
+next exact Android API 35 x86_64 CI run.
 
-On the exact diagnostic publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
-/ SHA `59cdc16f38ab3d18cf5a91aeff383b168e7792c4`, the capture log identifies
-the failing operation and selected member: `llvm-readelf DWARF scan for
-algorithm.cpp.o returned exit status 1; capture incomplete; evidence incomplete`
-(`vcs-read/2384db20bae24a92bbc161eb8fa660b9`). The command suppresses stderr;
-therefore no underlying tool diagnostic was retained. Exact CI status records the
-Android job failure and Windows job success (`vcs-read/437a9c0a9b7c425c86ec1a59e62350c1`).
-The complete artifact inventory spans two pages and has no
-`ndk-member-debug/ndk-member-debug.json` (`vcs-read/7e2e95a3e76545a18644dbfef1225529`,
-`vcs-read/b5d6539719b04b2bb41625846b104085`). The Android job passed all 76
-probe tests and produced the build/map/compiler, package-term and patch records
-before this capture failure (`vcs-read/c207d1e052a44238bf6f973926185ac6`).
-The emulator then remained ADB-offline and was killed. This run identifies a
-member-specific tool failure but neither proves the member lacks DWARF nor gives
-Android runtime evidence. Even a successful DWARF report would only narrow a
-debug-info clue; it cannot establish exact source bytes, patch identity, surviving
-linked sections, applicable notices or redistribution rights. Adoption remains
-disabled.
+The report retains no object bytes or raw absolute `DW_AT_comp_dir`; it records
+member hashes, sanitized DWARF paths only when safe, basename and reduced
+compiler version. Temporary objects are removed; configured limits bound member
+count, extracted bytes, combined tool output and elapsed time. Tool stderr is
+drained under the same output budget and only a byte-capped diagnostic remains
+after C0/C1-control and path redaction; successful stderr is discarded.
+Synthetic tests cover indexed DWARF strings, the exact `--debug-info` argument,
+path redaction, archive/map binding, duplicate members, bounds, timeout and
+bounded, path-redacted failure context.
+
+The earlier exact diagnostic publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
+/ SHA `59cdc16f38ab3d18cf5a91aeff383b168e7792c4` failed the selected-member
+scan but discarded stderr, so its log only identifies the failing operation
+(`vcs-read/2384db20bae24a92bbc161eb8fa660b9`). The later exact run above
+captured the cause: `llvm-readelf` rejected the unsupported GNU-style option
+`--debug-dump=info` (`vcs-read/3a7f8344b4aa49efa21d9cb6931c835f`). The current
+change switches to NDK-provided `llvm-dwarfdump --debug-info` and adds a
+regression check. No successful corrected capture is available yet. Even a
+successful DWARF report would only narrow a debug-info clue; it cannot establish
+exact source bytes, patch identity, surviving linked sections, applicable
+notices or redistribution rights. The emulator failure is separate and gives
+no Android runtime observation; adoption remains disabled.
 
 #### Source-list candidate comparisons at the NDK-reported LLVM base
 
@@ -633,26 +633,36 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Current evidence limits:** exact Android API 35 x86_64 publication
+**Current evidence limits:** the latest exact Android API 35 x86_64 attempt is
+publication `ba2e0cbad9a7b2fc1b95e63014e65a02a6f008a1df61c8c72c324e784569ea6b`
+/ SHA `913b8384fcca653287098c50999f434ee9b806d9`, job `128674035071` (failure;
+status `vcs-read/3d46288028aa456e9a7924e418da16a1`). It passed 80 Python probe
+tests, then `llvm-readelf` rejected `--debug-dump=info`
+(`vcs-read/3a7f8344b4aa49efa21d9cb6931c835f`). The corrected
+`llvm-dwarfdump --debug-info` command has not yet run against the pinned NDK
+objects. The emulator remained
+ADB-offline and was killed. This establishes a command-interface failure, not
+DWARF absence or Android runtime behavior.
+
+The previous exact Android probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
 `59cdc16f38ab3d18cf5a91aeff383b168e7792c4` retained the map, archive/member,
-compiler-read and NDK metadata, then failed `llvm-readelf` DWARF scanning on
-`algorithm.cpp.o` with exit status 1; the report is absent. The full artifact
-inventory is on pages `vcs-read/7e2e95a3e76545a18644dbfef1225529` and
-`vcs-read/b5d6539719b04b2bb41625846b104085`. Its map declaration is 4,660,773
-bytes with SHA-256
+compiler-read and NDK metadata before its DWARF failure. Its manifest and
+sidecar agree on map SHA-256
 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`; the
-current independently read manifest and sidecar agree. Emulator ADB remained
-offline and the process was killed. This identifies a tool/member failure, not
-absence of DWARF or a runtime result. The earlier successful emulator observation
-at publication `297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa`
+complete artifact inventory is recorded on pages
+`vcs-read/7e2e95a3e76545a18644dbfef1225529` and
+`vcs-read/b5d6539719b04b2bb41625846b104085`. These archive details remain
+historical evidence, not a fresh complete-artifact review of the later run.
+The earlier successful emulator observation at publication
+`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa`
 (`vcs-read/57c733d1cb7b4bd39a8c73d74dfefcb8`) resolved `/system/bin/linker64`
-imports on Android 15/API 35 x86_64 only. Neither run establishes physical-device
-behavior, other ABIs/OS versions, all `dlopen` paths, provider legal terms or
-product linkage. Selected NDK archive/member provenance, complete applicable
-notices and user-accessible delivery remain unresolved; no adoption, model
-redistribution, persistence, privacy, quality or platform-support claim is
-authorized.
+imports on Android 15/API 35 x86_64 only. Neither run establishes
+physical-device behavior, other ABIs/OS versions, all `dlopen` paths, provider
+legal terms or product linkage. Selected NDK archive/member provenance,
+complete applicable notices and user-accessible delivery remain unresolved;
+no adoption, model redistribution, persistence, privacy, quality or platform-
+support claim is authorized.
 
 ## Selected-source and runtime audit
 
@@ -896,22 +906,26 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 
 ### Android selected runtime and delivery gate
 
-The newest exact Android API 35 x86_64 run is publication
+The latest exact Android API 35 x86_64 run is publication
+`ba2e0cbad9a7b2fc1b95e63014e65a02a6f008a1df61c8c72c324e784569ea6b` / SHA
+`913b8384fcca653287098c50999f434ee9b806d9`, job `128674035071` (failure;
+status `vcs-read/3d46288028aa456e9a7924e418da16a1`). After 80 probe tests, its
+bounded diagnostic showed `llvm-readelf` rejecting `--debug-dump=info`
+(`vcs-read/3a7f8344b4aa49efa21d9cb6931c835f`); this does not establish missing
+DWARF. The emulator remained ADB-offline, so no runtime result was produced.
+The earlier exact run
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
-`59cdc16f38ab3d18cf5a91aeff383b168e7792c4`, job `128662333478` (failure).
-Its exact-SHA artifacts contain the 4,660,773-byte map, 5,417-byte manifest and
-96-byte sidecar (`vcs-read/a0174cd30958445f915a379412d958c5`,
-`vcs-read/35b02c94bd924b7bb8025017857f67e0`). The manifest and sidecar agree on
-map SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`;
+`59cdc16f38ab3d18cf5a91aeff383b168e7792c4` retained the 4,660,773-byte map,
+5,417-byte manifest and 96-byte sidecar (`vcs-read/a0174cd30958445f915a379412d958c5`,
+`vcs-read/35b02c94bd924b7bb8025017857f67e0`). The manifest and sidecar agree
+on map SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`;
 the manifest artifact SHA-256 is
 `77989f7a3172bedbd86b23a6f7fa2f5ab4dccef696ebe2657cf1dcad13df09fd`. It lists
-47 members across four NDK archives, including 26 libc++ and 15 libc++abi members;
-the hashes bind archive bytes, not source files or surviving sections. Exact NDK
-package-term and Android LLVM patch manifests are retained
+47 members across four NDK archives, including 26 libc++ and 15 libc++abi
+members; the hashes bind archive bytes, not source files or surviving sections.
+Exact NDK package-term and Android LLVM patch manifests are retained
 (`vcs-read/4995c5cc44c24fbea2e2f794343675c5`,
-`vcs-read/36db48b5025e49c68da696c62b80e289`). The DWARF scan failed on
-`algorithm.cpp.o` and no report or emulator runtime result was produced, as
-detailed above.
+`vcs-read/36db48b5025e49c68da696c62b80e289`).
 
 An earlier successful Android emulator observation remains publication
 `297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` / SHA
@@ -930,9 +944,13 @@ unresolved; no product adoption is authorized.
 ### Windows runtime and delivery gate
 
 The latest exact Windows x64 engine probe is publication
-`20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
-`59cdc16f38ab3d18cf5a91aeff383b168e7792c4`, job `128662333216` (success;
-status `vcs-read/437a9c0a9b7c425c86ec1a59e62350c1`). Its exact configure log
+`ba2e0cbad9a7b2fc1b95e63014e65a02a6f008a1df61c8c72c324e784569ea6b` / SHA
+`913b8384fcca653287098c50999f434ee9b806d9`, job `128674035254` (success;
+status `vcs-read/3d46288028aa456e9a7924e418da16a1`). The detailed configure,
+linkage and provider observations below were captured on the earlier exact
+publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
+/ SHA `59cdc16f38ab3d18cf5a91aeff383b168e7792c4`; they are not re-read evidence
+from the latest run. That earlier configure log
 (`vcs-read/cca0866806fb427dbdd0ecc6cb5a77cc`) records Visual Studio 18 2026,
 MSVC `19.51.36260.0` and toolset `14.51.36231`. The exact PE linkage artifact
 (`vcs-read/cc9c8bb5417c4b2589598cb46f1347b7`, SHA-256

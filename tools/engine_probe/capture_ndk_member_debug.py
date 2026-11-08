@@ -282,9 +282,9 @@ def _safe_producer(value):
     return value[:256]
 
 
-def _member_record(name, data, readelf_output):
+def _member_record(name, data, dwarfdump_output):
     try:
-        text = readelf_output.decode('utf-8', errors='replace')
+        text = dwarfdump_output.decode('utf-8', errors='replace')
     except AttributeError as error:
         raise ValueError('Debug tool output is malformed; capture incomplete') from error
     units = parse_compile_units(text)
@@ -313,7 +313,7 @@ def _member_record(name, data, readelf_output):
     }
 
 
-def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
+def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
             temp_root, max_members, max_object_bytes, max_tool_output_bytes,
             max_diagnostic_bytes=8192, timeout_seconds=120):
     if (max_members < 1 or max_object_bytes < 1 or max_tool_output_bytes < 1 or
@@ -328,7 +328,7 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
     linker_map = Path(linker_map)
     manifest_bytes, map_record, archive, relative, archive_path, members = _safe_archive_manifest(
         archive_manifest, linker_map, ndk_root, max_members)
-    for tool in (Path(llvm_ar), Path(llvm_readelf)):
+    for tool in (Path(llvm_ar), Path(llvm_dwarfdump)):
         resolved = tool.resolve(strict=True)
         try:
             resolved.relative_to(ndk_root)
@@ -365,9 +365,9 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
             object_path = temp / ('member-%04d.o' % index)
             object_path.write_bytes(data)
             dwarf, diagnostic_bytes = _run(
-                [str(Path(llvm_readelf).resolve()), '--debug-dump=info', str(object_path)],
+                [str(Path(llvm_dwarfdump).resolve()), '--debug-info', str(object_path)],
                 deadline, max_tool_output_bytes - total_tool_output_bytes,
-                'llvm-readelf DWARF scan for ' + name, capture_stderr=True,
+                'llvm-dwarfdump DWARF scan for ' + name, capture_stderr=True,
                 max_diagnostic_bytes=max_diagnostic_bytes)
             total_dwarf_bytes += len(dwarf)
             total_tool_output_bytes += len(dwarf) + diagnostic_bytes
@@ -422,7 +422,7 @@ def main():
     parser.add_argument('--linker-map', type=Path, required=True)
     parser.add_argument('--ndk-root', type=Path, required=True)
     parser.add_argument('--llvm-ar', type=Path, required=True)
-    parser.add_argument('--llvm-readelf', type=Path, required=True)
+    parser.add_argument('--llvm-dwarfdump', type=Path, required=True)
     parser.add_argument('--temp-root', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--max-members', type=positive_int, default=64)
@@ -436,7 +436,7 @@ def main():
     try:
         manifest = capture(
             archive_manifest=args.archive_manifest, linker_map=args.linker_map,
-            ndk_root=args.ndk_root, llvm_ar=args.llvm_ar, llvm_readelf=args.llvm_readelf,
+            ndk_root=args.ndk_root, llvm_ar=args.llvm_ar, llvm_dwarfdump=args.llvm_dwarfdump,
             temp_root=args.temp_root, max_members=args.max_members,
             max_object_bytes=args.max_object_bytes, max_tool_output_bytes=args.max_tool_output_bytes,
             max_diagnostic_bytes=args.max_diagnostic_bytes,

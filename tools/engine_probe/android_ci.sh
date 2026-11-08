@@ -113,7 +113,7 @@ member_capture_status=0
 python3 tools/engine_probe/capture_ndk_member_debug.py \
   --archive-manifest "$build/validated-linker-map/llama-simple.map.archives.json" \
   --linker-map "$build/validated-linker-map/llama-simple.map" --ndk-root "$ndk" \
-  --llvm-ar "$llvm/llvm-ar" --llvm-readelf "$llvm/llvm-readelf" \
+  --llvm-ar "$llvm/llvm-ar" --llvm-dwarfdump "$llvm/llvm-dwarfdump" \
   --temp-root "$owner" --output "$build/ndk-member-debug/ndk-member-debug.json" \
   --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" \
   --max-object-bytes "$ENGINE_NDK_MEMBER_MAX_BYTES" \

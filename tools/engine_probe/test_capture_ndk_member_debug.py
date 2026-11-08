@@ -29,7 +29,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.bindir = self.ndk / 'toolchains' / 'llvm' / 'bin'
         self.bindir.mkdir(parents=True)
         self.ar = self.bindir / 'llvm-ar'
-        self.readelf = self.bindir / 'llvm-readelf'
+        self.dwarfdump = self.bindir / 'llvm-dwarfdump'
         self.listing = self.root / 'members.txt'
         self.object_dir = self.root / 'objects'
         self.object_dir.mkdir()
@@ -54,14 +54,19 @@ class CaptureMemberDebugTest(unittest.TestCase):
             'Path(' + repr(str(self.object_dir)) + ').joinpath(args[2])\n'
             'sys.stdout.buffer.write(target.read_bytes())\n'
         )
-        readelf_script = (
-            '#!/usr/bin/env python3\nimport sys\nfrom pathlib import Path\n'
+        self.tool_args = self.root / 'dwarfdump-args.json'
+        dwarfdump_script = (
+            '#!/usr/bin/env python3\nimport json,sys\nfrom pathlib import Path\n'
+            'args=sys.argv[1:]\n'
+            'if len(args) != 2 or args[0] != "--debug-info":\n'
+            ' sys.stderr.write("unsupported llvm-dwarfdump invocation\\n"); sys.exit(2)\n'
+            'Path(' + repr(str(self.tool_args)) + ').write_text(json.dumps(args), encoding="utf-8")\n'
             'sys.stdout.buffer.write(Path(' + repr(str(self.dwarf_file)) + ').read_bytes())\n'
         )
         self.ar.write_text(ar_script, encoding='utf-8')
-        self.readelf.write_text(readelf_script, encoding='utf-8')
+        self.dwarfdump.write_text(dwarfdump_script, encoding='utf-8')
         self.ar.chmod(0o755)
-        self.readelf.chmod(0o755)
+        self.dwarfdump.chmod(0o755)
         self.write_manifest()
 
     def tearDown(self):
@@ -85,7 +90,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
             'linker_map': self.map,
             'ndk_root': self.ndk,
             'llvm_ar': self.ar,
-            'llvm_readelf': self.readelf,
+            'llvm_dwarfdump': self.dwarfdump,
             'temp_root': self.root,
             'max_members': 64,
             'max_object_bytes': 1024,
@@ -112,7 +117,15 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertNotIn('/private/build', encoded)
         self.assertNotIn('synthetic object:', encoded)
 
-    def test_llvm_readelf_indexed_strings_are_extracted_without_form_text(self):
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_uses_llvm_dwarfdump_debug_info_option(self):
+        self.run_capture()
+        args = json.loads(self.tool_args.read_text(encoding='utf-8'))
+        self.assertEqual(args[0], '--debug-info')
+        self.assertEqual(len(args), 2)
+        self.assertFalse(Path(args[1]).exists())
+
+    def test_llvm_dwarfdump_indexed_strings_are_extracted_without_form_text(self):
         text = '''0x00000000: DW_TAG_compile_unit
   DW_AT_producer [DW_FORM_strx1] (indexed (00000000) string = "clang version 19.0.1 (/private/build)")
   DW_AT_name [DW_FORM_strx1] (indexed (00000001) string = "src/regex.cpp")
@@ -169,20 +182,20 @@ class CaptureMemberDebugTest(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_tool_timeout_terminates_capture(self):
-        self.readelf.write_text(
+        self.dwarfdump.write_text(
             '#!/usr/bin/env python3\nimport time\ntime.sleep(2)\n', encoding='utf-8')
-        self.readelf.chmod(0o755)
+        self.dwarfdump.chmod(0o755)
         with self.assertRaisesRegex(ValueError, 'configured timeout'):
             self.run_capture(timeout_seconds=0.1)
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_nonzero_debug_tool_reports_safe_member_context(self):
-        self.readelf.write_text(
+        self.dwarfdump.write_text(
             '#!/usr/bin/env python3\nimport sys\nsys.exit(7)\n', encoding='utf-8')
-        self.readelf.chmod(0o755)
+        self.dwarfdump.chmod(0o755)
         with self.assertRaisesRegex(
                 ValueError,
-                r'llvm-readelf DWARF scan for algorithm\.cpp\.o returned exit status 7') as caught:
+                r'llvm-dwarfdump DWARF scan for algorithm\.cpp\.o returned exit status 7') as caught:
             self.run_capture()
         self.assertNotIn(str(self.root), str(caught.exception))
 
@@ -202,15 +215,15 @@ class CaptureMemberDebugTest(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_nonzero_debug_tool_reports_bounded_path_redacted_stderr(self):
-        self.readelf.write_text(
+        self.dwarfdump.write_text(
             '#!/usr/bin/env python3\nimport sys\n'
             'sys.stderr.write("error: /home/runner/private/member.o: unsupported DWARF; '
             'C:\\\\agent\\_work\\object.o\\n")\n'
             'sys.exit(7)\n', encoding='utf-8')
-        self.readelf.chmod(0o755)
+        self.dwarfdump.chmod(0o755)
         with self.assertRaisesRegex(
                 ValueError,
-                r'llvm-readelf DWARF scan for algorithm\.cpp\.o returned exit status 7') as caught:
+                r'llvm-dwarfdump DWARF scan for algorithm\.cpp\.o returned exit status 7') as caught:
             self.run_capture(max_diagnostic_bytes=256)
         message = str(caught.exception)
         self.assertIn('unsupported DWARF', message)
@@ -221,10 +234,10 @@ class CaptureMemberDebugTest(unittest.TestCase):
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_debug_tool_stderr_counts_against_output_bound(self):
-        self.readelf.write_text(
+        self.dwarfdump.write_text(
             '#!/usr/bin/env python3\nimport sys\n'
             'sys.stderr.write("x" * 4096)\n', encoding='utf-8')
-        self.readelf.chmod(0o755)
+        self.dwarfdump.chmod(0o755)
         with self.assertRaisesRegex(ValueError, 'output exceeds its configured byte bound'):
             self.run_capture(max_tool_output_bytes=1024)
 
