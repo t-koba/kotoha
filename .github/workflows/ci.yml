@@ -204,8 +204,10 @@ jobs:
             -Pandroid.testInstrumentationRunnerArguments.axPollMillis="$ANDROID_AX_POLL_MILLIS" \
             -Pandroid.testInstrumentationRunnerArguments.profileBytes="$PROFILE_BYTES"
 
-  apple:
-    name: iOS and macOS debug builds
+  # Isolate platform test failures so iOS simulator UI issues do not suppress
+  # the separate macOS accessibility probe (or vice versa).
+  ios:
+    name: iOS debug build and simulator tests
     runs-on: macos-latest
     needs: [design-contracts, flutter-tests]
     timeout-minutes: 45
@@ -221,8 +223,6 @@ jobs:
           flutter-version: 3.47.9
           cache: true
           pub-cache: true
-      - name: Enable macOS desktop target
-        run: flutter config --enable-macos-desktop
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
       - name: Build unsigned iOS app
@@ -254,6 +254,28 @@ jobs:
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
+
+  macos:
+    name: macOS debug build and accessibility probe
+    runs-on: macos-latest
+    needs: [design-contracts, flutter-tests]
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+          pub-cache: true
+      - name: Enable macOS desktop target
+        run: flutter config --enable-macos-desktop
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
       - name: Profile desktop disk read and strict decode
         if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
         timeout-minutes: 5
