@@ -110,9 +110,16 @@ The manifest additionally hashes the NDK toolchain's Python, pip and setuptools
 license files. The inspected start of `NOTICE.toolchain` contains GPL-2.0 text;
 the inspected sysroot notice contains multiple distinct attribution/license
 texts. These broad installed-package records are not a license classification of
-the four map-selected static archives. The required notice subset and applicable
-terms remain unresolved until each selected archive/member and affected patch or
-section is mapped to its source, terms and distribution obligation.
+the map-selected static archives. The exact archive manifest
+`validated-linker-map/llama-simple.map.archives.json` (`vcs-read/58df53efd7a640b68b5816a12063f44e`,
+SHA-256 `ed2f334e79cda0e310a0d078c625e031e00f5f25203ead3fb6b8d83598921352`)
+identifies four NDK runtime archives and 47 selected members: compiler-rt
+builtins (one `emutls.c.o`), libunwind (5), libc++ (26), and libc++abi
+(15). This bounds the source/patch intersection but does not map member
+bytes to source files or surviving sections. The required notice subset
+and applicable terms remain unresolved until each selected member and
+affected patch/section is mapped to its source, terms and distribution
+obligation.
 
 The compiler log reports Android clang 19.0.1, based on r530567e, repository
 commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` (`vcs-read/c2129f0d0cae49969429c6c18adadfde`). An exact upstream commit-metadata read identifies this as “Merge 3b5e7c83… for LLVM update to 530567”, with `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` as its second parent. The installed `clang_source_info.md` instead names that `3b5e7c83…` commit as its base revision and lists Android toolchain patches from repository revision `e727bfb014bd436f581a66a450c939a6983a1fc3`. The component `LICENSE.TXT` hashes recorded above were re-fetched at base revision `3b5e7c83…` and match, but this verifies only identical license-text bytes, not that the patched installed archives' selected object code matches the mapped source files. Patch-to-member/source closure remains open.
@@ -148,8 +155,35 @@ The latest successful probe's exact metadata manifest is
 212,263 patch bytes plus a 16,039-byte tree index; 228,302 total collected bytes). The manifest
 scope is hashes, sizes and Git object IDs only; the raw patch blobs are not
 retained in CI. The checked-out temporary Git fetch has a 120-second deadline,
-but the pack has no independent hard byte cap. The demangler patch affects build-graph selection, and the HWASan/CodeGen patches
-modify compiler tooling rather than shipped runtime objects. The regex patch
+but the pack has no independent hard byte cap.
+
+This four-entry patch capture is not a complete patch inventory. The exact
+retained `clang_source_info.md` artifact (`vcs-read/e2ada48ced374c21b554de8fa9f8c1b7`)
+enumerates many additional repository patch entries, including `libc++`- and
+`compiler-rt`-named entries; the capture script allowlist and manifest scope
+cover only these four. Names alone do not establish effects on selected
+product objects, but the full source-info list must be intersected with exact
+selected runtime members and source paths before claiming patch closure. One
+additional source-info-listed `libc++` patch,
+`f886dfed3ae6cf70827cedc8d8aefde6250a239b`, was decoded in experiment
+`experiments/15418f8ce0bb4431ad2c5081095d8142`: 4,733 bytes, SHA-256
+`1e7a30444f33594f27ec14faf8d51b21a702fb1f452f16dc886779ed62e7a7f9`; its
+only diff path is `libcxx/include/__config`, changing diagnostic push/pop
+macros for Clang modules. This confirms the four-entry capture omits a
+header-affecting patch; exact installed-header/selected-read identity and
+any binary effect remain unverified.
+
+The demangler patch affects build-graph selection. A bounded decode of the
+exact `9a2fd97` patch in experiment
+`experiments/2aa9e6e756234995819851b9e7b6ce5b` measured 174,905 bytes and
+SHA-256 `9b0a015f44a91d6ed83eb9ba4b0303f0e634daa8874199eb76d74f7d61dba7b3`,
+matching the NDK manifest; its six diff paths are the HWASan
+instrumentation pass and five tests. None names the candidate
+`compiler-rt/lib/builtins/emutls.c` path for selected member `emutls.c.o`
+(`vcs-read/58df53efd7a640b68b5816a12063f44e`). This rules out a direct edit
+to that candidate source path by this patch only; member-source identity and
+the broader patch/source intersection remain open. The CodeGen patch is a
+compiler change. The regex patch
 affects a selected libc++ input, but neither patch-to-installed-header identity
 nor survival in the linked runtime object is established.
 
