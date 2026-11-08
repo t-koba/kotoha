@@ -151,9 +151,33 @@ source files (`compiler-rt/lib/builtins/emutls.c`, `libunwind/src/`,
 headers at that immutable revision declare
 `SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`; under
 [dependency_policy.json](specs/dependency_policy.json), this is a permissive
-branch. The archive and member names/hashes are from the exact Android link-map
-manifest; a member-name-to-source path match alone does not prove the compiled
-object bytes or surviving sections correspond to those unmodified source files.
+branch. The exact Android link-map manifest records archive-level hashes and
+selected member names, not per-member hashes. The bounded DWARF report described
+below hashes only the 26 members of `libc++_static.a`, not the 15 members of
+`libc++abi.a`. A member-name-to-source path match alone does not prove the
+compiled object bytes or surviving sections correspond to those unmodified
+source files.
+
+For the demangler candidate, the exact manifest lists `cxa_demangle.cpp.o` in
+`libc++abi.a` (archive SHA-256
+`11ff6729a881f3d1a2e72c2a9c4bd2c096e02c5dfb3858d942405e0514b7b95c`, size
+2,792,306 bytes; `vcs-read/efd03137e3cc49a78bfbe6462a2d5769`). The immutable
+compiler-reported LLVM source candidate `libcxxabi/src/cxa_demangle.cpp` has
+SHA-256
+`75d8f3ff6fb628bc57508f4c95cc8534e228c085e4e5167c593ea1cf4f703e97`
+(`mizu_fetch/de3ddede7537ac4215831d91a33be537c549f63e70d6d341ab11c00e5a67743c`);
+its reviewed header declares `Apache-2.0 WITH LLVM-exception`. This is an
+upstream candidate source read, not a source-read record for the prebuilt NDK
+object. The retained member-DWARF report's archive field is
+`libc++_static.a`, and its capture log confirms 26 selected libc++ members
+(`vcs-read/d05fe7df2bc84c2795ee6dbf91731320`,
+`vcs-read/7436fe292764417095664a2a9160d64b`). No cxa-demangler member hash or
+DWARF source record is retained here.
+The separate demangler patch changes libc++abi CMake files, while the map-bound
+manifest still lists this member in `libc++abi.a`; neither fact identifies the
+configured build-graph effect or proves patch application. Member identity,
+surviving sections, exact notice applicability, and redistribution rights
+remain unresolved.
 
 The full upstream terms were read at that same revision, including each
 component's own `LICENSE.TXT` (SHA-256 values are whole-file digests):
