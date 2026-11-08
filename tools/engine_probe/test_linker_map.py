@@ -156,6 +156,16 @@ class LinkerMapTests(unittest.TestCase):
                     self.capture()
                 self.assertFalse(self.output_dir.exists())
 
+    def test_rejects_malformed_header_instead_of_reusing_previous_section(self):
+        self.write_map(
+            '  100 100 20 4 .text\n'
+            '  100 100 20 4 .bad/name\n'
+            f'  104 104 4 4 {self.ndk_archive}(member.o):(.text)\n'
+        )
+        with self.assertRaisesRegex(RuntimeError, 'malformed output section header'):
+            self.capture()
+        self.assertFalse(self.output_dir.exists())
+
     def test_rejects_libcxx_contribution_outside_enclosing_output_range(self):
         self.write_map(
             '  100 100 10 4 .text\n'

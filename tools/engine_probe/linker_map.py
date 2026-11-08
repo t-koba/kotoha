@@ -100,18 +100,24 @@ def _parse_archive_members(stream, build_root, ndk_root, max_bytes):
         # LLD output-section headers have four address/size/alignment columns
         # followed by one section-name token. Treat malformed-looking headers
         # as errors rather than allowing later inputs to inherit stale context.
-        tokens = line.split()
-        header_candidate = (
-            '.a(' not in line and tokens and
-            _SECTION_NAME.fullmatch(tokens[-1]) is not None and
-            not tokens[-1].startswith('.L')
+        header_rest = fields[4].strip() if row and len(fields) == 5 else ''
+        header_parts = header_rest.split()
+        section_like_header = (
+            '.a(' not in line and header_parts and
+            header_parts[0].startswith('.') and ':(' not in header_rest
         )
+        valid_local_symbol = (
+            len(header_parts) == 1 and
+            _SECTION_NAME.fullmatch(header_parts[0]) is not None and
+            header_parts[0].startswith('.L')
+        )
+        header_candidate = section_like_header and not valid_local_symbol
         if header_candidate:
             if not row or len(fields) != 5:
                 raise RuntimeError(f'unrecognized output section header on map line {line_number}')
             vma_value, lma_value, size_value, align_value, rest = fields
             output_section = rest.strip()
-            if (output_section != tokens[-1] or
+            if (len(header_parts) != 1 or output_section != header_parts[0] or
                     not _SECTION_NAME.fullmatch(output_section) or
                     not _MAP_HEX.fullmatch(vma_value) or
                     not _MAP_HEX.fullmatch(lma_value) or
