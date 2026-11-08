@@ -7,6 +7,11 @@ import XCTest
 
 class RunnerTests: XCTestCase {
   @MainActor
+  private func waitForPredicate(_ expectation: XCTestExpectation, timeout: TimeInterval, context: String) {
+    let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
+    XCTAssertEqual(result, .completed, "Timed out waiting for \(context) after \(timeout) seconds")
+  }
+  @MainActor
   func testPrivacyCoverIsIdempotentAndLeavesContentAttached() throws {
     // Use Runner's connected scene and installed delegate so removing either
     // lifecycle callback's cover operation breaks this regression. These direct
@@ -145,7 +150,7 @@ class RunnerTests: XCTestCase {
     let active = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
       TextImportPlugin.activePresenter() != nil
     }, object: nil)
-    wait(for: [active], timeout: timeout)
+    waitForPredicate(active, timeout: timeout, context: "active presenter")
     let presenter = try XCTUnwrap(TextImportPlugin.activePresenter())
     let flutter = try XCTUnwrap(presenter as? FlutterViewController)
     let engine = try XCTUnwrap(flutter.engine)
@@ -182,7 +187,7 @@ class RunnerTests: XCTestCase {
       let shown = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
         picker.presentingViewController != nil && !picker.isBeingPresented
       }, object: nil)
-      wait(for: [shown], timeout: timeout)
+      waitForPredicate(shown, timeout: timeout, context: "document-picker presentation")
       XCTAssertTrue(picker.presentingViewController === presenter)
       XCTAssertEqual(picker.documentPickerMode, .open) // asCopy:false, not import/copy mode.
       XCTAssertFalse(picker.allowsMultipleSelection)
@@ -224,7 +229,7 @@ class RunnerTests: XCTestCase {
     let detachShown = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
       detachedPicker.presentingViewController != nil && !detachedPicker.isBeingPresented
     }, object: nil)
-    wait(for: [detachShown], timeout: timeout)
+    waitForPredicate(detachShown, timeout: timeout, context: "detached-plugin picker presentation")
     detachedPlugin.detachFromEngine(for: registrar)
     XCTAssertNil(detachedPicker.delegate)
     XCTAssertNil(detachedPlugin.picker)
