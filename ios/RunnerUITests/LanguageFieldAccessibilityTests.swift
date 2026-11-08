@@ -148,6 +148,9 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     }
 
     let current = field(id)
+    if current.exists && hasUsableFrame(current.frame) && current.isHittable {
+      return current
+    }
     let keyboard = app.keyboards.firstMatch
     let targetExists = current.exists
     XCTFail(
