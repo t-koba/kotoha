@@ -1,4 +1,4 @@
-"""Capture bounded DWARF metadata for selected NDK libc++ archive members.
+"""Capture bounded DWARF metadata for selected NDK C++ runtime archive members.
 
 This developer-only probe hashes exact selected member bytes in memory and
 records sanitized DWARF compile-unit names; temporary object files are deleted
@@ -23,6 +23,8 @@ ARCHIVE_NAME = 'libc++_static.a'
 COMPONENT = 'libcxx'
 SHA_RE = re.compile(r'[0-9a-f]{64}')
 MEMBER_RE = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.+-]*\.o')
+ARCHIVE_NAME_RE = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.+-]*\.a')
+COMPONENT_RE = re.compile(r'[A-Za-z][A-Za-z0-9_+-]*')
 CLANG_VERSION_RE = re.compile(r'\bclang version\s+([0-9][A-Za-z0-9.+_-]*)', re.IGNORECASE)
 CHUNK_BYTES = 1024 * 1024
 ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
@@ -53,7 +55,13 @@ def _safe_relative(value):
     return path
 
 
-def _safe_archive_manifest(path, linker_map, ndk_root, max_members):
+def _safe_archive_manifest(path, linker_map, ndk_root, max_members,
+                           archive_name=ARCHIVE_NAME, selected_member=None):
+    if not isinstance(archive_name, str) or not ARCHIVE_NAME_RE.fullmatch(archive_name):
+        raise ValueError('Selected archive name is malformed; capture incomplete')
+    if (selected_member is not None and
+            (not isinstance(selected_member, str) or not MEMBER_RE.fullmatch(selected_member))):
+        raise ValueError('Requested archive member name is malformed; capture incomplete')
     raw = path.read_bytes()
     try:
         manifest = json.loads(raw)
@@ -79,34 +87,39 @@ def _safe_archive_manifest(path, linker_map, ndk_root, max_members):
         if not isinstance(record, dict) or record.get('root') != 'ndk':
             continue
         rel = _safe_relative(record.get('path'))
-        if rel.name == ARCHIVE_NAME:
+        if rel.name == archive_name:
             matches.append((record, rel))
     if len(matches) != 1:
-        raise ValueError('Expected exactly one selected libc++ archive; capture incomplete')
+        raise ValueError('Expected exactly one selected NDK archive; capture incomplete')
     archive, relative = matches[0]
     members = archive.get('members')
     if (not isinstance(members, list) or not members or len(members) > max_members or
             any(not isinstance(member, str) or not MEMBER_RE.fullmatch(member) for member in members) or
             len(set(members)) != len(members)):
-        raise ValueError('Selected libc++ member set is malformed or exceeds its configured count')
+        raise ValueError('Selected archive member set is malformed or exceeds its configured count')
     if (not isinstance(archive.get('size'), int) or isinstance(archive.get('size'), bool) or
             archive['size'] <= 0 or
             not SHA_RE.fullmatch(archive.get('sha256', ''))):
-        raise ValueError('Selected libc++ archive identity is malformed; capture incomplete')
+        raise ValueError('Selected archive identity is malformed; capture incomplete')
+
+    if selected_member is not None and members.count(selected_member) != 1:
+        raise ValueError('Requested member is absent or ambiguous in validated manifest; capture incomplete')
+    if selected_member is not None:
+        members = [selected_member]
 
     candidate = ndk_root / Path(*relative.parts)
     if candidate.is_symlink():
-        raise ValueError('Selected libc++ archive is a symbolic link; capture incomplete')
+        raise ValueError('Selected archive is a symbolic link; capture incomplete')
     archive_path = candidate.resolve(strict=True)
     try:
         archive_path.relative_to(ndk_root)
     except ValueError as error:
-        raise ValueError('Selected libc++ archive escapes NDK root; capture incomplete') from error
+        raise ValueError('Selected archive escapes NDK root; capture incomplete') from error
     if not archive_path.is_file():
-        raise ValueError('Selected libc++ archive is not a regular file; capture incomplete')
+        raise ValueError('Selected archive is not a regular file; capture incomplete')
     size, digest = sha256_file(archive_path)
     if (size, digest) != (archive['size'], archive['sha256']):
-        raise ValueError('Selected libc++ archive digest changed; capture incomplete')
+        raise ValueError('Selected archive digest changed; capture incomplete')
     return raw, map_record, archive, relative, archive_path, sorted(members)
 
 
@@ -258,7 +271,7 @@ def parse_compile_units(text):
     return units
 
 
-def _safe_source_path(name, comp_dir):
+def _safe_source_path(name, comp_dir, component=COMPONENT):
     if (not isinstance(name, str) or not name or len(name) > 4096 or
             any(ord(char) < 32 or ord(char) == 127 for char in name)):
         return None, 'missing-or-malformed'
@@ -271,8 +284,8 @@ def _safe_source_path(name, comp_dir):
     name_path = PurePosixPath(normalized_name)
     candidate = name_path if name_path.is_absolute() else PurePosixPath(normalized_dir) / name_path
     parts = tuple(part for part in candidate.parts if part not in ('/', '', '.'))
-    if COMPONENT in parts:
-        start = parts.index(COMPONENT)
+    if component in parts:
+        start = parts.index(component)
         suffix = parts[start:]
         if any(part == '..' for part in suffix):
             return None, 'unmapped'
@@ -298,7 +311,7 @@ def _unescape_dwarf_quoted(value):
     return value.replace('\\"', '"').replace('\\\\', '\\')
 
 
-def parse_line_tables(data):
+def parse_line_tables(data, component=COMPONENT):
     """Extract only line-table versions and safe file/checksum records.
 
     Consumes LLVM's line-table prologue text. Paths are reduced to a safe
@@ -388,7 +401,7 @@ def parse_line_tables(data):
                     else:
                         raise ValueError(
                             'Line-table directory index is out of range; capture incomplete')
-                safe, state = _safe_source_path(raw_name, directory)
+                safe, state = _safe_source_path(raw_name, directory, component)
                 resolved.append({
                     'source_path': safe,
                     'source_path_state': state,
@@ -487,16 +500,16 @@ def parse_line_tables(data):
     return tables
 
 
-def _member_record(name, data, dwarfdump_output, line_table_output=b''):
+def _member_record(name, data, dwarfdump_output, line_table_output=b'', component=COMPONENT):
     try:
         text = dwarfdump_output.decode('utf-8', errors='replace')
     except AttributeError as error:
         raise ValueError('Debug tool output is malformed; capture incomplete') from error
     units = parse_compile_units(text)
-    line_tables = parse_line_tables(line_table_output)
+    line_tables = parse_line_tables(line_table_output, component)
     safe_units = []
     for unit in units:
-        source_path, path_state = _safe_source_path(unit.get('name'), unit.get('comp_dir'))
+        source_path, path_state = _safe_source_path(unit.get('name'), unit.get('comp_dir'), component)
         raw_name = unit.get('name')
         basename = None
         if (isinstance(raw_name, str) and len(raw_name) <= 4096 and
@@ -523,7 +536,10 @@ def _member_record(name, data, dwarfdump_output, line_table_output=b''):
 
 def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
             temp_root, max_members, max_object_bytes, max_tool_output_bytes,
-            max_line_table_output_bytes, max_diagnostic_bytes=8192, timeout_seconds=120):
+            max_line_table_output_bytes, max_diagnostic_bytes=8192, timeout_seconds=120,
+            archive_name=ARCHIVE_NAME, component=COMPONENT, selected_member=None):
+    if not isinstance(component, str) or not COMPONENT_RE.fullmatch(component):
+        raise ValueError('DWARF component name is malformed; capture incomplete')
     if (max_members < 1 or max_object_bytes < 1 or max_tool_output_bytes < 1 or
             max_diagnostic_bytes < 1 or max_line_table_output_bytes < 1):
         raise ValueError('Configured member capture limits must be positive')
@@ -535,7 +551,7 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
     archive_manifest = Path(archive_manifest)
     linker_map = Path(linker_map)
     manifest_bytes, map_record, archive, relative, archive_path, members = _safe_archive_manifest(
-        archive_manifest, linker_map, ndk_root, max_members)
+        archive_manifest, linker_map, ndk_root, max_members, archive_name, selected_member)
     for tool in (Path(llvm_ar), Path(llvm_dwarfdump)):
         resolved = tool.resolve(strict=True)
         try:
@@ -592,16 +608,17 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
                 raise ValueError('Aggregate tool output exceeds its configured byte bound; capture incomplete')
             if total_line_output_bytes > max_line_table_output_bytes:
                 raise ValueError('Line-table output exceeds its configured byte bound; capture incomplete')
-            member_records.append(_member_record(name, data, dwarf, line_table))
+            member_records.append(_member_record(name, data, dwarf, line_table, component))
             object_path.unlink()
     final_map_size, final_map_hash = sha256_file(linker_map)
     final_archive_size, final_archive_hash = sha256_file(archive_path)
     if ((final_map_size, final_map_hash) != (map_record['size'], map_record['sha256']) or
             (final_archive_size, final_archive_hash) != (archive['size'], archive['sha256'])):
-        raise ValueError('Link-map or libc++ archive changed during capture; evidence incomplete')
+        raise ValueError('Link-map or selected archive changed during capture; evidence incomplete')
     return {
         'schema': 2,
-        'scope': 'selected libc++_static.a members only; source and licensing closure not established',
+        'scope': 'selected ' + archive_name + ' members only; source and licensing closure not established',
+        'component': component,
         'archive_manifest_sha256': hashlib.sha256(manifest_bytes).hexdigest(),
         'link_map': map_record,
         'archive': {'path': 'ndk/' + relative.as_posix(), 'size': archive['size'],
@@ -657,6 +674,9 @@ def main():
     parser.add_argument('--max-diagnostic-bytes', type=positive_int, default=8192)
     parser.add_argument('--max-line-table-output-bytes', type=positive_int, required=True)
     parser.add_argument('--timeout-seconds', type=positive_seconds, default=120)
+    parser.add_argument('--archive-name', default=ARCHIVE_NAME)
+    parser.add_argument('--component', default=COMPONENT)
+    parser.add_argument('--selected-member')
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.unlink(missing_ok=True)
@@ -668,11 +688,12 @@ def main():
             max_object_bytes=args.max_object_bytes, max_tool_output_bytes=args.max_tool_output_bytes,
             max_diagnostic_bytes=args.max_diagnostic_bytes,
             max_line_table_output_bytes=args.max_line_table_output_bytes,
-            timeout_seconds=args.timeout_seconds)
+            timeout_seconds=args.timeout_seconds, archive_name=args.archive_name,
+            component=args.component, selected_member=args.selected_member)
         text = json.dumps(manifest, sort_keys=True, indent=2) + '\n'
         args.output.write_text(text, encoding='utf-8', newline='\n')
         print('Captured ' + str(manifest['counts']['members']) +
-              ' selected libc++ members; ' +
+              ' selected ' + args.archive_name + ' members; ' +
               str(manifest['counts']['members_with_compile_units']) + ' contain DWARF compile units; ' +
               str(manifest['counts']['members_with_line_tables']) + ' have line tables with ' +
               str(manifest['counts']['line_table_files_with_md5']) + ' file checksums')

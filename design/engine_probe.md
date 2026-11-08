@@ -93,7 +93,20 @@ existing 64 MiB budget plus that configured addition. Malformed or over-budget
 output fails capture. Extracted objects and raw DWARF/line-table output are
 temporary and deleted. A DWARF MD5 is debug metadata, not an integrity proof or
 evidence of build/patch identity, surviving code, licensing, rights or device
-behavior.
+behavior. The next exact Android API 35 x86_64 native-probe run additionally
+selects only `libc++abi.a(cxa_demangle.cpp.o)` into
+`ndk-member-debug/libcxxabi-demangler.json`. It binds to one matching NDK archive
+record and the validated selected-member manifest, uses the pinned NDK tools,
+and rechecks the linker-map and archive digests after capture. Workflow bounds
+for this one-member capture are 8 MiB of object bytes, 16 MiB of aggregate
+`llvm-ar`/DWARF-info output, 8 MiB of line-table output, and 30 seconds. The
+report retains only the in-memory-derived member digest and reduced,
+path-sanitized DWARF metadata; component-relative paths are emitted only when
+the debug records support them. Unmapped absolute paths are not retained, and
+absent line-table MD5 remains
+`unavailable`. Temporary objects and raw tool output are deleted. This narrows
+provenance only and does not establish source identity, patch/notice scope,
+licensing, redistribution rights, device behavior or adoption.
 
 The separate Android smoke log reports emulator-only loader rejection and one
 `Bonjour.` sample (`vcs-read/ebd8643b34544a958045fe6b1802c8b0`), not translation

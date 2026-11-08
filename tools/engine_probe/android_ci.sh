@@ -8,7 +8,9 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES ENGINE_NDK_TERMS_MAX_FILES \
   ENGINE_NDK_TERMS_MAX_BYTES ENGINE_NDK_PATCH_MAX_BYTES ENGINE_NDK_PATCH_FETCH_SECONDS \
   ENGINE_NDK_MEMBER_MAX_MEMBERS ENGINE_NDK_MEMBER_MAX_BYTES \
-  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS; do
+  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS \
+  ENGINE_NDK_ABI_MEMBER_MAX_BYTES ENGINE_NDK_ABI_MEMBER_MAX_TOOL_OUTPUT_BYTES \
+  ENGINE_NDK_ABI_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_ABI_MEMBER_SECONDS; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -25,7 +27,8 @@ for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS',
             'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES',
             'NDK_PATCH_MAX_BYTES', 'NDK_PATCH_FETCH_SECONDS', 'NDK_MEMBER_MAX_MEMBERS',
             'NDK_MEMBER_MAX_BYTES', 'NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES',
-            'NDK_MEMBER_LINE_OUTPUT_BYTES'):
+            'NDK_MEMBER_LINE_OUTPUT_BYTES', 'NDK_ABI_MEMBER_MAX_BYTES',
+            'NDK_ABI_MEMBER_MAX_TOOL_OUTPUT_BYTES', 'NDK_ABI_MEMBER_LINE_OUTPUT_BYTES'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -34,7 +37,7 @@ port = int(os.environ['ENGINE_EMULATOR_PORT'])
 if port % 2 or not 5554 <= port <= 5682:
     raise SystemExit('invalid emulator console port')
 for key in ('BOOT_SECONDS', 'BOOT_POLL_SECONDS', 'ADB_SECONDS', 'PROBE_SECONDS',
-            'DOWNLOAD_SECONDS', 'NDK_MEMBER_SECONDS'):
+            'DOWNLOAD_SECONDS', 'NDK_MEMBER_SECONDS', 'NDK_ABI_MEMBER_SECONDS'):
     value = float(os.environ['ENGINE_' + key])
     if not math.isfinite(value) or value <= 0:
         raise SystemExit('invalid finite positive timeout: ' + key)
@@ -124,6 +127,20 @@ python3 tools/engine_probe/capture_ndk_member_debug.py \
   --timeout-seconds "$ENGINE_NDK_MEMBER_SECONDS" \
   > "$build/ndk-member-debug-capture.log" 2>&1 || member_capture_status=$?
 cat "$build/ndk-member-debug-capture.log"
+abi_member_capture_status=0
+python3 tools/engine_probe/capture_ndk_member_debug.py \
+  --archive-manifest "$build/validated-linker-map/llama-simple.map.archives.json" \
+  --linker-map "$build/validated-linker-map/llama-simple.map" --ndk-root "$ndk" \
+  --llvm-ar "$llvm/llvm-ar" --llvm-dwarfdump "$llvm/llvm-dwarfdump" \
+  --temp-root "$owner" --output "$build/ndk-member-debug/libcxxabi-demangler.json" \
+  --archive-name libc++abi.a --component libcxxabi --selected-member cxa_demangle.cpp.o \
+  --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" --max-object-bytes "$ENGINE_NDK_ABI_MEMBER_MAX_BYTES" \
+  --max-tool-output-bytes "$ENGINE_NDK_ABI_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
+  --max-line-table-output-bytes "$ENGINE_NDK_ABI_MEMBER_LINE_OUTPUT_BYTES" \
+  --max-diagnostic-bytes "$ENGINE_OUTPUT_BYTES" \
+  --timeout-seconds "$ENGINE_NDK_ABI_MEMBER_SECONDS" \
+  > "$build/ndk-member-debug-abi-capture.log" 2>&1 || abi_member_capture_status=$?
+cat "$build/ndk-member-debug-abi-capture.log"
 ninja -C "$build" -t deps > "$build/ninja-deps.txt"
 ninja -C "$build" -t commands llama-simple > "$build/selected-commands.txt"
 ninja -C "$build" -t query bin/llama-simple > "$build/link-inputs.txt"
@@ -175,4 +192,5 @@ python3 tools/engine_probe/android.py --adb "$ANDROID_HOME/platform-tools/adb" \
 if [[ "$capture_status" != 0 ]]; then exit "$capture_status"; fi
 if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi
 if [[ "$member_capture_status" != 0 ]]; then exit "$member_capture_status"; fi
+if [[ "$abi_member_capture_status" != 0 ]]; then exit "$abi_member_capture_status"; fi
 cat "$build/android-compiler-summary.txt"

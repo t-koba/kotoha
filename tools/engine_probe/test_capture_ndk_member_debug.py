@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 import capture_ndk_member_debug as capture
 
@@ -150,6 +151,26 @@ class CaptureMemberDebugTest(unittest.TestCase):
         }
         args.update(overrides)
         return capture.capture(**args)
+
+    def prepare_abi_candidate(self, members=('cxa_demangle.cpp.o',)):
+        self.archive = self.ndk / 'sysroot/usr/lib/x86_64-linux-android/libc++abi.a'
+        self.archive.parent.mkdir(parents=True, exist_ok=True)
+        self.archive.write_bytes(self.archive_bytes)
+        self.members = list(members)
+        self.object_bytes = {name: ('selected ABI object:' + name).encode() for name in self.members}
+        for name, data in self.object_bytes.items():
+            (self.object_dir / name).write_bytes(data)
+        self.listing.write_text(''.join(name + '\n' for name in self.members), encoding='utf-8')
+        self.write_manifest(path='sysroot/usr/lib/x86_64-linux-android/libc++abi.a')
+
+    def run_abi_capture(self, **overrides):
+        args = {
+            'archive_name': 'libc++abi.a',
+            'component': 'libcxxabi',
+            'selected_member': 'cxa_demangle.cpp.o',
+        }
+        args.update(overrides)
+        return self.run_capture(**args)
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_hashes_selected_members_and_sanitizes_compile_unit_paths(self):
@@ -487,6 +508,97 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.dwarfdump.chmod(0o755)
         with self.assertRaisesRegex(ValueError, 'output exceeds its configured byte bound'):
             self.run_capture(max_tool_output_bytes=1024)
+
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_abi_capture_binds_requested_member_and_component_paths(self):
+        self.prepare_abi_candidate()
+        self.dwarf_file.write_bytes(
+            DWARF.replace(b'libcxx', b'libcxxabi').replace(b'regex.cpp', b'cxa_demangle.cpp'))
+        self.line_file.write_bytes(
+            LINE_TABLE_V19.replace(b'libcxx', b'libcxxabi').replace(b'regex.cpp', b'cxa_demangle.cpp'))
+        result = self.run_abi_capture()
+        member = result['members'][0]
+        self.assertEqual(result['archive']['sha256'], digest(self.archive_bytes))
+        self.assertEqual(result['component'], 'libcxxabi')
+        self.assertEqual(result['scope'], 'selected libc++abi.a members only; source and licensing closure not established')
+        self.assertEqual(result['counts']['members'], 1)
+        self.assertEqual(member['member'], 'cxa_demangle.cpp.o')
+        self.assertEqual(member['sha256'], digest(self.object_bytes['cxa_demangle.cpp.o']))
+        self.assertEqual(member['compile_units'][0]['dwarf_name_path'], 'libcxxabi/src/cxa_demangle.cpp')
+        self.assertEqual(member['line_tables'][0]['files'][0]['source_path'], 'libcxxabi/src/cxa_demangle.cpp')
+        self.assertEqual(member['line_tables'][0]['files'][1]['md5_state'], 'unavailable')
+        encoded = json.dumps(result)
+        self.assertNotIn(str(self.root), encoded)
+        self.assertNotIn('selected ABI object:', encoded)
+        self.assertNotIn('/home/runner', encoded)
+
+    def test_abi_capture_rejects_malformed_selection(self):
+        self.prepare_abi_candidate()
+        with self.assertRaisesRegex(ValueError, 'Requested archive member name is malformed'):
+            self.run_abi_capture(selected_member='../cxa_demangle.cpp.o')
+        with self.assertRaisesRegex(ValueError, 'DWARF component name is malformed'):
+            self.run_abi_capture(component='../libcxxabi')
+        with self.assertRaisesRegex(ValueError, 'Selected archive name is malformed'):
+            self.run_abi_capture(archive_name='../libc++abi.a')
+
+    def test_abi_capture_rejects_missing_manifest_member(self):
+        self.prepare_abi_candidate(('other.cpp.o',))
+        with self.assertRaisesRegex(ValueError, 'Requested member is absent'):
+            self.run_abi_capture()
+
+    def test_abi_capture_rejects_duplicate_archive_record(self):
+        self.prepare_abi_candidate()
+        manifest = json.loads(self.archive_manifest.read_text(encoding='utf-8'))
+        manifest['archives'].append(manifest['archives'][0])
+        self.archive_manifest.write_text(json.dumps(manifest), encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'exactly one selected NDK archive'):
+            self.run_abi_capture()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_abi_capture_rejects_duplicate_archive_member_listing(self):
+        self.prepare_abi_candidate()
+        self.listing.write_text('cxa_demangle.cpp.o\ncxa_demangle.cpp.o\n', encoding='utf-8')
+        with self.assertRaisesRegex(ValueError, 'ambiguous'):
+            self.run_abi_capture()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_abi_object_bound_failure_cleans_staged_object(self):
+        self.prepare_abi_candidate()
+        with self.assertRaisesRegex(ValueError, 'output exceeds its configured byte bound'):
+            self.run_abi_capture(max_object_bytes=1)
+        self.assertEqual(list(self.root.glob('ndk-member-dwarf-*')), [])
+        self.assertEqual(self.archive.read_bytes(), self.archive_bytes)
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_abi_archive_digest_is_rechecked_after_capture_and_cleanup(self):
+        self.prepare_abi_candidate()
+        original = capture._member_record
+
+        def mutate_archive(*args, **kwargs):
+            record = original(*args, **kwargs)
+            self.archive.write_bytes(b'changed archive after extraction')
+            return record
+
+        with mock.patch.object(capture, '_member_record', side_effect=mutate_archive):
+            with self.assertRaisesRegex(ValueError, 'selected archive changed during capture'):
+                self.run_abi_capture()
+        self.assertEqual(list(self.root.glob('ndk-member-dwarf-*')), [])
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_link_map_digest_is_rechecked_after_capture_and_cleanup(self):
+        self.prepare_abi_candidate()
+        original = capture._member_record
+
+        def mutate_link_map(*args, **kwargs):
+            record = original(*args, **kwargs)
+            self.map.write_bytes(b'changed link map after extraction')
+            return record
+
+        with mock.patch.object(capture, '_member_record', side_effect=mutate_link_map):
+            with self.assertRaisesRegex(ValueError, 'Link-map or selected archive changed'):
+                self.run_abi_capture()
+        self.assertEqual(list(self.root.glob('ndk-member-dwarf-*')), [])
 
 
 if __name__ == '__main__':
