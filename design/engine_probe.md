@@ -3,12 +3,12 @@
 This is **developer tooling only**, not product inference or distribution
 approval. Flutter, memory-only drafts and app platform support are unchanged.
 The latest exact native-engine probe is publication
-`ed1cbdd66f8a85b628ca9d402004041fa1d07f9dd0e20939508215b3796b9c08` at SHA
-`e5d824bfd6a069fe4835fef5fed3008a866d9924` (code digest
-`1675158c12cac384e986135f8f96a03133173d8069abe2a42ade85dcc85cbd22`, source
-commit `9ac103ffc72feafc530f09e8810a3a5052674d07`). The exact status receipt
-`vcs-read/442c158947954aa59442db384fdcc89e` records passing Android API 35
-x86_64 job `128571835942` and Windows x64 job `128571835828`. Android recorded
+`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` at SHA
+`2e3aa9f593032cee733c5dda3f7b5c16205ad89e` (code digest
+`b9187db9056a692aaaa0d21aa8c53814181a7e04fa586ebf23d646971b2baf19`, source
+commit `c87bb2fd33515d0aea4a6425a0436518f180ac3d`). The exact status receipt
+`vcs-read/c0250d87e4a24b23a24a780d980c2f80` records passing Android API 35
+x86_64 job `128600185278` and Windows x64 job `128600185473`. Android recorded
 72 actual compiled objects, 1,435 unique selected compiler inputs, the exact
 link-map archive/member manifest, and bounded NDK records for
 `28.2.13676358` (r28c). The owned Android 15/API 35 x86_64 emulator rejected
@@ -20,11 +20,11 @@ physical-device coverage.
 The exact `android-api35-x86_64-engine-probe` artifact includes the map and a
 link-map-bound archive manifest. The complete manifest is 5,417 bytes and its
 locally verified artifact SHA-256 is
-`93eabfbed3897bb75870878d4d8c39c10f141c3ebf6e6617949a6985c724bf64`
-(`vcs-read/38ba166e1a7344ff9a4746325f936a5b`). Its declared map size/hash
+`ed2f334e79cda0e310a0d078c625e031e00f5f25203ead3fb6b8d83598921352`
+(`vcs-read/025b5ad35e4b46d6af398dafa5a17387`). Its declared map size/hash
 (4,660,773 bytes; SHA-256
 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`) matches
-the exact publication's 96-byte sidecar (`vcs-read/98c6bff44d8b4a849c615488d3889c9a`).
+the exact publication's 96-byte sidecar (`vcs-read/93541311fa7e4336be2b87f3d81f54bb`).
 This confirms internal manifest/sidecar agreement, not an independent re-hash
 of the 4.66 MB raw map, which has not been fully assembled here.
 
@@ -32,7 +32,7 @@ The manifest records the following archive files and exact build hashes:
 
 | Archive | Bytes | SHA-256 |
 | --- | ---: | --- |
-| `libggml-base.a` | 10,016,748 | `093103c56905ba27bbfbf8fa253827d276e97f77ff3d5ecc28f8a6c37ff44457` |
+| `libggml-base.a` | 10,016,748 | `b3012c80945ae3880599bddbd5a70a0f239d76752b16cb06f34e37aab7ba94bf` |
 | `libggml-cpu.a` | 8,072,970 | `303132d570d054729a74ec1d1c7023ecacc31e0c52779d527e4c9002e2544110` |
 | `libggml.a` | 823,710 | `c05c0b4b2a4880e613862fdafe5d79080f1f760587509f11792c74fedd895be4` |
 | `libllama.a` | 83,403,538 | `665926e6210e5b33d291e9e7efd5b2114204d58552616295f8168c04eabeab43` |
@@ -85,14 +85,14 @@ necessary. No product adoption or notice set is approved by this partial result.
 The corrected capture ran in the exact successful publication above. Its bounded
 manifest (`ndk-terms/manifest.json`, 2,735 bytes, SHA-256
 `6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`;
-`vcs-read/3c3df1fc2880401c9e59b7cbc51f768d`) records 10 files totaling
+`vcs-read/4dbc44be06fb4ec39a4843710708901b`) records 10 files totaling
 1,988,532 bytes under its 64-file/16-MiB limits. Its declared capture scope is
 package metadata plus matching root-level and host LLVM-toolchain license/notice/
 copying/copyright files, not a complete package inventory or legal classification.
 `source.properties` identifies
 NDK 28.2.13676358 / r28c (108 bytes, SHA-256
 `c00aa236fdb205e9be9edd9e2169763e48aca52735efff4e16f34205d49783b5`;
-`vcs-read/3c3df1fc2880401c9e59b7cbc51f768d`). `package.xml` records the same
+`vcs-read/4dbc44be06fb4ec39a4843710708901b`). `package.xml` records the same
 package revision and `uses-license ref="android-sdk-license"` (18,351 bytes,
 manifest SHA-256 `1d901b6452ef3f759a7d7a09b0c3ea5d745a60a8ae9a5be06db24b893ebf8a9a`).
 The manifest also identifies the following broad candidate notices; their
@@ -120,9 +120,9 @@ commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` (`vcs-read/c2129f0d0cae4996942
 ### Pinned Android LLVM patches and selected inputs
 
 The successful exact Android probe at publication
-`ed1cbdd66f8a85b628ca9d402004041fa1d07f9dd0e20939508215b3796b9c08` captured
+`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` captured
 NDK package metadata and the bounded toolchain source-info record. Its
-`ndk-terms/manifest.json` (exact evidence `vcs-read/3c3df1fc2880401c9e59b7cbc51f768d`)
+`ndk-terms/manifest.json` (exact evidence `vcs-read/4dbc44be06fb4ec39a4843710708901b`)
 records NDK `28.2.13676358`, `clang_source_info.md` SHA-256
 `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`, and the
 candidate notice files. The exact source-info bytes were read in the earlier
@@ -131,7 +131,7 @@ same-r28c probe (`vcs-read/5a60708a01b74460876c8a8e9ec0ecb9`,
 `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and Android toolchain source commit
 `e727bfb014bd436f581a66a450c939a6983a1fc3`.
 
-The exact CI capture contains metadata for these three patch blobs; decoded
+The exact CI capture contains metadata for these four patch blobs; decoded
 payload identities and effect review are independently reproducible from the
 immutable `llvm_android` commit:
 
@@ -140,42 +140,47 @@ immutable `llvm_android` commit:
 | `patches/move-cxa-demangle-into-libcxxdemangle.patch` | `21533ee8f77a251f9143f16c9043f8a68e419dae` | 3,857 | `6a8879953b2133491d4bc6be97332d4d031b837e0175227969f4ef7f7d6ef8b9` | `libc++abi` CMake build-graph change only; the exact map still names `cxa_demangle.cpp.o` inside `libc++abi.a`, with no separate demangle archive in that map. This does not establish the build option value or object-section provenance. |
 | `patches/cherry/9a2fd97d391caf1060e303f636d7113501788d2f-r530567.patch` | `06f046b19b45d11a32a68b0ae33cfc0d9ba823e3` | 174,905 | `9b0a015f44a91d6ed83eb9ba4b0303f0e634daa8874199eb76d74f7d61dba7b3` | HWASan compiler-pass and test changes; compiler tooling, not a linked product-runtime archive. |
 | `patches/cherry/b433076fcbacba8a3b91446390bbea5843322bcd-v2.patch` | `b9772a9cf10a19f1ad7c86db4a86ae73c2ed8a66` | 18,250 | `2f6b8beec77bfb2bff02b6cf341ff31ec424834aa28c23f30ce18bb12945d8eb` | Clang CodeGen and test changes; compiler tooling, not a linked product-runtime archive. |
+| `patches/cherry/e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` | `cdd63954108d97d7c34018ccc9840cb8a6c703e9` | 15,251 | `4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d` | `libc++` regex iterator fix and tests; selected header/object provenance remains unresolved. |
 
 The latest successful probe's exact metadata manifest is
-`vcs-read/96cdc17523eb4edebe327ea0c16a20dc` (1,317-byte manifest describing
-197,012 patch bytes plus a 16,039-byte tree index; 213,051 total collected bytes). The manifest
+`vcs-read/51fcdd3102054fecaf09235c97050821` (1,526-byte manifest, SHA-256
+`d8dc351b4d2a681fa16997a47c02b01f3921970c62146aa3c776b1dd048ef0b1`, describing
+212,263 patch bytes plus a 16,039-byte tree index; 228,302 total collected bytes). The manifest
 scope is hashes, sizes and Git object IDs only; the raw patch blobs are not
 retained in CI. The checked-out temporary Git fetch has a 120-second deadline,
-but the pack has no independent hard byte cap. These three patch changes are
-not runtime-archive provenance: the demangler change affects build-graph
-selection, and the HWASan/CodeGen patches modify the compiler rather than a
-shipped runtime object.
+but the pack has no independent hard byte cap. The demangler patch affects build-graph selection, and the HWASan/CodeGen patches
+modify compiler tooling rather than shipped runtime objects. The regex patch
+affects a selected libc++ input, but neither patch-to-installed-header identity
+nor survival in the linked runtime object is established.
 
-A fourth patch is directly relevant to a selected libc++ input and was missing
-from that three-file CI capture:
+The fourth captured patch changes `libcxx/include/regex` and two tests. The
+upstream diff (`mizu_fetch` receipt
+`d9c2e640a5107cf0ecf2e9c896bccd9b4b4d17f42823b2d60ed15285f99c6d43`) updates
+`regex_iterator::operator++` to retain the preceding match end as the unmatched
+prefix after a zero-length match, correcting replacement behavior; its tests
+cover that case. The exact compiler-input record selects this header, and the
+link map selects `libc++_static.a(regex.cpp.o)`. The earlier exact r28c selected-input
+artifact page (`vcs-read/2df5e51c0539440bb5e5d15ff2913609`) hashes the installed
+`sysroot/usr/include/c++/v1/regex` input as
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`. Exact
+immutable-source fetches hash the header at pinned LLVM base
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` as
+`897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
+(`mizu_fetch` receipt `f614c261c435ba26dbc74edc5353061a4817a22b0ee0b9712111292cdf988cc1`)
+and at upstream patch commit `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`
+as `60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`
+(`mizu_fetch` receipt `193d5ec9a2c090a79f73ba0e285ee545a8a2211579bd22111dc42132b5191b75`).
+All three byte hashes differ. The selected read proves the installed header is
+a compiler input, while the map member proves an object was linked; neither
+proves that this source patch's changed code survives in that object or the final
+executable. Patch-to-installed-header and patch-to-binary provenance therefore
+remain unresolved. The source/header terms are Apache-2.0 WITH LLVM-exception.
 
-- **`patches/cherry/e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch`** changes
-  `libcxx/include/regex` and two tests. At the pinned Android source commit its
-  Git blob ID is `cdd63954108d97d7c34018ccc9840cb8a6c703e9`, decoded size 15,251
-  bytes, SHA-256
-  `4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d`
-  (`mizu_fetch` receipt `aa2ac67b02744c91046e95f640db6bc8c3fadf2d168ced445f346e2b5ab4e873`,
-  decoded-content experiment `ce75863b151d4542999082174b0b3450`, and exact tree-object
-  read `d29da36697b5d3d5103fa36c8086d9568b86528eec47f14746dad129ae7168dc`).
-  Its changed installed header is a direct compiler-read candidate; the exact
-  link map selects `libc++_static.a(regex.cpp.o)`. The compiler-read record from
-  the exact same r28c NDK package in the earlier probe names
-  `sysroot/usr/include/c++/v1/regex` with SHA-256
-  `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
-  (`vcs-read/0c02cedb3b654a8c9337056fd789694a`,
-  `vcs-read/6b5d012196944a40b1d34698e6ada3f2`). The source/header terms are
-  Apache-2.0 WITH LLVM-exception; this header-to-object relation still does not
-  prove which changed code survives in the linked executable.
-
-The current capture implementation now requires that fourth exact path and
-still retains only metadata; its synthetic Git unit tests passed locally, but
-this four-patch change is not yet represented by an exact CI artifact. The
-three-patch manifest above remains the latest published capture.
+The exact c87 publication captures all four patch paths as metadata only; its
+`patch-source-capture.log` records four files and 228,302 total bytes
+(`vcs-read/d9758c2d11614dcf8009cb751a57f825`). The raw patch blobs are not
+retained, and this confirms capture execution—not patch-to-installed-header
+identity or surviving binary code.
 
 LLVM `LICENSE.TXT` at pinned base `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`
 has whole-file SHA-256
@@ -344,7 +349,7 @@ wait reaps the wrapper, and the host reaper collects orphaned children. Detached
 helpers, untrappable cancellation and runner loss rely on disposable runner
 teardown; no broad process-name kill or blind retry is used.
 
-The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default). `linker_map.py` parses and hashes the map in one bounded pass, resolves every `.a(member)` row within the configured build or NDK root, hashes each unique regular archive, and stages `llama-simple.map`, its byte-size/SHA-256 sidecar and `llama-simple.map.archives.json` together before one directory rename. The archive manifest lists root-relative paths, exact archive sizes/digests and the member names named by the map; it does not prove source licensing or which sections survive. The map remains raw linker output, not a normalized inventory: inspect its exact rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. The updated inventory is now present in successful exact CI publication `ed1cbdd66f8a85b628ca9d402004041fa1d07f9dd0e20939508215b3796b9c08`; it still does not prove which sections survive or establish complete runtime/legal closure.
+The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default). `linker_map.py` parses and hashes the map in one bounded pass, resolves every `.a(member)` row within the configured build or NDK root, hashes each unique regular archive, and stages `llama-simple.map`, its byte-size/SHA-256 sidecar and `llama-simple.map.archives.json` together before one directory rename. The archive manifest lists root-relative paths, exact archive sizes/digests and the member names named by the map; it does not prove source licensing or which sections survive. The map remains raw linker output, not a normalized inventory: inspect its exact rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. The updated inventory is now present in successful exact CI publication `297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa`; it still does not prove which sections survive or establish complete runtime/legal closure.
 
 The `android-api35-x86_64-engine-probe` artifact retains the linker map, its hash/size record and, on successful capture, the archive manifest alongside raw compile commands,
 verbose build log, Ninja commands/link inputs/log/dependency database, NDK version,
@@ -387,16 +392,16 @@ capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
 **Current evidence limits:** exact publication
-`ed1cbdd66f8a85b628ca9d402004041fa1d07f9dd0e20939508215b3796b9c08` at SHA
-`e5d824bfd6a069fe4835fef5fed3008a866d9924` records Android x86_64 static
+`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` at SHA
+`2e3aa9f593032cee733c5dda3f7b5c16205ad89e` records Android x86_64 static
 archives and member names. Its artifact manifest
-`vcs-read/38ba166e1a7344ff9a4746325f936a5b` and hash/size sidecar
-`vcs-read/98c6bff44d8b4a849c615488d3889c9a` agree on a 4,660,773-byte map with
+`vcs-read/025b5ad35e4b46d6af398dafa5a17387` and hash/size sidecar
+`vcs-read/93541311fa7e4336be2b87f3d81f54bb` agree on a 4,660,773-byte map with
 SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`;
 the full raw map has not been assembled and independently rehashed here. The
-exact ELF record `vcs-read/9f2b6b5d03764a1bad81325f4e78d91f` reports
+exact ELF record `vcs-read/aa4d59eb9e6d45e5b03f597f1cd33710` reports
 `/system/bin/linker64` and direct imports `libm.so`, `libdl.so`, and `libc.so`.
-The exact emulator smoke record `vcs-read/a363a90cf3e441bb87a5cb8ce92fca1f`
+The exact emulator smoke record `vcs-read/57c733d1cb7b4bd39a8c73d74dfefcb8`
 resolves them to `/apex/com.android.runtime/lib64/bionic/` and records provider
 hashes; its fingerprint is Android 15/API 35 x86_64. This is loader-resolution
 evidence, not live application mappings, all `dlopen` paths, other ABIs/OS
@@ -648,14 +653,14 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 ### Android selected runtime and delivery gate
 
 The latest exact Android API 35 x86_64 probe is publication
-`ed1cbdd66f8a85b628ca9d402004041fa1d07f9dd0e20939508215b3796b9c08` / SHA
-`e5d824bfd6a069fe4835fef5fed3008a866d9924`, job `128571835942`. Its link-map
+`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` / SHA
+`2e3aa9f593032cee733c5dda3f7b5c16205ad89e`, job `128600185278`. Its link-map
 archive manifest records hashes/sizes and named members for all referenced
 archives, including `libc++_static.a` and `libc++abi.a`; the four NDK archives
 name 47 members. The map's declared 4,660,773-byte size and SHA-256
 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd` agree with
-its sidecar and manifest (`vcs-read/38ba166e1a7344ff9a4746325f936a5b`,
-`vcs-read/98c6bff44d8b4a849c615488d3889c9a`), but the raw map has not been
+its sidecar and manifest (`vcs-read/025b5ad35e4b46d6af398dafa5a17387`,
+`vcs-read/93541311fa7e4336be2b87f3d81f54bb`), but the raw map has not been
 assembled and independently re-hashed here. NDK package records identify
 `28.2.13676358` (r28c), and the source section above inventories the bounded
 installed terms and selected-source candidates. These hashes identify the
@@ -665,8 +670,8 @@ classification.
 The exact ELF record reports `/system/bin/linker64` and direct imports
 `libc.so`, `libm.so`, `libdl.so`; the exact emulator smoke resolves them under
 `/apex/com.android.runtime/lib64/bionic/` and records provider hashes
-(`vcs-read/9f2b6b5d03764a1bad81325f4e78d91f`,
-`vcs-read/a363a90cf3e441bb87a5cb8ce92fca1f`). This does not identify all runtime
+(`vcs-read/aa4d59eb9e6d45e5b03f597f1cd33710`,
+`vcs-read/57c733d1cb7b4bd39a8c73d74dfefcb8`). This does not identify all runtime
 loading paths, supported OS/OEM provider terms or redistribution rights. The
 NDK static archive member-to-source/section review, complete applicable notices
 and their user-accessible delivery remain unresolved. This is synthetic
@@ -676,18 +681,18 @@ physical-device behavior or app integration. No product adoption is authorized.
 ### Windows runtime and delivery gate
 
 The latest exact Windows x64 engine probe is the same publication
-`ed1cbdd66f8a85b628ca9d402004041fa1d07f9dd0e20939508215b3796b9c08` / SHA
-`e5d824bfd6a069fe4835fef5fed3008a866d9924`, job `128571835828`. Its configure
-record (`vcs-read/288326e7c9704a2daab2ee850debb669`) identifies Visual Studio 18
+`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` / SHA
+`2e3aa9f593032cee733c5dda3f7b5c16205ad89e`, job `128600185473`. Its configure
+record (`vcs-read/803d106d2ba8437aaf2e9ad8fc408b9c`) identifies Visual Studio 18
 2026 Enterprise, MSVC `19.51.36260.0` and toolset `14.51.36231`. The exact PE
-linkage record (`vcs-read/85e989f81a0a4fef8f60440022e6ebf7`, SHA-256
-`9c94e39914ddee874e631446ec5e67287afac9201ac090e176f624724089cedd`) reports
+linkage record (`vcs-read/7719c8557898434792af24120d29e4c1`, SHA-256
+`8ff52cd5fd8cf8e6ecf45318bfe6ef307aaaaee8b0f79e37bad13f5e13109a38`) reports
 COFF Dumper `14.29.30159.0` and x64 direct imports `KERNEL32.dll`,
 `ADVAPI32.dll`, `MSVCP140.dll`, `VCRUNTIME140.dll`, `VCRUNTIME140_1.dll`, and
 `api-ms-win-crt-` contracts for runtime, stdio, locale, convert, string, heap,
 math, environment and utility. The compiler summary records 72 unique compiler
 source keys, 581 selected inputs and the exact manifest hashes
-(`vcs-read/9bd26336542442329c183b0c7379ffc6`). This is **dynamic** CRT linkage
+(`vcs-read/c759d88031a042e5a4baf3f098d97cd2`). This is **dynamic** CRT linkage
 despite static engine libraries. Imports do not identify resolved provider DLL
 paths, versions or hashes; the old dumper version is not runtime identity
 evidence.
