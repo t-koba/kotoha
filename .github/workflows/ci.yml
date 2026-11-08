@@ -280,15 +280,26 @@ jobs:
         env:
           MACOS_PANEL_TIMEOUT_SECONDS: '15'
           MACOS_UI_TEST_TIMEOUT_SECONDS: '30'
+          MACOS_VOICEOVER_START_TIMEOUT_SECONDS: '10'
         run: |
           set -euo pipefail
           # XCUITest does not itself enable Flutter's macOS accessibility tree.
-          # Enable VoiceOver for this native accessibility probe only.
+          # Start VoiceOver without AppleEvents; activation timed out on the exact hosted run.
           cleanup_voiceover() {
-            osascript -e 'tell application "VoiceOver" to quit' >/dev/null 2>&1 || true
+            pkill -x VoiceOver >/dev/null 2>&1 || true
           }
           trap cleanup_voiceover EXIT
-          osascript -e 'tell application "VoiceOver" to activate'
+          python3 - "$MACOS_VOICEOVER_START_TIMEOUT_SECONDS" <<'PYTHON'
+          import subprocess
+          import sys
+
+          timeout_seconds = float(sys.argv[1])
+          starter = "/System/Library/CoreServices/VoiceOver.app/Contents/MacOS/VoiceOverStarter"
+          try:
+              subprocess.run([starter], check=True, timeout=timeout_seconds)
+          except subprocess.TimeoutExpired:
+              raise SystemExit(f"VoiceOverStarter exceeded {timeout_seconds:g}s")
+          PYTHON
           # Xcode strips TEST_RUNNER_ when forwarding environment to the test process.
           TEST_RUNNER_KOTOHA_PANEL_TIMEOUT_SECONDS="$MACOS_PANEL_TIMEOUT_SECONDS" \
           xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner \
