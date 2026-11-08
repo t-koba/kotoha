@@ -1,3 +1,4 @@
+import CoreGraphics
 import XCTest
 
 final class NativeExportPanelUITests: XCTestCase {
@@ -27,22 +28,32 @@ final class NativeExportPanelUITests: XCTestCase {
       "translation-text-0",
       XCUIElement.ElementType.textField.rawValue,
       XCUIElement.ElementType.textView.rawValue)).firstMatch
-    // The translation editor is below the initial viewport. On macOS the
-    // accessibility node may not exist until its ListView region is revealed.
-    let deadline = Date().addingTimeInterval(panelTimeout)
-    var scrolls = 0
-    while Date() < deadline && (!field.exists || !field.isHittable) {
-      // Flutter's workspace is not exposed as an XCUI ScrollView on this host.
-      // Swipe the application window instead of waiting for a missing semantics node.
-      app.swipeUp()
-      scrolls += 1
+    // The Flutter ListView is not exposed as an XCUI ScrollView on macOS.
+    // Target one measured drag at the native application window: XCTest's
+    // app.swipeUp() requires an application hit point that this host does not expose.
+    if !field.exists || !field.isHittable {
+      let window = app.windows.firstMatch
+      guard window.waitForExistence(timeout: panelTimeout) else {
+        XCTFail("Main application window was not exposed to XCUI")
+        return
+      }
+      let frame = window.frame
+      guard !frame.isNull && frame.origin.x.isFinite && frame.origin.y.isFinite
+          && frame.width.isFinite && frame.height.isFinite
+          && frame.width > 0 && frame.height > 48 else {
+        XCTFail("Main application window has no usable frame: \(frame)")
+        return
+      }
+      let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+      let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
+      start.press(forDuration: 0.05, thenDragTo: end)
     }
     XCTAssertTrue(
-      field.exists,
-      "Translation field is unavailable after \(scrolls) scrolls")
+      field.waitForExistence(timeout: panelTimeout),
+      "Translation field is unavailable after one window-coordinate scroll")
     XCTAssertTrue(
       field.isHittable,
-      "Translation field is not hittable after \(scrolls) scrolls")
+      "Translation field is not hittable after the window-coordinate scroll")
     field.click()
     field.typeText(translation)
 
