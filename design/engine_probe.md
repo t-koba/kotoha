@@ -888,24 +888,38 @@ evidence.
 
 Microsoft's [Visual Studio 2026 REDIST
 list](https://learn.microsoft.com/en-us/visualstudio/releases/2026/redistribution)
-is the edition-specific online list referenced by Visual Studio Enterprise,
-Professional, Community and Build Tools terms. It permits unmodified listed files
-for a validly licensed copy, subject to those terms; its Visual C++ section names
-the `Microsoft_VC145_CRT_[arch].msm` family and files under `VC\redist` (except
-the excluded debug folders), and limits distribution of the runtime package and
-individual files to licensed Visual Studio users. This is a possible route, not
-permission established for this runner: the build artifact does not identify the
-provider binaries or their hashes, and the applicable runner license terms are
-not captured. Page retrieved 2026-11-07: receipt
-`3b2a6113930dd4413738cd98383e577b9462473fea498d26fa8ea9bd7b7a7ef6`, SHA-256
-`0e91cdda4d1d224221b1559e72e70677d304859c296ceb2463ceb222850eb054`.
+is the edition-specific online list referenced by the Visual Studio Enterprise,
+Professional, Community and Build Tools license terms. The list says a validly
+licensed copy may distribute listed files unmodified, subject to those terms. Its
+Visual C++ section includes `Microsoft_VC145_CRT_[arch].msm` and files under
+`VC\redist`, except excluded debug folders; it explicitly limits distribution
+of the runtime package, merge modules and individual binaries to licensed Visual
+Studio users. A second Microsoft deployment page says these files are governed
+by the Visual Studio license terms and recommends central Redistributable-package
+deployment for servicing rather than app-local DLL copies. This is a possible
+route, not permission established for this product or runner: the specific
+provider binaries and the applicable Visual Studio/runner license terms are not
+captured. Full retrieved-page evidence: REDIST receipt
+`c3f2b535696602d845e5c849fd4ff92c874926ef420d38a165a69d62eddf58d5`, SHA-256
+`a93e29021e046c42fc97de94c9d69598e3141849e9637dbfce4dd50608894728`; deployment
+receipt `b2a93905e9aff462845c811589d86f141d272e3ac4e91e5db5f11d5bec4b938d`,
+SHA-256 `b5ee56b66669b7274abd8f197b10082e960403b269c8a4772dae651479ff0b1e`.
+
+The complete paginated artifact listing for this publication (first page
+`vcs-read/6792185a81db4747bd101f13eb2709b2`, second page to EOF
+`vcs-read/195b8e0620fe4253be31c7153e8e8996`) contains no VC runtime DLLs,
+Redistributable installer, or loaded-module inventory. This is an artifact-retention
+finding, not evidence of which files Windows actually resolved during the smoke
+run. The exact PE import record only names `MSVCP140.dll`, `VCRUNTIME140.dll`,
+`VCRUNTIME140_1.dll`, Windows system DLLs and API-set contracts; it supplies no
+resolved path, provider version, file digest or signature.
 
 KERNEL32/ADVAPI32 and UCRT contracts still require supported-Windows provider
 and terms review; VC C++/vcruntime DLLs are **not assumed OS-provided**. For any
-product runtime, capture the exact provider binary identities, then match them to
-the selected installation's REDIST list and terms. Record provider, linkage,
-redistribution and approval under policy. Do not ship runner DLLs or infer
-redistribution permission from dumpbin.
+product runtime, capture the exact loader-resolved provider identities, then match
+them to the selected installation's REDIST list and terms. Record provider,
+linkage, redistribution and approval under policy. Do not ship runner DLLs or
+infer redistribution permission from dumpbin.
 
 Before adoption: close generated/header and selected-term gaps above, then ship
 complete selected notices alongside the engine and expose them through the app's
