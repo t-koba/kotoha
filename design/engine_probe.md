@@ -424,6 +424,31 @@ and applicable terms remain unresolved until each selected member and
 affected patch/section is mapped to its source, terms and distribution
 obligation.
 
+The corrected parser snapshot is publication
+`3dc2ba80dd8f8b01bea7c80f5abf113668f9a751f9184359d0ef1e118c908d5b` / SHA
+`bd2d8a0619fdbd1a5431e6671b81abc073d0b2c5`. Receipt-bound status shows
+`CI / Design contracts` and `Native engine probe / Android API 35 x86_64 CPU
+feasibility` passed (jobs `128737632108` and `128736947860`; evidence
+`vcs-read/dc36aec496be4d5886c8b1f83d5f2d53`). Its
+`validated-linker-map/llama-simple.map.contributions.json` artifact (first and
+last pages `vcs-read/cc88d73fc051462e821406e220c6e6d5`,
+`vcs-read/3b370cf9b1fd4d91808865f691f81541`) is 459,104 bytes with SHA-256
+`504654291e47812ef7883f7f124879e921382fcd9ed4e0a4d08f88be3aefb6b5`; it records
+1,563 input-section contributions across all 26 selected `libc++_static.a`
+members. Each row records map line, member, input/output section, VMA/LMA, size
+and alignment. Its archive identity is
+`toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/x86_64-linux-android/libc++_static.a`,
+SHA-256 `893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`,
+size 14,336,094 bytes; the map identity is SHA-256
+`2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`, size
+4,660,773 bytes. Those identities agree with the separately recorded archive
+and map sidecars (`vcs-read/68517223cb504e98b12b70f95313ec4e`,
+`vcs-read/dc743bbf69f04438a8ed1bcd528787a4`). The manifest contains debug
+sections and is not evidence of retained executable code, exact source identity,
+patch application, applicable terms or redistribution authorization; the raw
+map has not been independently reassembled or rehashed here. No raw archive-member
+objects are retained.
+
 The compiler log reports Android clang 19.0.1, based on r530567e, repository
 commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` (`vcs-read/c2129f0d0cae49969429c6c18adadfde`). An exact upstream commit-metadata read identifies this as “Merge 3b5e7c83… for LLVM update to 530567”, with `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` as its second parent. The installed `clang_source_info.md` instead names that `3b5e7c83…` commit as its base revision and lists Android toolchain patches from repository revision `e727bfb014bd436f581a66a450c939a6983a1fc3`. The component `LICENSE.TXT` hashes recorded above were re-fetched at base revision `3b5e7c83…` and match, but this verifies only identical license-text bytes, not that the patched installed archives' selected object code matches the mapped source files. Patch-to-member/source closure remains open.
 
@@ -960,11 +985,13 @@ of `source.properties`, `package.xml`, required
 license/notice/copying/copyright-named records at the NDK root and under
 `toolchains/llvm/prebuilt/linux-x86_64`. It retains `ndk-terms/manifest.json`
 and the original bytes under `ndk-terms/records/`; the manifest hashes and sizes
-every record. The configured 64-file/16-MiB bounds fail closed. Until the next
-exact Android job passes and its records are reviewed, this is a capture
-implementation, not source/terms evidence. It does not classify archive members
-or prove which source terms apply. The member/source mapping and complete
-applicable per-file terms remain open. Do not infer complete license
+every record. The configured 64-file/16-MiB bounds fail closed. The exact
+Android API 35 x86_64 job for publication
+`3dc2ba80dd8f8b01bea7c80f5abf113668f9a751f9184359d0ef1e118c908d5b` passed, and
+its selected-member contribution evidence is recorded above. This validates the
+bounded capture, not the terms records' applicability to linked members. The
+source/member/patch mapping and complete applicable per-file terms remain open.
+Do not infer complete license
 classification from docs or from `libc++`'s name. **Android engine adoption
 remains disabled** pending exact source/terms/notices, any third-party exceptions,
 binary/runtime closure, and platform-specific review. The official reference
