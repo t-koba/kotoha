@@ -147,6 +147,8 @@ jobs:
           ANDROID_BOOT_TIMEOUT_SECONDS: '180'
           ANDROID_BOOT_POLL_SECONDS: '2'
           ANDROID_TEST_TIMEOUT: 7m
+          # Bound failure-only log capture if the emulator has gone offline.
+          ANDROID_LOGCAT_CAPTURE_TIMEOUT_SECONDS: '10'
           ANDROID_AX_TIMEOUT_MILLIS: '10000'
           ANDROID_AX_POLL_MILLIS: '100'
           PROFILE_BYTES: ${{ inputs.profile_bytes }}
@@ -174,6 +176,12 @@ jobs:
             wait "$emulator_pid" 2>/dev/null || true
             tail -n 80 "$RUNNER_TEMP/kotoha-emulator.log"
           }
+          capture_profile() {
+            if ! timeout --kill-after=1s "${ANDROID_LOGCAT_CAPTURE_TIMEOUT_SECONDS}s" \
+                adb logcat -d -s KotohaImportProfile:I; then
+              echo "Android profile logcat capture unavailable or timed out" >&2
+            fi
+          }
           trap cleanup EXIT
           export emulator_pid
           timeout "${ANDROID_BOOT_TIMEOUT_SECONDS}s" bash -c '
@@ -184,10 +192,10 @@ jobs:
           '
           adb shell input keyevent KEYCODE_WAKEUP
           adb shell wm dismiss-keyguard
-          # Capture native profile output even when Gradle or instrumentation fails.
+          # Attempt bounded native profile capture even when tests fail.
           if [[ -n "$PROFILE_BYTES" ]]; then
             adb logcat -c
-            trap 'adb logcat -d -s KotohaImportProfile:I || true; cleanup' EXIT
+            trap 'capture_profile; cleanup' EXIT
           fi
           cd android
           timeout "$ANDROID_TEST_TIMEOUT" ./gradlew --no-daemon :app:connectedDebugAndroidTest \
