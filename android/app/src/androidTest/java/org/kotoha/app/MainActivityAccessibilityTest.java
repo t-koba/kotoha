@@ -5,6 +5,7 @@ import android.app.UiAutomation;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
@@ -13,6 +14,7 @@ import android.view.InputDevice;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 import java.util.List;
@@ -301,11 +303,15 @@ public final class MainActivityAccessibilityTest
                     if (count[0] > 0) state.append(", ");
                     Rect bounds = new Rect();
                     node.getBoundsInScreen(bounds);
+                    String actions = node.getActionList().stream()
+                            .map(action -> Integer.toHexString(action.getId()))
+                            .collect(Collectors.joining(","));
                     state.append("{class=").append(string(node.getClassName()))
                             .append(",id=").append(string(node.getViewIdResourceName()))
                             .append(",visible=").append(node.isVisibleToUser())
                             .append(",bounds=").append(bounds.toShortString())
-                            .append(",children=").append(node.getChildCount()).append("}");
+                            .append(",children=").append(node.getChildCount())
+                            .append(",actions=").append(actions).append("}");
                 }
                 count[0]++;
             }
@@ -326,9 +332,14 @@ public final class MainActivityAccessibilityTest
                 try {
                     MainActivity activity = getActivity();
                     View focus = activity.getCurrentFocus();
+                    WindowInsets insets = activity.getWindow().getDecorView().getRootWindowInsets();
+                    String imeVisible = Build.VERSION.SDK_INT >= 30 && insets != null
+                            ? Boolean.toString(insets.isVisible(WindowInsets.Type.ime()))
+                            : "unavailable";
                     state[0] = "{windowFocus=" + activity.hasWindowFocus()
                             + ", currentFocusExists=" + (focus != null)
-                            + ", currentFocusHasFocus=" + (focus != null && focus.hasFocus()) + "}";
+                            + ", currentFocusHasFocus=" + (focus != null && focus.hasFocus())
+                            + ", imeVisible=" + imeVisible + "}";
                 } catch (RuntimeException | AssertionError ignored) { /* Keep unavailable. */ }
             });
         } catch (RuntimeException | AssertionError ignored) { /* Keep unavailable. */ }
