@@ -2,12 +2,12 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. The latest exact native-probe publication is
-`e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16` / SHA
-`5752035ff2adb68a51b78c020f1d52ec7d5be1ba` (code digest
-`3279e24928491426c61a0b1302ac17e993677965d74e7bef4ebf2c96ebd48417`). Its
-receipt-bound status (`vcs-read/fdd6c0cbcb9b423ab5f26928b9b85175`) reports the
+`ab0e4c71f09a95cee50e9d8b5f654f8df46071185c9eb3ad60394010e6a16d50` / SHA
+`a7d9ff104e50454b9e018544d92d429ea3d13b06` (code digest
+`38d05a1dc46d541938d6ba9efb33e9c473a35a3b6ec1a3ec2dfee6f31d990380`). Its
+receipt-bound status (`vcs-read/11f3f17d527c4967beeee78974c47f63`) reports the
 Android API 35 x86_64 and Windows x64 native-probe checks successful in run
-`42515261841` (jobs `128836792623` and `128836792802`). These are feasibility
+`42534227635` (jobs `128894858502` and `128894858690`). These are feasibility
 observations only, not source, license, redistribution, adoption, or physical-
 device approval.
 
@@ -126,6 +126,43 @@ SHA-256 `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`
 the regex and demangler patches. The separate retained patch manifest covers
 four selected blobs only; the source-info listing is broader and is metadata,
 not proof that any patch was applied to an installed object or header.
+
+Android's NDK C++ support guide says libc++ may be linked statically or as a
+shared library, and that `libc++_shared.so` is not a system library and must be
+included in an app when used. Its generic page summary names Apache-2.0 with
+LLVM Exceptions (`sources/search-4898ca8a08820333cdc3d2eb018270f119c86111856f78360c8a7857809186f0`);
+a bounded extraction of the fetched page's raw bytes confirms the exact
+passage (`experiments/138eb1e07efc4ae4b38ae86a6af72827`, 290,174 bytes,
+SHA-256 `3c03f5a8353e9fd6694cd88eaf7d797f046cb07ce41baba06102671a168849a1`).
+The candidate `libcxx/LICENSE.TXT` at NDK source-info base
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` (fetch
+`mizu_fetch/42de15639a21943905ea4aaf8ea200f41277c3e5a0d56c88b1d9308a44291245`)
+and at compiler-reported candidate
+`97a699bf4812a18fb657c2779f5296a4ab2694d2` (fetch
+`mizu_fetch/65f8796f7902f4add555b0d0bf29e211f731460967bddd171ff6419dac24d6ec`)
+share SHA-256
+`539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b`. The
+fetched file contains both the Apache/LLVM-exception text and an explicit
+legacy dual-license block for University of Illinois/NCSA and MIT
+(`experiments/4d8660f0fc5249e792fd110f7ce1a358`). This candidate-file
+agreement does not bind selected archive members to either source revision.
+The generic page summary and component/relicensing evidence below therefore
+do not justify an Apache-only classification; NCSA/MIT alternatives and
+incomplete relicensing remain in scope.
+
+The exact Android API 35 x86_64 probe publication
+`ab0e4c71f09a95cee50e9d8b5f654f8df46071185c9eb3ad60394010e6a16d50` / SHA
+`a7d9ff104e50454b9e018544d92d429ea3d13b06` has a map-bound archive manifest
+listing `libc++_static.a` (14,336,094 bytes, SHA-256
+`893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`) and
+`libc++abi.a` (2,792,306 bytes, SHA-256
+`11ff6729a881f3d1a2e72c2a9c4bd2c096e02c5dfb3858d942405e0514b7b95c`); its
+ELF `DT_NEEDED` list is only `libm.so`, `libdl.so`, and `libc.so`, with no
+`libc++_shared.so` (`vcs-read/73b9d6e07992495fbfb5ad63545171fd`,
+`vcs-read/37f19f698a084721890f376e92a59fe0`). This proves static NDK C++
+archives in the developer probe only, not a product APK/AAB's linkage. The
+static archive's selected-source and notice mapping remains unresolved; any
+product runtime choice requires its own exact build and package evidence.
 
 #### Targeted diff-path triage of additional NDK source-info patches
 
