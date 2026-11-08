@@ -27,14 +27,38 @@ assertions and deadline unchanged.
 The exact Android pinned-NDK line-table report `ndk-member-debug.json` is
 307,893 bytes, SHA-256
 `b638280b8a8fbfe2bd732715e0c7b69dd6dcfab56fc2ebff99481fbba3226e07`
-(`vcs-read/ba330e53d9984ff8879edfbf29735f2e`). It records line tables for all
-26 selected `libc++_static.a` members and 1,506 file entries, but zero MD5
-checksums; no candidate-byte comparison is possible. The exact NDK patch-source
-manifest is 1,526 bytes, SHA-256
+(`vcs-read/74a16fa950be48d799e16e06a564b6c9`). Its recorded archive-manifest
+hash `8efc215b9079c3f77ec0583aa0138885f5d95b9d8657f9ea14bc74ecb044efb9`
+matches the 5,417-byte link-map-bound manifest
+(`vcs-read/ce873ce82b894b34a72b33b0122b2c56`), which names all 26 selected
+`libc++_static.a` members. The report records 26 compile units, 26 line tables
+and 1,506 file entries, but zero MD5 checksums. Its first member record names
+`libcxx/src/algorithm.cpp` as a component-relative DWARF path; such paths are
+source-location clues, not byte identity, and no candidate-byte comparison is
+possible. The exact NDK patch-source manifest is 1,526 bytes, SHA-256
 `d8dc351b4d2a681fa16997a47c02b01f3921970c62146aa3c776b1dd048ef0b1`
 (`vcs-read/b6c42f82da224c018d25e4f05414d175`): it names four patch blobs at
-`llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`, but retains
-only hashes, sizes and Git blob IDs, not raw patches. The exact NDK terms
+`llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3` and records
+hashes, sizes and Git blob IDs, not raw patches. Bounded experiments decoded
+Gitiles responses for all four exact-revision blobs and matched their byte
+counts and SHA-256 values to the manifest; no decoded patch files were
+retained. The observed non-test diff targets are:
+
+| Patch | Bytes; SHA-256 | Non-test changed paths | Experiment |
+| --- | --- | --- | --- |
+| `move-cxa-demangle-into-libcxxdemangle.patch` | 3,857; `6a8879953b2133491d4bc6be97332d4d031b837e0175227969f4ef7f7d6ef8b9` | `libcxxabi/CMakeLists.txt`, `libcxxabi/src/CMakeLists.txt` | `experiments/e5793796d8e440c398cb2a3e6210cef4` |
+| `9a2fd97d391caf1060e303f636d7113501788d2f-r530567.patch` | 174,905; `9b0a015f44a91d6ed83eb9ba4b0303f0e634daa8874199eb76d74f7d61dba7b3` | `llvm/lib/Transforms/Instrumentation/HWAddressSanitizer.cpp` | `experiments/862ec89446ba4171acffa45aad11455b` |
+| `b433076fcbacba8a3b91446390bbea5843322bcd-v2.patch` | 18,250; `2f6b8beec77bfb2bff02b6cf341ff31ec424834aa28c23f30ce18bb12945d8eb` | `clang/lib/CodeGen/CGDecl.cpp` | `experiments/97f297c42c93471bacd504eed6af32bf` |
+| `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` | 15,251; `4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d` | `libcxx/include/regex` | `experiments/e34b5a63a6c9455ebd58426e5909a5fe` |
+
+The archive manifest names `cxa_demangle.cpp.o` and `regex.cpp.o`; the
+source-info/compiler-read comparison below also identifies the regex header as
+a selected input. These are candidate overlaps only: the CMake patch's
+configured effect, installed patch postimages and patch application to the
+captured NDK remain unproven. The other two patches alter Clang/LLVM code
+that may affect generated objects despite not targeting an engine runtime
+member. Neither path comparison establishes member bytes, surviving code,
+notice applicability or redistribution authorization. The exact NDK terms
 manifest is 2,735 bytes, SHA-256
 `6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`
 (`vcs-read/a030cba6c6e64ba286d505d325278ffb`); it identifies broad r28c
@@ -65,9 +89,10 @@ remains disabled.
 
 The detailed archive/member inventory below is historical evidence from exact
 publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
-/ SHA `59cdc16f38ab3d18cf5a91aeff383b168e7792c4`. The corrected publication's
-refreshed manifest and successful member-DWARF report are recorded separately
-below; the historical inventory is not substituted for them.
+/ SHA `59cdc16f38ab3d18cf5a91aeff383b168e7792c4`. The newer exact archive
+manifest and DWARF line-table report are summarized above; this historical
+inventory remains evidence for the bounded source-list and terms analysis, not a
+substitute for the current report.
 
 The earlier `android-api35-x86_64-engine-probe` artifact includes the map
 and a link-map-bound archive manifest. The complete manifest is
