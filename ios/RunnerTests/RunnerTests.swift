@@ -157,14 +157,32 @@ class RunnerTests: XCTestCase {
     let plugin = try XCTUnwrap(engine.valuePublished(byPlugin: "TextImportPlugin") as? TextImportPlugin,
                               "Must be registered by the implicit engine callback")
     let originalReader = plugin.reader
-    defer { plugin.reader = originalReader }
+    let originalPresentPicker = plugin.presentPicker
+    let originalPickerIsPresented = plugin.pickerIsPresented
+    let originalDismissPicker = plugin.dismissPicker
+    defer {
+      plugin.reader = originalReader
+      plugin.presentPicker = originalPresentPicker
+      plugin.pickerIsPresented = originalPickerIsPresented
+      plugin.dismissPicker = originalDismissPicker
+    }
     var reader = TextDocumentReader()
     reader.startScope = { _ in false }
     reader.coordinate = { url, accessor in accessor(url) }
     reader.load = { _ in Data([65, 10, 66]) }
     plugin.reader = reader
+    var simulatedPresentation: UIDocumentPickerViewController?
+    plugin.presentPicker = { selectedPresenter, picker, completion in
+      XCTAssertTrue(selectedPresenter === presenter)
+      simulatedPresentation = picker
+      completion()
+    }
+    plugin.pickerIsPresented = { $0 === simulatedPresentation }
 
-    // Handler/delegate integration on the implicit engine. The XCUI regression
+    // Handler/delegate integration on the implicit engine. Presentation is a
+    // narrow seam: picker configuration and active presenter remain real, while
+    // no external Files/DocumentManager scene is launched by this unit test.
+    // The XCUI regression
     // exercises the real Dart channel and system-picker cancellation as well.
     for outcome in ["cancel", "dismiss", "selection", "read-error", "invalid"] {
       if outcome == "read-error" {
@@ -183,23 +201,19 @@ class RunnerTests: XCTestCase {
         completed.fulfill()
       }
       let picker = try XCTUnwrap(plugin.picker)
-      defer { picker.dismiss(animated: false) }
-      let shown = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-        picker.presentingViewController != nil && !picker.isBeingPresented
-      }, object: nil)
-      waitForPredicate(shown, timeout: timeout, context: "document-picker presentation")
-      XCTAssertTrue(picker.presentingViewController === presenter)
+      XCTAssertTrue(simulatedPresentation === picker)
       XCTAssertEqual(picker.documentPickerMode, .open) // asCopy:false, not import/copy mode.
       XCTAssertFalse(picker.allowsMultipleSelection)
       XCTAssertEqual(picker.modalPresentationStyle, .formSheet) // iPad-safe sheet; no unanchored popover.
       XCTAssertTrue(picker.delegate === plugin)
-      XCTAssertTrue(picker.presentationController?.delegate === plugin)
       plugin.handle(FlutterMethodCall(methodName: "open", arguments: nil)) { value in
         XCTAssertEqual((value as? FlutterError)?.code, "busy")
       }
       if outcome == "cancel" { plugin.documentPickerWasCancelled(picker) }
       else if outcome == "dismiss" {
-        plugin.presentationControllerDidDismiss(try XCTUnwrap(picker.presentationController))
+        let presentation = UIPresentationController(presentedViewController: picker,
+                                                    presenting: presenter)
+        plugin.presentationControllerDidDismiss(presentation)
       } else {
         plugin.documentPicker(picker, didPickDocumentsAt: outcome == "invalid" ? [] : [
           URL(fileURLWithPath: "/synthetic/sample.md")
@@ -211,26 +225,29 @@ class RunnerTests: XCTestCase {
       XCTAssertNil(picker.delegate)
       plugin.documentPickerWasCancelled(picker) // Late delegate callback is ignored.
       XCTAssertEqual(completions, 1)
-      let dismissed = expectation(description: "dismissed")
-      picker.dismiss(animated: false) { dismissed.fulfill() }
-      wait(for: [dismissed], timeout: timeout)
     }
 
     // A separate plugin/registrar tests engine detach without breaking the hosted
     // engine's live import handler for later tests.
     let registrar = try XCTUnwrap(engine.registrar(forPlugin: "TextImportDetachTest"))
     let detachedPlugin = TextImportPlugin()
+    var detachedPresentation: UIDocumentPickerViewController?
+    var detachedDismissals = 0
+    detachedPlugin.presentPicker = { _, picker, completion in
+      detachedPresentation = picker
+      completion()
+    }
+    detachedPlugin.pickerIsPresented = { $0 === detachedPresentation }
+    detachedPlugin.dismissPicker = { _ in detachedDismissals += 1 }
     var detachCompletions = 0
     detachedPlugin.handle(FlutterMethodCall(methodName: "open", arguments: nil)) { value in
       detachCompletions += 1
       XCTAssertEqual((value as? FlutterError)?.code, "detached")
     }
     let detachedPicker = try XCTUnwrap(detachedPlugin.picker)
-    let detachShown = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-      detachedPicker.presentingViewController != nil && !detachedPicker.isBeingPresented
-    }, object: nil)
-    waitForPredicate(detachShown, timeout: timeout, context: "detached-plugin picker presentation")
+    XCTAssertTrue(detachedPresentation === detachedPicker)
     detachedPlugin.detachFromEngine(for: registrar)
+    XCTAssertEqual(detachedDismissals, 1)
     XCTAssertNil(detachedPicker.delegate)
     XCTAssertNil(detachedPlugin.picker)
     detachedPlugin.documentPickerWasCancelled(detachedPicker)

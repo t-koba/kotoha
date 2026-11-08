@@ -43,6 +43,13 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
   private var pending: Request?
   private(set) var picker: UIDocumentPickerViewController?
   var reader = TextDocumentReader()
+  // The default uses UIKit. Native unit tests inject a non-presenting boundary so
+  // they can exercise request/delegate lifecycle without launching Files UI.
+  var presentPicker: (UIViewController, UIDocumentPickerViewController, @escaping () -> Void) -> Void = {
+    presenter, picker, completion in presenter.present(picker, animated: true, completion: completion)
+  }
+  var pickerIsPresented: (UIDocumentPickerViewController) -> Bool = { $0.presentingViewController != nil }
+  var dismissPicker: (UIDocumentPickerViewController) -> Void = { $0.dismiss(animated: false) }
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let plugin = TextImportPlugin()
@@ -91,13 +98,15 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
     let picker = Self.makePicker(presenter: presenter)
     self.picker = picker
     picker.delegate = self
-    presenter.present(picker, animated: true) { [weak self, weak picker] in
+    presentPicker(presenter, picker) { [weak self, weak picker] in
       // Detach or a failed presentation must not leave a pending channel call.
-      guard let self = self, self.pending === request else {
-        picker?.dismiss(animated: false)
+      guard let picker = picker else { return }
+      guard let self = self else { picker.dismiss(animated: false); return }
+      guard self.pending === request else {
+        self.dismissPicker(picker)
         return
       }
-      guard let picker = picker, picker.presentingViewController != nil else {
+      guard self.pickerIsPresented(picker) else {
         self.finish(request, value: Self.failure("presentation_failed"))
         return
       }
@@ -152,6 +161,6 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
     let presented = picker
     if let request = pending { finish(request, value: Self.failure("detached")) }
     presented?.delegate = nil
-    presented?.dismiss(animated: false)
+    if let presented = presented { dismissPicker(presented) }
   }
 }
