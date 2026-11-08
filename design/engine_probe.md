@@ -153,12 +153,20 @@ modify compiler tooling rather than shipped runtime objects. The regex patch
 affects a selected libc++ input, but neither patch-to-installed-header identity
 nor survival in the linked runtime object is established.
 
-The fourth captured patch changes `libcxx/include/regex` and two tests. The
-upstream diff (`mizu_fetch` receipt
-`d9c2e640a5107cf0ecf2e9c896bccd9b4b4d17f42823b2d60ed15285f99c6d43`) updates
-`regex_iterator::operator++` to retain the preceding match end as the unmatched
-prefix after a zero-length match, correcting replacement behavior; its tests
-cover that case. The exact compiler-input record selects this header, and the
+The fourth captured patch raw payload was independently fetched from the exact
+`llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3` through
+Gitiles (whose endpoint returns Base64) and decoded in bounded experiment
+`experiments/52e149171bb14295972aaff3b7922196`: 15,251 bytes, SHA-256
+`4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d`, matching
+the NDK capture manifest SHA-256; that manifest records Git blob ID
+`cdd63954108d97d7c34018ccc9840cb8a6c703e9` (`mizu_fetch` receipt
+`95d67600306683e5838227da6c404ce6f374678d996c30e56148f72fefc266a3`). Its diff
+names only `libcxx/include/regex` and two tests; it updates
+`regex_iterator::operator++` to preserve the preceding match end as the
+unmatched prefix after a zero-length match, and the added test declares
+`Apache-2.0 WITH LLVM-exception`.
+
+The exact compiler-input record selects this header, and the
 link map selects `libc++_static.a(regex.cpp.o)`. The earlier exact r28c selected-input
 artifact page (`vcs-read/2df5e51c0539440bb5e5d15ff2913609`) hashes the installed
 `sysroot/usr/include/c++/v1/regex` input as
