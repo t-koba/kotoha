@@ -914,7 +914,18 @@ run. The exact PE import record only names `MSVCP140.dll`, `VCRUNTIME140.dll`,
 `VCRUNTIME140_1.dll`, Windows system DLLs and API-set contracts; it supplies no
 resolved path, provider version, file digest or signature.
 
-KERNEL32/ADVAPI32 and UCRT contracts still require supported-Windows provider
+Microsoft documents the Universal CRT as a Windows OS component included in
+Windows 10 or later and Windows Server 2016 or later; older supported systems may
+receive it through Windows Update, while local deployment is subject to specific
+restrictions. The system UCRT is always used on Windows 10/11 even if the app
+contains a local copy. This is conditional OS guidance, not a product support
+floor: neither Kotoha's supported Windows minimum nor this `windows-latest`
+runner's exact OS build is captured here. Thus the API-set contracts do not by
+themselves prove a concrete UCRT provider across product targets. Microsoft Learn
+page retrieved 2026-11-08: `mizu_fetch/30c74266cc7b61875a639168acac25a15014b7d83333442769b820c29e735f2b`,
+SHA-256 `ffb73fffc0daf9f3f973b39a7691c59d50fe79184d82e23e3ae00dc69feb568e`.
+
+KERNEL32/ADVAPI32 and UCRT therefore still require supported-Windows provider
 and terms review; VC C++/vcruntime DLLs are **not assumed OS-provided**. For any
 product runtime, capture the exact loader-resolved provider identities, then match
 them to the selected installation's REDIST list and terms. Record provider,
