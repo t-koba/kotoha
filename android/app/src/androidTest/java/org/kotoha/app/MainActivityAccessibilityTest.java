@@ -171,13 +171,16 @@ public final class MainActivityAccessibilityTest
     // Keep the native keyboard event path, but assert that Android accepted each event before
     // diagnosing a missing editor update as a Flutter/IME/input-connection problem.
     private void injectKeyDownUpAndAssertAccepted(int keyCode) {
-        injectKeyEventAndAssertAccepted(KeyEvent.ACTION_DOWN, keyCode);
-        injectKeyEventAndAssertAccepted(KeyEvent.ACTION_UP, keyCode);
+        // ACTION_UP must reuse the original ACTION_DOWN time to form one key press.
+        long downTime = SystemClock.uptimeMillis();
+        injectKeyEventAndAssertAccepted(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode);
+        injectKeyEventAndAssertAccepted(downTime, SystemClock.uptimeMillis(),
+                KeyEvent.ACTION_UP, keyCode);
     }
 
-    private void injectKeyEventAndAssertAccepted(int action, int keyCode) {
-        long now = SystemClock.uptimeMillis();
-        KeyEvent event = new KeyEvent(now, now, action, keyCode, 0, 0,
+    private void injectKeyEventAndAssertAccepted(long downTime, long eventTime,
+            int action, int keyCode) {
+        KeyEvent event = new KeyEvent(downTime, eventTime, action, keyCode, 0, 0,
                 KeyCharacterMap.VIRTUAL_KEYBOARD, 0, KeyEvent.FLAG_FROM_SYSTEM,
                 InputDevice.SOURCE_KEYBOARD);
         assertTrue("Android rejected native key injection: action=" + action
