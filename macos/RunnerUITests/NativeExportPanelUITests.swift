@@ -33,7 +33,7 @@ final class NativeExportPanelUITests: XCTestCase {
 
     let deadline = Date().addingTimeInterval(panelTimeout)
     while !field.isHittable && Date() < deadline {
-      app.scrollViews.firstMatch.scrollDown()
+      app.scrollViews.firstMatch.swipeUp()
     }
     XCTAssertTrue(field.isHittable, "Translation field is not hittable")
     field.click()
