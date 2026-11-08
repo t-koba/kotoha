@@ -31,10 +31,11 @@ class LinkerMapTests(unittest.TestCase):
     def write_map(self, content=None):
         if content is None:
             content = (
-                f'  62d18 62d18 c 4 {self.build_archive.relative_to(self.build)}(llama.cpp.o):(.text)\n'
-                f'  62d1c 62d1c 4 4 .rodata {self.build_archive.relative_to(self.build)}(llama-context.cpp.o):(.text)\n'
-                '  62d20 62d20 8 4 .text\n'
+                '  62d18 62d18 10 4 .text\n'
+                f'  62d18 62d18 4 4 {self.build_archive.relative_to(self.build)}(llama.cpp.o):(.text)\n'
+                f'  62d1c 62d1c 4 4 .text {self.build_archive.relative_to(self.build)}(llama-context.cpp.o):(.text)\n'
                 f'  62d20 62d20 8 4 {self.ndk_archive}(string.cpp.o):(.text)\n'
+                '  62d28 62d28 6 2 .rodata\n'
                 f'  62d28 62d28 4 4 .rodata {self.ndk_archive}(locale.cpp.o):(.rodata)\n'
                 f'  62d2c 62d2c 2 2 {self.ndk_archive}(wchar.cpp.o):(.rodata)\n'
             )
@@ -91,13 +92,13 @@ class LinkerMapTests(unittest.TestCase):
                 'size_bytes': 8, 'align_bytes': 4,
             },
             {
-                'line': 5, 'member': 'locale.cpp.o',
+                'line': 6, 'member': 'locale.cpp.o',
                 'output_section': '.rodata', 'input_section': '.rodata',
                 'vma': '0x62d28', 'lma': '0x62d28',
                 'size_bytes': 4, 'align_bytes': 4,
             },
             {
-                'line': 6, 'member': 'wchar.cpp.o',
+                'line': 7, 'member': 'wchar.cpp.o',
                 'output_section': '.rodata', 'input_section': '.rodata',
                 'vma': '0x62d2c', 'lma': '0x62d2c',
                 'size_bytes': 2, 'align_bytes': 2,
@@ -134,11 +135,17 @@ class LinkerMapTests(unittest.TestCase):
     def test_rejects_libcxx_rows_without_a_valid_section_mapping(self):
         cases = (
             (f'  62d20 62d20 8 4 {self.ndk_archive}(string.cpp.o):(.text)\n',
-             'missing or malformed libc++ section mapping'),
-            (f'  62d20 62d20 8 4 .text {self.ndk_archive}(string.cpp.o):(bad)\n',
-             'missing or malformed libc++ section mapping'),
-            (f'  nope 62d20 8 4 .text {self.ndk_archive}(string.cpp.o):(.text)\n',
-             'malformed libc++ address/size/alignment'),
+             'missing enclosing output section'),
+            ('  62d20 62d20 10 4 .text\n'
+             f'  62d20 62d20 4 4 .rodata {self.ndk_archive}(string.cpp.o):(.text)\n',
+             'explicit output section disagrees with enclosing section'),
+            ('  62d20 62d20 10 4 .text\n'
+             f'  62d20 62d20 4 4 {self.ndk_archive}(string.cpp.o):(bad)\n',
+             'malformed libc++ input section'),
+            ('  62d20 62d20 10 4 .text\n'
+             '  nope 62d20 8 4 .data\n'
+             f'  62d20 62d20 4 4 {self.ndk_archive}(string.cpp.o):(.text)\n',
+             'malformed output section header'),
         )
         for index, (content, message) in enumerate(cases):
             with self.subTest(content=content):
@@ -148,6 +155,15 @@ class LinkerMapTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, re.escape(message)):
                     self.capture()
                 self.assertFalse(self.output_dir.exists())
+
+    def test_rejects_libcxx_contribution_outside_enclosing_output_range(self):
+        self.write_map(
+            '  100 100 10 4 .text\n'
+            f'  200 200 4 4 {self.ndk_archive}(member.o):(.text)\n'
+        )
+        with self.assertRaisesRegex(RuntimeError, 'outside enclosing output section range'):
+            self.capture()
+        self.assertFalse(self.output_dir.exists())
 
     def test_rejects_invalid_map_bounds_and_symlink_map(self):
         self.write_map()

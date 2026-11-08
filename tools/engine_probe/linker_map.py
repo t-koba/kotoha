@@ -88,7 +88,6 @@ def _parse_archive_members(stream, build_root, ndk_root, max_bytes):
     members_by_archive = {}
     contributions_by_archive = {}
     current_output_section = None
-    current_output_end = 0
     for line_number, raw_line in enumerate(stream, 1):
         observed += len(raw_line)
         if observed > max_bytes:
@@ -97,16 +96,44 @@ def _parse_archive_members(stream, build_root, ndk_root, max_bytes):
         line = raw_line.decode('utf-8')
         row = _MAP_ROW.match(line)
         fields = line.split(None, 4) if row else []
-        if len(fields) == 5 and '.a(' not in line:
-            vma, _, size, _, rest = fields
-            rest = rest.strip()
-            if (_SECTION_NAME.fullmatch(rest) and not rest.startswith('.L') and
-                    _MAP_HEX.fullmatch(vma) and _MAP_HEX.fullmatch(size)):
-                section_start = _map_integer(vma, 16, 'section VMA', line_number)
-                section_size = _map_integer(size, 16, 'section size', line_number)
-                if section_size > 0 and section_start >= current_output_end:
-                    current_output_section = rest
-                    current_output_end = section_start + section_size
+
+        # LLD output-section headers have four address/size/alignment columns
+        # followed by one section-name token. Treat malformed-looking headers
+        # as errors rather than allowing later inputs to inherit stale context.
+        tokens = line.split()
+        header_candidate = (
+            '.a(' not in line and tokens and
+            _SECTION_NAME.fullmatch(tokens[-1]) is not None and
+            not tokens[-1].startswith('.L')
+        )
+        if header_candidate:
+            if not row or len(fields) != 5:
+                raise RuntimeError(f'unrecognized output section header on map line {line_number}')
+            vma_value, lma_value, size_value, align_value, rest = fields
+            output_section = rest.strip()
+            if (output_section != tokens[-1] or
+                    not _SECTION_NAME.fullmatch(output_section) or
+                    not _MAP_HEX.fullmatch(vma_value) or
+                    not _MAP_HEX.fullmatch(lma_value) or
+                    not _MAP_HEX.fullmatch(size_value) or
+                    not _MAP_ALIGN.fullmatch(align_value)):
+                raise RuntimeError(f'malformed output section header on map line {line_number}')
+            vma_start = _map_integer(vma_value, 16, 'output section VMA', line_number)
+            lma_start = _map_integer(lma_value, 16, 'output section LMA', line_number)
+            section_size = _map_integer(size_value, 16, 'output section size', line_number)
+            _map_integer(align_value, 10, 'output section alignment', line_number)
+            vma_end = vma_start + section_size
+            lma_end = lma_start + section_size
+            if vma_end > (1 << 64) or lma_end > (1 << 64):
+                raise RuntimeError(f'output section range overflows on map line {line_number}')
+            current_output_section = {
+                'name': output_section,
+                'vma_start': vma_start,
+                'vma_end': vma_end,
+                'lma_start': lma_start,
+                'lma_end': lma_end,
+            }
+
         if '.a(' not in line:
             continue
         if not row or len(fields) != 5:
@@ -115,16 +142,12 @@ def _parse_archive_members(stream, build_root, ndk_root, max_bytes):
         output_section = None
         columns = archive_text.split(None, 1)
         if (len(columns) == 2 and columns[0].startswith('.') and
-                '/' not in columns[0] and '\\' not in columns[0] and
-                '.a(' not in columns[0] and '.a(' in columns[1]):
-            # LLD may show the output section before the input archive path.
+                '.a(' in columns[1]):
+            # Some LLD row forms repeat the output-section name before the
+            # input archive. It must agree with the enclosing header below.
+            if not _SECTION_NAME.fullmatch(columns[0]):
+                raise RuntimeError(f'malformed explicit output section on map line {line_number}')
             output_section = columns[0]
-            current_output_section = output_section
-            if _MAP_HEX.fullmatch(fields[0]) and _MAP_HEX.fullmatch(fields[2]):
-                current_output_end = max(
-                    current_output_end,
-                    _map_integer(fields[0], 16, 'contribution VMA', line_number) +
-                    _map_integer(fields[2], 16, 'contribution size', line_number))
             archive_text = columns[1]
         matches = list(_ARCHIVE_MEMBER.finditer(archive_text))
         if not matches:
@@ -156,18 +179,23 @@ def _parse_archive_members(stream, build_root, ndk_root, max_bytes):
             if not section_match:
                 raise RuntimeError(f'missing libc++ input section on map line {line_number}')
             input_section = section_match.group(1)
-            mapped_output_section = output_section or current_output_section
-            if (not mapped_output_section or
-                    not _SECTION_NAME.fullmatch(mapped_output_section) or
-                    mapped_output_section.startswith('.L') or
-                    not _SECTION_NAME.fullmatch(input_section)):
-                raise RuntimeError(f'missing or malformed libc++ section mapping on map line {line_number}')
-            if vma_number + size_number > (1 << 64) or lma_number + size_number > (1 << 64):
-                raise RuntimeError(f'libc++ contribution range overflows on map line {line_number}')
+            if not _SECTION_NAME.fullmatch(input_section):
+                raise RuntimeError(f'malformed libc++ input section on map line {line_number}')
+            if current_output_section is None:
+                raise RuntimeError(f'missing enclosing output section on libc++ map line {line_number}')
+            if output_section is not None and output_section != current_output_section['name']:
+                raise RuntimeError(f'explicit output section disagrees with enclosing section on map line {line_number}')
+            vma_end = vma_number + size_number
+            lma_end = lma_number + size_number
+            section = current_output_section
+            if (vma_end > (1 << 64) or lma_end > (1 << 64) or
+                    vma_number < section['vma_start'] or vma_end > section['vma_end'] or
+                    lma_number < section['lma_start'] or lma_end > section['lma_end']):
+                raise RuntimeError(f'libc++ contribution is outside enclosing output section range on map line {line_number}')
             contributions_by_archive.setdefault(key, []).append({
                 'line': line_number,
                 'member': member,
-                'output_section': mapped_output_section,
+                'output_section': section['name'],
                 'input_section': input_section,
                 'vma': '0x' + format(vma_number, 'x'),
                 'lma': '0x' + format(lma_number, 'x'),
