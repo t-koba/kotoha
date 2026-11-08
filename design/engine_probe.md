@@ -905,14 +905,38 @@ captured. Full retrieved-page evidence: REDIST receipt
 receipt `b2a93905e9aff462845c811589d86f141d272e3ac4e91e5db5f11d5bec4b938d`,
 SHA-256 `b5ee56b66669b7274abd8f197b10082e960403b269c8a4772dae651479ff0b1e`.
 
-The complete paginated artifact listing for this publication (first page
-`vcs-read/6792185a81db4747bd101f13eb2709b2`, second page to EOF
+The complete paginated artifact listing for this historical publication
+(first page `vcs-read/6792185a81db4747bd101f13eb2709b2`, second page to EOF
 `vcs-read/195b8e0620fe4253be31c7153e8e8996`) contains no VC runtime DLLs,
 Redistributable installer, or loaded-module inventory. This is an artifact-retention
-finding, not evidence of which files Windows actually resolved during the smoke
-run. The exact PE import record only names `MSVCP140.dll`, `VCRUNTIME140.dll`,
-`VCRUNTIME140_1.dll`, Windows system DLLs and API-set contracts; it supplies no
-resolved path, provider version, file digest or signature.
+finding for that run, not evidence of which files Windows actually resolved during
+the smoke run. The exact PE import record only names `MSVCP140.dll`,
+`VCRUNTIME140.dll`, `VCRUNTIME140_1.dll`, Windows system DLLs and API-set
+contracts; it supplies no resolved path, provider version, file digest or signature.
+
+The developer-only Windows workflow now adds a `debug-initial-breakpoint`
+observation for the exact `llama-simple.exe --help` build. It records actual
+`LOAD_DLL_DEBUG_EVENT` file handles before the executable entrypoint, hashes the
+observed files, captures file/product versions and cache-only Windows trust
+status without online certificate retrieval, and classifies paths under the
+probe directory or `%SystemRoot%`; providers outside those roots are represented
+by basename only. Direct ordinary PE imports must tie to an observed module
+basename; `api-ms-win-*` and `ext-ms-win-*` remain contract names, not fabricated
+DLL paths. The retained outputs are `runtime-providers.json` and
+`runtime-summary.txt`; provider binaries and runner absolute paths are not
+retained. The process is terminated before the initial breakpoint is released.
+
+Workflow defaults are a 60-second debug wait and 256 provider/import records;
+`ENGINE_RUNTIME_DEBUG_SECONDS`, `ENGINE_RUNTIME_MAX_PROVIDERS` and
+`ENGINE_RUNTIME_MAX_IMPORTS` configure them. The workflow's 15-minute job cap
+bounds runtime. These bounds limit this capture, not the Windows loader or every
+supported runtime. This is one developer-runner
+observation, not product provider identity across supported Windows versions
+and not redistribution approval. At this code snapshot, the new method still
+requires exact Windows CI. Provider paths, versions, hashes and trust results
+remain unobserved until that job succeeds and its output is reviewed. An
+unavailable version or unknown trust result is recorded as uncertainty, not
+closure.
 
 Microsoft documents the Universal CRT as a Windows OS component included in
 Windows 10 or later and Windows Server 2016 or later; older supported systems may

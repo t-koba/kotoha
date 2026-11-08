@@ -25,6 +25,9 @@ jobs:
       ENGINE_PROBE_OUTPUT_BYTES: '8192'
       ENGINE_PROBE_TOKENS: '16'
       ENGINE_DOWNLOAD_TIMEOUT_SECONDS: '300'
+      ENGINE_RUNTIME_DEBUG_SECONDS: '60'
+      ENGINE_RUNTIME_MAX_PROVIDERS: '256'
+      ENGINE_RUNTIME_MAX_IMPORTS: '256'
       # Explicit acceptance of the reviewed complete terms for this developer test ONLY.
       ENGINE_ACCEPT_TERMS_SHA256: '832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e'
     steps:
@@ -101,6 +104,19 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             Get-FileHash $exe -Algorithm SHA256 | Format-List | Out-File build/engine-probe/executable-sha256.txt
           }
+      - name: Capture loader-resolved runtime providers (pre-entrypoint, no model)
+        if: always()
+        shell: pwsh
+        run: |
+          # Debug initial-breakpoint observation of the exact executable; no
+          # model fixture reads, no DLL copies, no licensing determination.
+          $ErrorActionPreference = 'Stop'
+          $exe = 'build/engine-probe/bin/Release/llama-simple.exe'
+          $linkage = 'build/engine-probe/linkage.log'
+          if (-not (Test-Path -LiteralPath $exe)) { throw 'Executable missing; provider capture incomplete' }
+          if (-not (Test-Path -LiteralPath $linkage)) { throw 'Linkage log missing; provider capture incomplete' }
+          python tools/engine_probe/runtime_providers.py --executable $exe --linkage-log $linkage --output build/engine-probe --timeout-seconds $env:ENGINE_RUNTIME_DEBUG_SECONDS --max-providers $env:ENGINE_RUNTIME_MAX_PROVIDERS --max-imports $env:ENGINE_RUNTIME_MAX_IMPORTS
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Retain developer engine build and audit inputs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -112,6 +128,8 @@ jobs:
             build/engine-probe/*.log
             build/engine-probe/*sha256.txt
             build/engine-probe/compiler-summary.txt
+            build/engine-probe/runtime-providers.json
+            build/engine-probe/runtime-summary.txt
             build/engine-probe/CMakeCache.txt
             build/engine-probe/CMakeFiles/CMakeConfigureLog.yaml
             build/engine-probe/.cmake/api/v1/reply/
