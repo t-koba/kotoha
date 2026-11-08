@@ -440,8 +440,18 @@ candidate notice files. The exact source-info bytes were read in the earlier
 same-r28c probe (`vcs-read/5a60708a01b74460876c8a8e9ec0ecb9`,
 `vcs-read/af0cdd28285b41128da2817ec8144328`); they pin LLVM base
 `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and Android toolchain source commit
-`e727bfb014bd436f581a66a450c939a6983a1fc3`. The current patch metadata is the
-1,526-byte exact-SHA artifact `vcs-read/36db48b5025e49c68da696c62b80e289`
+`e727bfb014bd436f581a66a450c939a6983a1fc3`. The same-r28c probe's `compiler.log`
+reports LLVM-project revision `97a699bf4812a18fb657c2779f5296a4ab2694d2`
+(`vcs-read/282338e9792e4c7c9aab2cac0afde1bf`). Gitiles metadata for that exact
+Android `toolchain/llvm-project` commit lists
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` as its second parent (along with
+first parent `d8003a456d14a3deb8054cdaa529ffbf02d9b262`) and describes a merge
+for LLVM update 530567
+(`fetch/8f681f457b8f4d193fae4939e74314310bcbdb648f32cce753e927e90ca2d0af`).
+Thus the banner revision and source-info base are ancestry-related, not conflicting
+revision claims. This commit graph does not prove patch application to installed
+files or identify selected archive-member source bytes. The current patch metadata
+is the 1,526-byte exact-SHA artifact `vcs-read/36db48b5025e49c68da696c62b80e289`
 (SHA-256 `d8dc351b4d2a681fa16997a47c02b01f3921970c62146aa3c776b1dd048ef0b1`).
 
 The exact CI capture contains metadata for these four patch blobs; decoded
