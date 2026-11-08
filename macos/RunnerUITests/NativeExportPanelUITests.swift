@@ -27,17 +27,14 @@ final class NativeExportPanelUITests: XCTestCase {
       "translation-text-0",
       XCUIElement.ElementType.textField.rawValue,
       XCUIElement.ElementType.textView.rawValue)).firstMatch
-    let workspace = app.scrollViews.firstMatch
-    XCTAssertTrue(
-      workspace.waitForExistence(timeout: panelTimeout),
-      "Workspace scroll view is unavailable")
-
     // The translation editor is below the initial viewport. On macOS the
     // accessibility node may not exist until its ListView region is revealed.
     let deadline = Date().addingTimeInterval(panelTimeout)
     var scrolls = 0
     while Date() < deadline && (!field.exists || !field.isHittable) {
-      workspace.swipeUp()
+      // Flutter's workspace is not exposed as an XCUI ScrollView on this host.
+      // Swipe the application window instead of waiting for a missing semantics node.
+      app.swipeUp()
       scrolls += 1
     }
     XCTAssertTrue(
