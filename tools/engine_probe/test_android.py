@@ -40,6 +40,8 @@ class LinkerMapWorkflowTest(unittest.TestCase):
         self.assertIn('capture_ndk_member_debug.py', script)
         self.assertIn('--llvm-ar "$llvm/llvm-ar" --llvm-dwarfdump "$llvm/llvm-dwarfdump"', script)
         self.assertIn('ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES', workflow)
+        self.assertIn('ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES', workflow)
+        self.assertIn('--max-line-table-output-bytes "$ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES"', script)
         self.assertIn('build/engine-probe-android/ndk-member-debug/**', workflow)
         self.assertIn('if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi', script)
         self.assertIn('if [[ "$member_capture_status" != 0 ]]; then exit "$member_capture_status"; fi', script)

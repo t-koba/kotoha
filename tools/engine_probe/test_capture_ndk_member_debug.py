@@ -17,8 +17,51 @@ DWARF = b''' <0> DW_TAG_compile_unit
 '''
 
 
+# Realistic LLVM 19 DWARFDebugLine::Prologue::dump text: include directories,
+# file_names with name/dir_index/md5_checksum. The first file resolves through
+# its directory to a component-relative libcxx path with a checksum; the second
+# has no checksum and its directory carries no libcxx component, so only the
+# basename is retained. Absolute directory strings must never appear in output.
+LINE_TABLE_V19 = b'''debug_line[0x00000000]
+Line table prologue:
+    total_length: 0x00000123
+    version: 5
+    address_size: 8
+    seg_select_size: 0
+    prologue_length: 0x000000ab
+    min_inst_length: 1
+    max_ops_per_inst: 1
+    default_is_stmt: 1
+    line_base: -5
+    line_range: 14
+    opcode_base: 13
+    standard_opcode_lengths[1] = 0
+    standard_opcode_lengths[2] = 1
+    include_directories[  0] = "/home/runner/work/llvm-project/libcxx/src"
+    include_directories[  1] = "/home/runner/work/llvm-project/include"
+    file_names[  0]:
+               name: "regex.cpp"
+               dir_index: 0
+               mod_time: 0x00000000
+               length: 0x00000000
+               md5_checksum: 0123456789abcdef0123456789ABCDEF
+    file_names[  1]:
+               name: "secret.cpp"
+               dir_index: 1
+               mod_time: 0x00000000
+               length: 0x00000000
+'''
+
+
 def digest(value):
     return hashlib.sha256(value).hexdigest()
+
+
+def line_table(version, rows='', *, include_version=True):
+    header = 'debug_line[0x00000000]\nLine table prologue:\n'
+    if include_version:
+        header += '    version: ' + str(version) + '\n'
+    return (header + rows).encode('utf-8')
 
 
 class CaptureMemberDebugTest(unittest.TestCase):
@@ -34,6 +77,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.object_dir = self.root / 'objects'
         self.object_dir.mkdir()
         self.dwarf_file = self.root / 'dwarf.txt'
+        self.line_file = self.root / 'line.txt'
         self.archive = self.ndk / 'sysroot' / 'usr' / 'lib' / 'x86_64-linux-android' / 'libc++_static.a'
         self.archive.parent.mkdir(parents=True)
         self.archive_bytes = b'exact synthetic archive bytes'
@@ -47,6 +91,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         for name, data in self.object_bytes.items():
             (self.object_dir / name).write_bytes(data)
         self.dwarf_file.write_bytes(DWARF)
+        self.line_file.write_bytes(LINE_TABLE_V19)
         ar_script = (
             '#!/usr/bin/env python3\nimport sys\nfrom pathlib import Path\n'
             'args=sys.argv[1:]\n'
@@ -55,13 +100,17 @@ class CaptureMemberDebugTest(unittest.TestCase):
             'sys.stdout.buffer.write(target.read_bytes())\n'
         )
         self.tool_args = self.root / 'dwarfdump-args.json'
+        self.tool_calls = self.root / 'dwarfdump-calls.jsonl'
+        self.tool_calls.write_text('', encoding='utf-8')
         dwarfdump_script = (
             '#!/usr/bin/env python3\nimport json,sys\nfrom pathlib import Path\n'
             'args=sys.argv[1:]\n'
-            'if len(args) != 2 or args[0] != "--debug-info":\n'
+            'if len(args) != 2 or args[0] not in ("--debug-info", "--debug-line"):\n'
             ' sys.stderr.write("unsupported llvm-dwarfdump invocation\\n"); sys.exit(2)\n'
             'Path(' + repr(str(self.tool_args)) + ').write_text(json.dumps(args), encoding="utf-8")\n'
-            'sys.stdout.buffer.write(Path(' + repr(str(self.dwarf_file)) + ').read_bytes())\n'
+            'open(' + repr(str(self.tool_calls)) + ', "a").write(json.dumps(args) + "\\n")\n'
+            'src=Path(' + repr(str(self.dwarf_file)) + ') if args[0] == "--debug-info" else Path(' + repr(str(self.line_file)) + ')\n'
+            'sys.stdout.buffer.write(src.read_bytes())\n'
         )
         self.ar.write_text(ar_script, encoding='utf-8')
         self.dwarfdump.write_text(dwarfdump_script, encoding='utf-8')
@@ -96,6 +145,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
             'max_object_bytes': 1024,
             'max_tool_output_bytes': 1024 * 1024,
             'max_diagnostic_bytes': 8192,
+            'max_line_table_output_bytes': 1024 * 1024,
             'timeout_seconds': 5,
         }
         args.update(overrides)
@@ -106,22 +156,44 @@ class CaptureMemberDebugTest(unittest.TestCase):
         result = self.run_capture()
         self.assertEqual(result['link_map']['sha256'], digest(self.map.read_bytes()))
         self.assertEqual(result['archive']['sha256'], digest(self.archive_bytes))
+        self.assertEqual(result['schema'], 2)
         self.assertEqual(result['counts']['members'], 2)
+        self.assertEqual(result['counts']['members_with_line_tables'], 2)
+        self.assertEqual(result['counts']['line_table_files_with_md5'], 2)
+        self.assertTrue(all(item['line_table_state'] == 'tables' for item in result['members']))
         unit = result['members'][0]['compile_units'][0]
         self.assertEqual(unit['dwarf_name_path'], 'libcxx/src/regex.cpp')
         self.assertEqual(unit['dwarf_name_path_state'], 'component-relative')
         self.assertEqual(unit['dwarf_name_basename'], 'regex.cpp')
         self.assertEqual(unit['producer_version'], 'clang version 19.0.1')
+        tables = result['members'][0]['line_tables']
+        self.assertEqual(tables[0]['version'], 5)
+        self.assertEqual(tables[0]['files'][0]['source_path'], 'libcxx/src/regex.cpp')
+        self.assertEqual(tables[0]['files'][0]['source_path_state'], 'component-relative')
+        self.assertEqual(tables[0]['files'][0]['md5'], '0123456789abcdef0123456789abcdef')
+        self.assertEqual(tables[0]['files'][0]['md5_state'], 'present')
+        self.assertEqual(tables[0]['files'][1]['source_path'], 'secret.cpp')
+        self.assertEqual(tables[0]['files'][1]['md5_state'], 'unavailable')
         encoded = json.dumps(result)
         self.assertNotIn('/home/runner', encoded)
         self.assertNotIn('/private/build', encoded)
         self.assertNotIn('synthetic object:', encoded)
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
-    def test_uses_llvm_dwarfdump_debug_info_option(self):
+    def test_uses_llvm_dwarfdump_for_info_and_line_tables(self):
         self.run_capture()
+        calls = [json.loads(line) for line in self.tool_calls.read_text(encoding='utf-8').splitlines()]
+        self.assertEqual(len(calls), 4)
+        for index, member in enumerate(self.members):
+            info_args, line_args = calls[2 * index], calls[2 * index + 1]
+            self.assertEqual(info_args[0], '--debug-info')
+            self.assertEqual(line_args[0], '--debug-line')
+            self.assertEqual(len(info_args), 2)
+            self.assertEqual(len(line_args), 2)
+            self.assertFalse(Path(info_args[1]).exists())
+            self.assertFalse(Path(line_args[1]).exists())
         args = json.loads(self.tool_args.read_text(encoding='utf-8'))
-        self.assertEqual(args[0], '--debug-info')
+        self.assertEqual(args[0], '--debug-line')
         self.assertEqual(len(args), 2)
         self.assertFalse(Path(args[1]).exists())
 
@@ -165,9 +237,12 @@ class CaptureMemberDebugTest(unittest.TestCase):
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_no_dwarf_is_a_recorded_finding_not_a_false_mapping(self):
         self.dwarf_file.write_bytes(b'')
+        self.line_file.write_bytes(b'')
         result = self.run_capture()
         self.assertEqual(result['counts']['members_with_compile_units'], 0)
         self.assertTrue(all(item['dwarf_state'] == 'no-compile-units' for item in result['members']))
+        self.assertTrue(all(item['line_table_state'] == 'no-line-table-output' for item in result['members']))
+        self.assertTrue(all(item['line_tables'] == [] for item in result['members']))
 
     def test_absolute_source_path_without_component_root_is_redacted(self):
         path, state = capture._safe_source_path('/private/build/user/foo.cpp', '/other/root')
@@ -179,6 +254,142 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.dwarf_file.write_bytes(b'x' * 4096)
         with self.assertRaisesRegex(ValueError, 'configured byte bound'):
             self.run_capture(max_tool_output_bytes=1024)
+
+    def test_line_table_v19_prologue_resolves_dirs_and_checksums(self):
+        tables = capture.parse_line_tables(LINE_TABLE_V19)
+        self.assertEqual(len(tables), 1)
+        self.assertEqual(tables[0]['version'], 5)
+        self.assertEqual(len(tables[0]['files']), 2)
+        first = tables[0]['files'][0]
+        self.assertEqual(first['source_path'], 'libcxx/src/regex.cpp')
+        self.assertEqual(first['source_path_state'], 'component-relative')
+        self.assertEqual(first['md5'], '0123456789abcdef0123456789abcdef')
+        self.assertEqual(first['md5_state'], 'present')
+        second = tables[0]['files'][1]
+        self.assertEqual(second['source_path'], 'secret.cpp')
+        self.assertEqual(second['md5_state'], 'unavailable')
+        self.assertIsNone(second['md5'])
+        encoded = json.dumps(tables)
+        self.assertNotIn('/home/runner', encoded)
+        self.assertNotIn('/private', encoded)
+        for record in tables[0]['files']:
+            self.assertEqual(set(record.keys()), {'source_path', 'source_path_state', 'md5', 'md5_state'})
+
+    def test_legacy_line_table_without_checksum_is_unavailable(self):
+        table = line_table(
+            4,
+            '    include_directories[  1] = "/home/runner/llvm-project/libcxx/src"\n'
+            '    file_names[  1]:\n'
+            '               name: "old.cpp"\n'
+            '               dir_index: 0\n'
+            '    file_names[  2]:\n'
+            '               name: "regex.cpp"\n'
+            '               dir_index: 1\n')
+        parsed = capture.parse_line_tables(table)
+        self.assertEqual(parsed[0]['version'], 4)
+        self.assertEqual(parsed[0]['files'][0]['source_path'], 'old.cpp')
+        self.assertEqual(parsed[0]['files'][0]['source_path_state'], 'relative-name')
+        self.assertEqual(parsed[0]['files'][1]['source_path'], 'libcxx/src/regex.cpp')
+        self.assertIsNone(parsed[0]['files'][0]['md5'])
+        self.assertEqual(parsed[0]['files'][0]['md5_state'], 'unavailable')
+
+    def test_line_table_malformed_checksum_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table checksum'):
+            capture.parse_line_tables(line_table(
+                5, '    file_names[  0]:\n'
+                '               name: "a.cpp"\n'
+                '               md5_checksum: 1234\n'))
+
+    def test_line_table_malformed_version_fails_closed(self):
+        malformed = b'debug_line[0x00000000]\nLine table prologue:\nversion: x\n'
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table version'):
+            capture.parse_line_tables(malformed)
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table version'):
+            capture.parse_line_tables(b'debug_line[0x00000000]\nLine table prologue:\nversion:\n')
+        with self.assertRaisesRegex(ValueError, 'Unsupported line-table version'):
+            capture.parse_line_tables(line_table(6))
+
+    def test_line_table_malformed_dir_index_fails_closed(self):
+        rows = '    file_names[  0]:\n               name: "a.cpp"\n'
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table directory index'):
+            capture.parse_line_tables(line_table(5, rows + '               dir_index: x\n'))
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table directory index'):
+            capture.parse_line_tables(line_table(5, rows + '               dir_index:\n'))
+
+    def test_line_table_malformed_directory_record_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table directory record'):
+            capture.parse_line_tables(line_table(5, '    include_directories[  x] = "/tmp"\n'))
+
+    def test_line_table_malformed_file_record_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table file record'):
+            capture.parse_line_tables(line_table(5, '    file_names[  x]:\n'))
+
+    def test_line_table_directory_index_out_of_range_fails_closed(self):
+        rows = (
+            '    include_directories[  0] = "/tmp"\n'
+            '    file_names[  0]:\n'
+            '               name: "a.cpp"\n'
+            '               dir_index: 5\n')
+        with self.assertRaisesRegex(ValueError, 'out of range'):
+            capture.parse_line_tables(line_table(5, rows))
+
+    def test_line_table_duplicate_checksum_fails_closed(self):
+        rows = (
+            '    file_names[  0]:\n'
+            '               name: "a.cpp"\n'
+            '               md5_checksum: 0123456789abcdef0123456789abcdef\n'
+            '               md5_checksum: 0123456789abcdef0123456789abcdef\n')
+        with self.assertRaisesRegex(ValueError, 'Duplicate line-table checksum'):
+            capture.parse_line_tables(line_table(5, rows))
+
+    def test_line_table_checksum_without_path_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'checksum has no source path'):
+            capture.parse_line_tables(line_table(
+                5, '    md5_checksum: 0123456789abcdef0123456789abcdef\n'))
+
+    def test_line_table_dir_index_without_path_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'directory index has no source path'):
+            capture.parse_line_tables(line_table(5, '    dir_index: 0\n'))
+
+    def test_line_table_missing_version_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'version is missing'):
+            capture.parse_line_tables(line_table(None, include_version=False))
+
+    def test_line_table_unrecognized_output_fails_closed(self):
+        with self.assertRaisesRegex(ValueError, 'unrecognized'):
+            capture.parse_line_tables(b'not a line table\n')
+        with self.assertRaisesRegex(ValueError, 'unrecognized'):
+            capture.parse_line_tables(b'x' * 64)
+
+    def test_line_table_empty_is_no_table(self):
+        self.assertEqual(capture.parse_line_tables(b''), [])
+        self.assertEqual(capture.parse_line_tables(b'  \n '), [])
+
+    def test_line_table_absolute_paths_are_redacted(self):
+        rows = (
+            '    include_directories[  0] = "/private/agent/source"\n'
+            '    file_names[  0]:\n'
+            '               name: "secret.cpp"\n'
+            '               dir_index: 0\n'
+            '    file_names[  1]:\n'
+            '               name: "/private/agent/source/other.cpp"\n')
+        tables = capture.parse_line_tables(line_table(5, rows))
+        self.assertEqual(tables[0]['files'][0]['source_path'], 'secret.cpp')
+        self.assertIsNone(tables[0]['files'][1]['source_path'])
+        self.assertEqual(tables[0]['files'][1]['source_path_state'], 'absolute-unmapped')
+        encoded = json.dumps(tables)
+        self.assertNotIn('/private', encoded)
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_line_table_output_budget_and_temp_object_cleanup(self):
+        self.dwarfdump.write_text(
+            '#!/usr/bin/env python3\nimport sys\n'
+            'sys.stdout.write("x" * 4096) if sys.argv[1] == "--debug-line" else None\n', encoding='utf-8')
+        self.dwarfdump.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'output exceeds its configured byte bound'):
+            self.run_capture(max_line_table_output_bytes=1024)
+        self.assertEqual(list(self.root.glob('ndk-member-dwarf-*')), [])
+        self.assertEqual(sorted(path.name for path in self.object_dir.iterdir()), sorted(self.members))
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_tool_timeout_terminates_capture(self):

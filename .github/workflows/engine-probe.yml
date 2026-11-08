@@ -171,7 +171,8 @@ jobs:
       ENGINE_NDK_PATCH_FETCH_SECONDS: '120' # total pinned-source fetch/capture deadline
       ENGINE_NDK_MEMBER_MAX_MEMBERS: '64'
       ENGINE_NDK_MEMBER_MAX_BYTES: '16777216' # 16 MiB selected libc++ member bytes
-      ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES: '67108864' # 64 MiB tool-output budget
+      ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES: '67108864' # 64 MiB existing info/listing output budget
+      ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES: '33554432' # 32 MiB added line-table output; aggregate ceiling rises by exactly this amount
       ENGINE_NDK_MEMBER_SECONDS: '120' # total selected-member extraction/DWARF deadline
       ENGINE_TOKENS: '16'
       ENGINE_DOWNLOAD_SECONDS: '300'

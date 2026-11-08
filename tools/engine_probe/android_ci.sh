@@ -8,7 +8,7 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES ENGINE_NDK_TERMS_MAX_FILES \
   ENGINE_NDK_TERMS_MAX_BYTES ENGINE_NDK_PATCH_MAX_BYTES ENGINE_NDK_PATCH_FETCH_SECONDS \
   ENGINE_NDK_MEMBER_MAX_MEMBERS ENGINE_NDK_MEMBER_MAX_BYTES \
-  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS; do
+  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -24,7 +24,8 @@ for name in ('ENGINE_BUILD_ROOT', 'ENGINE_TEMP_ROOT'):
 for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS',
             'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES',
             'NDK_PATCH_MAX_BYTES', 'NDK_PATCH_FETCH_SECONDS', 'NDK_MEMBER_MAX_MEMBERS',
-            'NDK_MEMBER_MAX_BYTES', 'NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES'):
+            'NDK_MEMBER_MAX_BYTES', 'NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES',
+            'NDK_MEMBER_LINE_OUTPUT_BYTES'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -118,6 +119,7 @@ python3 tools/engine_probe/capture_ndk_member_debug.py \
   --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" \
   --max-object-bytes "$ENGINE_NDK_MEMBER_MAX_BYTES" \
   --max-tool-output-bytes "$ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
+  --max-line-table-output-bytes "$ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES" \
   --max-diagnostic-bytes "$ENGINE_OUTPUT_BYTES" \
   --timeout-seconds "$ENGINE_NDK_MEMBER_SECONDS" \
   > "$build/ndk-member-debug-capture.log" 2>&1 || member_capture_status=$?

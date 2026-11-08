@@ -29,6 +29,20 @@ is 459,104 bytes, SHA-256
 input-section contributions from the 26 selected libc++ members, not all
 archive contents or legal obligations.
 
+The selected-member capture also invokes the pinned NDK `llvm-dwarfdump --debug-line`
+and retains only compact per-member line-table metadata: version, sanitized
+source path/state, and MD5 when present. Missing MD5 is explicitly
+`unavailable`; it is not synthesized, used as an identity match, or passed to a
+later source comparison. Added line output has its own workflow-configured 32
+MiB budget, and aggregate tool output is bounded by the existing 64 MiB budget
+plus exactly that configured addition. Malformed or over-budget output fails
+capture. Extracted archive objects and raw DWARF/line-table output are temporary
+and deleted, not artifacts. The DWARF MD5 field is a debug-information checksum, not a security or
+integrity proof; it can only help compare candidate source bytes. By itself
+it does not establish selected source, build or patch identity, surviving
+executable code, applicable notices, rights, or device behavior. Existing
+compile-unit metadata remains unchanged.
+
 The same Android job ran 86 engine-probe tests and captured build, source-read,
 NDK-term and patch inputs. Its retained smoke log
 (`vcs-read/abd14e30c5864542aaee4617b5d8723d`) reports Android 15 API 35 x86_64

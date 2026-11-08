@@ -294,12 +294,206 @@ def _safe_producer(value):
     return value[:256]
 
 
-def _member_record(name, data, dwarfdump_output):
+def _unescape_dwarf_quoted(value):
+    return value.replace('\\"', '"').replace('\\\\', '\\')
+
+
+def parse_line_tables(data):
+    """Extract only line-table versions and safe file/checksum records.
+
+    Consumes LLVM's line-table prologue text. Paths are reduced to a safe
+    component-relative or relative name; directory strings and raw DWARF are
+    never retained. Empty output means no table was emitted. Nonempty output
+    without a recognized prologue, malformed records, or unsupported versions
+    fail closed. A checksum only records file bytes for later comparison; it
+    does not establish source, patch or binary identity.
+    """
+    try:
+        text = data.decode('utf-8', errors='strict')
+    except (AttributeError, UnicodeDecodeError) as error:
+        raise ValueError('Line-table output is malformed; capture incomplete') from error
+    if '\ufffd' in text:
+        raise ValueError('Line-table output contains invalid UTF-8; capture incomplete')
+    if text.strip() == '':
+        return []
+
+    prologue_re = re.compile(r'\bLine table prologue:\s*$', re.IGNORECASE)
+    version_re = re.compile(r'^\s*version\s*:\s*(\d+)\s*$')
+    version_like_re = re.compile(r'^\s*version\s*:')
+    line_header_re = re.compile(r'^\s*(?:\.debug_line contents:|debug_line\s*\[)', re.IGNORECASE)
+    include_dir_re = re.compile(
+        r'^\s*include_directories\s*\[\s*(\d+)\s*\]\s*=\s*"((?:[^"\\]|\\.)*)"\s*$')
+    include_dir_like_re = re.compile(r'include_directories')
+    file_re = re.compile(r'^\s*file_names\s*\[\s*(\d+)\s*\]\s*:\s*$')
+    file_like_re = re.compile(r'file_names')
+    name_re = re.compile(r'^\s*name\s*:\s*"((?:[^"\\]|\\.)*)"\s*$')
+    name_like_re = re.compile(r'^\s*name\s*:')
+    dir_index_re = re.compile(r'^\s*dir_index\s*:\s*(\d+)\s*$')
+    dir_index_like_re = re.compile(r'\bdir_index\s*:')
+    checksum_re = re.compile(
+        r'^\s*(?:md5_checksum|md5)\s*:\s*(?:0x)?([0-9A-Fa-f]{32})\s*$')
+    checksum_like_re = re.compile(r'\b(?:md5_checksum|md5)\s*:')
+
+    tables = []
+    version = None
+    prologue_seen = False
+    include_dirs = {}
+    raw_files = []
+    current = None
+
+    def close_current():
+        nonlocal current
+        if current is None:
+            return
+        if current.get('raw_name') is None:
+            raise ValueError('Line-table file name is missing; capture incomplete')
+        raw_files.append(current)
+        current = None
+
+    def close_table():
+        nonlocal version, prologue_seen, include_dirs, raw_files, current, tables
+        if current is not None:
+            close_current()
+        has_table_data = prologue_seen or version is not None or raw_files or include_dirs
+        if has_table_data:
+            if not prologue_seen or version is None:
+                raise ValueError('Line-table prologue or version is missing; capture incomplete')
+            if version not in (2, 3, 4, 5):
+                raise ValueError('Unsupported line-table version; capture incomplete')
+            directory_base = 0 if version >= 5 else 1
+            expected_dirs = list(range(directory_base, directory_base + len(include_dirs)))
+            if sorted(include_dirs) != expected_dirs:
+                raise ValueError('Line-table directory indexes are malformed; capture incomplete')
+            file_indexes = [entry['file_index'] for entry in raw_files]
+            if any(index is None for index in file_indexes) and any(
+                    index is not None for index in file_indexes):
+                raise ValueError('Line-table file indexes are incomplete; capture incomplete')
+            if file_indexes and not any(index is None for index in file_indexes):
+                file_base = 0 if version >= 5 else 1
+                if file_indexes != list(range(file_base, file_base + len(file_indexes))):
+                    raise ValueError('Line-table file indexes are malformed; capture incomplete')
+            resolved = []
+            for raw in raw_files:
+                raw_name = raw['raw_name']
+                name_path = PurePosixPath(raw_name.replace('\\', '/'))
+                directory = None
+                index = raw.get('dir_index')
+                if index is not None and not name_path.is_absolute():
+                    if version < 5 and index == 0:
+                        # DWARF v2-v4 use zero for the compilation directory.
+                        # It is unavailable here, so retain only the relative name.
+                        directory = None
+                    elif index in include_dirs:
+                        directory = include_dirs[index]
+                    else:
+                        raise ValueError(
+                            'Line-table directory index is out of range; capture incomplete')
+                safe, state = _safe_source_path(raw_name, directory)
+                resolved.append({
+                    'source_path': safe,
+                    'source_path_state': state,
+                    'md5': raw.get('md5'),
+                    'md5_state': raw.get('md5_state', 'unavailable'),
+                })
+            tables.append({'version': version, 'files': resolved})
+        version = None
+        prologue_seen = False
+        include_dirs = {}
+        raw_files = []
+        current = None
+
+    for line in text.splitlines():
+        if line_header_re.search(line):
+            if version is not None or raw_files or include_dirs or current is not None:
+                close_table()
+            continue
+        if prologue_re.search(line):
+            if version is not None or raw_files or include_dirs or current is not None:
+                close_table()
+            prologue_seen = True
+            continue
+        match = version_re.fullmatch(line)
+        if match:
+            if version is not None or raw_files or include_dirs or current is not None:
+                close_table()
+            if not prologue_seen:
+                raise ValueError('Line-table version precedes its prologue; capture incomplete')
+            version = int(match.group(1))
+            if version not in (2, 3, 4, 5):
+                raise ValueError('Unsupported line-table version; capture incomplete')
+            continue
+        if version_like_re.match(line):
+            raise ValueError('Malformed line-table version; capture incomplete')
+        if include_dir_like_re.search(line):
+            match = include_dir_re.fullmatch(line)
+            if not match or version is None or current is not None or raw_files:
+                raise ValueError('Malformed line-table directory record; capture incomplete')
+            index = int(match.group(1))
+            base = 0 if version >= 5 else 1
+            if index != base + len(include_dirs):
+                raise ValueError('Line-table directory indexes are malformed; capture incomplete')
+            value = _unescape_dwarf_quoted(match.group(2))
+            if (len(value) > 4096 or
+                    any(ord(char) < 32 or ord(char) == 127 for char in value)):
+                raise ValueError('Malformed line-table directory path; capture incomplete')
+            include_dirs[index] = value
+            continue
+        if file_like_re.search(line):
+            match = file_re.fullmatch(line)
+            if not match or version is None:
+                raise ValueError('Malformed line-table file record; capture incomplete')
+            if current is not None:
+                close_current()
+            file_index = int(match.group(1))
+            expected = (0 if version >= 5 else 1) + len(raw_files)
+            if file_index != expected:
+                raise ValueError('Line-table file indexes are malformed; capture incomplete')
+            current = {'file_index': file_index, 'raw_name': None, 'dir_index': None,
+                       'md5': None, 'md5_state': 'unavailable'}
+            continue
+        name_match = name_re.fullmatch(line)
+        if name_match is not None:
+            if current is None:
+                raise ValueError('Line-table file name has no file record; capture incomplete')
+            if current.get('raw_name') is not None:
+                raise ValueError('Duplicate line-table file name; capture incomplete')
+            current['raw_name'] = _unescape_dwarf_quoted(name_match.group(1))
+            continue
+        if name_like_re.match(line):
+            raise ValueError('Malformed line-table file name; capture incomplete')
+        if dir_index_like_re.search(line):
+            match = dir_index_re.fullmatch(line)
+            if not match:
+                raise ValueError('Malformed line-table directory index; capture incomplete')
+            if current is None or current.get('raw_name') is None:
+                raise ValueError('Line-table directory index has no source path; capture incomplete')
+            if current.get('dir_index') is not None:
+                raise ValueError('Duplicate line-table directory index; capture incomplete')
+            current['dir_index'] = int(match.group(1))
+            continue
+        if checksum_like_re.search(line):
+            match = checksum_re.fullmatch(line)
+            if not match:
+                raise ValueError('Malformed line-table checksum; capture incomplete')
+            if current is None or current.get('raw_name') is None:
+                raise ValueError('Line-table checksum has no source path; capture incomplete')
+            if current['md5'] is not None:
+                raise ValueError('Duplicate line-table checksum; capture incomplete')
+            current['md5'] = match.group(1).lower()
+            current['md5_state'] = 'present'
+    close_table()
+    if not tables:
+        raise ValueError('Line-table output is unrecognized; capture incomplete')
+    return tables
+
+
+def _member_record(name, data, dwarfdump_output, line_table_output=b''):
     try:
         text = dwarfdump_output.decode('utf-8', errors='replace')
     except AttributeError as error:
         raise ValueError('Debug tool output is malformed; capture incomplete') from error
     units = parse_compile_units(text)
+    line_tables = parse_line_tables(line_table_output)
     safe_units = []
     for unit in units:
         source_path, path_state = _safe_source_path(unit.get('name'), unit.get('comp_dir'))
@@ -322,14 +516,16 @@ def _member_record(name, data, dwarfdump_output):
         'sha256': hashlib.sha256(data).hexdigest(),
         'dwarf_state': 'compile-units' if safe_units else 'no-compile-units',
         'compile_units': safe_units,
+        'line_table_state': 'tables' if line_tables else 'no-line-table-output',
+        'line_tables': line_tables,
     }
 
 
 def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
             temp_root, max_members, max_object_bytes, max_tool_output_bytes,
-            max_diagnostic_bytes=8192, timeout_seconds=120):
+            max_line_table_output_bytes, max_diagnostic_bytes=8192, timeout_seconds=120):
     if (max_members < 1 or max_object_bytes < 1 or max_tool_output_bytes < 1 or
-            max_diagnostic_bytes < 1):
+            max_diagnostic_bytes < 1 or max_line_table_output_bytes < 1):
         raise ValueError('Configured member capture limits must be positive')
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise ValueError('Member-debug timeout must be finite positive')
@@ -366,6 +562,7 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
     total_object_bytes = 0
     total_dwarf_bytes = 0
     total_tool_output_bytes = len(listing)
+    total_line_output_bytes = 0
     with tempfile.TemporaryDirectory(prefix='ndk-member-dwarf-', dir=temp_root) as directory:
         temp = Path(directory)
         for index, name in enumerate(members):
@@ -385,7 +582,17 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
             total_tool_output_bytes += len(dwarf) + diagnostic_bytes
             if total_tool_output_bytes > max_tool_output_bytes:
                 raise ValueError('DWARF output exceeds configured byte bound; capture incomplete')
-            member_records.append(_member_record(name, data, dwarf))
+            line_table, line_diagnostic_bytes = _run(
+                [str(Path(llvm_dwarfdump).resolve()), '--debug-line', str(object_path)],
+                deadline, max_line_table_output_bytes - total_line_output_bytes,
+                'llvm-dwarfdump line-table scan for ' + name, capture_stderr=True,
+                max_diagnostic_bytes=max_diagnostic_bytes)
+            total_line_output_bytes += len(line_table) + line_diagnostic_bytes
+            if total_tool_output_bytes + total_line_output_bytes > max_tool_output_bytes + max_line_table_output_bytes:
+                raise ValueError('Aggregate tool output exceeds its configured byte bound; capture incomplete')
+            if total_line_output_bytes > max_line_table_output_bytes:
+                raise ValueError('Line-table output exceeds its configured byte bound; capture incomplete')
+            member_records.append(_member_record(name, data, dwarf, line_table))
             object_path.unlink()
     final_map_size, final_map_hash = sha256_file(linker_map)
     final_archive_size, final_archive_hash = sha256_file(archive_path)
@@ -393,7 +600,7 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
             (final_archive_size, final_archive_hash) != (archive['size'], archive['sha256'])):
         raise ValueError('Link-map or libc++ archive changed during capture; evidence incomplete')
     return {
-        'schema': 1,
+        'schema': 2,
         'scope': 'selected libc++_static.a members only; source and licensing closure not established',
         'archive_manifest_sha256': hashlib.sha256(manifest_bytes).hexdigest(),
         'link_map': map_record,
@@ -402,8 +609,15 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
         'counts': {'members': len(member_records),
                    'compile_units': sum(len(item['compile_units']) for item in member_records),
                    'members_with_compile_units': sum(item['dwarf_state'] == 'compile-units' for item in member_records),
+                   'members_with_line_tables': sum(bool(item['line_tables']) for item in member_records),
+                   'line_table_files': sum(len(table['files']) for item in member_records
+                                           for table in item['line_tables']),
+                   'line_table_files_with_md5': sum(
+                       file['md5_state'] == 'present' for item in member_records
+                       for table in item['line_tables'] for file in table['files']),
                    'member_bytes': total_object_bytes, 'dwarf_output_bytes': total_dwarf_bytes,
-                   'tool_output_bytes': total_tool_output_bytes},
+                   'tool_output_bytes': total_tool_output_bytes,
+                   'line_table_output_bytes': total_line_output_bytes},
         'members': member_records,
     }
 
@@ -441,6 +655,7 @@ def main():
     parser.add_argument('--max-object-bytes', type=positive_int, default=16 * 1024 * 1024)
     parser.add_argument('--max-tool-output-bytes', type=positive_int, default=64 * 1024 * 1024)
     parser.add_argument('--max-diagnostic-bytes', type=positive_int, default=8192)
+    parser.add_argument('--max-line-table-output-bytes', type=positive_int, required=True)
     parser.add_argument('--timeout-seconds', type=positive_seconds, default=120)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -452,12 +667,15 @@ def main():
             temp_root=args.temp_root, max_members=args.max_members,
             max_object_bytes=args.max_object_bytes, max_tool_output_bytes=args.max_tool_output_bytes,
             max_diagnostic_bytes=args.max_diagnostic_bytes,
+            max_line_table_output_bytes=args.max_line_table_output_bytes,
             timeout_seconds=args.timeout_seconds)
         text = json.dumps(manifest, sort_keys=True, indent=2) + '\n'
         args.output.write_text(text, encoding='utf-8', newline='\n')
         print('Captured ' + str(manifest['counts']['members']) +
               ' selected libc++ members; ' +
-              str(manifest['counts']['members_with_compile_units']) + ' contain DWARF compile units')
+              str(manifest['counts']['members_with_compile_units']) + ' contain DWARF compile units; ' +
+              str(manifest['counts']['members_with_line_tables']) + ' have line tables with ' +
+              str(manifest['counts']['line_table_files_with_md5']) + ' file checksums')
     except Exception as error:
         args.output.unlink(missing_ok=True)
         detail = str(error) if isinstance(error, ValueError) else type(error).__name__
