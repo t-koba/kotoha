@@ -30,6 +30,7 @@ class ModelPackagePlugin :
     private var binding: ActivityPluginBinding? = null
     private var pendingSelection: SelectRequest? = null
     private var pendingRead: ReadRequest? = null
+    // Only a volatile reference to the current non-persistable SAF selection.
     private var root: Uri? = null
     private val main = Handler(Looper.getMainLooper())
 
@@ -38,6 +39,7 @@ class ModelPackagePlugin :
     private class ReadRequest(val result: MethodChannel.Result) {
         @Volatile var cancelled = false
         @Volatile var stream: InputStream? = null
+        var replied = false
     }
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -66,12 +68,12 @@ class ModelPackagePlugin :
 
     private fun detachActivity() {
         binding?.removeActivityResultListener(this)
-        binding = null
         pendingSelection?.let {
             finishSelection(it, error = "detached", preserveLateResult = true)
         }
         cancelRead("detached")
         root = null
+        binding = null
     }
 
     override fun onActivityResult(
@@ -104,8 +106,8 @@ class ModelPackagePlugin :
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "release" -> {
-                root = null
                 cancelRead("released")
+                root = null
                 result.success(null)
             }
             "selectDirectory" -> selectDirectory(result)
@@ -130,7 +132,7 @@ class ModelPackagePlugin :
             return
         }
 
-        // A new selection supersedes the previous temporary package grant.
+        // Drop the old tree reference before asking for another temporary grant.
         root = null
         val request = SelectRequest(code, result)
         pendingSelection = request
@@ -164,11 +166,18 @@ class ModelPackagePlugin :
         val request = ReadRequest(result)
         pendingRead = request
         Thread({
+            var bytes: ByteArray? = null
+            var error: String? = null
             try {
-                val file = resolveDocument(resolver, selectedRoot, path)
-                val bytes = resolver.openInputStream(file)?.use { input ->
-                    request.stream = input
-                    if (request.cancelled) throw IllegalStateException("cancelled")
+                val file = resolveDocument(resolver, selectedRoot, path) { request.cancelled }
+                if (request.cancelled) throw IllegalStateException("cancelled")
+                val opened = resolver.openInputStream(file)
+                request.stream = opened
+                if (request.cancelled) {
+                    try { opened?.close() } catch (_: Exception) { }
+                    throw IllegalStateException("cancelled")
+                }
+                bytes = opened?.use { input ->
                     val output = ByteArrayOutputStream(minOf(maxBytes, BUFFER_BYTES))
                     val buffer = ByteArray(BUFFER_BYTES)
                     var total = 0
@@ -190,9 +199,11 @@ class ModelPackagePlugin :
                     }
                     output.toByteArray()
                 } ?: throw IllegalArgumentException("missing stream")
-                main.post { completeRead(request, bytes = bytes) }
             } catch (_: Exception) {
-                main.post { completeRead(request, error = "read_failed") }
+                error = "read_failed"
+            } finally {
+                request.stream = null
+                main.post { completeRead(request, bytes = bytes, error = error) }
             }
         }, "kotoha-model-metadata-read").start()
     }
@@ -202,16 +213,17 @@ class ModelPackagePlugin :
         bytes: ByteArray? = null,
         error: String? = null,
     ) {
-        if (pendingRead !== request || request.cancelled) return
+        if (pendingRead !== request) return
         pendingRead = null
         request.stream = null
+        if (request.cancelled || request.replied) return
+        request.replied = true
         if (error == null) request.result.success(bytes)
         else request.result.error(error, "Could not safely read package metadata.", null)
     }
 
     private fun cancelRead(error: String) {
         val request = pendingRead ?: return
-        pendingRead = null
         request.cancelled = true
         try {
             request.stream?.close()
@@ -219,7 +231,10 @@ class ModelPackagePlugin :
             // The request is already cancelled; no further provider access is allowed.
         }
         request.stream = null
-        request.result.error(error, "Model-package read was cancelled.", null)
+        if (!request.replied) {
+            request.replied = true
+            request.result.error(error, "Model-package read was cancelled.", null)
+        }
     }
 
     private fun finishSelection(
@@ -257,7 +272,13 @@ class ModelPackagePlugin :
         }
 
         @JvmStatic
-        fun resolveDocument(resolver: ContentResolver, tree: Uri, path: String): Uri {
+        @JvmOverloads
+        fun resolveDocument(
+            resolver: ContentResolver,
+            tree: Uri,
+            path: String,
+            cancelled: () -> Boolean = { false },
+        ): Uri {
             require(isSafePath(path)) { "unsafe path" }
             require(DocumentsContract.isTreeUri(tree)) { "not a tree URI" }
             var parent = DocumentsContract.buildDocumentUriUsingTree(
@@ -271,7 +292,8 @@ class ModelPackagePlugin :
                     DocumentsContract.getDocumentId(parent),
                 )
                 val found = mutableListOf<Pair<String, Boolean>>()
-                resolver.query(
+                check(!cancelled()) { "cancelled" }
+                val cursorResult = resolver.query(
                     children,
                     arrayOf(
                         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -281,7 +303,9 @@ class ModelPackagePlugin :
                     null,
                     null,
                     null,
-                )?.use { cursor ->
+                )
+                cursorResult?.use { cursor ->
+                    check(!cancelled()) { "cancelled" }
                     val idColumn = cursor.getColumnIndex(
                         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                     )
@@ -304,7 +328,10 @@ class ModelPackagePlugin :
                             )
                         }
                     }
-                } ?: throw IllegalArgumentException("missing child listing")
+                } ?: run {
+                    check(!cancelled()) { "cancelled" }
+                    throw IllegalArgumentException("missing child listing")
+                }
 
                 if (found.size != 1) throw IllegalArgumentException("ambiguous path")
                 val isDirectory = found.single().second

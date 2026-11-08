@@ -1,7 +1,25 @@
 # Android model-package terms review (initial increment)
 
 Android uses the system SAF directory picker with a temporary read-only grant;
-Kotoha never requests or takes persistable URI permission. It reads the
+Kotoha never requests or takes persistable URI permission. The plugin keeps the
+selected tree URI only in volatile state and drops that reference when released,
+replaced by a new selection, or detached. It does not call
+`Context.revokeUriPermission(Uri, int)`: Android 15 `Context.java` documents that
+overload as removing matching grants for any package and grant mechanism, so it
+could revoke another app's matching access. The target-package overload is not
+equivalent; its documented scope excludes activity-launch and other
+non-`grantUriPermission` mechanisms. Because the SAF result grant is temporary
+and no persistable flag is requested, Kotoha drops its own handle rather than
+causing cross-package revocation. The OS controls the grant's remaining lifetime;
+this implementation does not claim immediate platform-level revocation. A
+rejected `content:` result is not retained or read. Synthetic instrumentation
+verifies that release/reselection stop further plugin reads and that no global
+revoke call is made; it does not exercise live DocumentsUI/provider grant
+behavior. Source: Android 15
+[`Context.java`](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-15.0.0_r1/core/java/android/content/Context.java#6830),
+retrieved as `mizu_fetch/44512bde38c85844078ab052432d660ec9584b0614bd20be94e747b7694412d1`.
+
+It reads the
 package-root `model_manifest.json`, then only terms files declared in the
 manifest and bound to `files` rows with role `terms`. The directory pick uses
 the shared 16-bit `SharedActivityRequestCodes` pool with text import, so picks
@@ -46,4 +64,6 @@ with BSD-3-Clause terms (permissive). The full notice is bundled at
 `assets/licenses/crypto-3.0.8.txt` and user-accessible through
 `LicenseRegistry`/`showLicensePage` alongside the Unicode notice.
 
-Use synthetic package providers only.
+Instrumentation uses synthetic package providers only; it does not exercise
+live DocumentsUI/provider grant behavior. No test or implementation path reads
+model weights.
