@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.UiAutomation;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
@@ -252,7 +253,65 @@ public final class MainActivityAccessibilityTest
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
         fail("Native field unavailable after scrolling: " + id
-                + "; forwardAccepted/attempted=" + scrollAccepted + "/" + scrollAttempts);
+                + "; forwardAccepted/attempted=" + scrollAccepted + "/" + scrollAttempts
+                + "; target=" + fieldAvailability(id)
+                + "; scrollables=" + scrollableState());
+    }
+
+    // Failure-only structure diagnostics distinguish an absent/hidden target from
+    // an incorrectly selected scroll container without emitting labels or text.
+    private String fieldAvailability(String id) {
+        AccessibilityNodeInfo node = findInApplication(n -> field(n, id));
+        if (node == null) return "not-in-tree";
+        try {
+            Rect bounds = new Rect();
+            node.getBoundsInScreen(bounds);
+            return "present{visible=" + node.isVisibleToUser()
+                    + ",bounds=" + bounds.toShortString() + "}";
+        } finally {
+            node.recycle();
+        }
+    }
+
+    private String scrollableState() {
+        String packageName = getInstrumentation().getTargetContext().getPackageName();
+        StringBuilder state = new StringBuilder("[");
+        int[] count = {0};
+        List<AccessibilityWindowInfo> windows = automation.getWindows();
+        try {
+            for (AccessibilityWindowInfo window : windows) {
+                if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
+                appendScrollableState(window.getRoot(), packageName, state, count);
+            }
+        } finally {
+            for (AccessibilityWindowInfo window : windows) window.recycle();
+        }
+        return state.append("] count=").append(count[0]).toString();
+    }
+
+    private static void appendScrollableState(AccessibilityNodeInfo node, String packageName,
+            StringBuilder state, int[] count) {
+        if (node == null) return;
+        try {
+            if (packageName.contentEquals(string(node.getPackageName())) && node.isScrollable()) {
+                if (count[0] < 8) {
+                    if (count[0] > 0) state.append(", ");
+                    Rect bounds = new Rect();
+                    node.getBoundsInScreen(bounds);
+                    state.append("{class=").append(string(node.getClassName()))
+                            .append(",id=").append(string(node.getViewIdResourceName()))
+                            .append(",visible=").append(node.isVisibleToUser())
+                            .append(",bounds=").append(bounds.toShortString())
+                            .append(",children=").append(node.getChildCount()).append("}");
+                }
+                count[0]++;
+            }
+            for (int i = 0; i < node.getChildCount(); i++) {
+                appendScrollableState(node.getChild(i), packageName, state, count);
+            }
+        } finally {
+            node.recycle();
+        }
     }
 
     // Window/view focus only: IMM status getters can trigger checkFocus/startInput.
