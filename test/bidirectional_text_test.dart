@@ -267,7 +267,7 @@ void main() {
     expect(secondParagraphCaret.top, greaterThan(firstParagraphCaret.top));
   });
 
-  testWidgets('language field deletes after an RTL direction rebuild', (
+  testWidgets('language field keeps input focus through bidi rebuilds', (
     tester,
   ) async {
     await tester.pumpWidget(const KotohaApp());
@@ -278,6 +278,11 @@ void main() {
     await tester.pump();
 
     final controller = tester.widget<TextField>(field).controller!;
+    final editable = find.descendant(
+      of: field,
+      matching: find.byType(EditableText),
+    );
+    final focusNode = tester.widget<EditableText>(editable).focusNode;
     const arabic = 'العربية';
     await tester.enterText(field, 'p');
     await tester.pump();
@@ -309,11 +314,38 @@ void main() {
     expect(controller.text, arabic);
     expect(controller.selection.baseOffset, arabic.length);
     expect(tester.widget<TextField>(field).textDirection, TextDirection.rtl);
-    final editable = find.descendant(
-      of: field,
-      matching: find.byType(EditableText),
+
+    // Exercise the complete RTL-to-LTR transition and a following IME commit
+    // through the same focused input client, without requesting focus again.
+    for (var length = arabic.length - 1; length >= 0; length--) {
+      final remaining = arabic.substring(0, length);
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: remaining,
+          selection: TextSelection.collapsed(offset: remaining.length),
+        ),
+      );
+      await tester.pump();
+      expect(controller.text, remaining);
+      expect(
+        tester.widget<TextField>(field).textDirection,
+        remaining.isEmpty ? TextDirection.ltr : TextDirection.rtl,
+      );
+      expect(tester.widget<EditableText>(editable).focusNode, same(focusNode));
+      expect(focusNode.hasFocus, isTrue);
+    }
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'Latin',
+        selection: TextSelection.collapsed(offset: 5),
+      ),
     );
-    expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isTrue);
+    await tester.pump();
+    expect(controller.text, 'Latin');
+    expect(tester.widget<TextField>(field).textDirection, TextDirection.ltr);
+    expect(tester.widget<EditableText>(editable).focusNode, same(focusNode));
+    expect(focusNode.hasFocus, isTrue);
   });
 
   testWidgets('source field preserves composing input across edit rebuilds', (
