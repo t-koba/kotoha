@@ -115,8 +115,9 @@ the map-selected static archives. The exact archive manifest
 SHA-256 `ed2f334e79cda0e310a0d078c625e031e00f5f25203ead3fb6b8d83598921352`)
 identifies four NDK runtime archives and 47 selected members: compiler-rt
 builtins (one `emutls.c.o`), libunwind (5), libc++ (26), and libc++abi
-(15). This bounds the source/patch intersection but does not map member
-bytes to source files or surviving sections. The required notice subset
+(15). This bounds the selected archive-member set. The full source-info
+patch-path comparison appears below, but it does not map member bytes to source
+files or surviving sections. The required notice subset
 and applicable terms remain unresolved until each selected member and
 affected patch/section is mapped to its source, terms and distribution
 obligation.
@@ -157,21 +158,61 @@ scope is hashes, sizes and Git object IDs only; the raw patch blobs are not
 retained in CI. The checked-out temporary Git fetch has a 120-second deadline,
 but the pack has no independent hard byte cap.
 
-This four-entry patch capture is not a complete patch inventory. The exact
-retained `clang_source_info.md` artifact (`vcs-read/e2ada48ced374c21b554de8fa9f8c1b7`)
-enumerates many additional repository patch entries, including `libc++`- and
-`compiler-rt`-named entries; the capture script allowlist and manifest scope
-cover only these four. Names alone do not establish effects on selected
-product objects, but the full source-info list must be intersected with exact
-selected runtime members and source paths before claiming patch closure. One
-additional source-info-listed `libc++` patch,
-`f886dfed3ae6cf70827cedc8d8aefde6250a239b`, was decoded in experiment
-`experiments/15418f8ce0bb4431ad2c5081095d8142`: 4,733 bytes, SHA-256
-`1e7a30444f33594f27ec14faf8d51b21a702fb1f452f16dc886779ed62e7a7f9`; its
-only diff path is `libcxx/include/__config`, changing diagnostic push/pop
-macros for Clang modules. This confirms the four-entry capture omits a
-header-affecting patch; exact installed-header/selected-read identity and
-any binary effect remain unverified.
+The four-entry capture allowlist and metadata-only manifest remain incomplete
+as payload retention; the full installed source-info inventory has now been
+intersected with the exact archive-member and compiler-read manifests. The
+retained `clang_source_info.md` is 11,370 bytes with SHA-256
+`8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`
+(`vcs-read/b16654cc3bf946759bffa59d44c7396c`, continuation
+`vcs-read/09c32684b9ff4a219be8f310a9d6d7b1`); it names LLVM base
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and Android toolchain source
+commit `e727bfb014bd436f581a66a450c939a6983a1fc3`. Its 52 patch entries were
+decoded and their diff paths compared with all 47 map-selected NDK archive
+member names (and basename-inferred source candidates) and the exact selected
+compiler-input hash list. Four patch entries directly name a selected
+compiler-read header; none directly names one of the candidate source paths
+inferred from the 47 archive members. The other 48 entries modify
+compiler/driver/linker code, build configuration, tests, nonselected
+sanitizer/HWASan/OpenMP paths or other target architectures. These are direct
+path results only: toolchain changes may affect generated code, and no path
+comparison proves patch application, object-section survival or license
+applicability. Paths in the table's selected-input column are relative to
+`ndk/toolchains/llvm/prebuilt/linux-x86_64`. The four exact intersections are:
+
+| Source-info patch | Exact diff path | Exact selected compiler input | Link-map relation and remaining limit |
+| --- | --- | --- | --- |
+| `f886dfed3ae6cf70827cedc8d8aefde6250a239b.patch` (`experiments/15418f8ce0bb4431ad2c5081095d8142`) | `libcxx/include/__config` | `sysroot/usr/include/c++/v1/__config`, SHA-256 `4a2eb47672b4f8c68000044174ba4ea01a00e287483a3fda12b29ed268fa93da` (`vcs-read/c55baa2e6768434ea8cf0fb8494de267`) | Header input; no direct member-source path. Upstream patch-commit hash does not match the installed input hash; presence and binary effect are unproven. |
+| `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` (`experiments/52e149171bb14295972aaff3b7922196`) | `libcxx/include/regex` | `sysroot/usr/include/c++/v1/regex`, SHA-256 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` (`vcs-read/e4719ea39a8c4086b6b1df600ae8d707`) | `libc++_static.a(regex.cpp.o)` is selected; the upstream base, patch-commit and installed-header byte hashes differ, so patch-to-input or surviving-object identity is not established. |
+| `Revert-Fix-diagnostic-for-stdatomic.h-before-C++23.patch` (`experiments/fdd2d7dbe3f5413f959b130736580eae`) | `libcxx/include/atomic` | `sysroot/usr/include/c++/v1/atomic`, SHA-256 `99cb8c4b0cc7866a710f877a377c9749a3e3c6905d8eb7012b00859f20a4a1bd` (`vcs-read/800cb3aec4ed416da5af9ccce09ea7e4`) | Selected header input; the map has no `atomic.cpp.o` member. Header use/inline code and any emitted-section effect are not proven. |
+| `7d20ea9d32954e8e5becab8495fa509a3f67b710.patch` (`experiments/b8af38156bb743bea1d01296e5ed72e5`) | `clang/lib/Headers/limits.h` | `lib/clang/19/include/limits.h`, SHA-256 `201a7790932ddd1da2b69c0484d6d8ecd076e08684aabc5ce984bd0fa8ef2cf8` (`vcs-read/4b378905b66c401698249f915c141d39`) | Selected compiler resource header, not an archive member source path; patch-to-installed-header and emitted-code effects remain unverified. |
+
+The complete two-page artifact inventory for this publication
+(`vcs-read/d6a5d402b76f4afa93e824c6df38515f`, continuation
+`vcs-read/91af38e63bf749a590cc96db8cac8bcd`) retains the archive manifest,
+link map, compiler-input hashes and notice records, but no raw NDK runtime
+archives or extracted archive-member objects. Exact source/member provenance
+therefore cannot be recovered from these retained CI artifacts.
+
+Representative non-overlap checks include compiler-rt sanitizer-common code
+and tests (`experiments/8f0c09ce7db342b0ab38a6d182a83f83`), the AArch64
+`sme-abi-init.c` builtins path (`experiments/cf1ad34f6f854620ba3889f24bc8d1eb`),
+HWASan-only paths (`experiments/f597dd462c6747a98345d206d05e3698`,
+`experiments/4c7282f3061945fab7783dcf7fdd0e55`), and `nl_types`-related OpenMP
+runtime code (`experiments/8d1dcff7ab4a4bc1a0c486a3c54afb13`). These examples
+do not substitute for the full path comparison or establish whether toolchain
+changes influence emitted code.
+
+The source-info inventory closes only this bounded diff-path intersection. It
+does not close exact archive-member source identities or surviving sections,
+patch presence in installed files, per-file notice obligations, or user-facing
+notice delivery. The app has a user-accessible Flutter license page: the info
+button in `lib/main.dart` opens it, and `test/licenses_test.dart` verifies
+bundled notice access. The current app registers only the Unicode and crypto
+notices from `assets/licenses/`; `pubspec.yaml` packages those two assets and
+no NDK notice payload. This is a delivery surface, not delivery of the NDK
+notices. The broad `NOTICE.toolchain` contains GPL-2.0 text, but these path
+comparisons establish neither applicability nor irrelevance. Keep all unknown
+selected terms fail-closed and engine adoption disabled.
 
 The demangler patch affects build-graph selection. A bounded decode of the
 exact `9a2fd97` patch in experiment
@@ -182,7 +223,8 @@ instrumentation pass and five tests. None names the candidate
 `compiler-rt/lib/builtins/emutls.c` path for selected member `emutls.c.o`
 (`vcs-read/58df53efd7a640b68b5816a12063f44e`). This rules out a direct edit
 to that candidate source path by this patch only; member-source identity and
-the broader patch/source intersection remain open. The CodeGen patch is a
+surviving-section provenance remain open. The complete diff-path intersection
+is recorded above. The CodeGen patch is a
 compiler change. The regex patch
 affects a selected libc++ input, but neither patch-to-installed-header identity
 nor survival in the linked runtime object is established.
