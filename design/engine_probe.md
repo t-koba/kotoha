@@ -77,13 +77,30 @@ component's own `LICENSE.TXT` (SHA-256 values are whole-file digests):
 | `libcxx/LICENSE.TXT` | `539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b` |
 | `libcxxabi/LICENSE.TXT` | `e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c` |
 
-The Apache 2.0 text plus LLVM exception classifies as permissive; the exception
-specifically relaxes Apache sections 4(a), 4(b) and 4(d) for portions embedded
-in object form. Some component `LICENSE.TXT` files also retain legacy UIUC/NCSA and MIT
-license text, so this source-level classification does not imply that every
-other file, included header, generated input, notice or linked section shares
-it. Exact package-record capture and member-to-input/section closure remain
-necessary. No product adoption or notice set is approved by this partial result.
+The four component `LICENSE.TXT` files above explicitly state that their
+respective runtime libraries are dual licensed under the University of
+Illinois/NCSA and MIT licenses, and include both full texts (compiler-rt
+`mizu_fetch/3d2a8f7ac3e59993aa44cf5e441d3d15f07d692e2042c1ab476bf757198c415d`,
+libunwind `mizu_fetch/f68c9e49188a33a5c3f63512d5784b3c49eb13842bb70464313b2d99800ac706`,
+libc++ `mizu_fetch/0aaca30739202814bc07c0236dbc31724d7f620cf0439c0ca3695811701c28a0`,
+and libc++abi
+`mizu_fetch/8661c9a74fab06b41dfff8e53f3f5d1b3d04fd6ab2d6675398eeea723177dfea`).
+LLVM's `DeveloperPolicy.rst` at the same revision (SHA-256
+`8f0134f982af6a56c50cbaaa7a806507c2cd9c372a8a12629556fdd4372a512c`,
+`mizu_fetch/712c7445714285d00a776951b5a062e280c493a1273754a532ca767954006155`)
+states that relicensing is incomplete and contributions are under both the
+new license and legacy scheme. The candidate source files' Apache-2.0 WITH
+LLVM-exception SPDX headers therefore do not by themselves establish an
+Apache-only term set. These upstream source candidates have permissive
+license alternatives; this does not identify the selected NDK object bytes or
+show that vendor patches and third-party inputs introduce no additional terms.
+The Apache exception specifically relaxes sections 4(a), 4(b), and 4(d) for
+embedded object-form portions; the legacy NCSA binary-notice condition and the
+MIT copyright/permission notice remain alternative obligations whose use and
+applicable source subset have not been selected. Exact package-record capture,
+member-to-input/section closure, and a reviewed user-facing notice payload are
+still required. No product adoption or notice set is approved by this partial
+result.
 
 #### Selected libc++ member DWARF (bounded exact-CI capture)
 
@@ -225,9 +242,11 @@ LLVM-exception` (source SHA-256 respectively
 `eb6c7923d2e8ddc9347410b95981c6b800ccbe251d34057e5fca9069bf99ecf2`). These
 are representative source-file checks, not a file-by-file license audit of all
 47 candidates. The component `LICENSE.TXT` files at this base (whole-file
-SHA-256 values in the preceding table) contain Apache 2.0/LLVM-exception text
-and legacy UIUC/NCSA and MIT dual-license blocks; their presence alone does not
-map those blocks to particular selected source files or linked sections.
+SHA-256 values in the preceding table) explicitly describe their libraries as
+dual licensed under Apache-2.0 WITH LLVM-exception and legacy UIUC/NCSA and MIT
+options, consistent with the project policy summarized above. This component-
+level source licensing does not establish the identity of any selected object
+or third-party code and notice obligations in linked sections.
 
 #### Exact libc++ DWARF-path source candidates at the compiler revision
 
@@ -277,18 +296,16 @@ SHA-256 `8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee` and
 respectively (`mizu_fetch/6b4820014d0c42cde7e151b2fac81332a262a1853668862f9bec7d53960c0f09`,
 `mizu_fetch/d7ae0a769b142de0d9ed9070f71d9e80b3bdaf892579b97f8993e39c8c2c2caf`,
 full receipts). They match the component-text digests already recorded at LLVM
-base `3b5e7c83...`; the full texts classify these candidate file expressions
-as permissive Apache-2.0 WITH LLVM-exception, whose exception relaxes Apache
-sections 4(a), 4(b), and 4(d) for portions embedded in object form. The libc++
-license file also retains legacy UIUC/NCSA and MIT text; its presence alone
-does not map those blocks to the candidate files or establish whether they add
-applicable notices. The file headers classify these source candidates, but not
-the archive objects. This advances source-term classification for these 26
-candidates only. The DWARF paths and
-upstream source hashes do not prove that the NDK archive members came from
-these files, identify applied source patches, establish surviving sections,
-or determine exact notice applicability or delivery. Headers were reviewed for
-the SPDX expression; no full body-level embedded-origin audit is claimed.
+base `3b5e7c83...`. The source headers and component license records establish
+permissive upstream candidate terms under the Apache-2.0 WITH LLVM-exception
+and legacy UIUC/NCSA-or-MIT alternatives described above; no license option or
+notice set is selected for an NDK archive member. The file headers classify
+these source candidates, not the archive objects. This advances source-term
+classification for these 26 candidates only. The DWARF paths and upstream
+source hashes do not prove that the NDK archive members came from these files,
+identify applied source patches, establish surviving sections, or determine
+exact notice applicability or delivery. Headers were reviewed for the SPDX
+expression; no full body-level embedded-origin audit is claimed.
 
 #### Remaining compiler-rt, libunwind, and libc++abi source-list candidates
 
@@ -537,7 +554,9 @@ All three byte hashes differ. The selected read proves the installed header is
 a compiler input, while the map member proves an object was linked; neither
 proves that this source patch's changed code survives in that object or the final
 executable. Patch-to-installed-header and patch-to-binary provenance therefore
-remain unresolved. The source/header terms are Apache-2.0 WITH LLVM-exception.
+remain unresolved. The changed source/header files carry Apache-2.0 WITH
+LLVM-exception SPDX identifiers; component-level legacy alternatives and the
+license choice for any selected binary section remain as described above.
 
 The exact c87 publication captures all four patch paths as metadata only; its
 `patch-source-capture.log` records four files and 228,302 total bytes
