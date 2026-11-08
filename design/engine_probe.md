@@ -55,10 +55,18 @@ The exact selected-input artifact page for SHA `c9dd460d9392485594a5fa6b0a8b92ae
 records `sysroot/usr/include/c++/v1/regex` with SHA-256
 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
 (`vcs-read/92c4b4eeddd64179a6da1b12793ce79f`); its selected archive manifest
-also names `regex.cpp.o`. This is a direct compiler-read/member path overlap,
-not proof that the installed header matches an upstream patch postimage or that
-the patch was applied. The pinned-source comparisons below retain distinct
-base, patch-commit and installed-input hashes.
+also names `regex.cpp.o`. The newer line-table report's exact member record gives
+`regex.cpp.o` SHA-256
+`c1f4771dcb758744d3a5add17084102095354b0efb685d98f4eb006c1c7b5c67`, size
+127,056 bytes, compile-unit path `libcxx/src/regex.cpp`, and a line-table entry
+named `regex` with `relative-name` state and no MD5 (`vcs-read/a04ccc41ffbd4a9bbca03a5c43f70ff2`,
+`vcs-read/afa363a4859748e9b6fcef46830fe5b2`,
+`vcs-read/dcfcff547ed0405d8094872bf02382a9`). These records strengthen the
+member/source-path and header-basename overlap only: they do not map that
+relative line-table name to the full compiler-read header path or compare the
+header bytes to the object. This is not proof that the installed header matches
+an upstream patch postimage or that the patch was applied. The pinned-source
+comparisons below retain distinct base, patch-commit and installed-input hashes.
 
 The archive manifest names `cxa_demangle.cpp.o` and `regex.cpp.o`; the
 source-info/compiler-read comparison below also identifies the regex header as
