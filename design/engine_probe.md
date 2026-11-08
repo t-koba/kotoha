@@ -80,6 +80,30 @@ other file, included header, generated input, notice or linked section shares
 it. Exact package-record capture and member-to-input/section closure remain
 necessary. No product adoption or notice set is approved by this partial result.
 
+#### Selected libc++ member DWARF (instrumented; exact run pending)
+
+The Android probe now includes `capture_ndk_member_debug.py`, wired after the
+link-map-bound archive manifest is produced. It rechecks the exact map and
+`libc++_static.a` hashes, enumerates the selected members, hashes each extracted
+object in memory, and runs the pinned NDK `llvm-readelf --debug-dump=info` on a
+temporarily staged object. The report retains no object bytes or raw absolute
+`DW_AT_comp_dir`; it records only member hashes, sanitized DWARF `DW_AT_name`
+path values only when component-relative or safe relative names without traversal
+(or a state that says why no path was mapped), basename, and a reduced compiler
+version. The temporary directory is
+removed, and configurable limits bound selected member count, total extracted
+bytes, tool output and elapsed time. A capture failure is recorded as a CI
+failure, without skipping the independent emulator smoke.
+
+The parser's synthetic tests cover indexed-string attributes, path redaction,
+archive/map binding, duplicate members and configured limits. This is tooling
+feasibility only. The exact Android CI artifact has not yet been produced for
+this capture, so it is not known whether selected r28c members expose useful
+compile-unit metadata. Even a positive DWARF path or producer value is only a
+claim carried by debug info; it does not establish exact source bytes, patch
+identity, surviving linked sections, applicable notices or redistribution
+rights. Adoption remains disabled until those independent gates close.
+
 #### Source-list candidate comparisons at the NDK-reported LLVM base
 
 A separate bounded comparison used the four component CMake source lists at

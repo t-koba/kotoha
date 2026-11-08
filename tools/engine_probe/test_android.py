@@ -36,7 +36,11 @@ class LinkerMapWorkflowTest(unittest.TestCase):
         self.assertIn('ENGINE_NDK_PATCH_FETCH_SECONDS', workflow)
         self.assertIn('capture_ndk_terms.py', script)
         self.assertIn('capture_android_patch_sources.py', script)
+        self.assertIn('capture_ndk_member_debug.py', script)
+        self.assertIn('ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES', workflow)
+        self.assertIn('build/engine-probe-android/ndk-member-debug/**', workflow)
         self.assertIn('if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi', script)
+        self.assertIn('if [[ "$member_capture_status" != 0 ]]; then exit "$member_capture_status"; fi', script)
         self.assertNotIn('build/engine-probe-android/*.map', workflow)
         self.assertNotIn('build/engine-probe-android/*.map.sha256.json', workflow)
 

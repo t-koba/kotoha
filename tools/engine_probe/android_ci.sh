@@ -6,7 +6,9 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_BOOT_SECONDS ENGINE_BOOT_POLL_SECONDS ENGINE_ADB_SECONDS ENGINE_PROBE_SECONDS \
   ENGINE_OUTPUT_BYTES ENGINE_TOKENS ENGINE_DOWNLOAD_SECONDS ENGINE_DEVICE_ROOT ANDROID_HOME FLUTTER_ROOT \
   ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES ENGINE_NDK_TERMS_MAX_FILES \
-  ENGINE_NDK_TERMS_MAX_BYTES ENGINE_NDK_PATCH_MAX_BYTES ENGINE_NDK_PATCH_FETCH_SECONDS; do
+  ENGINE_NDK_TERMS_MAX_BYTES ENGINE_NDK_PATCH_MAX_BYTES ENGINE_NDK_PATCH_FETCH_SECONDS \
+  ENGINE_NDK_MEMBER_MAX_MEMBERS ENGINE_NDK_MEMBER_MAX_BYTES \
+  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -21,7 +23,8 @@ for name in ('ENGINE_BUILD_ROOT', 'ENGINE_TEMP_ROOT'):
         raise SystemExit('invalid root: ' + name)
 for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS',
             'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES',
-            'NDK_PATCH_MAX_BYTES', 'NDK_PATCH_FETCH_SECONDS'):
+            'NDK_PATCH_MAX_BYTES', 'NDK_PATCH_FETCH_SECONDS', 'NDK_MEMBER_MAX_MEMBERS',
+            'NDK_MEMBER_MAX_BYTES', 'NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -29,7 +32,8 @@ port = int(os.environ['ENGINE_EMULATOR_PORT'])
 # Android emulator protocol permits even console ports 5554 through 5682.
 if port % 2 or not 5554 <= port <= 5682:
     raise SystemExit('invalid emulator console port')
-for key in ('BOOT_SECONDS', 'BOOT_POLL_SECONDS', 'ADB_SECONDS', 'PROBE_SECONDS', 'DOWNLOAD_SECONDS'):
+for key in ('BOOT_SECONDS', 'BOOT_POLL_SECONDS', 'ADB_SECONDS', 'PROBE_SECONDS',
+            'DOWNLOAD_SECONDS', 'NDK_MEMBER_SECONDS'):
     value = float(os.environ['ENGINE_' + key])
     if not math.isfinite(value) or value <= 0:
         raise SystemExit('invalid finite positive timeout: ' + key)
@@ -104,13 +108,25 @@ cmake --build "$build" --target llama-simple --parallel "$ENGINE_BUILD_JOBS" --v
 python3 tools/engine_probe/linker_map.py "$build/llama-simple.map.pending" \
   --max-bytes "$ENGINE_LINKER_MAP_MAX_BYTES" --output-dir "$build/validated-linker-map" \
   --build-root "$build" --ndk-root "$ndk"
+llvm="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+member_capture_status=0
+python3 tools/engine_probe/capture_ndk_member_debug.py \
+  --archive-manifest "$build/validated-linker-map/llama-simple.map.archives.json" \
+  --linker-map "$build/validated-linker-map/llama-simple.map" --ndk-root "$ndk" \
+  --llvm-ar "$llvm/llvm-ar" --llvm-readelf "$llvm/llvm-readelf" \
+  --temp-root "$owner" --output "$build/ndk-member-debug/ndk-member-debug.json" \
+  --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" \
+  --max-object-bytes "$ENGINE_NDK_MEMBER_MAX_BYTES" \
+  --max-tool-output-bytes "$ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
+  --timeout-seconds "$ENGINE_NDK_MEMBER_SECONDS" \
+  > "$build/ndk-member-debug-capture.log" 2>&1 || member_capture_status=$?
+cat "$build/ndk-member-debug-capture.log"
 ninja -C "$build" -t deps > "$build/ninja-deps.txt"
 ninja -C "$build" -t commands llama-simple > "$build/selected-commands.txt"
 ninja -C "$build" -t query bin/llama-simple > "$build/link-inputs.txt"
 capture_status=0
 python3 tools/engine_probe/ninja_reads.py --build "$build" --source "$build/_deps/llama_cpp-src" \
   --ndk "$ndk" --probe "$PWD/tools/engine_probe" || capture_status=$?
-llvm="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
 "$llvm/clang" --version > "$build/compiler.log"
 "$llvm/llvm-readelf" -h -l -d "$build/bin/llama-simple" > "$build/linkage.log"
 sha256sum "$build/bin/llama-simple" "$llvm/clang" "$llvm/llvm-readelf" > "$build/executable-tool-sha256.txt"
@@ -155,4 +171,5 @@ python3 tools/engine_probe/android.py --adb "$ANDROID_HOME/platform-tools/adb" \
   --output-bytes "$ENGINE_OUTPUT_BYTES" > "$build/smoke.log" 2>&1
 if [[ "$capture_status" != 0 ]]; then exit "$capture_status"; fi
 if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi
+if [[ "$member_capture_status" != 0 ]]; then exit "$member_capture_status"; fi
 cat "$build/android-compiler-summary.txt"

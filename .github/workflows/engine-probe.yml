@@ -169,6 +169,10 @@ jobs:
       ENGINE_NDK_TERMS_MAX_BYTES: '16777216' # 16 MiB; reject rather than omit records
       ENGINE_NDK_PATCH_MAX_BYTES: '16777216' # 16 MiB for the fixed selected-source patch set
       ENGINE_NDK_PATCH_FETCH_SECONDS: '120' # total pinned-source fetch/capture deadline
+      ENGINE_NDK_MEMBER_MAX_MEMBERS: '64'
+      ENGINE_NDK_MEMBER_MAX_BYTES: '16777216' # 16 MiB selected libc++ member bytes
+      ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES: '67108864' # 64 MiB tool-output budget
+      ENGINE_NDK_MEMBER_SECONDS: '120' # total selected-member extraction/DWARF deadline
       ENGINE_TOKENS: '16'
       ENGINE_DOWNLOAD_SECONDS: '300'
       ENGINE_DEVICE_ROOT: /data/local/tmp
@@ -212,6 +216,7 @@ jobs:
             build/engine-probe-android/ndk.properties
             build/engine-probe-android/ndk-terms/**
             build/engine-probe-android/ndk-patch-sources/**
+            build/engine-probe-android/ndk-member-debug/**
             build/engine-probe-android/compile_commands.json
             build/engine-probe-android/build.ninja
             build/engine-probe-android/.ninja_log
