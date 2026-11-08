@@ -127,6 +127,42 @@ the regex and demangler patches. The separate retained patch manifest covers
 four selected blobs only; the source-info listing is broader and is metadata,
 not proof that any patch was applied to an installed object or header.
 
+#### Targeted diff-path triage of additional NDK source-info patches
+
+The exact installed NDK source-info record (11,370 bytes; SHA-256
+`8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`,
+`vcs-read/e7514a280e224efba480dcacee62643b` and
+`vcs-read/33c69ea3726f4d5d96b1900a267482ff`) names a broader set of patch URLs
+at `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3` than
+the four-patch hash manifest. To narrow likely component overlaps, seven
+additional exact-revision patch blobs were fetched as Gitiles base64 text and
+decoded only in disposable experiments. The experiments retain only each
+patch digest, byte count and diff-path metadata; they did not write or retain
+decoded patch files.
+
+| Listed patch | Decoded bytes; SHA-256 | Changed paths from diff headers | Relation to the selected x86_64 archive set |
+| --- | --- | --- | --- |
+| `ee870e593a82a6478ff1d8b3f1bd8a45aa1bf650.patch` | 1,627; `8fc2cbaffc98a81892bb881f4d85b915b7028ecd2e858fb04f7ee72ee167137b` | `compiler-rt/lib/hwasan/hwasan.h` | Hwasan runtime header; the selected compiler-rt archive candidate is `lib/builtins/emutls.c`, not a Hwasan member. This does not show whether the patch affects a configured compiler pass or was applied. (`mizu_fetch/d7f9d780f241cfc5cf78e482cd0fc020a30438bb402f5161b30f3145865e8057`; `experiments/c7eccfb0636f40ccb64859fdb7839850`.) |
+| `933d6be8e8c4a81f6409f4daaf704e7f363c6508.patch` | 12,960; `67b6df44c2b7c3d766815c1af4615c1ab03622da850d37cc61440d5195111156` | `compiler-rt/lib/builtins/cpu_model/aarch64/fmv/android.inc`; `compiler-rt/lib/builtins/cpu_model/aarch64/fmv/freebsd.inc`; `compiler-rt/lib/builtins/cpu_model/aarch64/fmv/fuchsia.inc`; `compiler-rt/lib/builtins/cpu_model/aarch64/fmv/mrs.inc`; `compiler-rt/lib/builtins/cpu_model/aarch64/fmv/sysauxv.inc`; `compiler-rt/lib/builtins/cpu_model/aarch64/hwcap.inc` | All changed paths are AArch64-specific, while this probe selects `x86_64` runtime archives. This is no direct path overlap with the selected ABI; it does not identify the installed toolchain's complete transformations. (`mizu_fetch/8869b0c089ec568c40e861834cd807da055a54ef081a869813c8b0c458efff87`; `experiments/a8329f82e9b84d6294e5906526e167f4`.) |
+| `f886dfed3ae6cf70827cedc8d8aefde6250a239b.patch` | 4,733; `1e7a30444f33594f27ec14faf8d51b21a702fb1f452f16dc886779ed62e7a7f9` | `libcxx/include/__config` | A libc++ header candidate relevant to selected libc++ sources; the existing member DWARF and selected-input artifacts do not establish that this header was an input when the NDK archive members were built or that the patch postimage is installed. (`mizu_fetch/bd3a51e1edf0215b57525eb32113bec5f9f5e6e98d720651797a8d574cfe57fa`; `experiments/0fd7df35fea843e6aee10ed03d3d3b49`.) |
+| `79a32609759af317a62184c2c7b1300263a336c8.patch` | 2,630; `b89bfe4221e5bbe7a7e2a960be024ef3463dae5aebf1fee9af51a92768f3ec3c` | `llvm/lib/Transforms/Instrumentation/HWAddressSanitizer.cpp`; `llvm/test/Instrumentation/HWAddressSanitizer/mem-attr.ll` | Compiler-pass implementation plus its test, not a selected archive source. It may affect generated code only when the relevant pass is active; this path summary proves neither activation nor application. (`mizu_fetch/66a1111145b32e0c433ccd6e9f95fb4d001598c7f3972705243d6d486a7c1b59`; `experiments/8fd90d122b4242ffb2eafd490a29d889`.) |
+| `2620ccc3cdebcaa53b96b5f4d79ffe3951534e07.patch` | 4,808; `8b653e64f6d9941acd5f0cd9e3bf8930366cee363d1946a9edf511645da004be` | `clang/lib/Driver/ToolChains/Linux.cpp`; `clang/test/Driver/android-link.cpp` | Potential Android link-driver behavior candidate. The exact probe ELF reports each `LOAD` segment with alignment `0x4000` (`vcs-read/a66e93ede89f42c7aa5978c1a86ec424`), but its selected-link-input artifact is not the driver invocation and does not attribute that output to this patch. (`mizu_fetch/9c4515888efc13e976518a564ccf139f6b97ccd18bc4993a11a0d2bd52549365`; `experiments/51530c3c86544520ad669a1da0dcef41`.) |
+| `b20360abeb3a80281dc082f1e093abd13cb1ee4c.patch` | 2,441; `24ac485245fcac93b3ce419ba77829aa91d6958f28229983bb47a8e59fe5ca0b` | `clang/lib/Driver/ToolChains/Arch/RISCV.cpp`; `clang/test/Driver/riscv-features.c` | RISC-V driver path and test; no direct x86_64 selected-ABI path overlap. (`mizu_fetch/ced0872c84260a6b0a57b43694880055200254dbdd481153e59d7847086785d4`; `experiments/f426820e9c75442bb44301d0f521d4e5`.) |
+| `e1c36bde0551977d4b2efae032af6dfc4b2b3936.patch` | 6,138; `826583402da8b0b178b4936754d5d248edd196235181ec300b012efe0d00bf23` | `clang/lib/CodeGen/CodeGenModule.cpp`; `llvm/lib/Transforms/Utils/ModuleUtils.cpp`; `clang/test/CodeGen/kcfi-normalize.c`; `llvm/test/Transforms/GCOVProfiling/kcfi-normalize.ll`; `llvm/test/Transforms/GCOVProfiling/kcfi.ll` | Clang/LLVM code-generation and transform paths, not runtime-source members. The patch could affect emitted objects if its code paths are exercised; exact application and effect on the selected objects remain unproven. (`mizu_fetch/b2fc7f587fbe2eaaf94a56bb7bcd0bffbab5efc87e6cd751ca413c2c7d741f5c`; `experiments/de0e3054c560456684ab4156af3e0454`.) |
+
+Together with the earlier exact-revision diff-path triage, the source-info list
+contains candidates that target libc++ (`include/regex`, `include/__config`),
+libc++abi build rules, compiler-rt/HWASan code, and Clang/LLVM code generation.
+The exact archive manifest and member-name/source-list comparisons still do not
+bind any installed or selected member to these patch postimages. The probed ELF's
+16 KiB `LOAD` alignment is an output observation only; the artifact does not
+record the NDK driver's actual link invocation or show which configuration
+produced that alignment. This targeted sample is not a complete mapping of the
+source-info list; unexamined entries, patch application, toolchain-generated
+object transformations, surviving linked sections and applicable notices
+remain open. Do not infer a complete source, notice, redistribution or adoption
+closure from the list, output alignment or path overlaps.
+
 The exact Android API 35 x86_64 selected-input artifact records the installed
 NDK `sysroot/usr/include/c++/v1/regex` header at SHA-256
 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
