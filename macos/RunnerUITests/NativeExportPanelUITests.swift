@@ -21,6 +21,20 @@ final class NativeExportPanelUITests: XCTestCase {
     app.terminate()
   }
 
+  private func logScrollDiagnostics(target: XCUIElement) {
+    let window = app.windows.firstMatch
+    let visibleFields = ["source-language", "source-text"].map { identifier in
+      let element = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+      return "\(identifier){exists=\(element.exists),frame=\(element.frame)}"
+    }
+    // Deliberately omit element values: these diagnostics report only geometry
+    // and accessibility availability, never draft contents.
+    print("KotohaScrollDiagnostic windowFrame=\(window.frame) " +
+          "scrollViews=\(app.scrollViews.count) target={exists=\(target.exists)," +
+          "hittable=\(target.isHittable),frame=\(target.frame)} " +
+          visibleFields.joined(separator: " "))
+  }
+
   func testNativeSavePanelIsAccessibleAndCancelPreservesDraft() {
     let translation = "macOS panel probe"
     let field = app.descendants(matching: .any).matching(NSPredicate(
@@ -48,8 +62,12 @@ final class NativeExportPanelUITests: XCTestCase {
       let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
       start.press(forDuration: 0.05, thenDragTo: end)
     }
+    let fieldExists = field.waitForExistence(timeout: panelTimeout)
+    if !fieldExists || !field.isHittable {
+      logScrollDiagnostics(target: field)
+    }
     XCTAssertTrue(
-      field.waitForExistence(timeout: panelTimeout),
+      fieldExists,
       "Translation field is unavailable after one window-coordinate scroll")
     XCTAssertTrue(
       field.isHittable,
