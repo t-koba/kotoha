@@ -27,15 +27,25 @@ final class NativeExportPanelUITests: XCTestCase {
       "translation-text-0",
       XCUIElement.ElementType.textField.rawValue,
       XCUIElement.ElementType.textView.rawValue)).firstMatch
+    let workspace = app.scrollViews.firstMatch
     XCTAssertTrue(
-      field.waitForExistence(timeout: panelTimeout),
-      "Translation field is unavailable")
+      workspace.waitForExistence(timeout: panelTimeout),
+      "Workspace scroll view is unavailable")
 
+    // The translation editor is below the initial viewport. On macOS the
+    // accessibility node may not exist until its ListView region is revealed.
     let deadline = Date().addingTimeInterval(panelTimeout)
-    while !field.isHittable && Date() < deadline {
-      app.scrollViews.firstMatch.swipeUp()
+    var scrolls = 0
+    while Date() < deadline && (!field.exists || !field.isHittable) {
+      workspace.swipeUp()
+      scrolls += 1
     }
-    XCTAssertTrue(field.isHittable, "Translation field is not hittable")
+    XCTAssertTrue(
+      field.exists,
+      "Translation field is unavailable after \(scrolls) scrolls")
+    XCTAssertTrue(
+      field.isHittable,
+      "Translation field is not hittable after \(scrolls) scrolls")
     field.click()
     field.typeText(translation)
 
