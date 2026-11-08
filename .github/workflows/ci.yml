@@ -328,6 +328,10 @@ jobs:
           else
             echo "VoiceOver activation diagnostic: process absent after starter"
           fi
+          # Query the system's VoiceOver state too; process presence alone is not activation.
+          if ! swift -e 'import AppKit; print("VoiceOver activation diagnostic: isVoiceOverEnabled=\(NSWorkspace.shared.isVoiceOverEnabled)")'; then
+            echo "VoiceOver activation diagnostic: system-state query unavailable" >&2
+          fi
           # Xcode strips TEST_RUNNER_ when forwarding environment to the test process.
           TEST_RUNNER_KOTOHA_PANEL_TIMEOUT_SECONDS="$MACOS_PANEL_TIMEOUT_SECONDS" \
           xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner \
