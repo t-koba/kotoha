@@ -107,16 +107,16 @@ def _safe_archive_manifest(path, linker_map, ndk_root, max_members):
     return raw, map_record, archive, relative, archive_path, sorted(members)
 
 
-def _run(argv, deadline, max_output_bytes):
+def _run(argv, deadline, max_output_bytes, operation):
     if max_output_bytes < 0:
-        raise ValueError('Configured tool-output budget is exhausted')
+        raise ValueError(operation + ' has no remaining output budget; capture incomplete')
     remaining = deadline - time.monotonic()
     if not math.isfinite(remaining) or remaining <= 0:
-        raise ValueError('NDK member-debug capture exceeded its configured timeout')
+        raise ValueError(operation + ' exceeded its configured timeout')
     try:
         process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     except OSError as error:
-        raise ValueError('NDK archive/debug tool invocation failed; capture incomplete') from error
+        raise ValueError(operation + ' invocation failed; capture incomplete') from error
     try:
         output = bytearray()
         with selectors.DefaultSelector() as selector:
@@ -124,24 +124,24 @@ def _run(argv, deadline, max_output_bytes):
             while True:
                 remaining = deadline - time.monotonic()
                 if not math.isfinite(remaining) or remaining <= 0:
-                    raise ValueError('NDK member-debug capture exceeded its configured timeout')
+                    raise ValueError(operation + ' exceeded its configured timeout')
                 if not selector.select(remaining):
-                    raise ValueError('NDK member-debug capture exceeded its configured timeout')
+                    raise ValueError(operation + ' exceeded its configured timeout')
                 chunk = os.read(process.stdout.fileno(), min(CHUNK_BYTES, max_output_bytes - len(output) + 1))
                 if not chunk:
                     break
                 output.extend(chunk)
                 if len(output) > max_output_bytes:
-                    raise ValueError('NDK tool output exceeds its configured byte bound')
+                    raise ValueError(operation + ' output exceeds its configured byte bound')
         remaining = deadline - time.monotonic()
         if not math.isfinite(remaining) or remaining <= 0:
-            raise ValueError('NDK member-debug capture exceeded its configured timeout')
+            raise ValueError(operation + ' exceeded its configured timeout')
         try:
             return_code = process.wait(timeout=remaining)
         except subprocess.TimeoutExpired as error:
-            raise ValueError('NDK member-debug capture exceeded its configured timeout') from error
+            raise ValueError(operation + ' exceeded its configured timeout') from error
         if return_code != 0:
-            raise ValueError('NDK archive/debug tool returned failure; capture incomplete')
+            raise ValueError(operation + ' returned exit status ' + str(return_code) + '; capture incomplete')
         return bytes(output)
     finally:
         if process.poll() is None:
@@ -281,7 +281,7 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
             raise ValueError('Archive/debug tool is not a regular file; capture incomplete')
     deadline = time.monotonic() + timeout_seconds
     listing = _run([str(Path(llvm_ar).resolve()), 't', str(archive_path)], deadline,
-                   max_tool_output_bytes)
+                   max_tool_output_bytes, 'llvm-ar selected-member listing')
     try:
         listed = listing.decode('utf-8', errors='strict').splitlines()
     except UnicodeDecodeError as error:
@@ -301,14 +301,15 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
         temp = Path(directory)
         for index, name in enumerate(members):
             data = _run([str(Path(llvm_ar).resolve()), 'p', str(archive_path), name], deadline,
-                        max_object_bytes - total_object_bytes)
+                        max_object_bytes - total_object_bytes, 'llvm-ar extraction for ' + name)
             total_object_bytes += len(data)
             if not data or total_object_bytes > max_object_bytes:
                 raise ValueError('Selected member bytes exceed configured bound; capture incomplete')
             object_path = temp / ('member-%04d.o' % index)
             object_path.write_bytes(data)
             dwarf = _run([str(Path(llvm_readelf).resolve()), '--debug-dump=info', str(object_path)],
-                         deadline, max_tool_output_bytes - total_tool_output_bytes)
+                         deadline, max_tool_output_bytes - total_tool_output_bytes,
+                         'llvm-readelf DWARF scan for ' + name)
             total_dwarf_bytes += len(dwarf)
             total_tool_output_bytes += len(dwarf)
             if total_tool_output_bytes > max_tool_output_bytes:
