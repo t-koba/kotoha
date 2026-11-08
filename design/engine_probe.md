@@ -229,6 +229,115 @@ SHA-256 values in the preceding table) contain Apache 2.0/LLVM-exception text
 and legacy UIUC/NCSA and MIT dual-license blocks; their presence alone does not
 map those blocks to particular selected source files or linked sections.
 
+#### Exact libc++ DWARF-path source candidates at the compiler revision
+
+The exact Android report lists 26 `libcxx/src/...` compile-unit paths for the
+26 selected `libc++_static.a` members (`vcs-read/04388ed5a7fe4dfa93bd203180c33903`
+and continuation `vcs-read/96480eb28e004c5d92f37385d74e50e9`; report SHA-256
+`74e5ef31fd187059f6ee51b293260d0a7c8c856076c2d69d649a6fbca3dd0a5b`). Each
+path has a unique filename candidate in the source-list comparison above. I
+fetched each candidate from the compiler-reported immutable LLVM repository
+commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` and reviewed its first-page
+file header. All 26 headers state
+`SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`; whole-source hashes
+and exact fetch receipts are:
+
+| Candidate source path | SHA-256 | Exact source receipt |
+| --- | --- | --- |
+| `libcxx/src/algorithm.cpp` | `5965a2ccb91e21d3dbeaa659299e43566a8128d9648743395d1dd14d592ec8a7` | `mizu_fetch/0c632bed3980a362212ec8b928327fea92c12c8bd09a08c6a3a73438b6cfc8be` |
+| `libcxx/src/call_once.cpp` | `b01877158f1ba03d107d0e01307bfcd7a26613ccb9f605ca0eb741a6aad800b3` | `mizu_fetch/f8f75ff0cf5896093a14709d98db8b957db52cb706c0b781b4f7b36cc0f50fd9` |
+| `libcxx/src/chrono.cpp` | `b4f61b94430171b4d7c3f8f8fa8dbf50b82c8ba8d44d291f06b7bc6cbc25fe13` | `mizu_fetch/0505348618872b7766fb2d4e4991c7e8602792e184a5b6849fbf809261f4a0d1` |
+| `libcxx/src/condition_variable.cpp` | `2c2daa42f90592fcd085bec73a99b3db1d4dc0f228622401a25b630f4a2cf57d` | `mizu_fetch/9ea0b3cb0d4dc8382edf884b8a4834e36283fc481727e92c9e41b1f4e0dba207` |
+| `libcxx/src/condition_variable_destructor.cpp` | `5ffc3496ccaafcc01a57c854a6e8e9fc15f2ed18008b8a96382603f674f79e08` | `mizu_fetch/d12315537fa0fe9556b9715a4dba72b7cbc0391a504afdcfe975c72f02331faf` |
+| `libcxx/src/filesystem/directory_iterator.cpp` | `c6ae3cbb77ca3a6afe0117ce43c87f86ec9855f5dde0e88e3d3b36419dfebc52` | `mizu_fetch/1a81f770bc875beedea96353e16325fa45b54c21c7249276558e684046c3385e` |
+| `libcxx/src/error_category.cpp` | `236d878ed42578f1599dae12d0b7b5f44acc146f9f5af2b92f29c5b54008193a` | `mizu_fetch/85222634506a843028e832a5d1e1554338ca511d91b3802677cd95f84894a037` |
+| `libcxx/src/exception.cpp` | `a7b7792329befed2fa15e31232329340ae36f4380c76348f895b9ad0e7975e66` | `mizu_fetch/080211102f6696b2d9a34a6816423ae9d23107b9abd64f2eac226bfafea85c94` |
+| `libcxx/src/filesystem/filesystem_error.cpp` | `3e33692dbdba317553144222703db6e701138bd9d0148bc421ecf27bcd524381` | `mizu_fetch/1866de76e3a6a49a4bff15e89ac29883ab9dc2c76a95d2535a1a62c359af36ef` |
+| `libcxx/src/future.cpp` | `81d9672773eee216b5150cb6004c54a04c30d22c71a3402a25bb9eac1551f8e9` | `mizu_fetch/0339d72c4350693aa7b02c0f48dc807694c1d6544393a936189b66d71e074c83` |
+| `libcxx/src/hash.cpp` | `63890063c9f5b28bdfe5168bc2777ccc19586d27a05465f25dfa04ef51e1a6e4` | `mizu_fetch/58c4401aa13597ad4e402cde4edf6669bcde5469925a64a33e531c33f22ea676` |
+| `libcxx/src/ios.cpp` | `88be7f1eaf4fdf7d2647de4ed0bceb519bdc41768cf919e28a20c314c8d73795` | `mizu_fetch/a35fd764f33ad43796c4441a17d9636f4d6e5ccc8d6f17b50669bb2110a3caf3` |
+| `libcxx/src/ios.instantiations.cpp` | `995a37e2e986af415dd95c5406daa73a7c4f847b16ecd06bd5c621e059096427` | `mizu_fetch/bb6198e44b259880d74861e414eebba89e3b556a9b64933130e754ea72b87e8d` |
+| `libcxx/src/locale.cpp` | `fca6ab86c3b16b3660d41ba38360efb3fa5e9f4cbc42186f19556431716d1457` | `mizu_fetch/6cf6c98b138a40f43c0e6fe304c1b69f0069187702258bf4c7fdd1572084e93b` |
+| `libcxx/src/memory.cpp` | `f5dd019603cdbe6a03c2caabad2a85a2ff6782f276f5c69ab1c523ab40fa1551` | `mizu_fetch/6cba385804833a48ef619c3651edb1a40747b4ef82ac20f62f9c765161a9ea76` |
+| `libcxx/src/mutex.cpp` | `f562a2cda5b2fff8c592e94f225af080916a547cd4c144cba959e8e4e1326fbe` | `mizu_fetch/175922e2be7ad74e66ddf58da4eba0c1837292b978e57d88741ea0f1059c5798` |
+| `libcxx/src/mutex_destructor.cpp` | `0940ca95f81440e72ca9919b284b9a1a837b1700e08dbe90d61139240ac57cce` | `mizu_fetch/a1bb6ba1c8497316c3beef22d63801935b49abf9552afa4c4f494f2e6b7dfb61` |
+| `libcxx/src/new_helpers.cpp` | `745bd190f8e82539b9896aef7f9a6a32948f2c5313bcbdc836a5f45b518a1399` | `mizu_fetch/4c27b93e6fa06ae8c44dd0408ebf53d64e745f3d43d2aecd07f2828bc25af9ec` |
+| `libcxx/src/filesystem/operations.cpp` | `fc33c72864afb24384d76bd0fbed9cb8ea68a6a3218adabe634c94817f326645` | `mizu_fetch/fbdfc762f15c78bb3903dd36d37f725f72bc684f86c6f4f14413527acd656efe` |
+| `libcxx/src/filesystem/path.cpp` | `17b89bcf9dd5973ed774fb8559c1f9b917f6b4d659650b482e1bd4f52744e200` | `mizu_fetch/805d34c56cd9910eef68ebcb03e04f9e922880b8ecf962a52d4928709a466f92` |
+| `libcxx/src/random.cpp` | `c288b5d9d4cdf253bd867a5572c7aca9a1c93398680b915518f4ae111d82bfed` | `mizu_fetch/4dc684630437aec6c1c0bef0d741776099d61ec8dbc937fa934702c9cdea1447` |
+| `libcxx/src/regex.cpp` | `87ce61e6756d2a07a5794ed44df844a4c3e02c5cf91cfcf0d3c6626f7e846643` | `mizu_fetch/8930d5b57de897eaad62e8e4915e648e68715d797b491ff2180857679d0d1a4d` |
+| `libcxx/src/stdexcept.cpp` | `3d4cdfcf736eb5cd67d0cb1c406caf8c7b831f7bfd80f13fcb19cb5df18fdaee` | `mizu_fetch/0f115f57dce17053f7681c77e92b5bb74a8fd9cefb384a96e1b269c13f425853` |
+| `libcxx/src/string.cpp` | `7fc174817784c4ebd597b5cb494a62c76098eb40aee0949ce22b8233e9476a01` | `mizu_fetch/bb992a8e198cd1cb6543fd6f5d41408319ad5b5679c96b11c043f9617c1350f6` |
+| `libcxx/src/system_error.cpp` | `fb570270dcc6749dd2d5bdd078d7b0f0576ffbc0afb2d2e6862a691f53f1c8ff` | `mizu_fetch/efe91ddc59bfe8b60b795419a0282b28cf8222a465f59bb20ad3cfcaaed63e0e` |
+| `libcxx/src/thread.cpp` | `74acf68a6c8eb1701e166fc48b4c40a39cf09d29af95bee63d6bbd56401f6a45` | `mizu_fetch/de1b685d3e81b4d1fcf1afcb666abb33a32d604cb3f3ac453c5337834ec27d72` |
+
+The complete LLVM and libc++ `LICENSE.TXT` files at commit `97a699...` have
+SHA-256 `8d85c1057d742e597985c7d4e6320b015a9139385cff4cbae06ffc0ebe89afee` and
+`539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b`,
+respectively (`mizu_fetch/6b4820014d0c42cde7e151b2fac81332a262a1853668862f9bec7d53960c0f09`,
+`mizu_fetch/d7ae0a769b142de0d9ed9070f71d9e80b3bdaf892579b97f8993e39c8c2c2caf`,
+full receipts). They match the component-text digests already recorded at LLVM
+base `3b5e7c83...`; the full texts classify these candidate file expressions
+as permissive Apache-2.0 WITH LLVM-exception, whose exception relaxes Apache
+sections 4(a), 4(b), and 4(d) for portions embedded in object form. The libc++
+license file also retains legacy UIUC/NCSA and MIT text; its presence alone
+does not map those blocks to the candidate files or establish whether they add
+applicable notices. The file headers classify these source candidates, but not
+the archive objects. This advances source-term classification for these 26
+candidates only. The DWARF paths and
+upstream source hashes do not prove that the NDK archive members came from
+these files, identify applied source patches, establish surviving sections,
+or determine exact notice applicability or delivery. Headers were reviewed for
+the SPDX expression; no full body-level embedded-origin audit is claimed.
+
+#### Remaining compiler-rt, libunwind, and libc++abi source-list candidates
+
+The other 21 unique basename matches from the 47-member source-list comparison
+(1 compiler-rt, 5 libunwind, and 15 libc++abi) are candidate paths only; unlike
+the libc++ set above, this comparison does not have corresponding DWARF source
+paths. I fetched the candidate files at the same immutable compiler-reported
+LLVM revision `97a699bf4812a18fb657c2779f5296a4ab2694d2` and checked their first
+page. All 21 headers state `SPDX-License-Identifier: Apache-2.0 WITH
+LLVM-exception`. The table records whole-source hashes and exact fetch receipts;
+these are upstream candidate bytes, not proof of archive-member identity.
+
+| Archive member | Candidate source path | SHA-256 | Exact source receipt |
+| --- | --- | --- | --- |
+| `emutls.c.o` | `compiler-rt/lib/builtins/emutls.c` | `a4437f3e329a0835adbc7df38e36df12f358d05c073b11813c409f849c2345d2` | `mizu_fetch/b8d4ebfd6919c8abdd5091e4f2943e2f8a75aaab98ce2675d7d9e7c8ba12a25f` |
+| `UnwindLevel1-gcc-ext.c.o` | `libunwind/src/UnwindLevel1-gcc-ext.c` | `3bed106de18fec9d1c52cb7bc3d5db89d3225252f3c0312597d159edbbd6e802` | `mizu_fetch/a845025fde7a5c638bf12d2264172fc92e079b5c24d4761e660f6707f0b37f4b` |
+| `UnwindLevel1.c.o` | `libunwind/src/UnwindLevel1.c` | `60713346aa7712b5292e4cc2a05c0d3400296ebe76d7c25d256ee46a7dc2a174` | `mizu_fetch/b817673de5b5dffb5d559da5b89927173385ac13e52daa72e7e761f7e60f0184` |
+| `UnwindRegistersRestore.S.o` | `libunwind/src/UnwindRegistersRestore.S` | `7c66721db60ae08b776119e0475bb4efe6aeaec79dc0386c8cd35cb4aee268f1` | `mizu_fetch/b5fb3adddcf5045d52c5c9129e8794d232b1be3547f7c0d2b069c238df002ef0` |
+| `UnwindRegistersSave.S.o` | `libunwind/src/UnwindRegistersSave.S` | `9c7c51e705f73bb22d8113714a47fe9f1a3b84fe5a9484bb6801578523cabc5d` | `mizu_fetch/fe9c2ba3cd302bce16a4b9a46fae26535102354f2847d626e80a0b73fc8792f1` |
+| `libunwind.cpp.o` | `libunwind/src/libunwind.cpp` | `6897d1a337fc38d050b5742f404a623c8988ce9d6a55fe8271c4b7ceee32ef10` | `mizu_fetch/26f2c53c3e3c623523dc21bdf5b5f29e75fe10d68c487a85dfe89404be08cb27` |
+| `abort_message.cpp.o` | `libcxxabi/src/abort_message.cpp` | `2891464b7f9273747fe6dd10d9c34e5b07023add80735065965d9f3bfeb8997d` | `mizu_fetch/a582c5c7c9c192e86a45ccde5b5d4fe637415593c98804f900d8cf75a31fa5fd` |
+| `cxa_default_handlers.cpp.o` | `libcxxabi/src/cxa_default_handlers.cpp` | `eed7e4752a04198064a8cf15d64495bc854135b8d7bf1b5ec320457f86fe0c8b` | `mizu_fetch/7a35a1faa723569b04b0f50ddfd0a985f29da1fd59685844ac1c59ed69845af5` |
+| `cxa_demangle.cpp.o` | `libcxxabi/src/cxa_demangle.cpp` | `75d8f3ff6fb628bc57508f4c95cc8534e228c085e4e5167c593ea1cf4f703e97` | `mizu_fetch/de3ddede7537ac4215831d91a33be537c549f63e70d6d341ab11c00e5a67743c` |
+| `cxa_exception.cpp.o` | `libcxxabi/src/cxa_exception.cpp` | `eb6c7923d2e8ddc9347410b95981c6b800ccbe251d34057e5fca9069bf99ecf2` | `mizu_fetch/0edd735ede486316a0053e9e89b3d3295dab576839fa60f1f3c94a034afcccc0` |
+| `cxa_exception_storage.cpp.o` | `libcxxabi/src/cxa_exception_storage.cpp` | `320adf288aded3e266bd1b1ef117e714c90d24bc1de607a7c51567ade3f06b9b` | `mizu_fetch/a99a150941474ca1e93f80fbabacdb1680e25e8a257f12791cee9c50b00066f0` |
+| `cxa_guard.cpp.o` | `libcxxabi/src/cxa_guard.cpp` | `97dbc2a48acb2233301bd7c11717cda173b23c73e7da64eb1710332c3b19f54d` | `mizu_fetch/7b00eeaa56e0e3f437f5496e91cea30e458c43398f7b722eb77d893ca31f8109` |
+| `cxa_handlers.cpp.o` | `libcxxabi/src/cxa_handlers.cpp` | `c95d15e9b6e3f3e3e665a2ca170ebfe87bd323fb498ded9711e32e0633da2892` | `mizu_fetch/e79137a535a9abfc80fc47e9adc0b868f803f931fd79a59ac450267f935e7540` |
+| `cxa_personality.cpp.o` | `libcxxabi/src/cxa_personality.cpp` | `57c285728ed943c0168dbbcd244ba5550af673ea7e317c0953eecaa733e7559b` | `mizu_fetch/b2ec27bcf9591ab078a8977dcaed0847422a2262c3a02be78114e3759d393722` |
+| `cxa_virtual.cpp.o` | `libcxxabi/src/cxa_virtual.cpp` | `ac1a29d1c9d4fa78d69e209879f61abeb65e1614d1cdd7271d2f386737a4d2a3` | `mizu_fetch/1e7a45d1f98ad1d6c72623ac8cdce736f60342ba0942964a13a73f08d4c4c97e` |
+| `fallback_malloc.cpp.o` | `libcxxabi/src/fallback_malloc.cpp` | `b68232eb83588c20e28acf706703a5e9769c63adbeb2c6594ce4c0be5634a011` | `mizu_fetch/125ec3afb533c419425887577c2193b93a2700fef7ba8c7612d034ea071ced28` |
+| `private_typeinfo.cpp.o` | `libcxxabi/src/private_typeinfo.cpp` | `55fb71fdd633e1c0f7b4bccba5b947bd03c1498f9cb5f79f162c58efc34342c3` | `mizu_fetch/b2f9fd6335334449e8fa234afc2054fb7be7937ee3b4256aa0fbe15bb81efd06` |
+| `stdlib_exception.cpp.o` | `libcxxabi/src/stdlib_exception.cpp` | `d609597f8f536fec59f7afa2dbd352c69a9b50ce8aaf85082fd1fbad08c79a25` | `mizu_fetch/e8fe2b54f261e8c8fcfa0540d2383379734c8c2417187fc6929d76b62fcca295` |
+| `stdlib_new_delete.cpp.o` | `libcxxabi/src/stdlib_new_delete.cpp` | `eba213003682944709bcfeb8278da1327be01cf2620146ed9aea412ad04b6c69` | `mizu_fetch/de9838572f759a45e5809896f07c567c42848783dd2f9c060efaedb432c0a87c` |
+| `stdlib_stdexcept.cpp.o` | `libcxxabi/src/stdlib_stdexcept.cpp` | `8539fc8929cd9a166a74fe04ef81472e7a6d507f4422f991963867fbda1f256a` | `mizu_fetch/9444fbc55fe08bdd7e31959ffd4ba96cea3ec06641cec6831b5bde9871329bbf` |
+| `stdlib_typeinfo.cpp.o` | `libcxxabi/src/stdlib_typeinfo.cpp` | `5d0b584b9341eb49ea5e640a475dc690d44b0770712222e2667185b1e814367f` | `mizu_fetch/9ee3ffe94f07f36e30e43c94d9298bee310e5555dcf1e15bc84396d0e4ad119e` |
+
+The three component license files were also fetched at this LLVM revision;
+whole-file hashes match the component digests above: compiler-rt
+`1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d`
+(`mizu_fetch/ce51531af43620f97822207b6c534da77fe8ce145658188321f98dc65fb73aa5`),
+libunwind `b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d`
+(`mizu_fetch/7cb3352abf0bd66c53ca7a31e3088a0e36f9509b6f63314aa05344d3b8dd9f17`),
+and libc++abi `e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c`
+(`mizu_fetch/95e37edcb4ace56559ee4afe6995221ce72c3f8e4b5b892579f698d4c5f5977b`).
+This extends the header-level candidate classification to the 21 files only;
+there is no complete body-level embedded-origin review. Matching paths and
+permissive SPDX headers do not establish object identity, patch provenance,
+linked-section survival, notice applicability, or redistribution authorization.
+
 The NDK `move-cxa-demangle-into-libcxxdemangle` patch changes the libc++abi
 build graph, and the exact map still places `cxa_demangle.cpp.o` in
 `libc++abi.a`. The source-list comparison does not reveal the configured build
