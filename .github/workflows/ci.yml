@@ -300,6 +300,12 @@ jobs:
           except subprocess.TimeoutExpired:
               raise SystemExit(f"VoiceOverStarter exceeded {timeout_seconds:g}s")
           PYTHON
+          # Observe process presence only; it is not proof of an active AX tree.
+          if pgrep -x VoiceOver >/dev/null 2>&1; then
+            echo "VoiceOver activation diagnostic: process running after starter"
+          else
+            echo "VoiceOver activation diagnostic: process absent after starter"
+          fi
           # Xcode strips TEST_RUNNER_ when forwarding environment to the test process.
           TEST_RUNNER_KOTOHA_PANEL_TIMEOUT_SECONDS="$MACOS_PANEL_TIMEOUT_SECONDS" \
           xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner \

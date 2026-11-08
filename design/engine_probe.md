@@ -38,12 +38,23 @@ failure occurred before the native save-panel UI test: the macOS probe's
 `VoiceOver got an error: AppleEvent timed out. (-1712)` at 20:22:36, before the
 subsequent `xcodebuild test` command (log `vcs-read/a29b60558b414990b38eeb8b8c8c180d`).
 Because the step uses `set -e`, the native panel test did not run in that job.
-The earlier exact Apple failure reached one window-coordinate gesture, then
-reported source-language, source-text, scrollViews, and target absent at
-`NativeExportPanelUITests.swift:76` before field entry or native save-panel
-presentation (`vcs-read/e04aec26a5544d0882844dab0d036c87`). The VoiceOver
-hypothesis and save-panel, cancellation, and draft-preservation behavior remain
-unvalidated; assertions and deadlines were not weakened.
+
+The later exact publication
+`5c43ff5c00f01c6a1263dce2566d34a3e2de35794f67dd39ebd4d5ec9c9c939e` / SHA
+`12287a8818759667fd48151767ac5b5fed79f84d` passed Flutter, Design,
+Windows, and Android checks, but its Apple job `128857705944` failed in run
+`42522013903` (status `vcs-read/3831345c30c94d85aa39022746f963e7`; exact log
+`vcs-read/18d6f59f26554ebaa0948360aa6d6aaa`). The bounded `VoiceOverStarter`
+wrapper returned far enough for the native UI test to run, but the test again
+failed at `NativeExportPanelUITests.swift:76` after one window-coordinate
+scroll. Its sanitized diagnostic finds an 800x632 window but no translation,
+source-language, or source-text elements and zero XCUI scroll views. The four
+native `RunnerTests` passed; the native panel, cancellation, and draft-
+preservation assertions were not reached. This confirms the AppleEvent timeout
+was bypassed but does not prove VoiceOver activated the Flutter semantics tree
+or establish a product/Flutter defect. The assertions and deadlines remain
+unchanged; the next exact CI adds only a process-presence diagnostic after the
+VoiceOverStarter invocation.
 
 The exact Android pinned-NDK line-table report `ndk-member-debug.json` from
 publication `e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16`
