@@ -100,9 +100,12 @@ object in memory, and runs the pinned NDK `llvm-readelf --debug-dump=info` on a
 temporarily staged object. The report retains no object bytes or raw absolute
 `DW_AT_comp_dir`; it records member hashes, sanitized DWARF paths only when safe,
 basename and reduced compiler version. Temporary objects are removed; configured
-limits bound member count, extracted bytes, tool output and elapsed time. Synthetic
+limits bound member count, extracted bytes, combined tool output and elapsed time.
+For a failing `llvm-readelf` invocation, stderr is drained under the same tool-output
+budget and only a diagnostic capped by `ENGINE_OUTPUT_BYTES` is retained after
+terminal-control and path redaction; successful stderr is discarded. Synthetic
 tests cover indexed DWARF strings, path redaction, archive/map binding, duplicate
-members, bounds, timeout and path-safe failure context.
+members, bounds, timeout and bounded, path-redacted failure context.
 
 On the exact diagnostic publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
 / SHA `59cdc16f38ab3d18cf5a91aeff383b168e7792c4`, the capture log identifies

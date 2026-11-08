@@ -25,6 +25,9 @@ SHA_RE = re.compile(r'[0-9a-f]{64}')
 MEMBER_RE = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.+-]*\.o')
 CLANG_VERSION_RE = re.compile(r'\bclang version\s+([0-9][A-Za-z0-9.+_-]*)', re.IGNORECASE)
 CHUNK_BYTES = 1024 * 1024
+ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
+PATH_RE = re.compile(
+    r'''(?<![A-Za-z0-9_-])(?:[A-Za-z]:[\\/]|[\\/]{1,2}|\.{1,2}[\\/]|[^\s\"'<>:=]+[\\/])[^\s\"'<>]*''')
 
 
 def sha256_file(path):
@@ -107,32 +110,75 @@ def _safe_archive_manifest(path, linker_map, ndk_root, max_members):
     return raw, map_record, archive, relative, archive_path, sorted(members)
 
 
-def _run(argv, deadline, max_output_bytes, operation):
+def _safe_tool_diagnostic(data, max_bytes, truncated=False):
+    text = data.decode('utf-8', errors='replace')
+    text = ANSI_ESCAPE_RE.sub('', text)
+    text = PATH_RE.sub('[path]', text)
+    text = ''.join(
+        char if char in '\t\r\n' or (ord(char) >= 32 and ord(char) != 127) else ' '
+        for char in text)
+    text = ' '.join(text.split())
+    marker = ' [truncated]'
+    encoded = text.encode('utf-8')
+    if truncated or len(encoded) > max_bytes:
+        marker_bytes = marker.encode('utf-8')
+        budget = max(0, max_bytes - len(marker_bytes))
+        text = encoded[:budget].decode('utf-8', errors='ignore')
+        if max_bytes >= len(marker_bytes):
+            text += marker
+    return text
+
+
+def _run(argv, deadline, max_output_bytes, operation, *, capture_stderr=False,
+         max_diagnostic_bytes=0):
     if max_output_bytes < 0:
         raise ValueError(operation + ' has no remaining output budget; capture incomplete')
+    if capture_stderr and max_diagnostic_bytes < 1:
+        raise ValueError(operation + ' has no diagnostic byte budget; capture incomplete')
     remaining = deadline - time.monotonic()
     if not math.isfinite(remaining) or remaining <= 0:
         raise ValueError(operation + ' exceeded its configured timeout')
     try:
-        process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        process = subprocess.Popen(
+            argv, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE if capture_stderr else subprocess.DEVNULL)
     except OSError as error:
         raise ValueError(operation + ' invocation failed; capture incomplete') from error
     try:
         output = bytearray()
+        stderr_output = bytearray()
+        stderr_bytes = 0
+        output_bytes = 0
         with selectors.DefaultSelector() as selector:
             selector.register(process.stdout, selectors.EVENT_READ)
-            while True:
+            if capture_stderr:
+                selector.register(process.stderr, selectors.EVENT_READ)
+            while selector.get_map():
                 remaining = deadline - time.monotonic()
                 if not math.isfinite(remaining) or remaining <= 0:
                     raise ValueError(operation + ' exceeded its configured timeout')
-                if not selector.select(remaining):
+                events = selector.select(remaining)
+                if not events:
                     raise ValueError(operation + ' exceeded its configured timeout')
-                chunk = os.read(process.stdout.fileno(), min(CHUNK_BYTES, max_output_bytes - len(output) + 1))
-                if not chunk:
-                    break
-                output.extend(chunk)
-                if len(output) > max_output_bytes:
-                    raise ValueError(operation + ' output exceeds its configured byte bound')
+                for key, _ in events:
+                    stream = key.fileobj
+                    is_stderr = capture_stderr and stream is process.stderr
+                    read_size = min(CHUNK_BYTES, max_output_bytes - output_bytes + 1)
+                    chunk = os.read(stream.fileno(), read_size)
+                    if not chunk:
+                        selector.unregister(stream)
+                        stream.close()
+                        continue
+                    output_bytes += len(chunk)
+                    if is_stderr:
+                        stderr_bytes += len(chunk)
+                        remaining_diagnostic = max_diagnostic_bytes - len(stderr_output)
+                        if remaining_diagnostic > 0:
+                            stderr_output.extend(chunk[:remaining_diagnostic])
+                    else:
+                        output.extend(chunk)
+                    if output_bytes > max_output_bytes:
+                        raise ValueError(operation + ' output exceeds its configured byte bound')
         remaining = deadline - time.monotonic()
         if not math.isfinite(remaining) or remaining <= 0:
             raise ValueError(operation + ' exceeded its configured timeout')
@@ -141,13 +187,22 @@ def _run(argv, deadline, max_output_bytes, operation):
         except subprocess.TimeoutExpired as error:
             raise ValueError(operation + ' exceeded its configured timeout') from error
         if return_code != 0:
-            raise ValueError(operation + ' returned exit status ' + str(return_code) + '; capture incomplete')
+            diagnostic = _safe_tool_diagnostic(
+                bytes(stderr_output), max_diagnostic_bytes,
+                truncated=stderr_bytes > len(stderr_output)) if capture_stderr else ''
+            suffix = '; diagnostic: ' + diagnostic if diagnostic else ''
+            raise ValueError(operation + ' returned exit status ' + str(return_code) +
+                             suffix + '; capture incomplete')
+        if capture_stderr:
+            return bytes(output), stderr_bytes
         return bytes(output)
     finally:
         if process.poll() is None:
             process.kill()
         process.wait()
         process.stdout.close()
+        if process.stderr is not None:
+            process.stderr.close()
 
 
 def _attribute_value(line, attribute):
@@ -259,8 +314,10 @@ def _member_record(name, data, readelf_output):
 
 
 def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
-            temp_root, max_members, max_object_bytes, max_tool_output_bytes, timeout_seconds):
-    if max_members < 1 or max_object_bytes < 1 or max_tool_output_bytes < 1:
+            temp_root, max_members, max_object_bytes, max_tool_output_bytes,
+            max_diagnostic_bytes=8192, timeout_seconds=120):
+    if (max_members < 1 or max_object_bytes < 1 or max_tool_output_bytes < 1 or
+            max_diagnostic_bytes < 1):
         raise ValueError('Configured member capture limits must be positive')
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise ValueError('Member-debug timeout must be finite positive')
@@ -307,11 +364,13 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_readelf,
                 raise ValueError('Selected member bytes exceed configured bound; capture incomplete')
             object_path = temp / ('member-%04d.o' % index)
             object_path.write_bytes(data)
-            dwarf = _run([str(Path(llvm_readelf).resolve()), '--debug-dump=info', str(object_path)],
-                         deadline, max_tool_output_bytes - total_tool_output_bytes,
-                         'llvm-readelf DWARF scan for ' + name)
+            dwarf, diagnostic_bytes = _run(
+                [str(Path(llvm_readelf).resolve()), '--debug-dump=info', str(object_path)],
+                deadline, max_tool_output_bytes - total_tool_output_bytes,
+                'llvm-readelf DWARF scan for ' + name, capture_stderr=True,
+                max_diagnostic_bytes=max_diagnostic_bytes)
             total_dwarf_bytes += len(dwarf)
-            total_tool_output_bytes += len(dwarf)
+            total_tool_output_bytes += len(dwarf) + diagnostic_bytes
             if total_tool_output_bytes > max_tool_output_bytes:
                 raise ValueError('DWARF output exceeds configured byte bound; capture incomplete')
             member_records.append(_member_record(name, data, dwarf))
@@ -369,6 +428,7 @@ def main():
     parser.add_argument('--max-members', type=positive_int, default=64)
     parser.add_argument('--max-object-bytes', type=positive_int, default=16 * 1024 * 1024)
     parser.add_argument('--max-tool-output-bytes', type=positive_int, default=64 * 1024 * 1024)
+    parser.add_argument('--max-diagnostic-bytes', type=positive_int, default=8192)
     parser.add_argument('--timeout-seconds', type=positive_seconds, default=120)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -379,6 +439,7 @@ def main():
             ndk_root=args.ndk_root, llvm_ar=args.llvm_ar, llvm_readelf=args.llvm_readelf,
             temp_root=args.temp_root, max_members=args.max_members,
             max_object_bytes=args.max_object_bytes, max_tool_output_bytes=args.max_tool_output_bytes,
+            max_diagnostic_bytes=args.max_diagnostic_bytes,
             timeout_seconds=args.timeout_seconds)
         text = json.dumps(manifest, sort_keys=True, indent=2) + '\n'
         args.output.write_text(text, encoding='utf-8', newline='\n')

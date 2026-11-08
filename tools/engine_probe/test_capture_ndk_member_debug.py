@@ -90,6 +90,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
             'max_members': 64,
             'max_object_bytes': 1024,
             'max_tool_output_bytes': 1024 * 1024,
+            'max_diagnostic_bytes': 8192,
             'timeout_seconds': 5,
         }
         args.update(overrides)
@@ -184,6 +185,39 @@ class CaptureMemberDebugTest(unittest.TestCase):
                 r'llvm-readelf DWARF scan for algorithm\.cpp\.o returned exit status 7') as caught:
             self.run_capture()
         self.assertNotIn(str(self.root), str(caught.exception))
+
+    def test_tool_diagnostic_has_a_utf8_byte_bound(self):
+        diagnostic = capture._safe_tool_diagnostic(b'error: ' + b'x' * 128, 32)
+        self.assertLessEqual(len(diagnostic.encode('utf-8')), 32)
+        self.assertTrue(diagnostic.endswith('[truncated]'))
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_nonzero_debug_tool_reports_bounded_path_redacted_stderr(self):
+        self.readelf.write_text(
+            '#!/usr/bin/env python3\nimport sys\n'
+            'sys.stderr.write("error: /home/runner/private/member.o: unsupported DWARF; '
+            'C:\\\\agent\\_work\\object.o\\n")\n'
+            'sys.exit(7)\n', encoding='utf-8')
+        self.readelf.chmod(0o755)
+        with self.assertRaisesRegex(
+                ValueError,
+                r'llvm-readelf DWARF scan for algorithm\.cpp\.o returned exit status 7') as caught:
+            self.run_capture(max_diagnostic_bytes=256)
+        message = str(caught.exception)
+        self.assertIn('unsupported DWARF', message)
+        self.assertIn('[path]', message)
+        self.assertNotIn('/home/runner', message)
+        self.assertNotIn('C:\\agent', message)
+        self.assertNotIn(str(self.root), message)
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
+    def test_debug_tool_stderr_counts_against_output_bound(self):
+        self.readelf.write_text(
+            '#!/usr/bin/env python3\nimport sys\n'
+            'sys.stderr.write("x" * 4096)\n', encoding='utf-8')
+        self.readelf.chmod(0o755)
+        with self.assertRaisesRegex(ValueError, 'output exceeds its configured byte bound'):
+            self.run_capture(max_tool_output_bytes=1024)
 
 
 if __name__ == '__main__':

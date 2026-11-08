@@ -118,6 +118,7 @@ python3 tools/engine_probe/capture_ndk_member_debug.py \
   --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" \
   --max-object-bytes "$ENGINE_NDK_MEMBER_MAX_BYTES" \
   --max-tool-output-bytes "$ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
+  --max-diagnostic-bytes "$ENGINE_OUTPUT_BYTES" \
   --timeout-seconds "$ENGINE_NDK_MEMBER_SECONDS" \
   > "$build/ndk-member-debug-capture.log" 2>&1 || member_capture_status=$?
 cat "$build/ndk-member-debug-capture.log"
