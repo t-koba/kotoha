@@ -610,7 +610,11 @@ unresolved; adoption remains disabled.
 
 ### Exact installed-NDK capture (partial)
 
-The bounded capture completed on the exact diagnostic publication
+A later exact publication `3785c8518bedd38e205423534510ea5786925117816e5d461815c0d692b4ab0c` / SHA
+`284349acc34b37f36fdb8195925834af8280a7e6` passed `Native engine probe / Android API 35 x86_64 CPU feasibility`
+(run `42531164878`, job `128885450790`; status `vcs-read/5fcfd3bcd4c742adb54cbb5c5c79f741`). Its member-debug log reports 26 selected `libc++_static.a` members, all with compile units and line tables, but zero file checksums (`vcs-read/2715eb2548d94b95ba0bee06a1d751ca`). The 307,918-byte sanitized manifest (whole-file SHA-256 `da9c5bc35d49c4e4bb6c75c840dbf7ca591d0c92880fd28d94dc07f3e42ee5b4`; inspected page `vcs-read/cd691e426cc04dfd84c06593fe86e93d`) binds archive SHA-256 `893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099` and link-map SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`; it reports 1,506 line-table files and no MD5 values. The inspected page includes component-relative compile-unit path `libcxx/src/algorithm.cpp` and producer `clang version 19.0.1`. The separate libc++abi capture reports one selected `libc++abi.a` member with one compile unit and line table, also without file checksums (`vcs-read/d82de61724344871b2717f097d277108`). This later `llvm-dwarfdump` capture resolves the earlier tool failure only on this newer snapshot; path metadata without source checksums does not prove source-byte identity, patch application, notice applicability or redistribution. The probe is emulator CI, not physical-device evidence.
+
+The earlier bounded capture completed on the exact diagnostic publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
 `59cdc16f38ab3d18cf5a91aeff383b168e7792c4`, before its later DWARF and emulator
 failures. Its manifest (`ndk-terms/manifest.json`, 2,735 bytes, SHA-256
@@ -696,8 +700,17 @@ commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` (`vcs-read/c2129f0d0cae4996942
 
 The exact diagnostic Android publication is
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
-`59cdc16f38ab3d18cf5a91aeff383b168e7792c4`; member-DWARF capture and emulator
-startup failed, but the package and patch metadata captures completed. Its
+`59cdc16f38ab3d18cf5a91aeff383b168e7792c4`. Its `Native engine probe / Android
+API 35 x86_64 CPU feasibility` check failed (run `42458440551`, job
+`128662333478`; status `vcs-read/df036fc3ae304d19b45d1b1810950baf`). The bounded
+member-debug record says `llvm-readelf` returned exit status 1 scanning
+`algorithm.cpp.o` and marks capture incomplete (`vcs-read/00f0b54c2f3845aca111ba414ee4c5bb`).
+The same run's log records ADB seeing no device and then an offline device; the
+emulator log includes a boot-completed message, but no ADB-online state or
+successful smoke is recorded before the owned emulator process is killed during
+cleanup (`vcs-read/f5630f03e54f46b284789fb6af741310`). Therefore source capture
+and emulator smoke remain incomplete; this is not evidence of physical-device
+behavior. Package and patch metadata captures completed. Its
 `ndk-terms/manifest.json` (exact artifact `vcs-read/4995c5cc44c24fbea2e2f794343675c5`)
 records NDK `28.2.13676358`, `clang_source_info.md` SHA-256
 `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`, and the
