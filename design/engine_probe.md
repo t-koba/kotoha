@@ -103,7 +103,7 @@ basename and reduced compiler version. Temporary objects are removed; configured
 limits bound member count, extracted bytes, combined tool output and elapsed time.
 For a failing `llvm-readelf` invocation, stderr is drained under the same tool-output
 budget and only a diagnostic capped by `ENGINE_OUTPUT_BYTES` is retained after
-terminal-control and path redaction; successful stderr is discarded. Synthetic
+C0/C1-control and path redaction; successful stderr is discarded. Synthetic
 tests cover indexed DWARF strings, path redaction, archive/map binding, duplicate
 members, bounds, timeout and bounded, path-redacted failure context.
 

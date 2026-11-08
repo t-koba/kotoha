@@ -115,7 +115,7 @@ def _safe_tool_diagnostic(data, max_bytes, truncated=False):
     text = ANSI_ESCAPE_RE.sub('', text)
     text = PATH_RE.sub('[path]', text)
     text = ''.join(
-        char if char in '\t\r\n' or (ord(char) >= 32 and ord(char) != 127) else ' '
+        ' ' if ord(char) < 32 or 0x7f <= ord(char) <= 0x9f else char
         for char in text)
     text = ' '.join(text.split())
     marker = ' [truncated]'

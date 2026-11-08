@@ -186,6 +186,15 @@ class CaptureMemberDebugTest(unittest.TestCase):
             self.run_capture()
         self.assertNotIn(str(self.root), str(caught.exception))
 
+    def test_tool_diagnostic_strips_c0_and_c1_controls(self):
+        raw = 'before\x07\u009b31mCSI\u0085next\u009dtitle'
+        diagnostic = capture._safe_tool_diagnostic(raw.encode('utf-8'), 256)
+        self.assertIn('before', diagnostic)
+        self.assertIn('CSI', diagnostic)
+        self.assertIn('next', diagnostic)
+        self.assertFalse(any(
+            ord(char) < 32 or 0x7f <= ord(char) <= 0x9f for char in diagnostic))
+
     def test_tool_diagnostic_has_a_utf8_byte_bound(self):
         diagnostic = capture._safe_tool_diagnostic(b'error: ' + b'x' * 128, 32)
         self.assertLessEqual(len(diagnostic.encode('utf-8')), 32)
