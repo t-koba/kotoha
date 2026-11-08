@@ -2,29 +2,28 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. The latest exact native-engine probe publication is
-`def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7` at SHA
-`8f19233e7da006a9e857b09452cc1158920c5996` (source commit
-`be99fdbb922a50a5c0734e2a511813e145ecf577`). Exact status receipt
-`vcs-read/651c17de01f6490db8c4e1822c014f0f` records successful Android API 35
-x86_64 (job `128649320513`) and Windows x64 (job `128649320386`) probe jobs on
-that SHA. The preceding exact Android DWARF report on publication
-`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` / SHA
-`678896ce4c8d9b73ba56d897e0d575e36e67ea7e` records 26 selected
-`libc++_static.a` members with compile units. The `def59...` Android artifacts
-retain the map and archive inventory, but not the new linked-section
-contribution capture; that change has not yet run on exact Android CI. The
-API 35 x86_64 emulator booted on `def59...`; its smoke resolved Android runtime
-APEX providers, rejected missing/truncated GGUF inputs and passed a narrow
-public synthetic sample (`vcs-read/c71a1b4fa3074e6ca85968d4d8c98996`,
-`vcs-read/32db2a78b0bd419a89552d619b587b67`). This is not language-quality
-coverage or a physical-device observation. The
-Windows provider report captures one CI runner's loader-resolved modules. The
-operator confirms there is no Visual Studio license entitlement or agreement,
-no basis to redistribute Microsoft VC++ runtime DLLs, and no Windows runtime
-distribution path is chosen (`operator/kotoha/a-e1ceeae8-r1-1794137634`). CI
-success and DWARF or linker-map paths do not establish source or patch identity,
-notice applicability, licensing closure, redistribution authorization or
-physical-device behavior. Engine adoption remains disabled.
+`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` at SHA
+`678896ce4c8d9b73ba56d897e0d575e36e67ea7e`. Exact status receipt
+`vcs-read/5a236a4c8e744409b5d9c738a9be587e` records successful Android API 35
+x86_64 (job `128682924723`) and Windows x64 (job `128682924884`) probe jobs in
+workflow run `42465180585`. The Android smoke reached an Android 15 x86_64
+emulator over ADB, resolved `libm.so`, `libdl.so` and `libc.so` under the runtime
+APEX, rejected missing/truncated GGUF inputs, and passed one narrow synthetic
+sample (`vcs-read/d2d9c8c109204b76be8751b864483a15`,
+`vcs-read/36fdc1d714a342e3a83e8d784703e037`). This is neither language-quality
+coverage nor physical-device evidence. The exact Windows provider capture is
+one CI runner observation and establishes no redistribution rights. This
+publication includes the Android map and archive inventory but predates the
+linked-section contribution capture; that change still needs exact Android CI.
+The earlier publication `def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7`
+/ SHA `8f19233e7da006a9e857b09452cc1158920c5996` is historical, not latest.
+The operator confirms there is no Visual Studio license entitlement or
+agreement, no basis to redistribute Microsoft VC++ runtime DLLs, and no
+Windows runtime distribution path is chosen
+(`operator/kotoha/a-e1ceeae8-r1-1794137634`). CI success, DWARF and linker-map
+paths do not establish source or patch identity, notice applicability,
+licensing closure, redistribution authorization or physical-device behavior.
+Engine adoption remains disabled.
 
 The detailed archive/member inventory below is historical evidence from exact
 publication `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785`
@@ -741,21 +740,22 @@ wait reaps the wrapper, and the host reaper collects orphaned children. Detached
 helpers, untrappable cancellation and runner loss rely on disposable runner
 teardown; no broad process-name kill or blind retry is used.
 
-The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default). `linker_map.py` parses and hashes the map in one bounded pass, resolves every `.a(member)` row within the configured build or NDK root, hashes each unique regular archive, and stages `llama-simple.map`, its byte-size/SHA-256 sidecar, `llama-simple.map.archives.json` and `llama-simple.map.contributions.json` together before one directory rename. The archive manifest lists root-relative paths, exact archive sizes/digests and the member names named by the map. The contribution manifest records each selected NDK `libc++_static.a` input-section/output-section mapping, VMA/LMA, size, alignment and map line, without retaining archive-member object bytes. It is bounded by the configured map limit and requires every selected libc++ member to have a mapping. This metadata does not establish source identity, patch provenance, licensing/notice applicability or runtime behavior. The map remains raw linker output, not a normalized inventory: inspect its exact rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. The exact Android inventory in publication
-`def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8a1ed3d7afdf7` / SHA
-`8f19233e7da006a9e857b09452cc1158920c5996` has a 5,417-byte archive manifest,
-SHA-256 `0800bae19c58773aeaac1ab2f987debcbc8ee960f76edc6d9f5909ca792a9dfd`
-(`vcs-read/e83e319824a34d758cc3912368015d20`), and a 96-byte map sidecar,
+The Android-only `llama-simple` link emits LLD `-Map` to `llama-simple.map` inside the clean configured build root. After linking, the probe requires a regular, nonempty file no larger than `ENGINE_LINKER_MAP_MAX_BYTES` (128 MiB default). `linker_map.py` parses and hashes the map in one bounded pass, resolves every `.a(member)` row within the configured build or NDK root, hashes each unique regular archive, and stages `llama-simple.map`, its byte-size/SHA-256 sidecar, `llama-simple.map.archives.json` and `llama-simple.map.contributions.json` together before one directory rename. The archive manifest lists root-relative paths, exact archive sizes/digests and the member names named by the map. The contribution manifest records each selected NDK `libc++_static.a` input-section/output-section mapping, VMA/LMA, size, alignment and map line, without retaining archive-member object bytes. The parser follows LLD output-section headers, checks each contribution range against its enclosing output section, and rejects malformed headers or mismatched explicit section labels. It is bounded by the configured map limit and requires every selected libc++ member to have a mapping. This metadata does not establish source identity, patch provenance, licensing/notice applicability or runtime behavior. The map remains raw linker output, not a normalized inventory: inspect its exact rows rather than infer completeness from `-static-libstdc++` or ELF `NEEDED`. The exact Android inventory in publication
+`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` / SHA
+`678896ce4c8d9b73ba56d897e0d575e36e67ea7e` has a 5,417-byte archive manifest,
+SHA-256 `6be9cfbb85dffc2f419d832fc03f280775a929b62fb0ee3d3cd36ebc48bc2474`
+(`vcs-read/44542b47ba7e4958aaadf7c4cf3bcc39`), and a 96-byte map sidecar,
 SHA-256 `4f1b583fec32579adb492d8cc7bc0769ef46b4fbcc3f1856ab78efbafe558ac3`
-(`vcs-read/5031d86a6b384b2289b920110de6ef11`). Both declare the 4,660,773-byte
+(`vcs-read/9a04acbf8a2e4257b107f388e9f344a5`). Both declare the 4,660,773-byte
 map SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`.
-The earlier publication's exact DWARF report and archive-manifest digest are
-recorded separately above; these hash ties do not prove source identity,
-patch provenance, applicable notices or redistribution rights. The
-earlier publication's manifest digest was
-`77989f7a3172bedbd86b23a6f7fa2f5ab4dccef696ebe2657cf1dcad13df09fd`
-(`vcs-read/a0174cd30958445f915a379412d958c5`). These internal hash ties do not
-prove which sections survive or establish complete runtime/legal closure.
+The manifest binds `libc++_static.a` (14,336,094 bytes, SHA-256
+`893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`) to the
+same map. The exact DWARF report is tied to this archive-manifest digest and
+records 26/26 selected members with compile units
+(`vcs-read/5701564fb46b4a78b51bb250a1f061f5`). The raw map, archive inventory
+and DWARF metadata do not prove source identity, patch provenance, applicable
+notices or redistribution rights. The contribution manifest is absent from
+this publication.
 
 The `android-api35-x86_64-engine-probe` artifact retains the linker map, its hash/size record and, on successful capture, the archive and libc++ contribution manifests alongside raw compile commands,
 verbose build log, Ninja commands/link inputs/log/dependency database, NDK version,
@@ -798,18 +798,19 @@ capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
 **Current evidence limits:** the latest combined exact probe publication is
-`def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7` / SHA
-`8f19233e7da006a9e857b09452cc1158920c5996`; Android API 35 x86_64 and Windows
-x64 probe jobs succeeded (status `vcs-read/651c17de01f6490db8c4e1822c014f0f`).
-The prior exact DWARF report is bound to `0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0`
-/ SHA `678896ce4c8d9b73ba56d897e0d575e36e67ea7e`; the current map contribution
-capture still awaits exact Android CI. The `def59...` emulator booted, resolved
-its runtime imports, rejected malformed model inputs and passed only a narrow
-public synthetic sample; this is not language-quality or physical-device
-evidence. The earlier `llvm-readelf` option failure is historical and does not
-imply DWARF absence. CI success and member metadata do not close source/patch
-identity, selected-section provenance, terms, notices, redistribution or
-physical-device behavior.
+`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` / SHA
+`678896ce4c8d9b73ba56d897e0d575e36e67ea7e`; both Android API 35 x86_64 and
+Windows x64 jobs succeeded (status `vcs-read/5a236a4c8e744409b5d9c738a9be587e`).
+The Android smoke log records successful ADB operations and the narrow sample;
+this remains an emulator-only observation.
+The new linker-map contribution parser/capture is not present in this
+publication, so its exact Android CI and contribution artifact remain
+outstanding. The separate older `def59...` publication also had successful
+Android and Windows probe jobs; its results are historical, not a later or
+newer probe. The exact `0f9...` smoke is still only a narrow synthetic sample,
+not language-quality or physical-device evidence. CI success and member
+metadata do not close source/patch identity, selected-section provenance,
+terms, notices, redistribution or physical-device behavior.
 
 The previous exact Android probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
@@ -1074,63 +1075,64 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 ### Android selected runtime and delivery gate
 
 The latest exact Android API 35 x86_64 native probe is publication
-`def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7` / SHA
-`8f19233e7da006a9e857b09452cc1158920c5996`, job `128649320513` (success;
-status `vcs-read/651c17de01f6490db8c4e1822c014f0f`). Its Android 15 emulator
-booted, the real loader query resolved `libm.so`, `libdl.so` and `libc.so` under
-the runtime APEX, invalid model files were rejected, and the narrow public
-synthetic sample passed (`vcs-read/c71a1b4fa3074e6ca85968d4d8c98996`,
-`vcs-read/32db2a78b0bd419a89552d619b587b67`). This does not measure language
-quality or establish physical-device behavior. The corrected bounded DWARF
-capture completed for 26/26 selected libc++ members on the preceding exact
-publication described above. Neither the current CI result nor DWARF establishes
-source/patch identity, license/notice closure or redistribution; adoption
-remains disabled.
+`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` / SHA
+`678896ce4c8d9b73ba56d897e0d575e36e67ea7e`, job `128682924723` (success;
+status `vcs-read/5a236a4c8e744409b5d9c738a9be587e`). The Android 15 emulator
+was reachable over ADB; the exact runtime fingerprint is
+`Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys`.
+The loader query resolved `libm.so`, `libdl.so` and `libc.so` under the runtime
+APEX, the real loader rejected missing and truncated GGUF files, and a single
+public synthetic sample generated `Bonjour.` (`vcs-read/d2d9c8c109204b76be8751b864483a15`,
+`vcs-read/36fdc1d714a342e3a83e8d784703e037`). This is not language-quality
+coverage or a physical-device observation. The corrected bounded DWARF capture
+reports compile units for 26/26 selected libc++ members on this same exact
+publication; neither that report nor runtime smoke establishes source/patch
+identity, license/notice closure or redistribution. The linker contribution
+capture was added later and still needs exact Android CI; adoption remains
+disabled.
 
-An earlier successful Android emulator observation remains publication
-`297d605988c1f6867ba745c26ad064ecd0590223952d3eb940abb4f15a0e1baa` / SHA
-`2e3aa9f593032cee733c5dda3f7b5c16205ad89e`, job `128600185278`. That run's ELF
-record reports `/system/bin/linker64` and direct imports `libc.so`, `libm.so`,
-`libdl.so`; the emulator smoke resolves them under
-`/apex/com.android.runtime/lib64/bionic/` and records provider hashes
-(`vcs-read/aa4d59eb9e6d45e5b03f597f1cd33710`,
-`vcs-read/57c733d1cb7b4bd39a8c73d74dfefcb8`). This evidence is limited to that
-synthetic Android 15/API 35 x86_64 emulator. It does not establish the later
-failed run's runtime, ARM, physical-device behavior, all loading paths, supported
-OS/OEM terms or redistribution rights. Static-archive member-to-source/section
+The prior exact publication `def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7`
+/ SHA `8f19233e7da006a9e857b09452cc1158920c5996`, Android job `128649320513`,
+also booted an Android 15/API 35 emulator and passed its own narrow synthetic
+smoke (`vcs-read/c71a1b4fa3074e6ca85968d4d8c98996`,
+`vcs-read/32db2a78b0bd419a89552d619b587b67`). That is a separate earlier
+observation, not a result from the latest publication. Neither run proves
+language quality, ARM, physical-device behavior, all loading paths, applicable
+terms, or redistribution rights. Static-archive member-to-source/section
 review, complete applicable notices and their user-accessible delivery remain
 unresolved; no product adoption is authorized.
 
 ### Windows runtime and delivery gate
 
 The latest exact Windows x64 engine probe is publication
-`def59baed3148a7bfd76deffdd331952d95154c1fdd6111bcc8ca1ed3d7afdf7` / SHA
-`8f19233e7da006a9e857b09452cc1158920c5996`, Windows job `128649320386`
-(success; overall workflow run `42454099508`; exact status receipt
-`vcs-read/651c17de01f6490db8c4e1822c014f0f`). Its exact PE linkage artifact
-(`vcs-read/2766b07854244eb2b7b10e94d5a70cf2`, SHA-256
-`40143d149aa6255c5f752768a9e729246db5a366fcd8d6fa2363a7dea3e1b2fe`) reports
+`0f9b59bf92eca25d42bce26015e3254228419da6853def4fe4a7b360f32f19f0` / SHA
+`678896ce4c8d9b73ba56d897e0d575e36e67ea7e`, Windows job `128682924884`
+(success; workflow run `42465180585`; exact status receipt
+`vcs-read/5a236a4c8e744409b5d9c738a9be587e`). Its exact PE linkage artifact
+(`vcs-read/c294b89a499d4593ab33b9838df98b80`, SHA-256
+`569e9bc5619484ca7afb768bc0dd6fe7037c22956adb3f8abcc5fcfee180265f`) reports
 COFF Dumper `14.29.30159.0`, x64 direct imports `KERNEL32.dll`, `ADVAPI32.dll`,
 `MSVCP140.dll`, `VCRUNTIME140.dll`, `VCRUNTIME140_1.dll` and nine
 `api-ms-win-crt-` contracts. The exact selected-input summary
-(`vcs-read/f8253424ba1f4ca99d5cc68030820de1`, SHA-256
-`e6e854b7d6be4c5332503ef33311dafa3d1831bb137d7f647a1cf1ff11897c8b`)
+(`vcs-read/ca51f8c6aa79413da6b1711993269a81`, SHA-256
+`0d98ed474dffd508822734871f943e4d620d04fa25b590105a99e484c1767d41`)
 records 72 unique compiler source keys and 581 actual selected compiler inputs;
-its scope is compiler-input observation, not legal approval or complete binary
-member closure. This remains **dynamic** CRT linkage despite static engine
-libraries.
+its source-key manifest SHA-256 is
+`1bdca7142f8c67bf78ee76e00d819a86b4a2f09542828645ba859913d857d5d2`.
+Compiler-input scope is not legal approval or complete binary-member closure.
+This remains **dynamic** CRT linkage despite static engine libraries.
 
 The pre-entrypoint `debug-initial-breakpoint` capture for
 `llama-simple.exe --help` succeeded on this exact Windows run. Its
 `runtime-providers.json` is 5,692 bytes, SHA-256
-`911fe5943f0188e1233171f29ee48cf5d141ac333de76fba7055b5ebcf180e4e`
-(`vcs-read/9bd62d62e58d42f48234ee8204037634`); the summary is
-`vcs-read/7490a7af65604b9dbed69626ca101453`, SHA-256
-`8bfbb032dc6b5c7a1ea01067c901ecb23366a9419a947e8a18746e969c844dd1`. It
+`8f5091834838266907c655ad4e19482cad184008dc13f3931ae16b69d6494271`
+(`vcs-read/2e4724bec3ef4c43a182af822d178e9a`); the summary is
+`vcs-read/212cd56ee5554f26b84c0cb179d33330`, SHA-256
+`8386d0b28060a3ed5e36e829d64028a0aad9c578daa0681125a87836f7e6c356`. It
 records 14 direct imports, zero delay imports, 9 API-set contracts, 11
 loader-resolved providers and zero redacted paths, binding `llama-simple.exe`
-SHA-256 `8b7ed31b2ad0bf53550a7db52dceed29b0a3322c0b49b255031fa5e1b69921b9`
-to linkage SHA-256 `40143d149aa6255c5f752768a9e729246db5a366fcd8d6fa2363a7dea3e1b2fe`.
+SHA-256 `975fb962890fb11571d7b0492ea45a7b7d1ccc6bdb921cf46c826afd911de169`
+to linkage SHA-256 `569e9bc5619484ca7afb768bc0dd6fe7037c22956adb3f8abcc5fcfee180265f`.
 The imported VC runtime modules resolved under the classified
 `windows/system32` root: `MSVCP140.dll`, `VCRUNTIME140.dll` and
 `VCRUNTIME140_1.dll`, each version `14.51.36247.0`; their hashes are recorded
