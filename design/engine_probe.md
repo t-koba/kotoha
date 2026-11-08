@@ -594,7 +594,34 @@ immutable-source fetches hash the header at pinned LLVM base
 and at upstream patch commit `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`
 as `60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`
 (`mizu_fetch` receipt `193d5ec9a2c090a79f73ba0e285ee545a8a2211579bd22111dc42132b5191b75`).
-All three byte hashes differ. The selected read proves the installed header is
+All three byte hashes differ.
+
+A fresh immutable-source check fetched `libcxx/include/regex` at compiler-
+reported LLVM commit `97a699bf4812a18fb657c2779f5296a4ab2694d2`: its 212,825
+bytes and SHA-256 `897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
+are identical to the source-info base `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`,
+but not to the upstream patch-commit header. Fresh exact source receipts are
+`mizu_fetch/214989f9f14857abe317f1e6609c32ef739739c946684efad9bcee58eaf9599c`
+(base), `mizu_fetch/ff762f9a255360c1140bd1acd8e2281d7d953e83d9ef6024f04bbd38c2448a51`
+(compiler-reported commit), and
+`mizu_fetch/5270406d11283568e964439fc2b4c9b89a7812db3bc747ec070bb56d151ae329`
+(upstream patch commit). Bounded Git blob hashing gives the base/merge object
+`dc3db93744b489a32dc1abb0f63c63faf23aaed0` and patch-commit object
+`46968357d39747d887c2e105dd579487ff84d864` (experiments
+`e3334137e11b4ed78ccf3805f06246e7`, `d2c1106bb6de43ff8aacfe36099c3b1f`,
+`12c07ee7f03949f399e7507951fbb664`). The latter matches the upstream commit
+diff's postimage prefix `46968357d397`
+(`mizu_fetch/ec7748ca84bf492028ca84db48a8810d99ef00fc3be3e3551e87efe1f655db4a`).
+That hunk adds `regex_iterator` friendship and updates prefix bookkeeping after
+successful search, preserving the previous match end for zero-length matches.
+This establishes the changed header bytes in the upstream patch tree and their
+absence from the compiler-reported upstream tree, whose header is byte-identical
+to the source-info base. It does not establish whether the installed NDK input
+is patched, backported, or behaviorally equivalent: its recorded hash
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` differs,
+and the installed header bytes and extracted object sections are not retained.
+
+The selected read proves the installed header is
 a compiler input, while the map member proves an object was linked; neither
 proves that this source patch's changed code survives in that object or the final
 executable. Patch-to-installed-header and patch-to-binary provenance therefore
