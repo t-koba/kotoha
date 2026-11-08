@@ -80,6 +80,111 @@ other file, included header, generated input, notice or linked section shares
 it. Exact package-record capture and member-to-input/section closure remain
 necessary. No product adoption or notice set is approved by this partial result.
 
+#### Source-list candidate comparisons at the NDK-reported LLVM base
+
+A separate bounded comparison used the four component CMake source lists at
+source-info base `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` (not the
+compiler-reported LLVM commit `97a699bf4812a18fb657c2779f5296a4ab2694d2`).
+Each of the 47 selected archive-member basenames has exactly one matching
+source-list path at that base. This is a unique filename candidate, not proof
+that the NDK build selected that CMake target or that an archive member was
+compiled from those exact source bytes.
+
+| Archive | Candidate matches | CMake source-list SHA-256 | Bounded comparison |
+| --- | ---: | --- | --- |
+| compiler-rt builtins | 1/1 | `b62993a0dbad605272194914305ca62ade86e47e49d6ba63b0221609270a4ea0` | `mizu_fetch/27118ae48174bd1058e297d506836d2d7ee6b95c958ae57339bbc67833d3ce69`; `experiments/66281496c5b742d8af5e9d67b99b0746` |
+| libunwind | 5/5 | `a806c64195fc9e8bf88a8e3cdfb7701ac354e841873273651cc7f3a09241aa97` | `mizu_fetch/d7b089045a6bbd9801543b8c0227decfb946e8872169c5834cf6b314d73d81bf`; `experiments/388dbc7e3f48416d86dad080e2ee37db` |
+| libc++ | 26/26 | `b62aa4a6c2cb2d95cb48872cc4a4fb10568d2b99531b345e8ce499993bfabf87` | `mizu_fetch/7e3089ec7654af05b712824a2f7e76f7c59af5322a4e5b1a6ca14883a0b9b0f1`; `experiments/66b474fa51a34fa599f69bded2dc4133` |
+| libc++abi | 15/15 | `c6192d1454baad9a0c3f3ef4e88320e845628c76c8100fd11eaf5327e28fb29d` | `mizu_fetch/428f48da215b3a3b06893bdf01edb975eae5c5ae86d0975e1abfcfa90caba0de`; `experiments/aef9f40ff5384d568ffc6032fe704a13` |
+
+The per-member outputs found exactly one CMake filename candidate for every
+member (no multi-candidate basename hits). Candidate paths below are relative
+to each component source root:
+
+```text
+compiler-rt:
+  emutls.c.o -> emutls.c
+libunwind:
+  UnwindLevel1-gcc-ext.c.o -> UnwindLevel1-gcc-ext.c
+  UnwindLevel1.c.o -> UnwindLevel1.c
+  UnwindRegistersRestore.S.o -> UnwindRegistersRestore.S
+  UnwindRegistersSave.S.o -> UnwindRegistersSave.S
+  libunwind.cpp.o -> libunwind.cpp
+libc++:
+  algorithm.cpp.o -> algorithm.cpp
+  call_once.cpp.o -> call_once.cpp
+  chrono.cpp.o -> chrono.cpp
+  condition_variable.cpp.o -> condition_variable.cpp
+  condition_variable_destructor.cpp.o -> condition_variable_destructor.cpp
+  directory_iterator.cpp.o -> filesystem/directory_iterator.cpp
+  error_category.cpp.o -> error_category.cpp
+  exception.cpp.o -> exception.cpp
+  filesystem_error.cpp.o -> filesystem/filesystem_error.cpp
+  future.cpp.o -> future.cpp
+  hash.cpp.o -> hash.cpp
+  ios.cpp.o -> ios.cpp
+  ios.instantiations.cpp.o -> ios.instantiations.cpp
+  locale.cpp.o -> locale.cpp
+  memory.cpp.o -> memory.cpp
+  mutex.cpp.o -> mutex.cpp
+  mutex_destructor.cpp.o -> mutex_destructor.cpp
+  new_helpers.cpp.o -> new_helpers.cpp
+  operations.cpp.o -> filesystem/operations.cpp
+  path.cpp.o -> filesystem/path.cpp
+  random.cpp.o -> random.cpp
+  regex.cpp.o -> regex.cpp
+  stdexcept.cpp.o -> stdexcept.cpp
+  string.cpp.o -> string.cpp
+  system_error.cpp.o -> system_error.cpp
+  thread.cpp.o -> thread.cpp
+libc++abi:
+  abort_message.cpp.o -> abort_message.cpp
+  cxa_default_handlers.cpp.o -> cxa_default_handlers.cpp
+  cxa_demangle.cpp.o -> cxa_demangle.cpp
+  cxa_exception.cpp.o -> cxa_exception.cpp
+  cxa_exception_storage.cpp.o -> cxa_exception_storage.cpp
+  cxa_guard.cpp.o -> cxa_guard.cpp
+  cxa_handlers.cpp.o -> cxa_handlers.cpp
+  cxa_personality.cpp.o -> cxa_personality.cpp
+  cxa_virtual.cpp.o -> cxa_virtual.cpp
+  fallback_malloc.cpp.o -> fallback_malloc.cpp
+  private_typeinfo.cpp.o -> private_typeinfo.cpp
+  stdlib_exception.cpp.o -> stdlib_exception.cpp
+  stdlib_new_delete.cpp.o -> stdlib_new_delete.cpp
+  stdlib_stdexcept.cpp.o -> stdlib_stdexcept.cpp
+  stdlib_typeinfo.cpp.o -> stdlib_typeinfo.cpp
+```
+
+Representative unique candidates are `emutls.c.o` →
+`compiler-rt/lib/builtins/emutls.c`, `UnwindLevel1.c.o` →
+`libunwind/src/UnwindLevel1.c`, `regex.cpp.o` → `libcxx/src/regex.cpp`, and
+`cxa_exception.cpp.o` → `libcxxabi/src/cxa_exception.cpp`. Each of these four
+pinned base source files carries `SPDX-License-Identifier: Apache-2.0 WITH
+LLVM-exception` (source SHA-256 respectively
+`a4437f3e329a0835adbc7df38e36df12f358d05c073b11813c409f849c2345d2`,
+`60713346aa7712b5292e4cc2a05c0d3400296ebe76d7c25d256ee46a7dc2a174`,
+`87ce61e6756d2a07a5794ed44df844a4c3e02c5cf91cfcf0d3c6626f7e846643`, and
+`eb6c7923d2e8ddc9347410b95981c6b800ccbe251d34057e5fca9069bf99ecf2`). These
+are representative source-file checks, not a file-by-file license audit of all
+47 candidates. The component `LICENSE.TXT` files at this base (whole-file
+SHA-256 values in the preceding table) contain Apache 2.0/LLVM-exception text
+and legacy UIUC/NCSA and MIT dual-license blocks; their presence alone does not
+map those blocks to particular selected source files or linked sections.
+
+The NDK `move-cxa-demangle-into-libcxxdemangle` patch changes the libc++abi
+build graph, and the exact map still places `cxa_demangle.cpp.o` in
+`libc++abi.a`. The source-list comparison does not reveal the configured build
+option or explain that archive membership. None of these candidate matches
+closes patch application, member-source identity, object-section survival, or
+license/notice applicability. The retained artifact inventory contains no raw
+NDK archives or extracted archive-member objects. The installed `NOTICE` and
+`NOTICE.toolchain` therefore remain broad candidate records; in particular,
+their GPL text is not evidence of either applicability or irrelevance to these
+members. The Flutter LicensePage currently exposes Unicode and crypto notices
+only. It is a suitable user-facing surface for a future reviewed notice set,
+but no NDK notice payload is packaged and the exact required subset is
+unresolved; adoption remains disabled.
+
 ### Exact installed-NDK capture (partial)
 
 The corrected capture ran in the exact successful publication above. Its bounded
