@@ -45,20 +45,23 @@ presentation (`vcs-read/e04aec26a5544d0882844dab0d036c87`). The VoiceOver
 hypothesis and save-panel, cancellation, and draft-preservation behavior remain
 unvalidated; assertions and deadlines were not weakened.
 
-The exact Android pinned-NDK line-table report `ndk-member-debug.json` is
-307,893 bytes, SHA-256
-`b638280b8a8fbfe2bd732715e0c7b69dd6dcfab56fc2ebff99481fbba3226e07`
-(`vcs-read/74a16fa950be48d799e16e06a564b6c9`). Its recorded archive-manifest
-hash `8efc215b9079c3f77ec0583aa0138885f5d95b9d8657f9ea14bc74ecb044efb9`
-matches the 5,417-byte link-map-bound manifest
-(`vcs-read/ce873ce82b894b34a72b33b0122b2c56`), which names all 26 selected
-`libc++_static.a` members. The report records 26 compile units, 26 line tables
-and 1,506 file entries, but zero MD5 checksums. Its first member record names
-`libcxx/src/algorithm.cpp` as a component-relative DWARF path; such paths are
-source-location clues, not byte identity, and no candidate-byte comparison is
-possible. The exact NDK patch-source manifest is 1,526 bytes, SHA-256
+The exact Android pinned-NDK line-table report `ndk-member-debug.json` from
+publication `e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16`
+/ SHA `5752035ff2adb68a51b78c020f1d52ec7d5be1ba` is 307,918 bytes, SHA-256
+`139da8091943746a993a95b75b9f7f66d381f6c39163aa2ac184aa12fc02961c`
+(`vcs-read/f4f31cc0c31d42f3bbe2919e3dae45e4`). Its recorded archive-manifest
+hash `2cafd537db2a905e0cb4a746ae365a38c0f4c74aaf5e4bf45ff3772e140c27fc`
+matches the 5,417-byte link-map-bound manifest (`vcs-read/0436c179b0f14cb190c081c49319dd23`),
+which names all 26 selected `libc++_static.a` members. The report binds archive
+SHA-256 `893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`
+and link-map SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`;
+it records 26 compile units, 26 line tables and 1,506 file entries, but zero
+MD5 checksums. Its first member record names `libcxx/src/algorithm.cpp` as a
+component-relative DWARF path; such paths are source-location clues, not byte
+identity, and no candidate-byte comparison is possible. The exact NDK
+patch-source manifest at this publication is 1,526 bytes, SHA-256
 `d8dc351b4d2a681fa16997a47c02b01f3921970c62146aa3c776b1dd048ef0b1`
-(`vcs-read/b6c42f82da224c018d25e4f05414d175`): it names four patch blobs at
+(`vcs-read/687ab920fad249dd8f12f949a88040d0`): it names four patch blobs at
 `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3` and records
 hashes, sizes and Git blob IDs, not raw patches. Bounded experiments decoded
 Gitiles responses for all four exact-revision blobs and matched their byte
@@ -99,7 +102,7 @@ member. Neither path comparison establishes member bytes, surviving code,
 notice applicability or redistribution authorization. The exact NDK terms
 manifest is 2,735 bytes, SHA-256
 `6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`
-(`vcs-read/a030cba6c6e64ba286d505d325278ffb`); it identifies broad r28c
+(`vcs-read/9fe473f9e8a943bb9ac788de1b705690`); it identifies broad r28c
 package/toolchain/host notices, not their applicability to selected archive
 members. The earlier exact patch-effect and terms analysis below remains
 bounded: neither these manifests, DWARF paths, member hashes nor successful
