@@ -612,7 +612,44 @@ unresolved; adoption remains disabled.
 
 A later exact publication `3785c8518bedd38e205423534510ea5786925117816e5d461815c0d692b4ab0c` / SHA
 `284349acc34b37f36fdb8195925834af8280a7e6` passed `Native engine probe / Android API 35 x86_64 CPU feasibility`
-(run `42531164878`, job `128885450790`; status `vcs-read/5fcfd3bcd4c742adb54cbb5c5c79f741`). Its member-debug log reports 26 selected `libc++_static.a` members, all with compile units and line tables, but zero file checksums (`vcs-read/2715eb2548d94b95ba0bee06a1d751ca`). The 307,918-byte sanitized manifest (whole-file SHA-256 `da9c5bc35d49c4e4bb6c75c840dbf7ca591d0c92880fd28d94dc07f3e42ee5b4`; inspected page `vcs-read/cd691e426cc04dfd84c06593fe86e93d`) binds archive SHA-256 `893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099` and link-map SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`; it reports 1,506 line-table files and no MD5 values. The inspected page includes component-relative compile-unit path `libcxx/src/algorithm.cpp` and producer `clang version 19.0.1`. The separate libc++abi capture reports one selected `libc++abi.a` member with one compile unit and line table, also without file checksums (`vcs-read/d82de61724344871b2717f097d277108`). This later `llvm-dwarfdump` capture resolves the earlier tool failure only on this newer snapshot; path metadata without source checksums does not prove source-byte identity, patch application, notice applicability or redistribution. The probe is emulator CI, not physical-device evidence.
+(run `42531164878`, job `128885450790`; status `vcs-read/a5a89d32cd964b59b484462893a6902e`). Its sanitized
+`ndk-member-debug.json` (307,918 bytes; SHA-256
+`da9c5bc35d49c4e4bb6c75c840dbf7ca591d0c92880fd28d94dc07f3e42ee5b4`; pages
+`vcs-read/cd691e426cc04dfd84c06593fe86e93d` and
+`vcs-read/03c9e8ad30bf44c7a64b6abeb8ccc43b`) binds the 26 selected
+`libc++_static.a` members to archive SHA-256
+`893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099` and link-map
+SHA-256 `2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`;
+all 26 have compile units and line tables, but the 1,506 file records contain
+zero MD5 checksums. The bounded records establish these two member-to-path
+clues, not source-byte identity:
+
+| Selected archive member | Member SHA-256 / size | DWARF compile-unit path | Exact record |
+| --- | --- | --- | --- |
+| `libc++_static.a` / `algorithm.cpp.o` | `de7313505863e9cbb874b047a1dccfcf07c5e69a7c7e64c7fd9c6aeb6e472d72` / 1,280,352 bytes | `libcxx/src/algorithm.cpp` (component-relative) | `vcs-read/cd691e426cc04dfd84c06593fe86e93d`, `vcs-read/03c9e8ad30bf44c7a64b6abeb8ccc43b` |
+| `libc++abi.a` / `cxa_demangle.cpp.o` | `8807afd3edd4b1dd569cefe42bfc7596060fdd7313a46003632db2d62a492930` / 2,158,776 bytes | `libcxxabi/src/cxa_demangle.cpp` (component-relative) | `vcs-read/79f110e6322c488d972aea21755815be`, `vcs-read/2d780a90e4af43ae87e91a074cf555d0` |
+
+The `libc++abi` record is a separate 14,944-byte manifest (SHA-256
+`a18c0ac4315ce69fcbb27ca9635579ae64a211e07aa28920d581f99ffd907daf`) for one
+selected member of the 15 map-selected `libc++abi.a` members; its 69 line-table
+files also have zero MD5 checksums. It binds that archive hash
+`11ff6729a881f3d1a2e72c2a9c4bd2c096e02c5dfb3858d942405e0514b7b95c` and the same
+link map. The object SHA-256 values identify extracted binary members, not their
+source text.
+
+The distinct compiler-read summary (`android-compiler-summary.txt`, SHA-256
+`98c689545204795200675800a6b1004aecc487ec55e25a4029ea8e17a18753ee`) reports
+72 actual built objects, 72 compiled source keys and 1,435 selected inputs,
+and explicitly limits this to compiler reads rather than surviving archive
+members or legal approval. The complete 7,599-byte compiled-source manifest
+(SHA-256 `399797e9bd52e0dd27c10c99fd64378f9a183f025f36cba0102e08ce507f05b3`;
+pages `vcs-read/1b71064be25b4e98838452af83c04070` and
+`vcs-read/39d3af58fcf44a01a4de9660ef0dcefa`) lists the probe's generated and
+`source/...` files, not sources for the NDK's prebuilt runtime archives. Thus the
+current compiler-read hashes cannot close source bytes for those archives.
+Neither DWARF paths nor archive/member hashes prove source identity, patch
+application, notice applicability or redistribution. The emulator probe is
+API 35 x86_64 only, not physical-device evidence.
 
 The earlier bounded capture completed on the exact diagnostic publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
@@ -1112,19 +1149,18 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Current evidence limits:** the latest exact combined native-engine probe is
-publication `a717c516acc2cd60945b93cc65c6d9d37387033e1116a0aeae897794c08f77e8`
-/ SHA `1af9fc2853ff8998c261c7ad8b7f5302873c240e`. Receipt-bound status
-`vcs-read/5dab69ca10fd42f2b3247c07c95dc5f3` shows the Android API 35 x86_64
-and Windows x64 probe checks passed in run `42493623648`. The Android artifact
-set includes the corrected bounded DWARF report and the linker-map contribution
-manifest; these captures are now present on this exact publication, rather than
-outstanding. The Android smoke is limited to the API 35 x86_64 emulator. The
-reports identify candidate member paths, mapped sections and one synthetic
-sample; they do not prove NDK object/source bytes, patch application, retained
-executable sections, applicable terms/notices, redistribution or physical-device
-behavior. See the platform gates below for the exact retained evidence and open
-conditions.
+**Current evidence limits:** the latest exact native-engine probe publication is
+`3785c8518bedd38e205423534510ea5786925117816e5d461815c0d692b4ab0c` / SHA
+`284349acc34b37f36fdb8195925834af8280a7e6`. Receipt-bound status
+`vcs-read/a5a89d32cd964b59b484462893a6902e` shows the Android API 35 x86_64
+and Windows x64 probe checks passed in run `42531164878`. The Android capture
+now maps two selected archive members to component-relative DWARF paths, but
+has no source-file checksums; the separate compiler-read manifest covers the
+probe's inputs, not NDK prebuilt runtime sources. These results do not establish
+source identity, patch application, applicable terms/notices, redistribution or
+physical-device behavior. The Android smoke is limited to the API 35 x86_64
+emulator; adoption remains disabled until each platform's independent gates
+close.
 
 The previous exact Android probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
