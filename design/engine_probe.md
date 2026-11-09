@@ -125,7 +125,23 @@ SHA-256 `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`
 `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`, including
 the regex and demangler patches. The separate retained patch manifest covers
 four selected blobs only; the source-info listing is broader and is metadata,
-not proof that any patch was applied to an installed object or header.
+not proof that any patch was applied to an installed object or header. The exact
+`patches/PATCHES.json` at that `llvm_android` revision is 55,313 decoded bytes,
+SHA-256 `0857edf7f3a0f2abfb41ba2540922e47ffc83c797533a86252557333f8c9dc54`
+(`mizu_fetch/ee698ffe538cee016610bd7a2e9b196b437f9e1e6f73c0d59dbbece5757dc6f2`,
+`experiments/ee4d3c07dde543249e4db75457bf602e`). Its 137 records contain
+`metadata`, `platforms`, `rel_patch_path` and `version_range` fields, but no
+patch hash/digest or postimage field. Exact path/title matches identify the
+four retained patch entries as Android patches; their recorded ranges are
+`move-cxa-demangle-into-libcxxdemangle.patch` (from 475365, no `until`),
+`9a2fd97d391caf1060e303f636d7113501788d2f-r530567.patch` (530567 to 548556),
+`b433076fcbacba8a3b91446390bbea5843322bcd-v2.patch` (530567 to 531383; the
+unsuffixed variant ends at 530567), and
+`e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` (530567 to 539017)
+(`experiments/7f0cf44e6e214321990a2b102b4c19c1`). These are upstream
+platform/version metadata, not proof of application to this NDK build, installed
+source postimages or selected archive members; the range-boundary interpretation
+and build-time patch execution are not established here.
 
 Android's NDK C++ support guide says libc++ may be linked statically or as a
 shared library, and that `libc++_shared.so` is not a system library and must be
