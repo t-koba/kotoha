@@ -2,17 +2,27 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. The latest exact native-probe publication is
-`ab0e4c71f09a95cee50e9d8b5f654f8df46071185c9eb3ad60394010e6a16d50` / SHA
-`a7d9ff104e50454b9e018544d92d429ea3d13b06` (code digest
-`38d05a1dc46d541938d6ba9efb33e9c473a35a3b6ec1a3ec2dfee6f31d990380`). Its
-receipt-bound status (`vcs-read/11f3f17d527c4967beeee78974c47f63`) reports the
+`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
+`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292` (code digest
+`83bdaf711b349221f18dd99fddf02aba2203e946ea91ed3d55b9d10784044558`). Its
+receipt-bound status (`vcs-read/f495e27f1c2a4884afdf58455436fca0`) reports the
 Android API 35 x86_64 and Windows x64 native-probe checks successful in run
-`42534227635` (jobs `128894858502` and `128894858690`). These are feasibility
+`42548704285` (jobs `128939244180` and `128939244483`). These are feasibility
 observations only, not source, license, redistribution, adoption, or physical-
 device approval.
 
-The previous exact full-CI publication `523041581cee6bae793cc1ec6be19f5debbdad74b74a0078cbb2a99c49d8b823`
-/ SHA `38abcdd872705ec2471008098954abd6c85900a7` (run `42511182547`; status
+The latest exact application-CI publication is
+`4f6f52ea633ec5f63764556d9461f75b2cfda597c4ba593d6ed8a74c6a249cea` / SHA
+`f2fcd2da091e3146a20cdd4f78232684bce28680` (code digest
+`89c968db201a784d2a8125336f03b5fa56a8105543afda77693ceab5db755fec`; status
+`vcs-read/d084501b24404954aaa4c90c64ab04c4`, run `42550784673`). Design,
+Flutter, and Windows checks passed; Android, iOS, and macOS checks failed. This
+application CI is distinct from the developer engine probes and does not close
+engine source, licensing, runtime, or adoption gates.
+
+An earlier exact full-CI publication
+`523041581cee6bae793cc1ec6be19f5debbdad74b74a0078cbb2a99c49d8b823` / SHA
+`38abcdd872705ec2471008098954abd6c85900a7` (run `42511182547`; status
 `vcs-read/715ab52343a140a88ea34f3b46058920`) passed Flutter, Design, and Windows
 checks but failed Android and Apple. Android instrumentation completed 20/20
 tests, then `emulator-5554` went offline and the emulator segfaulted; the
@@ -1329,17 +1339,18 @@ capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
 **Current evidence limits:** the latest exact native-engine probe publication is
-`3785c8518bedd38e205423534510ea5786925117816e5d461815c0d692b4ab0c` / SHA
-`284349acc34b37f36fdb8195925834af8280a7e6`. Receipt-bound status
-`vcs-read/a5a89d32cd964b59b484462893a6902e` shows the Android API 35 x86_64
-and Windows x64 probe checks passed in run `42531164878`. The Android capture
-now maps two selected archive members to component-relative DWARF paths, but
-has no source-file checksums; the separate compiler-read manifest covers the
-probe's inputs, not NDK prebuilt runtime sources. These results do not establish
-source identity, patch application, applicable terms/notices, redistribution or
-physical-device behavior. The Android smoke is limited to the API 35 x86_64
-emulator; adoption remains disabled until each platform's independent gates
-close.
+`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
+`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`. Receipt-bound status
+`vcs-read/f495e27f1c2a4884afdf58455436fca0` shows the Android API 35 x86_64
+and Windows x64 feasibility checks passed in run `42548704285`. The Android
+link-map-bound archive manifest identifies four NDK archives and 47 member
+entries; the sanitized line-table capture covers 26 libc++ members but reports
+no source-file checksums. Windows loader capture observes 11 providers on one
+CI runner, including the Microsoft C++ runtime DLLs. Neither platform's probe
+establishes selected-member source identity, patch application, applicable
+terms/notices, redistribution, supported-target runtime coverage, or
+physical-device behavior. Adoption remains disabled until each platform's
+gates close independently.
 
 The previous exact Android probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
@@ -1606,23 +1617,39 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 ### Android selected runtime and delivery gate
 
 The latest exact Android API 35 x86_64 native-engine probe is publication
-`a717c516acc2cd60945b93cc65c6d9d37387033e1116a0aeae897794c08f77e8` / SHA
-`1af9fc2853ff8998c261c7ad8b7f5302873c240e`; its Android check passed in run
-`42493623648` (job `128771063706`; status `vcs-read/5dab69ca10fd42f2b3247c07c95dc5f3`).
-The exact report `vcs-read/c5ff83d15f9046859a8826ccef35f323` (12,917 bytes,
-SHA-256 `5a0764d6fb9c795d4f80998a40dfdc347fe65180b63743e3cd856f763ab080ec`)
-binds the link map and `libc++_static.a` to the captured archive manifest. It
-records compile units for all 26 selected libc++ members, component-relative
-`libcxx/src/...` DWARF paths, and reduced producer `clang version 19.0.1`; raw
-archive-member objects and raw DWARF are not retained. The separate contribution
-artifact `vcs-read/c017d0011315425ca607cad010b4733a` (459,104 bytes, SHA-256
-`504654291e47812ef7883f7f124879e921382fcd9ed4e0a4d08f88be3aefb6b5`) records
-1,563 input-section contributions across those 26 members. The archive manifest
-names 47 NDK archive members across compiler-rt, libunwind, libc++, and libc++abi;
-the contribution artifact covers only libc++ and is not proof that mapped bytes
-survive in the final executable.
+`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
+`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`; its Android check passed in run
+`42548704285` (job `128939244180`; status `vcs-read/f495e27f1c2a4884afdf58455436fca0`).
+The exact link-map-bound archive manifest (`vcs-read/ab145b556d3e4abaa2e551e60a97ba7d`,
+5,685 bytes, SHA-256 `0b7ad33714a4b1b52f822a7b21c6775494631739030dc625531ba796efade9ce`)
+records four selected NDK archives: compiler-rt builtins (303,678 bytes;
+SHA-256 `82419d3e4735288342b2042c7418c3f49e352a721f43ce3966918a835580326a`),
+libunwind (94,182 bytes; SHA-256
+`a1d9a8a7242c22c32c1ce57108f2c4f6687f4af5c0526b207e394f2099e8482a`),
+`libc++_static.a` (14,336,094 bytes; SHA-256
+`893dc67b8c7eef4000af6e582421a14ea7e5fdec97249496005fc3a48f7d7099`), and
+`libc++abi.a` (2,792,306 bytes; SHA-256
+`11ff6729a881f3d1a2e72c2a9c4bd2c096e02c5dfb3858d942405e0514b7b95c`). It
+records 47 archive-member entries across
+those four archives and binds a 4,660,773-byte link map at SHA-256
+`2402cfa450db1486d103f60f64f245923afd639b74f2a1b2b06944f340936fbd`.
 
-The exact smoke artifact `vcs-read/410e26585a2e498795730bce37451744`
+The sanitized member-debug report (`vcs-read/5e158fb631aa4089bb1ec8bf305187ad`,
+307,918 bytes) and capture summary (`vcs-read/fca9de84bf764cff86fac376315c6b7c`)
+report compile units and line tables for all 26 selected `libc++_static.a`
+members, 1,506 line-table file entries and zero file MD5 checksums. Component-
+relative paths such as `libcxx/src/algorithm.cpp` and the reduced producer
+`clang version 19.0.1` are source-location/build clues, not source-byte identity.
+Raw archive-member objects and raw DWARF are not retained. The 4,660,773-byte map
+was not assembled and independently re-hashed in this audit.
+
+An earlier contribution artifact (`vcs-read/c017d0011315425ca607cad010b4733a`,
+459,104 bytes, SHA-256
+`504654291e47812ef7883f7f124879e921382fcd9ed4e0a4d08f88be3aefb6b5`) records
+1,563 input-section contributions across the 26 libc++ members. It does not
+prove that mapped bytes survive in the final executable.
+
+A prior exact smoke artifact `vcs-read/410e26585a2e498795730bce37451744`
 (SHA-256 `6d63d1b4fde218427a91dcca18595a68b770465d7c9ddf27a13af9f3616c519e`)
 records Android 15/API 35 x86_64 emulator fingerprint
 `Android/sdk_phone64_x86_64/emu64x:15/AE3A.240806.019/12368160:userdebug/test-keys`,
@@ -1643,16 +1670,16 @@ redistribution authorization remain open; Android engine adoption stays disabled
 ### Windows runtime and delivery gate
 
 The latest exact Windows x64 native-engine probe is the same publication
-`a717c516acc2cd60945b93cc65c6d9d37387033e1116a0aeae897794c08f77e8` / SHA
-`1af9fc2853ff8998c261c7ad8b7f5302873c240e`; its Windows check passed in run
-`42493623648` (job `128771063475`; status `vcs-read/5dab69ca10fd42f2b3247c07c95dc5f3`).
-The exact `runtime-providers.json` artifact (`vcs-read/339838cf95884ba1b24c4bf67d14da30`,
-5,692 bytes, SHA-256 `450ce0c1f74b55deba34fa5c13f82b607a8d1427e2621a98b20ecbbdf419fafc`)
-and summary (`vcs-read/69f5b84847d64ba7b7d8c634f337ec09`, SHA-256
-`882fb93c80accc69432068e60b044d8dc81cb43d1bbcc4c0455b98f0657259b5`) bind the
+`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
+`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`; its Windows check passed in run
+`42548704285` (job `128939244483`; status `vcs-read/f495e27f1c2a4884afdf58455436fca0`).
+The exact `runtime-providers.json` artifact (`vcs-read/48bcf2c49d564ffd8e30c524ad23b648`,
+5,692 bytes, SHA-256 `f15d808ad9f60019bb74430ae17651ace0a2875f2bcbcc7931308ed84605ea7f`)
+and summary (`vcs-read/8a16e9783db2457e8ffd82048941d9e3`, 2,845 bytes, SHA-256
+`0cb01d17a258de559a7833f74f40b656c7e52336119a0a2d2f2ebb7057810435`) bind the
 pre-entrypoint `llama-simple.exe --help` capture to executable SHA-256
-`fef29542fdc1cd13e579d64e2bd5c018e2698f979879c66034eeccfbc1fff745` and linkage
-SHA-256 `8042425d905cedfffcc422c2885470eabc18273a3374b314221bee2b9c033987`.
+`bceb196cc19f3c640617059b564f661591acc09862e2c4077568a6a7d9bc1f95` and linkage
+SHA-256 `d221d76bd973734c5e2d99ea4a7586f11414c0e9d3fef110df5ce24736880fec`.
 They report 14 direct imports, zero delay imports, 9 API-set contracts, 11
 loader-resolved providers and zero redacted paths. Direct imports include
 `MSVCP140.dll`, `VCRUNTIME140.dll` and `VCRUNTIME140_1.dll`; each resolved under
