@@ -22,6 +22,14 @@ final class NativeExportPanelUITests: XCTestCase {
     app.terminate()
   }
 
+  private func focusRunnerWindowThroughVoiceOver() {
+    app.activate()
+    // VO-Shift-F4 moves VoiceOver's cursor to keyboard focus; VO-Shift-Down
+    // interacts with that focused item so the test can observe Flutter AX nodes.
+    app.typeKey(.F4, modifierFlags: [.control, .option, .shift, .function])
+    app.typeKey(.downArrow, modifierFlags: [.control, .option, .shift])
+  }
+
   private func logScrollDiagnostics(target: XCUIElement) {
     func describe(_ identifier: String, element: XCUIElement) -> String {
       guard element.exists else { return "\(identifier){exists=false}" }
@@ -70,6 +78,7 @@ final class NativeExportPanelUITests: XCTestCase {
       let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
       let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
       start.press(forDuration: 0.05, thenDragTo: end)
+      focusRunnerWindowThroughVoiceOver()
     }
     let fieldExists = field.waitForExistence(timeout: panelTimeout)
     if !fieldExists || !field.isHittable {
