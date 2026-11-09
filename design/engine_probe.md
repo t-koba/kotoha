@@ -105,9 +105,33 @@ comparisons below retain distinct base, patch-commit and installed-input hashes.
 
 The archive manifest names `cxa_demangle.cpp.o` and `regex.cpp.o`; the
 source-info/compiler-read comparison below also identifies the regex header as
-a selected input. These are candidate overlaps only: the CMake patch's
-configured effect, installed patch postimages and patch application to the
-captured NDK remain unproven. The other two patches alter Clang/LLVM code
+a selected input. The candidate source named by that compile-unit path,
+`libcxx/src/regex.cpp`, was fetched at both the NDK source-info base revision
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and compiler-reported candidate
+revision `97a699bf4812a18fb657c2779f5296a4ab2694d2`; both complete files are
+10,538 bytes with identical SHA-256
+`87ce61e6756d2a07a5794ed44df844a4c3e02c5cf91cfcf0d3c6626f7e846643` and carry
+`SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception` (`mizu_fetch/095318a3e8c5b93590dad1184efd652bebe562ebfb4c8d226aa1666deca3b5e5`,
+`mizu_fetch/fc7aa1f8bd4d37a337f3e46da18fcf547b5b2260627315788f9f78ee791ed3b5`,
+`experiments/17476b633f934cccb8d1647a09e8091f`,
+`experiments/ebe834bf61094809a9a65c962eb82ae1`). This classifies only the
+candidate source file; the archive member's DWARF has no MD5 and no
+object-to-source build attestation exists, so it does not establish that the
+selected `regex.cpp.o` was built from those bytes or classify the other selected
+members. For archive-manifest member `cxa_demangle.cpp.o`, the
+same-basename candidate `libcxxabi/src/cxa_demangle.cpp` was fetched at both
+LLVM revisions `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and
+`97a699bf4812a18fb657c2779f5296a4ab2694d2`; each complete file is 11,815 bytes
+with SHA-256 `75d8f3ff6fb628bc57508f4c95cc8534e228c085e4e5167c593ea1cf4f703e97`
+and has `SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`
+(`mizu_fetch/63c619ecebd3013f3c19a75030bea5b2f0369d1df8bce4356a02af4cebe6705a`,
+`mizu_fetch/f9a15fd1f8d2234d08d583c83f39bdb0905bad0aec167528de3e1bfa242c5f3c`,
+`experiments/86953d5f783c41cc9766758cac8b2b6e`,
+`experiments/522cb221247f4fa9856ce1055a3f3efd`). This identifies a candidate
+source file's terms only; the archive report supplies no member source checksum
+or object-to-source build attestation. These are candidate overlaps only: the
+CMake patch's configured effect, installed patch postimages and patch application
+to the captured NDK remain unproven. The other two patches alter Clang/LLVM code
 that may affect generated objects despite not targeting an engine runtime
 member. Neither path comparison establishes member bytes, surviving code,
 notice applicability or redistribution authorization. The exact NDK terms
