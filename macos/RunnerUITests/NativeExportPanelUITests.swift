@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import XCTest
 
@@ -36,7 +37,8 @@ final class NativeExportPanelUITests: XCTestCase {
     }
     // Deliberately omit element values: these diagnostics report only geometry
     // and accessibility availability, never draft contents.
-    print("KotohaScrollDiagnostic windowFrame=\(windowFrame) " +
+    print("KotohaScrollDiagnostic voiceOverEnabled=\(NSWorkspace.shared.isVoiceOverEnabled) " +
+          "windowFrame=\(windowFrame) " +
           "scrollViews=\(app.scrollViews.count) " +
           describe("target", element: target) + " " +
           visibleFields.joined(separator: " "))
