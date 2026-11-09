@@ -773,6 +773,20 @@ objects are retained.
 The compiler log reports Android clang 19.0.1, based on r530567e, repository
 commit `97a699bf4812a18fb657c2779f5296a4ab2694d2` (`vcs-read/c2129f0d0cae49969429c6c18adadfde`). An exact upstream commit-metadata read identifies this as “Merge 3b5e7c83… for LLVM update to 530567”, with `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` as its second parent. The installed `clang_source_info.md` instead names that `3b5e7c83…` commit as its base revision and lists Android toolchain patches from repository revision `e727bfb014bd436f581a66a450c939a6983a1fc3`. The component `LICENSE.TXT` hashes recorded above were re-fetched at base revision `3b5e7c83…` and match, but this verifies only identical license-text bytes, not that the patched installed archives' selected object code matches the mapped source files. Patch-to-member/source closure remains open.
 
+Official NDK issue #1894 asked whether `clang_source_info.md` covered only
+Clang or all bundled LLVM components, explicitly including libc++; NDK
+contributors answered “Yes” and clarified it was “the whole toolchain.” A
+collaborator pointed to the `llvm_android` instructions for checking out a
+prebuilt release and applying `toolchain/llvm_android/patches/PATCHES.json`
+with `patch_manager.py` (issue capture `mizu_fetch/e579f70a79e7d4ca3dd04c83fcb52850138cfbb5ad56184dd1cb86579530c985`,
+page SHA-256 `7fbaa4abdc6357d43c074d5fa8e21677f54860edae15e5ceb1b14c2ad65258d0`).
+This corroborates the intended whole-toolchain scope of the source-info metadata
+and supplies an official source-reconstruction route for libc++/libc++abi. The
+issue concerns r26 canary (2023), not this r28c x86_64 installation; neither it
+nor the reconstruction instructions attest that installed archive-member bytes
+match reconstructed sources, prove a listed patch changed a selected member, or
+resolve selected-section license/notice applicability.
+
 ### Pinned Android LLVM patches and selected inputs
 
 The exact diagnostic Android publication is
