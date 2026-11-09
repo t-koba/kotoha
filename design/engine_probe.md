@@ -344,23 +344,21 @@ memory: `libunwind.a` (94,182 bytes) and compiler-rt builtins (303,678 bytes)
 have Git blob IDs and raw SHA-256 values matching both the r28c tree and the
 installed NDK archive manifest (`experiments/3a0bd1e667174204a688138f9b9da2b2`,
 `experiments/aac0c54a002b4c6faa63a45f9a80f00c`; installed manifest
-`vcs-read/ea337517054446ce9609fb934cb61c55`). This establishes byte identity
-for those two archive files (six of the 47 selected members) with the official
-r28c prebuilts. The two larger libc++ archives are not yet byte-matched.
+`vcs-read/ea337517054446ce9609fb934cb61c55`).
 
-The archive-manifest capture now records a Git blob SHA-1 alongside SHA-256
-for each NDK-linked archive, using Git's `blob <size>\0<bytes>` framing in the
-same streaming read; no archive or member bytes are retained. This enables a
-local comparison to the official Gitiles blob IDs without fetching those larger
-files. The new capture has passed its targeted unit test, but its exact Android
-CI output is pending; therefore byte identity is not yet established for
-`libc++_static.a` or `libc++abi.a`. Even after those checks, archive-level
-identity plus the official build manifest would establish provenance only at
-the published-build/archive level. It would not supply a compilation record
-for each of the 47 objects, prove each object's exact source/preprocessor
-inputs or patch postimages, determine which sections survive in a product, or
-settle notice applicability, licensing, redistribution, device behavior, or
-engine adoption.
+The exact Android API 35 x86_64 probe on publication
+`e4aba22248d229aad5e332313fe7e01dd79b2b30f36df47af849688b38e1dd85`, SHA
+`3b01112722440130634f9d835057602c09de0dce`, passed job `128914661486`. Its
+5,685-byte archive manifest (`vcs-read/31a3a90a5e1f4de3a67df541efd1a0d8`,
+SHA-256 `625fa883ac3ec4e01aaf59b59a057eead4d600659bcb05c23d9364fa8436a8ff`)
+records Git blob SHA-1s for all four NDK-linked archives, each matching the
+official r28c Gitiles IDs listed above. This establishes byte identity for all
+four archive files. The files list 47 selected members in the probe manifest. It
+does not map individual object bytes
+to source, establish patch application or surviving sections, or settle
+applicable notices, licensing, redistribution, device behavior, or engine
+adoption. The capture streams the Git `blob <size>\0<bytes>`
+framing alongside SHA-256 and retains no archive or member bytes.
 
 ### NDK archive-member source terms (partial)
 
