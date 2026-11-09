@@ -129,7 +129,18 @@ and has `SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`
 `experiments/86953d5f783c41cc9766758cac8b2b6e`,
 `experiments/522cb221247f4fa9856ce1055a3f3efd`). This identifies a candidate
 source file's terms only; the archive report supplies no member source checksum
-or object-to-source build attestation. These are candidate overlaps only: the
+or object-to-source build attestation. The first member record in the same
+line-table report names `libcxx/src/algorithm.cpp` as a component-relative path
+(`vcs-read/f4f31cc0c31d42f3bbe2919e3dae45e4`). The candidate file at both LLVM
+revisions is 2,648 bytes with identical SHA-256
+`5965a2ccb91e21d3dbeaa659299e43566a8128d9648743395d1dd14d592ec8a7` and carries
+`SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`
+(`mizu_fetch/a56dc473fc2c678671ec9cad7e2f56f5503390d86c98473b3dce53f821fc21b9`,
+`mizu_fetch/2445511eff5e44ac61a7a487c93321f0237b4808b26574a700da43e6d7550e98`,
+`experiments/aafad769ddee4676be442b6b73ed77f4`,
+`experiments/0924469b66474471a6f4bd0b54acb437`). This also identifies only a
+candidate source file; the report contains no per-member source checksum or
+object-to-source build attestation. These are candidate overlaps only: the
 CMake patch's configured effect, installed patch postimages and patch application
 to the captured NDK remain unproven. The other two patches alter Clang/LLVM code
 that may affect generated objects despite not targeting an engine runtime
@@ -623,7 +634,18 @@ LLVM-exception` (source SHA-256 respectively
 `87ce61e6756d2a07a5794ed44df844a4c3e02c5cf91cfcf0d3c6626f7e846643`, and
 `eb6c7923d2e8ddc9347410b95981c6b800ccbe251d34057e5fca9069bf99ecf2`). These
 are representative source-file checks, not a file-by-file license audit of all
-47 candidates. The component `LICENSE.TXT` files at this base (whole-file
+47 candidates. The sole selected compiler-rt member candidate `emutls.c.o` was
+also compared at the NDK source-info revision `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`
+and compiler-reported LLVM revision `97a699bf4812a18fb657c2779f5296a4ab2694d2`:
+the complete candidate files match at 13,660 bytes, SHA-256
+`a4437f3e329a0835adbc7df38e36df12f358d05c073b11813c409f849c2345d2`, and each
+carries `Apache-2.0 WITH LLVM-exception` (`mizu_fetch/3bb9c49f107b5dd9fba93a4bdfeafe2f7278ecdbc17d80b85313e24bdf993396`,
+`mizu_fetch/d687ab5ff4bc2353b7958e7dab2c45d19066d2552c43282e64aa96402048676c`,
+`experiments/bd51d804edf348f3b2ef141f42fece6c`,
+`experiments/c92e4f78500042b085317ab7cab4aa96`). This identifies only the two
+candidate source files and their file-level terms, not the prebuilt archive
+member's source bytes, patch state, notice applicability, or redistribution
+closure. The component `LICENSE.TXT` files at this base (whole-file
 SHA-256 values in the preceding table) explicitly describe their libraries as
 dual licensed under Apache-2.0 WITH LLVM-exception and legacy UIUC/NCSA and MIT
 options, consistent with the project policy summarized above. This component-
