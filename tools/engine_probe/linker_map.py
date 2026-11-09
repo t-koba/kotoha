@@ -19,7 +19,7 @@ _MEMBER_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.+-]*\.o\Z')
 _CHUNK_BYTES = 1024 * 1024
 
 
-def _sha256_file(path):
+def _archive_hashes(path, include_git_blob):
     before = path.stat(follow_symlinks=False)
     if not stat.S_ISREG(before.st_mode):
         raise RuntimeError(f'not a regular archive file: {path.name}')
@@ -31,6 +31,9 @@ def _sha256_file(path):
         os.close(fd)
         raise
     digest = hashlib.sha256()
+    git_blob = hashlib.sha1(usedforsecurity=False) if include_git_blob else None
+    if git_blob is not None:
+        git_blob.update(f'blob {before.st_size}\0'.encode('ascii'))
     observed = 0
     with stream:
         opened = os.fstat(stream.fileno())
@@ -42,12 +45,14 @@ def _sha256_file(path):
                 break
             observed += len(chunk)
             digest.update(chunk)
+            if git_blob is not None:
+                git_blob.update(chunk)
         after = os.fstat(stream.fileno())
     if (observed != before.st_size or after.st_size != before.st_size or
             (before.st_dev, before.st_ino, before.st_mtime_ns) !=
             (after.st_dev, after.st_ino, after.st_mtime_ns)):
         raise RuntimeError(f'archive changed while hashing: {path.name}')
-    return observed, digest.hexdigest()
+    return observed, digest.hexdigest(), git_blob.hexdigest() if git_blob is not None else None
 
 
 def _archive_location(raw_path, build_root, ndk_root):
@@ -219,14 +224,17 @@ def _linked_archives(members_by_archive, build_root, ndk_root, map_size, map_sha
     for (root_name, relative), members in sorted(members_by_archive.items()):
         archive_path = (build_root if root_name == 'build' else ndk_root) / relative
         archive_path = archive_path.resolve(strict=True)
-        size, digest = _sha256_file(archive_path)
-        archives.append({
+        size, digest, git_blob_sha1 = _archive_hashes(archive_path, root_name == 'ndk')
+        record = {
             'root': root_name,
             'path': relative,
             'size': size,
             'sha256': digest,
             'members': sorted(members),
-        })
+        }
+        if git_blob_sha1 is not None:
+            record['git_blob_sha1'] = git_blob_sha1
+        archives.append(record)
     return {
         'schema': 1,
         'link_map': {'size': map_size, 'sha256': map_sha256},
@@ -306,6 +314,7 @@ def record(path, max_bytes, output_dir, build_root, ndk_root):
                 'path': 'ndk/' + libcxx_archive['path'],
                 'size': libcxx_archive['size'],
                 'sha256': libcxx_archive['sha256'],
+                'git_blob_sha1': libcxx_archive['git_blob_sha1'],
             },
             'counts': {
                 'members': len(libcxx_archive['members']),

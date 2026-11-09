@@ -307,6 +307,61 @@ The manifest identifies selected members, including both `libc++_static.a` and
 5 libunwind, 26 libc++, 15 libc++abi). Neither the manifest nor archive hashes
 prove which linked sections survive or close licensing.
 
+### Official r28c build record and prebuilt archive identity
+
+The official `platform/prebuilts/clang/host/linux-x86` tree at
+`refs/tags/ndk-r28c/clang-r530567e` contains `BUILD_INFO` and
+`manifest_13624864.xml` (fetch receipts `mizu_fetch/3aba4abb8040e8e9f2da4c9443c00dd2ff66c1d26863c389a7dc1034aa76fdd4` and
+`mizu_fetch/37299249291ad581e35c2ace231111b9d3478f81419b977ead2022159bd14752`).
+The bounded `BUILD_INFO` inspection records build ID `13624864`, branch
+`aosp-llvm-r530567`, `build_type=submitted`, and source revisions
+`toolchain/llvm-project=97a699bf4812a18fb657c2779f5296a4ab2694d2`,
+`toolchain/llvm_android=e727bfb014bd436f581a66a450c939a6983a1fc3`, and
+`toolchain/common=0bce8b062126242872e9f3fc66760d3f76773c49`
+(`experiments/268c2dbd59a14bcead0c14a9a838f337`). The official `BUILD.md`
+rebuild route syncs a named manifest and supports rebuilding a particular
+toolchain (`mizu_fetch/b90aad88d722d497243b86972572f68eee92363ba3c254dd0e22e2d9b14876dc`;
+`experiments/50d7e4d44d3d43e3bbe31215031c4aa9`). This is official
+build-input/rebuild provenance. A bounded recursive field scan found no
+archive/member/hash/digest fields in `BUILD_INFO`
+(`experiments/9ca5cd1b929645f98739c7f32ab12a25`); the manifest supplies no
+archive-member-to-source map. These records contain no signed per-member build
+attestation.
+
+The same r28c prebuilt tree lists the probe's four x86_64 NDK archives: the
+libc++ files under `android_libc++/ndk/x86_64/lib/`,
+`libunwind.a` under `runtimes_ndk_cxx/x86_64/`, and
+`libclang_rt.builtins-x86_64-android.a` under `runtimes_ndk_cxx/`. Its Gitiles
+blob IDs are `b5416bc9c2e386d7f0c4561d8cca99d397cda14f`
+(`libc++_static.a`), `dab6da029cdfac8c822954bd4be98e3dfcbcb896`
+(`libc++abi.a`), `8150ca0f28c986030276ba92bf1808c4691f73a9` (`libunwind.a`), and
+`b681ebb13e6c285dc6516496817c68bed2e410ba` (compiler-rt builtins)
+(`mizu_fetch/5c6462635a572f8f9defb1ea300ab28140c50b5a160319740f2de9f4ad7c5189`,
+`mizu_fetch/0f6f33370603d110dde18ae053776ee33c986dbfe81a115f6aa960d632ebe311`,
+`mizu_fetch/e3c1c3758496b2171ad68f922a3999145c4b1899f4dfb1cdfc8224c15cb86d5a`).
+Bounded experiments decoded only the two smaller upstream archive responses in
+memory: `libunwind.a` (94,182 bytes) and compiler-rt builtins (303,678 bytes)
+have Git blob IDs and raw SHA-256 values matching both the r28c tree and the
+installed NDK archive manifest (`experiments/3a0bd1e667174204a688138f9b9da2b2`,
+`experiments/aac0c54a002b4c6faa63a45f9a80f00c`; installed manifest
+`vcs-read/ea337517054446ce9609fb934cb61c55`). This establishes byte identity
+for those two archive files (six of the 47 selected members) with the official
+r28c prebuilts. The two larger libc++ archives are not yet byte-matched.
+
+The archive-manifest capture now records a Git blob SHA-1 alongside SHA-256
+for each NDK-linked archive, using Git's `blob <size>\0<bytes>` framing in the
+same streaming read; no archive or member bytes are retained. This enables a
+local comparison to the official Gitiles blob IDs without fetching those larger
+files. The new capture has passed its targeted unit test, but its exact Android
+CI output is pending; therefore byte identity is not yet established for
+`libc++_static.a` or `libc++abi.a`. Even after those checks, archive-level
+identity plus the official build manifest would establish provenance only at
+the published-build/archive level. It would not supply a compilation record
+for each of the 47 objects, prove each object's exact source/preprocessor
+inputs or patch postimages, determine which sections survive in a product, or
+settle notice applicability, licensing, redistribution, device behavior, or
+engine adoption.
+
 ### NDK archive-member source terms (partial)
 
 The exact manifest's four NDK archives name 47 members: one compiler-rt builtin,

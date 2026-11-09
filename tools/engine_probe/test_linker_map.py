@@ -70,6 +70,7 @@ class LinkerMapTests(unittest.TestCase):
                 'path': 'toolchains/libc++_static.a',
                 'size': self.ndk_archive.stat().st_size,
                 'sha256': hashlib.sha256(self.ndk_archive.read_bytes()).hexdigest(),
+                'git_blob_sha1': 'e9b63b079edd8087c7912936b003b5e4d4f1ae6d',
                 'members': ['locale.cpp.o', 'string.cpp.o', 'wchar.cpp.o'],
             },
         ])
@@ -81,6 +82,7 @@ class LinkerMapTests(unittest.TestCase):
             'path': 'ndk/toolchains/libc++_static.a',
             'size': self.ndk_archive.stat().st_size,
             'sha256': hashlib.sha256(self.ndk_archive.read_bytes()).hexdigest(),
+            'git_blob_sha1': 'e9b63b079edd8087c7912936b003b5e4d4f1ae6d',
         })
         self.assertEqual(contributions['counts'], {
             'members': 3, 'members_with_contributions': 3, 'contributions': 3})
