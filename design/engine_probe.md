@@ -328,6 +328,16 @@ archive/member/hash/digest fields in `BUILD_INFO`
 archive-member-to-source map. These records contain no signed per-member build
 attestation.
 
+A June 2023 NDK issue discussion about prebuilt libc++ (NDK issue #1894, fetched
+as `mizu_fetch/1d7a64911c4a5062a30c0d63eb61fa82d3ffc8ef87b740ae2651eb35110b9bbd`,
+SHA-256 `516e88f9b0d7e04a6c6bd5ea4b6fcfc0129904f19d55335ad218388302e8781b`)
+contains a contributor's clarification that `clang_source_info.md` covers the
+whole toolchain and a collaborator's direction to rebuild from pinned sources
+using `llvm_android/patches/PATCHES.json` and `patch_manager.py`. This historical
+issue discussion is context, not an r28c per-member build attestation; it
+does not establish the source bytes or patch postimages of any captured archive
+member.
+
 The same r28c prebuilt tree lists the probe's four x86_64 NDK archives: the
 libc++ files under `android_libc++/ndk/x86_64/lib/`,
 `libunwind.a` under `runtimes_ndk_cxx/x86_64/`, and
