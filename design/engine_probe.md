@@ -1738,7 +1738,11 @@ The observed System32 providers have cache-only `WinVerifyTrust` signer status
 `Valid`; no online revocation retrieval or provider binaries are retained. This
 is one CI-runner loader observation, not a Windows runtime entitlement or
 redistribution authorization. The exact run does not establish providers or
-installation terms on other Windows versions.
+installation terms on other Windows versions. Because capture records path,
+version and cache-only signature status but not installation history, a
+`windows/system32` path does not establish whether these VC++ DLLs came with the
+OS image or were installed by a Visual C++ Redistributable, and it does not
+identify the applicable installation license.
 
 The developer-only Windows workflow captures actual `LOAD_DLL_DEBUG_EVENT`
 file handles before the executable entrypoint, hashes observed files, records
@@ -1778,13 +1782,13 @@ path blocked under the current operator constraint; any alternative toolchain
 or runtime requires a separate evidence and licensing review. Windows engine
 adoption remains disabled. The exact provider binaries and runner license terms
 are not retained.
-Sources retrieved 2026-11-08: VS 2026 REDIST receipt
-`mizu_fetch/7881f08bbb7a445200d35e7018cd772e6069168f4a20f97dbba26529e037be9d`,
-SHA-256 `d103654c2ba511d3f9934fc4ae62cf4342b6a92d737867b9b8315bad88ce413e`;
-VC++ redistribution page `mizu_fetch/0540ed656694535d3b217cf5c6ac779e6391103e4e5eb44bc8f7d25264a333df`,
-SHA-256 `b54924fde2ea7cb46a7002aebdffcd06a27e84f310a74fbf9543355dfe059863`;
-latest supported runtime page `mizu_fetch/32530cdeed12944dea69d9fe0294bc551574bab54d7b8909a8aa92af488ee51b`,
-SHA-256 `631e73734f66a3a62546d9c97bcd7408447548f312aae54a2aec9170e5c0592e`.
+Microsoft Learn pages rechecked 2026-11-14: VS 2026 REDIST receipt
+`mizu_fetch/7803f903ad50092c27dea8a7dd86047c0daeae28efd85e7a73e02f4af210cb18`,
+SHA-256 `47760a35d83bb02d2931fdb7b2259dc2afe246c705f9fe58d5a7377287f267ba`;
+VC++ redistribution page `mizu_fetch/b0d0345b2efd2615ecc5e6097ae80cf262d00d455d4edcbbd487b69f05efa143`,
+SHA-256 `68a3961bffcf4ee9db3a20989e33fca343cb3ea4e884693e8b6d2f04880d5f5f`;
+latest supported runtime page `mizu_fetch/bd28bbbc022f4b56819fde3571ce96f02f20c895742e824fd02b297a9f74d0bd`,
+SHA-256 `8c0f9dbf2b057c38575b95460d05cdbefac1d2f97b5b68449b2ecf9e7647e891`.
 
 Microsoft documents the Universal CRT as a Windows OS component included in
 Windows 10 or later and Windows Server 2016 or later; older supported systems may
