@@ -817,8 +817,20 @@ build graph, and the exact map still places `cxa_demangle.cpp.o` in
 `libc++abi.a`. The source-list comparison does not reveal the configured build
 option or explain that archive membership. None of these candidate matches
 closes patch application, member-source identity, object-section survival, or
-license/notice applicability. The retained artifact inventory contains no raw
-NDK archives or extracted archive-member objects. The installed `NOTICE` and
+license/notice applicability. The complete artifact inventory for publication
+`e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16` / SHA
+`5752035ff2adb68a51b78c020f1d52ec7d5be1ba` on branch `mizu` was read across
+five pages through EOF (`vcs-read/7aaa1fb2bed648bba54c4120a6295786`,
+`vcs-read/d3ca0ff2fdb4412a8fe805d62aab2930`,
+`vcs-read/ada10b93210d4151b78cb621a325e179`,
+`vcs-read/04d35e83d0fe43039f50ace70b6f9ec8`,
+`vcs-read/76d447e2d5db46bd884cfd7df01f2a59`; final `next_cursor` is null).
+It retains sanitized member, map, compiler-input, patch and terms records and
+installed notice files, but no raw NDK archive or extracted archive-member
+object. The exact terms manifest (`vcs-read/c18e682607434ec9932c5fdfc1a19836`,
+2,735 bytes, SHA-256 `6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`)
+explicitly limits its scope to package metadata and candidate license/notice
+files, not legal classification or member mapping. The installed `NOTICE` and
 `NOTICE.toolchain` therefore remain broad candidate records; in particular,
 their GPL text is not evidence of either applicability or irrelevance to these
 members. The Flutter LicensePage currently exposes Unicode and crypto notices
