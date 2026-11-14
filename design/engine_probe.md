@@ -1599,18 +1599,26 @@ The path-history response pinned to candidate revision
 `31424b7cf14604ca65a9195123da1413f31c4472` lists commit
 `10da8c463f735c7eaff904c6474e6cf38dccbe83` (2026-10-14, PR #30390) as the latest
 change to `src/unicode-data.cpp`. The PR added 3,985 generated lines and the
-normalization-only mode, but the reviewed PR body and changed-file list record
-no invocation, raw UCD input, response digest, or Python runtime manifest. These
-records do not bind the selected base tables to a particular UCD response, and
-the exact Python interpreter/build remains unidentified (`mizu_fetch/d2614e8e466c08dc626e8705bed0089af29750970b749d81523af8a7db027dd3`,
+normalization-only mode. The generator script contains the generic example
+`python ./scripts//gen-unicode-data.py > unicode-data.cpp`, but neither that
+comment nor the PR body/files bind an executed invocation to the committed
+output, record the `UnicodeData.txt` response/version/digest, or identify the
+Python runtime/build (`mizu_fetch/678da7ef5a13731d70652f6e87ee7919c4df1e642f5613e6bf528c643a1456ae`,
+`mizu_fetch/dc27d7c2dc75cd849df7d50ce0e4962599a89168af49c73059452efd0c3a9913`,
+`mizu_fetch/6551a668ad5e49391380bfec0cb2b652c8770f0f5d6c8d5508091c69040d8552`,
+`mizu_fetch/71609502312c0f6ba92817b5e6f754613e6c847dd7b7b7315a25a52f01895838`).
+These records do not bind the selected base tables to a particular UCD
+response, and the exact Python interpreter/build remains unidentified
+(`mizu_fetch/d2614e8e466c08dc626e8705bed0089af29750970b749d81523af8a7db027dd3`,
 `mizu_fetch/a5c991ccac2464b13018d35ae2ff316c08ec283cf6998127965590713e408454`).
-The c938 `generated-sha256.txt`
-artifact (`vcs-read/4bc19dc386374794ab2f6527ee0d3129`) is 1,420 bytes; its
-full-file SHA-256 equals its locally verified page SHA-256
-`c73a6d1df52452b70888929ada82bd37bd5bb43c5663186c510f1678e07fd9c2`. It lists
-11 Unity units and two version headers, not Unicode UCD inputs. The prior
-retained generator-output audit likewise records output hashes but not UCD
-response bytes/version or the Python environment (`vcs-read/50425157782045f78e96a7f2f4ba0230`,
+The exact Windows probe at SHA `d931a6f329ff035e3337b105abc9577234733456`
+records the selected `src/unicode-data.cpp` hash in the source manifest
+(`vcs-read/aeb3bb547f5d412dafea2abcf15a5ad3`); its 1,420-byte
+`generated-sha256.txt` lists 11 Unity units and two version headers, not UCD
+inputs or a Python environment (`vcs-read/6e0e959872874f43aea5a79de5a0bcfe`).
+The prior retained generator-output audit likewise records output hashes but
+not UCD response bytes/version or the Python environment
+(`vcs-read/50425157782045f78e96a7f2f4ba0230`,
 `experiments/e1af4e40316a44e39e1acaaa09d5595f`,
 `experiments/a1b7b1a91d28499192da29757face95a`). Complete data provenance and
 applicable notice scope therefore remain unresolved. Unicode License v3 provides a
