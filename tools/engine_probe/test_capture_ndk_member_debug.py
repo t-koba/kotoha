@@ -408,24 +408,22 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertEqual(capture.parse_line_tables(b'  \n '), [])
 
     def test_line_table_explicit_empty_llvm_section_header_is_no_table(self):
-        output = (
-            '/tmp/ndk-member-dwarf-random/member-0000.o:\tfile format ELF64-x86-64\n'
-            '\n.debug_line contents:\n').encode()
-        self.assertEqual(capture.parse_line_tables(output), [])
-        record = capture._member_record('member.o', b'object', b'', output)
-        self.assertEqual(record['line_table_state'], 'no-line-table-output')
-        self.assertEqual(record['line_tables'], [])
-        self.assertNotIn('/tmp/', json.dumps(record))
-
-    def test_line_table_inline_empty_llvm_section_header_is_no_table(self):
-        output = (
-            '/tmp/ndk-member-dwarf-random/member-0000.o: '
-            'file format elf64-x86-64 .debug_line contents:\n').encode()
-        self.assertEqual(capture.parse_line_tables(output), [])
-        record = capture._member_record('member.o', b'object', b'', output)
-        self.assertEqual(record['line_table_state'], 'no-line-table-output')
-        self.assertEqual(record['line_tables'], [])
-        self.assertNotIn('/tmp/', json.dumps(record))
+        outputs = (
+            '/tmp/ndk-member-dwarf-random/member-0000.o: file format '
+            'elf64-x86-64\n\n.debug_line contents:\n',
+            '/tmp/ndk-member-dwarf-random/member-0000.o:\tfile format '
+            'ELF64-x86-64\n\n.debug_line contents:\n',
+            '/tmp/ndk-member-dwarf-random/member-0000.o: file format '
+            'elf64-x86-64 .debug_line contents:\n',
+        )
+        for raw_output in outputs:
+            with self.subTest(output=raw_output):
+                output = raw_output.encode()
+                self.assertEqual(capture.parse_line_tables(output), [])
+                record = capture._member_record('member.o', b'object', b'', output)
+                self.assertEqual(record['line_table_state'], 'no-line-table-output')
+                self.assertEqual(record['line_tables'], [])
+                self.assertNotIn('/tmp/', json.dumps(record))
 
     def test_line_table_empty_section_header_with_extra_output_fails_closed(self):
         for output in (

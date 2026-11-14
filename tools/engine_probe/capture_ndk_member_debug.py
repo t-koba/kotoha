@@ -348,12 +348,9 @@ def parse_line_tables(data, component=COMPONENT):
     version_re = re.compile(r'^\s*version\s*:\s*(\d+)\s*$')
     version_like_re = re.compile(r'^\s*version\s*:')
     line_header_re = re.compile(r'^\s*(?:\.debug_line contents:|debug_line\s*\[)', re.IGNORECASE)
-    object_format_header_re = re.compile(
-        r'^.+:\tfile format ELF(?:32|64)-[A-Za-z0-9_.+-]+$')
-    empty_section_header_re = re.compile(r'^\s*\.debug_line contents:\s*$', re.IGNORECASE)
-    inline_empty_section_header_re = re.compile(
-        r'^.+:\s*file format\s+ELF(?:32|64)-[A-Za-z0-9_.+-]+\s+'
-        r'\.debug_line contents:\s*$', re.IGNORECASE)
+    empty_section_output_re = re.compile(
+        r'^.+:\s+file format\s+ELF(?:32|64)-[A-Za-z0-9_.+-]+'
+        r'\s+\.debug_line contents:\s*$', re.IGNORECASE)
     include_dir_re = re.compile(
         r'^\s*include_directories\s*\[\s*(\d+)\s*\]\s*=\s*"((?:[^"\\]|\\.)*)"\s*$')
     include_dir_like_re = re.compile(r'include_directories')
@@ -516,12 +513,7 @@ def parse_line_tables(data, component=COMPONENT):
             current['md5_state'] = 'present'
     close_table()
     if not tables:
-        nonempty_lines = [line for line in text.splitlines() if line.strip()]
-        if ((len(nonempty_lines) == 1 and
-             inline_empty_section_header_re.fullmatch(nonempty_lines[0])) or
-                (len(nonempty_lines) == 2 and
-                 object_format_header_re.fullmatch(nonempty_lines[0]) and
-                 empty_section_header_re.fullmatch(nonempty_lines[1]))):
+        if empty_section_output_re.fullmatch(text.strip()):
             return []
         raise ValueError('Line-table output is unrecognized; capture incomplete')
     return tables
