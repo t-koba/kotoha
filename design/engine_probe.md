@@ -1457,7 +1457,13 @@ runtime-present, pre-entrypoint observation on one server image—not Windows 11
 behavior, runtime-installation provenance, or redistribution permission.
 Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
-engine adoption remains disabled.
+engine adoption remains disabled. The current probe source also wires a
+`windows-simd.json` capture: it verifies the pinned llama.cpp revision and
+`vec.h` digest, uses the Release `ggml-cpu` C++ compile group from CMake File API
+and CMake-generated compiler metadata, then evaluates the exact `ggml_v_expf`
+preprocessor chain from a target-settings macro witness. This code has not yet
+run on Windows CI, so actual branch selection remains unverified; it does not
+change the runtime, redistribution, Windows 11, or adoption conclusions.
 
 The same application-CI snapshot's macOS accessibility job failed before the
 save-panel, cancellation and draft-preservation assertions; this does not

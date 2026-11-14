@@ -91,6 +91,15 @@ jobs:
           $sdk = Get-ItemPropertyValue 'HKLM:\SOFTWARE\Microsoft\Windows Kits\Installed Roots' -Name KitsRoot10
           python tools/engine_probe/compiler_reads.py --source $source --generated $build --msvc (Join-Path $vs 'VC/Tools/MSVC') --sdk $sdk --windows $env:SystemRoot --output build/engine-probe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Capture pinned Windows SIMD preprocessing evidence
+        if: always()
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Join-Path $pwd 'build/engine-probe/_deps/llama_cpp-src'
+          $build = 'build/engine-probe'
+          python tools/engine_probe/capture_windows_simd.py --source-root $source --build $build --output build/engine-probe/windows-simd.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record executable linkage for review
         if: always()
         shell: pwsh
@@ -129,9 +138,11 @@ jobs:
             build/engine-probe/*sha256.txt
             build/engine-probe/compiler-summary.txt
             build/engine-probe/runtime-providers.json
+            build/engine-probe/windows-simd.json
             build/engine-probe/runtime-summary.txt
             build/engine-probe/CMakeCache.txt
             build/engine-probe/CMakeFiles/CMakeConfigureLog.yaml
+            build/engine-probe/CMakeFiles/*/CMakeCXXCompiler.cmake
             build/engine-probe/.cmake/api/v1/reply/
             build/engine-probe/**/*.vcxproj
             build/engine-probe/_deps/llama_cpp-build/src/CMakeFiles/llama.dir/Unity/*.cxx
