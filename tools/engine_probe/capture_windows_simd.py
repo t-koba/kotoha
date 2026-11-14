@@ -153,6 +153,19 @@ def compiler_version(output):
     return next(iter(versions))
 
 
+def invoked_compiler_version(compiler):
+    # CL still requires a source file when /Bv is requested.
+    with tempfile.TemporaryDirectory() as work:
+        Path(work, "version_probe.cpp").write_text(
+            "int kotoha_compiler_version_probe;\n", encoding="ascii")
+        result = run([str(compiler), "/nologo", "/Bv", "/c",
+                      "/Foversion_probe.obj", "version_probe.cpp"], cwd=work)
+    if result.returncode:
+        fail("MSVC identity query failed")
+    output = (result.stdout + result.stderr).decode("ascii", "ignore")
+    return compiler_version(output)
+
+
 def compiler_identity(build):
     cache = cache_values(Path(build) / "CMakeCache.txt")
     generators = cache.get("CMAKE_GENERATOR", [])
@@ -229,10 +242,7 @@ def capture(source_root, build, output):
         fail("unexpected target preprocessing output")
     macros = {name for name in macro_names if "KOTOHA_" + name in tokens}
     selected = selected_branch(ordered, macros)
-    version = run([str(passed), "/Bv"])
-    if version.returncode:
-        fail("MSVC identity query failed")
-    invoked_version = compiler_version((version.stdout + version.stderr).decode("ascii", "ignore"))
+    invoked_version = invoked_compiler_version(passed)
     if invoked_version != cached_version:
         fail("invoked MSVC version disagrees with CMake compiler metadata")
     result_data = {"schema": 2, "source_revision": REVISION, "source_sha256": VEC_SHA256,

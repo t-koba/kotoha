@@ -109,6 +109,25 @@ class CaptureWindowsSimdTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "vec.h missing or changed"):
                     capture.capture(source, build, Path(d) / "out.json")
 
+    def test_version_query_supplies_source_file(self):
+        with tempfile.TemporaryDirectory() as d:
+            compiler = Path(d) / "cl.exe"
+
+            def fake_run(args, **kwargs):
+                self.assertEqual(args[:4], [str(compiler), "/nologo", "/Bv", "/c"])
+                self.assertIn("/Foversion_probe.obj", args)
+                self.assertEqual(args[-1], "version_probe.cpp")
+                source = Path(kwargs["cwd"]) / args[-1]
+                self.assertTrue(source.is_file())
+                self.assertEqual(source.read_text(encoding="ascii"),
+                                 "int kotoha_compiler_version_probe;\n")
+                return SimpleNamespace(returncode=0,
+                    stdout=b"Compiler Version 19.38.33135", stderr=b"")
+
+            with patch.object(capture, "run", side_effect=fake_run) as run:
+                self.assertEqual(capture.invoked_compiler_version(compiler), "19.38.33135")
+            run.assert_called_once()
+
     def test_invoked_version_must_match_cmake_metadata(self):
         with tempfile.TemporaryDirectory() as d:
             source, build, compiler = self.fixture(Path(d))

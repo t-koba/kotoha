@@ -1512,14 +1512,19 @@ Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
 engine adoption remains disabled.
 
-The current source snapshot adds a `windows-simd.json` capture bound to the
-pinned llama.cpp revision, `vec.h` digest, Release `ggml-cpu` CMake File API
-compile group and generated compiler metadata. It has not yet produced a CI
-artifact: the exact snapshot's publication search and commit status returned no
-receipt or checks (`vcs-read/c2ff77a131c84e0fb11c1fd076bdff13`,
-`vcs-read/ce45af4da1f94222b2dff67d0f0b2f05`). The macro-branch result therefore
-remains unknown and does not change runtime, redistribution, Windows 11 or
-adoption conclusions.
+The Windows SIMD capture binds `windows-simd.json` to the pinned llama.cpp
+revision, `vec.h` digest, Release `ggml-cpu` CMake File API compile group and
+generated compiler metadata. The former snapshot's exact publication/status
+reads returned no check or artifact (`vcs-read/c2ff77a131c84e0fb11c1fd076bdff13`,
+`vcs-read/ce45af4da1f94222b2dff67d0f0b2f05`). Review found its compiler-version
+query called `cl.exe /Bv` without an input file; Microsoft documents D8003 for a
+compiler command with no source filename (`mizu_fetch/cd908988fb90c69f8975b2d8e9902edda5c5e3ec79ede806d1941758899dc259`). The
+corrected query supplies a temporary valid C++ translation unit with `/Bv /c`;
+a regression test verifies the file is present at invocation. Focused local
+tests pass, but the corrected capture still needs exact Windows CI before any
+branch claim. The macro-branch result therefore remains unknown and does not
+change runtime, redistribution, Windows 11 or adoption conclusions
+(`commands/6f32d35c02994c8291cfeb3c71ca4ea5`).
 
 The same application-CI snapshot's macOS accessibility job failed before the
 save-panel, cancellation and draft-preservation assertions; this does not
