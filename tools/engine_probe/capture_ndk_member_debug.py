@@ -316,7 +316,8 @@ def parse_line_tables(data, component=COMPONENT):
 
     Consumes LLVM's line-table prologue text. Paths are reduced to a safe
     component-relative or relative name; directory strings and raw DWARF are
-    never retained. Empty output means no table was emitted. Nonempty output
+    never retained. Empty output or LLVM's exact object-format plus explicit
+    empty-section header means no table was emitted. Other nonempty output
     without a recognized prologue, malformed records, or unsupported versions
     fail closed. A checksum only records file bytes for later comparison; it
     does not establish source, patch or binary identity.
@@ -334,6 +335,9 @@ def parse_line_tables(data, component=COMPONENT):
     version_re = re.compile(r'^\s*version\s*:\s*(\d+)\s*$')
     version_like_re = re.compile(r'^\s*version\s*:')
     line_header_re = re.compile(r'^\s*(?:\.debug_line contents:|debug_line\s*\[)', re.IGNORECASE)
+    object_format_header_re = re.compile(
+        r'^.+:\tfile format ELF(?:32|64)-[A-Za-z0-9_.+-]+$')
+    empty_section_header_re = re.compile(r'^\s*\.debug_line contents:\s*$', re.IGNORECASE)
     include_dir_re = re.compile(
         r'^\s*include_directories\s*\[\s*(\d+)\s*\]\s*=\s*"((?:[^"\\]|\\.)*)"\s*$')
     include_dir_like_re = re.compile(r'include_directories')
@@ -496,6 +500,11 @@ def parse_line_tables(data, component=COMPONENT):
             current['md5_state'] = 'present'
     close_table()
     if not tables:
+        nonempty_lines = [line for line in text.splitlines() if line.strip()]
+        if (len(nonempty_lines) == 2 and
+                object_format_header_re.fullmatch(nonempty_lines[0]) and
+                empty_section_header_re.fullmatch(nonempty_lines[1])):
+            return []
         raise ValueError('Line-table output is unrecognized; capture incomplete')
     return tables
 

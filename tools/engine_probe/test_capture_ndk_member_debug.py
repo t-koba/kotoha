@@ -386,6 +386,25 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertEqual(capture.parse_line_tables(b''), [])
         self.assertEqual(capture.parse_line_tables(b'  \n '), [])
 
+    def test_line_table_explicit_empty_llvm_section_header_is_no_table(self):
+        output = (
+            '/tmp/ndk-member-dwarf-random/member-0000.o:\tfile format ELF64-x86-64\n'
+            '\n.debug_line contents:\n').encode()
+        self.assertEqual(capture.parse_line_tables(output), [])
+        record = capture._member_record('member.o', b'object', b'', output)
+        self.assertEqual(record['line_table_state'], 'no-line-table-output')
+        self.assertEqual(record['line_tables'], [])
+        self.assertNotIn('/tmp/', json.dumps(record))
+
+    def test_line_table_empty_section_header_with_extra_output_fails_closed(self):
+        for output in (
+                b'/tmp/member.o:\tfile format ELF64-x86-64\n\n.debug_line contents:\nwarning\n',
+                b'/tmp/member.o:\tfile format ELF64-x86-64\n',
+                b'/tmp/member.o:\tfile format ELF64-x86-64\n\n.debug_line contents: unexpected\n',
+                b'/tmp/member.o:\tfile format ELF64-x86-64\n\ndebug_line[0x00000000]\n'):
+            with self.subTest(output=output), self.assertRaisesRegex(ValueError, 'unrecognized'):
+                capture.parse_line_tables(output)
+
     def test_line_table_absolute_paths_are_redacted(self):
         rows = (
             '    include_directories[  0] = "/private/agent/source"\n'
