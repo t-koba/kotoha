@@ -78,7 +78,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
                 (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
                 run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""),
-                                   SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.38.33135", stderr=b"")]
+                                   SimpleNamespace(returncode=0, stdout=b"Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33135 for x64", stderr=b"")]
                 output = Path(d) / "result.json"
                 data = capture.capture(source, build, output)
             self.assertEqual(data["selected_branch"], "none")
@@ -147,6 +147,9 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             "Compiler Version 19.51.36260 for x64"), "19.51.36260")
         self.assertEqual(capture.compiler_version(
             "Compiler Version 19.51.36260.0 for x64"), "19.51.36260")
+        self.assertEqual(capture.compiler_version(
+            "Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36260 for x64"),
+            "19.51.36260")
         with self.assertRaisesRegex(ValueError, "MSVC version is invalid"):
             capture.normalize_msvc_version("19.51.36260.1")
 
@@ -155,7 +158,8 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             compiler = Path(d) / "cl.exe"
 
             def fake_run(args, **kwargs):
-                self.assertEqual(args[:4], [str(compiler), "/nologo", "/Bv", "/c"])
+                self.assertEqual(args[:3], [str(compiler), "/Bv", "/c"])
+                self.assertNotIn("/nologo", args)
                 self.assertIn("/Foversion_probe.obj", args)
                 self.assertEqual(args[-1], "version_probe.cpp")
                 source = Path(kwargs["cwd"]) / args[-1]
@@ -163,7 +167,8 @@ class CaptureWindowsSimdTest(unittest.TestCase):
                 self.assertEqual(source.read_text(encoding="ascii"),
                                  "int kotoha_compiler_version_probe;\n")
                 return SimpleNamespace(returncode=0,
-                    stdout=b"Compiler Version 19.38.33135", stderr=b"")
+                    stdout=b"Microsoft (R) C/C++ Optimizing Compiler Version 19.38.33135 for x64",
+                    stderr=b"")
 
             with patch.object(capture, "run", side_effect=fake_run) as run:
                 self.assertEqual(capture.invoked_compiler_version(compiler), "19.38.33135")
@@ -176,7 +181,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             (source / "ggml/src/ggml-cpu").mkdir(parents=True)
             (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
             with patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
-                run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""), SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.39.1", stderr=b"")]
+                run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""), SimpleNamespace(returncode=0, stdout=b"Microsoft (R) C/C++ Optimizing Compiler Version 19.39.1 for x64", stderr=b"")]
                 with self.assertRaisesRegex(ValueError, "disagrees"):
                     capture.capture(source, build, Path(d) / "output.json")
 

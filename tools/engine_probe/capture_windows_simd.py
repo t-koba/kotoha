@@ -186,7 +186,8 @@ def invoked_compiler_version(compiler):
     with tempfile.TemporaryDirectory() as work:
         Path(work, "version_probe.cpp").write_text(
             "int kotoha_compiler_version_probe;\n", encoding="ascii")
-        result = run([str(compiler), "/nologo", "/Bv", "/c",
+        # /nologo suppresses the startup banner that carries cl.exe's version.
+        result = run([str(compiler), "/Bv", "/c",
                       "/Foversion_probe.obj", "version_probe.cpp"], cwd=work)
     if result.returncode:
         fail("MSVC identity query failed")
