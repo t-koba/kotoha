@@ -1799,11 +1799,22 @@ download or install it silently. Planned missing-runtime guidance must name
 the x64 prerequisite, link to that page, explain the restart, and stop before
 launching the dependent process. If the Kotoha runner itself cannot load
 without the runtime, the check must occur in the installer or a separate
-launcher: an app UI cannot display guidance before its own loader failure. The
-current capture is for `llama-simple.exe`, not the release runner; the
-runner's imports and the exact minimum toolset/runtime version are not yet
-captured. This is a preferred deployment path, not a tested prerequisite or
-redistribution authorization.
+launcher: an app UI cannot display guidance before its own loader failure.
+The exact application-CI artifact
+`windows-release-import-summary/windows-release-import-summary.json` for
+publication
+`d8f404a7fc6c921332ba00e377c9b39585600b43b674c943a53a764841c3e277` / SHA
+`2939dcd2d70d085ee6930bab13900691f8f3318a` (run `43563759314`; read
+`vcs-read/c5e03f34d58540b3bd986e9d5e2022f6`) records x64 `kotoha.exe`
+(91,136 bytes; SHA-256
+`87113b3bf56b45db1a3be0d4d4cf88d7cee3174c3eb1f4c6c8695e877552ee7d`) with
+direct imports `msvcp140.dll`, `vcruntime140.dll`, and `vcruntime140_1.dll`,
+and no delay imports. This PE import evidence does not establish resolved paths,
+loaded providers, versions, or the minimum compatible v14 runtime. The exact
+job log identifies Windows Server 2025 Datacenter (`vcs-read/aac3d8f9cb79436083237e8266fa85a0`),
+not Windows 11; runtime-present and runtime-absent behavior on a clean Windows
+11 host remains untested. This is a preferred
+deployment path, not a tested prerequisite or redistribution authorization.
 
 **General-desktop floor decision (not yet validated):** Windows 11 x64 on a
 currently supported Windows 11 release. Microsoft lists Windows 10 Home/Pro
