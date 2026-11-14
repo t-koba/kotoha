@@ -1,4 +1,4 @@
-"""Capture the pinned vec.h branch selected by the Release ggml-cpu target."""
+"""Capture the Release ggml-cpu branch for vec.h with the expected file digest."""
 import argparse
 import hashlib
 import json
@@ -8,8 +8,6 @@ import shlex
 import subprocess
 import tempfile
 
-REVISION = "31424b7cf14604ca65a9195123da1413f31c4472"
-FIXTURE_PATH = Path(__file__).with_name("fixtures.json")
 VEC_SHA256 = "6afaaa70b626987e15dc37594e434a0cec28437b02391e8f72367239654ec768"
 EXP_CONDITIONS = (
     "defined(__ARM_FEATURE_SVE) && defined(__aarch64__)",
@@ -44,23 +42,6 @@ def cache_values(path):
         if match:
             found.setdefault(match.group(1), []).append(match.group(2))
     return found
-
-
-def pinned_source_archive():
-    manifest = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
-    files = manifest.get("files")
-    if not isinstance(files, list) or len(files) != 1 or not isinstance(files[0], dict):
-        fail("pinned source archive manifest missing or ambiguous")
-    entry = files[0]
-    url = f"https://github.com/ggml-org/llama.cpp/archive/{REVISION}.tar.gz"
-    if entry.get("url") != url:
-        fail("pinned source archive revision mismatch")
-    digest, size = entry.get("sha256"), entry.get("size")
-    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
-        fail("pinned source archive digest missing or invalid")
-    if type(size) is not int or size <= 0:
-        fail("pinned source archive size missing or invalid")
-    return digest, size
 
 
 def validate_source_root(root, build):
@@ -253,11 +234,14 @@ def compiler_identity(build):
 
 def capture(source_root, build, output):
     root = Path(source_root).resolve(strict=True)
-    archive_sha256, _ = pinned_source_archive()
     validate_source_root(root, build)
     source = root / "ggml/src/ggml-cpu/vec.h"
-    if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != VEC_SHA256:
-        fail("pinned vec.h missing or changed")
+    if not source.is_file():
+        fail("vec.h missing or changed from the expected file digest")
+    source_bytes = source.read_bytes()
+    source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    if source_sha256 != VEC_SHA256:
+        fail("vec.h missing or changed from the expected file digest")
     passed, cached_version = compiler_identity(build)
     group = file_api(build)
     definitions = [d["define"] for d in group.get("defines", []) if isinstance(d, dict) and isinstance(d.get("define"), str)]
@@ -271,7 +255,7 @@ def capture(source_root, build, output):
     args = [str(passed), "/nologo", "/EP", "/TP", *flags]
     args.extend("/D" + d for d in definitions)
     args.extend("/I" + i for i in includes)
-    text = source.read_text(encoding="utf-8")
+    text = source_bytes.decode("utf-8")
     ordered = conditions(text)
     macro_names = sorted({"__ARM_FEATURE_SVE", "__aarch64__", "__ARM_NEON", "__AVX512F__", "__AVX512DQ__", "__AVX2__", "__FMA__", "__SSE2__", "__VXE__", "__VXE2__", "__riscv_v"})
     witness = "KOTOHA_PROBE_OK\n" + "".join(f"#ifdef {name}\nKOTOHA_{name}\n#endif\n" for name in macro_names)
@@ -290,12 +274,12 @@ def capture(source_root, build, output):
     invoked_version = invoked_compiler_version(passed)
     if invoked_version != cached_version:
         fail(f"invoked MSVC version {invoked_version} disagrees with CMake compiler metadata {cached_version}")
-    result_data = {"schema": 3, "source_revision": REVISION,
-        "source_archive_sha256": archive_sha256, "source_sha256": VEC_SHA256,
-        "target": "ggml-cpu", "configuration": "Release", "architecture": "x64",
-        "compiler": "MSVC", "compiler_version": invoked_version,
+    result_data = {"schema": 4, "source_file": "ggml/src/ggml-cpu/vec.h",
+        "source_file_sha256": source_sha256, "target": "ggml-cpu",
+        "configuration": "Release", "architecture": "x64", "compiler": "MSVC",
+        "compiler_version": invoked_version,
         "macros": {name: name in macros for name in macro_names}, "selected_branch": selected,
-        "method": "CMake File API Release CXX compile group preprocessing witness"}
+        "method": "CMake File API Release CXX compile-group preprocessing witness; source identity is vec.h bytes only"}
     Path(output).write_text(json.dumps(result_data, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return result_data
 

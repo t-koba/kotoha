@@ -1586,21 +1586,34 @@ engine adoption remains disabled.
 
 The Windows SIMD branch remains unknown. Exact Windows x64 job `132463025479`
 for publication `1b0239717788a1d6504a1851d7cdc558eb085ab288d880f31388100129de0fb6`
-/ SHA `3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` failed at the SIMD capture
-with `upstream source revision mismatch` after the build and synthetic smoke
-succeeded (`vcs-read/2695bc6507c7402db327be033f149aa7`). This was a capture
-provenance-check defect, not evidence of a changed upstream source: the probe
-uses a GitHub source archive URL and pinned archive SHA (`vcs-read/638c188707114cbbbbae6b427e35f35a`,
-`vcs-read/28ddb9fbd8884c3cb74524e1301f44d6`), while its generated version
-header reports Kotoha's enclosing commit prefix `3cfbd48` (`vcs-read/96df28e1a7a841689fef34e2f2dc303c`).
-The build's source manifest independently records the pinned `vec.h` digest
-(`vcs-read/362bf74e70ee476b87fe95ee67b60f10`); the failed run did not produce
-`windows-simd.json` or a branch result. The capture now binds the revision to
-the pinned archive URL/SHA, verifies the CMake-configured source root and
-rejects a FetchContent source override, then retains the exact `vec.h`, target,
-compile-group and MSVC checks. A fresh exact Windows CI result is still needed
-to establish the SIMD branch. Runtime-present observations, redistribution,
-Windows 11 behavior and engine adoption remain separate and unresolved.
+/ SHA `3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` failed in its then-current
+capture with `upstream source revision mismatch` after the build and synthetic
+smoke succeeded (`vcs-read/2695bc6507c7402db327be033f149aa7`). That mismatch was
+not evidence of a changed upstream source, and the run produced no
+`windows-simd.json` or branch result.
+
+The follow-up capture implementation in `14c503d` checked the archive URL/SHA
+manifest and CMake source-root path, but did not bind the source-root contents
+to the verified archive. Its synthetic-source test could therefore emit the
+manifest's archive digest without acquiring those bytes. The CMake build
+configuration pins an archive URL/SHA and a separate source manifest records
+the expected `vec.h` digest (`vcs-read/638c188707114cbbbbae6b427e35f35a`,
+`vcs-read/362bf74e70ee476b87fe95ee67b60f10`); neither establishes the actual
+source-root provenance. The corrected capture format identifies
+`ggml/src/ggml-cpu/vec.h` by that file's SHA-256 only and retains exact
+target/compiler/macro checks; it makes no archive revision or archive SHA
+claim.
+
+A subsequent exact Windows x64 job `132475334984` on publication
+`da4733351ee49213bcf2feb138269307f1d4e09500f82e661d8e234125e1e4e9` / SHA
+`3fd4414d1434d07a5525a8774e4bfdf31bc4eff5` failed before configure/build: its
+capture test compared the compiler's original temporary path to `Path.resolve()`
+output, which used the runner's 8.3 short-name form. Later `always()` captures
+had no build artifacts, so this run produced no `windows-simd.json` or branch
+observation (`vcs-read/e1bdfb8892e0459993c0e9746aebe210`). A fresh exact Windows
+CI result is still needed to establish the SIMD branch. Runtime-present
+observations, redistribution, Windows 11
+behavior and engine adoption remain separate and unresolved.
 
 Exact macOS job `132464452966` for the same publication/SHA failed in
 `NativeExportPanelUITests.testNativeSavePanelIsAccessibleAndCancelPreservesDraft`
@@ -1904,6 +1917,15 @@ relative paths such as `libcxx/src/algorithm.cpp` and the reduced producer
 Raw archive-member objects and raw DWARF are not retained. The 4,660,773-byte map
 was not assembled and independently re-hashed in this audit.
 
+A later exact Android job `132475334683` on publication
+`da4733351ee49213bcf2feb138269307f1d4e09500f82e661d8e234125e1e4e9` / SHA
+`3fd4414d1434d07a5525a8774e4bfdf31bc4eff5` stopped in `android_ci.sh`
+configuration validation before cross-build or capture: the script referenced
+an unused `ENGINE_NDK_ABI_MEMBER_MAX_BYTES` setting absent from the workflow
+(`vcs-read/b7096e9797bc47118674fb8de3c13405`). No updated four-archive,
+47-member DWARF report was produced. The obsolete ABI-specific checks are now
+removed locally; hosted recapture and source/object provenance remain pending.
+
 An earlier contribution artifact (`vcs-read/c017d0011315425ca607cad010b4733a`,
 459,104 bytes, SHA-256
 `504654291e47812ef7883f7f124879e921382fcd9ed4e0a4d08f88be3aefb6b5`) records
@@ -1952,7 +1974,8 @@ redistribution authorization remain open; Android engine adoption stays disabled
 
 ### Windows runtime and delivery gate
 
-The latest exact Windows x64 native-engine probe is the same publication
+The latest successful exact Windows x64 native-engine probe (the later failed
+attempt is documented above) is publication
 `877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
 `e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`; its Windows check passed in run
 `42548704285` (job `128939244483`; status `vcs-read/f495e27f1c2a4884afdf58455436fca0`).

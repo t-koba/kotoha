@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import unittest
@@ -73,7 +74,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             metadata.write_text(metadata.read_text().replace(
                 '"19.38.33135"', '"19.38.33135.0"'))
             text = exp_source()
-            with patch.object(capture, "VEC_SHA256", __import__('hashlib').sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
+            with patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
                 (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
                 run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""),
@@ -83,7 +84,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             self.assertEqual(data["selected_branch"], "none")
             self.assertEqual(run.call_count, 2)
             probe_args = run.call_args_list[0].args[0]
-            self.assertEqual(probe_args[0], str(compiler))
+            self.assertEqual(Path(probe_args[0]).resolve(), compiler.resolve())
             self.assertIn("/O2", probe_args)
             self.assertIn("/DTEST=1", probe_args)
             self.assertIn("/DGOOD=1", probe_args)
@@ -91,12 +92,16 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             raw = output.read_text()
             for secret in (str(Path(d)), "/O2", "GOOD=1", "private/include"):
                 self.assertNotIn(secret, raw)
-            self.assertEqual(set(json.loads(raw)), {"schema", "source_revision", "source_archive_sha256", "source_sha256", "target", "configuration", "architecture", "compiler", "compiler_version", "macros", "selected_branch", "method"})
-            self.assertEqual(json.loads(raw)["source_archive_sha256"],
-                             json.loads(capture.FIXTURE_PATH.read_text())["files"][0]["sha256"])
+            result = json.loads(raw)
+            self.assertEqual(set(result), {"schema", "source_file", "source_file_sha256", "target", "configuration", "architecture", "compiler", "compiler_version", "macros", "selected_branch", "method"})
+            self.assertEqual(result["schema"], 4)
+            self.assertEqual(result["source_file"], "ggml/src/ggml-cpu/vec.h")
+            self.assertEqual(result["source_file_sha256"], data["source_file_sha256"])
+            self.assertEqual(data["source_file_sha256"], hashlib.sha256(text.encode()).hexdigest())
+            self.assertNotIn("source_revision", result)
+            self.assertNotIn("source_archive_sha256", result)
 
     def test_invalid_target_compiler_and_source_fail_closed(self):
-        import hashlib
         for kwargs, message in (({"target_name": "wrong"}, "target missing or ambiguous"),
                                 ({"extra_targets": ("ggml-cpu",)}, "target missing or ambiguous"),
                                 ({"compiler_id": "Clang"}, "identity is not MSVC"),
@@ -116,23 +121,11 @@ class CaptureWindowsSimdTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "vec.h missing or changed"):
                     capture.capture(source, build, Path(d) / "out.json")
 
-    def test_archive_pin_and_cmake_source_root_are_bound(self):
+    def test_cmake_source_root_is_bound_without_archive_claim(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             source, build, _ = self.fixture(root)
-            digest, size = capture.pinned_source_archive()
-            self.assertEqual((digest, size), (
-                "541aeea240dbceb48de352122b30a26ac32ec5fd936c62442037bf04310a0270",
-                39104147))
             capture.validate_source_root(source.resolve(), build)
-
-            manifest = root / "fixtures.json"
-            manifest.write_text(json.dumps({"files": [{
-                "url": "https://github.com/ggml-org/llama.cpp/archive/not-the-pin.tar.gz",
-                "sha256": "a" * 64, "size": 1}]}))
-            with patch.object(capture, "FIXTURE_PATH", manifest):
-                with self.assertRaisesRegex(ValueError, "archive revision mismatch"):
-                    capture.pinned_source_archive()
 
             other_source = root / "other-source"
             other_source.mkdir()
@@ -182,7 +175,6 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             text = exp_source()
             (source / "ggml/src/ggml-cpu").mkdir(parents=True)
             (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
-            import hashlib
             with patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
                 run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""), SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.39.1", stderr=b"")]
                 with self.assertRaisesRegex(ValueError, "disagrees"):
@@ -190,7 +182,6 @@ class CaptureWindowsSimdTest(unittest.TestCase):
 
 
     def test_missing_compiler_metadata_fails_closed(self):
-        import hashlib
         with tempfile.TemporaryDirectory() as d:
             source, build, _ = self.fixture(Path(d))
             text = exp_source()
