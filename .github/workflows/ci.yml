@@ -372,5 +372,23 @@ jobs:
         env:
           PROFILE_BYTES: ${{ inputs.profile_bytes }}
         run: flutter test --no-pub tools/profile_text_import_test.dart --dart-define=PROFILE_BYTES="$env:PROFILE_BYTES" --dart-define=PROFILE_STAGE=decode
+      - name: Test Windows import summary parser
+        run: python tools/engine_probe/test_windows_import_summary.py
       - name: Build Windows debug app
         run: flutter build windows --debug --no-pub
+      - name: Build Windows Release app
+        run: flutter build windows --release --no-pub
+      - name: Capture sanitized Release runner imports
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $dumpbin = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC/Tools/MSVC/**/bin/Hostx64/x64/dumpbin.exe' | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin not found; import capture missing' }
+          python tools/engine_probe/windows_import_summary.py --exe build/windows/x64/runner/Release/kotoha.exe --dumpbin $dumpbin --output windows-release-import-summary.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Retain sanitized Release runner import summary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-release-import-summary
+          path: windows-release-import-summary.json
+          if-no-files-found: error
