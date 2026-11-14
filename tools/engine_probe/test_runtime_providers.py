@@ -186,9 +186,30 @@ class TieTest(unittest.TestCase):
     def test_duplicate_empty_and_unsafe_fail(self):
         with self.assertRaises(ValueError):
             assemble_simple([])
-        with self.assertRaises(ValueError):
-            assemble_simple([WINDOWS + r'\System32\kernel32.dll',
-                              WINDOWS + r'\System32\KERNEL32.DLL'])
+        # Repeated loader events for the same case-insensitive path represent
+        # one provider and must not inflate the manifest or cause ambiguity.
+        manifest, _ = assemble_simple([
+            WINDOWS + r'\System32\kernel32.dll',
+            WINDOWS + r'\System32\KERNEL32.DLL',
+            WINDOWS + r'\System32\vcruntime140.dll',
+            WINDOWS + r'\System32\msvcp140.dll',
+        ])
+        self.assertEqual(
+            [item['basename'] for item in manifest['providers']],
+            ['kernel32.dll', 'msvcp140.dll', 'vcruntime140.dll'])
+        # Distinct paths with the same basename remain ambiguous. Only the
+        # sanitized basename is reported; neither absolute path may escape.
+        first = WINDOWS + r'\System32\msvcp140.dll'
+        second = APP + r'\msvcp140.dll'
+        with self.assertRaisesRegex(
+            ValueError,
+            'Ambiguous provider basename msvcp140[.]dll; closure incomplete') as error:
+            assemble_simple([
+                WINDOWS + r'\System32\kernel32.dll',
+                WINDOWS + r'\System32\vcruntime140.dll', first, second,
+            ])
+        self.assertNotIn(first, str(error.exception))
+        self.assertNotIn(second, str(error.exception))
         with self.assertRaises(ValueError):
             assemble_simple([WINDOWS + r'\System32\kernel32.dll',
                               WINDOWS + r'\System32\vcruntime140.dll',

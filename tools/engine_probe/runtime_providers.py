@@ -289,13 +289,16 @@ def assemble(*, exe_name, exe_sha256, exe_size, exe_classified,
     ordinary = sorted(name for name in direct if not is_api_contract(name))
     if not debug_paths or len(debug_paths) > max_providers:
         raise ValueError('Loader observation is missing or exceeds bound; closure incomplete')
-    seen = set()
+    seen = {}
     providers = []
-    for index, absolute in enumerate(debug_paths):
+    for absolute in debug_paths:
         base = _basename_lower(absolute)
+        path_identity = _normalize_dos(absolute)
         if base in seen:
-            raise ValueError('Ambiguous provider basename; closure incomplete')
-        seen.add(base)
+            if seen[base] == path_identity:
+                continue
+            raise ValueError('Ambiguous provider basename ' + base + '; closure incomplete')
+        seen[base] = path_identity
         classified = classify_provider(absolute, app_root, windows_root)
         info = file_info(absolute)
         _check_file_info(info)
@@ -317,7 +320,7 @@ def assemble(*, exe_name, exe_sha256, exe_size, exe_classified,
             'product_version': info['product_version'],
             'signer_status': info['signer_status'],
             'tie': tie,
-            'load_index': index,
+            'load_index': len(providers),
         })
     observed = {item['basename'] for item in providers}
     missing = [name for name in ordinary if name not in observed]

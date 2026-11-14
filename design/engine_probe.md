@@ -1756,6 +1756,10 @@ version and cache-only signature status but not installation history, a
 OS image or were installed by a Visual C++ Redistributable, and it does not
 identify the applicable installation license.
 
+On exact publication `dd4e37f6eb785d982748827cc7f6088b50374814fb3d0a1c3e7c96a30b9b70f5` / SHA `4ae1b83eace3ec3cd3c97bb92d0b427ac9b63ee6`, regular CI run `43572760207` built the Windows Release app and uploaded its sanitized import summary (`vcs-read/92415740d19d42068722ef239fe3621a`). The x64 `kotoha.exe` is 91,136 bytes with SHA-256 `5326df2ebc099d7ee5d98159bb97ef2b2ccfe8d9eda9e9280c1ae7b407a05e66`; it directly imports `msvcp140.dll`, `vcruntime140.dll`, and `vcruntime140_1.dll`, with no delay imports. The same job (Windows Server 2025) failed at the pre-entrypoint provider capture with `Ambiguous provider basename` (`vcs-read/ba84ac57b53a469b833e44badee38fdb`), so it produced no Release provider artifact; the duplicate name and paths were not retained. This does not establish which provider files were loaded, their versions or signers, installation provenance, Windows 11 behavior, or redistribution rights.
+
+The helper now treats repeated observations of the same normalized case-insensitive Windows path as one provider, but still rejects distinct paths sharing a basename. Its ambiguity error reports only the already-sanitized basename, not an absolute path. Exact CI has not yet exercised this correction.
+
 The developer-only Windows engine-probe workflow captures
 `LOAD_DLL_DEBUG_EVENT` file handles for `llama-simple.exe --help` before its
 entrypoint. The regular Windows CI job now also applies the same bounded helper
