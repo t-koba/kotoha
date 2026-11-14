@@ -334,6 +334,21 @@ This narrows provenance only: it does not establish source-byte identity,
 patch application, surviving linked sections, notice applicability, licensing,
 redistribution rights, device behavior, or adoption.
 
+The current exact probe publication
+`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` /
+SHA `48a430f888442ed162987ac2b349ab5a4f59161b` retains a current libc++
+member report with the same archive and link-map digests: 26 members and
+compile units, 1,506 line-table entries, and zero MD5 checksums
+(`vcs-read/9fb0ea5873264f4281718d2f805b4bbb`). Its libc++abi report
+records the selected `cxa_demangle.cpp.o` SHA-256
+`8807afd3edd4b1dd569cefe42bfc7596060fdd7313a46003632db2d62a492930`, one
+compile unit and 69 line-table entries, again with zero MD5 checksums
+(`vcs-read/1b776b1c3dc84be09b9ba22ba3837acf`). The exact patch-source
+manifest states that it retains metadata for four selected patch blobs,
+not raw blobs (`vcs-read/e1a1076b709d4ea1b736e168e936dc7e`). These
+current object hashes and path clues still do not bind the objects to
+source bytes or establish patch postimages/application.
+
 The separate Android smoke log reports emulator-only loader rejection and one
 `Bonjour.` sample (`vcs-read/ebd8643b34544a958045fe6b1802c8b0`), not translation
 quality or physical-device coverage. The exact Windows provider capture remains
