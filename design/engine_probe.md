@@ -110,9 +110,12 @@ named `regex` with `relative-name` state and no MD5 (`vcs-read/a04ccc41ffbd4a9bb
 `vcs-read/dcfcff547ed0405d8094872bf02382a9`). These records strengthen the
 member/source-path and header-basename overlap only: they do not map that
 relative line-table name to the full compiler-read header path or compare the
-header bytes to the object. This is not proof that the installed header matches
-an upstream patch postimage or that the patch was applied. The pinned-source
-comparisons below retain distinct base, patch-commit and installed-input hashes.
+header bytes to the object. Those DWARF/path and source-hash comparisons did
+not establish a patch postimage. The later byte-backed section application below establishes
+that the exact pinned regex patch applied to the compiler-reported source
+candidate produces this installed header byte-for-byte. That resolves header-
+postimage identity, not whether the runtime builder consumed it for any captured
+archive object.
 
 The archive manifest names `cxa_demangle.cpp.o` and `regex.cpp.o`; the
 source-info/compiler-read comparison below also identifies the regex header as
@@ -151,12 +154,15 @@ revisions is 2,648 bytes with identical SHA-256
 `experiments/aafad769ddee4676be442b6b73ed77f4`,
 `experiments/0924469b66474471a6f4bd0b54acb437`). This also identifies only a
 candidate source file; the report contains no per-member source checksum or
-object-to-source build attestation. These are candidate overlaps only: the
-CMake patch's configured effect, installed patch postimages and patch application
-to the captured NDK remain unproven. The other two patches alter Clang/LLVM code
+object-to-source build attestation. These are candidate overlaps only. The
+exact regex-header postimage is established below, and the source-info record
+plus pinned source-manager logic reports successful application during
+toolchain source preparation; neither binds captured archive objects to those
+bytes. The CMake patch's configured effect and per-object impact of the other
+Clang/LLVM patches remain unproven. The other two patches alter compiler code
 that may affect generated objects despite not targeting an engine runtime
-member. Neither path comparison establishes member bytes, surviving code,
-notice applicability or redistribution authorization. The exact NDK terms
+member. Path comparisons do not establish member bytes, surviving code, notice
+applicability or redistribution authorization. The exact NDK terms
 manifest is 2,735 bytes, SHA-256
 `6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`
 (`vcs-read/9b520d01d9504a7c8779de4ff303ee66`); it identifies broad r28c
@@ -170,8 +176,29 @@ SHA-256 `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`
 `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and lists patch URLs at
 `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`, including
 the regex and demangler patches. The separate retained patch manifest covers
-four selected blobs only; the source-info listing is broader and is metadata,
-not proof that any patch was applied to an installed object or header. The exact
+four selected blobs only. The exact 11,370-byte `clang_source_info.md` fetched
+from the official r28c prebuilt tag (`clang-r530567e/clang_source_info.md`)
+hashes to `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`,
+matching the NDK package manifest, and includes the regex patch URL
+(`mizu_fetch/fc36f115b303b3ea642e6daae8b8e6ef2d06853baef60668bc15ab0a8c3b7141`;
+`experiments/ae3cf212f603467091da4908ceaa89ce`). The pinned `source_manager.py`
+at `e727bfb014bd436f581a66a450c939a6983a1fc3` writes this file from
+`pi.applied_patches`; its parser populates that list only from the
+`The following patches applied successfully:` section
+(`mizu_fetch/5ea273a6a563cf5c18e171cad67bdf758c65e217c71431cac11008702791aeab`;
+`experiments/cffa42312f09473ab31a164f8ccae420`). Pinned `do_build.py` calls
+`source_manager.setup_sources` before the build steps, and
+`DeviceLibcxxBuilder` uses `paths.LLVM_PATH / 'runtimes'`
+(`mizu_fetch/bda5b6835c2c40fe89e41a45abe799f49d9525cf603b3e579cf7a729392268c2`;
+`experiments/845c92450858410bb7d50ca76c5102a5`;
+`mizu_fetch/3ee2fc4d85592d15d9d77ba4aaf258097042f4482331e8ba9d42fe70dc07b4ae`;
+`experiments/89f83f603879467b806563a3e2172bf0`). These source records support
+builder-reported patch application during toolchain source preparation, but do
+not prove that the captured runtime build used that tree or that any selected
+archive object consumed the header. The official prebuilt tree contains the
+source-info file alongside `android_libc++` and `runtimes_ndk_cxx` outputs
+(`mizu_fetch/f293b9eb178ac56e91af7a0bce95089b8a34097670d28944025d2a6499b79f3b`).
+The exact
 `patches/PATCHES.json` at that `llvm_android` revision is 55,313 decoded bytes,
 SHA-256 `0857edf7f3a0f2abfb41ba2540922e47ffc83c797533a86252557333f8c9dc54`
 (`mizu_fetch/ee698ffe538cee016610bd7a2e9b196b437f9e1e6f73c0d59dbbece5757dc6f2`,
@@ -260,10 +287,11 @@ bind any installed or selected member to these patch postimages. The probed ELF'
 16 KiB `LOAD` alignment is an output observation only; the artifact does not
 record the NDK driver's actual link invocation or show which configuration
 produced that alignment. This targeted sample is not a complete mapping of the
-source-info list; unexamined entries, patch application, toolchain-generated
-object transformations, surviving linked sections and applicable notices
-remain open. Do not infer a complete source, notice, redistribution or adoption
-closure from the list, output alignment or path overlaps.
+source-info list; unexamined entries, their source-tree postimages and effects
+on selected objects, toolchain-generated object transformations, surviving
+linked sections and applicable notices remain open. Do not infer a complete
+source, notice, redistribution or adoption closure from the list, output
+alignment or path overlaps.
 
 The exact Android API 35 x86_64 selected-input artifact records the installed
 NDK `sysroot/usr/include/c++/v1/regex` header at SHA-256
@@ -300,10 +328,11 @@ The resulting 213,476-byte postimage has SHA-256
 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` and Git
 blob `970de6af11cc6811d2aa8ce2867016c1c657fdc4`, exactly matching the selected
 installed/public r28c header (`experiments/563b00d934af4ea686a9bccfd3c9c2bc`,
-`experiments/05b52d485eed490eb535ae02c95b7960`). This establishes one exact
-candidate patch postimage for the installed header. It does not show that the
-NDK runtime builder applied the patch or consumed this header when building
-any captured archive object, and it is not an object-source mapping.
+`experiments/05b52d485eed490eb535ae02c95b7960`). This establishes the exact candidate patch postimage for the installed header;
+the source-info record above also reports successful application during
+toolchain source preparation. Neither observation shows that the runtime
+builder consumed this header when building a captured archive object, and
+neither is an object-source mapping.
 Applicable archive-member notices, redistribution authorization, surviving
 code, and device behavior remain unresolved.
 The capture invokes the pinned NDK `llvm-dwarfdump --debug-line` and retains
@@ -345,9 +374,10 @@ bytes remain under the configured 16 MiB, 8 MiB, and 8 MiB limits respectively;
 the elapsed-time limit is 30 seconds. The CI check passed in run `42515261841`,
 job `128836792623` (`vcs-read/fdd6c0cbcb9b423ab5f26928b9b85175`). The reduced report and bounded capture summary are retained; temporary objects
 and raw tool output are deleted.
-This narrows provenance only: it does not establish source-byte identity,
-patch application, surviving linked sections, notice applicability, licensing,
-redistribution rights, device behavior, or adoption.
+This DWARF capture narrows provenance only: it does not establish exact
+source-byte identity or per-member patch state, surviving linked sections,
+notice applicability, licensing, redistribution rights, device behavior, or
+adoption.
 
 The current exact probe publication
 `bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` /
@@ -360,9 +390,9 @@ records the selected `cxa_demangle.cpp.o` SHA-256
 compile unit and 69 line-table entries, again with zero MD5 checksums
 (`vcs-read/1b776b1c3dc84be09b9ba22ba3837acf`). The exact patch-source
 manifest states that it retains metadata for four selected patch blobs,
-not raw blobs (`vcs-read/e1a1076b709d4ea1b736e168e936dc7e`). These
-current object hashes and path clues still do not bind the archive objects to
-exact source bytes or establish patch application in their build.
+not raw blobs (`vcs-read/e1a1076b709d4ea1b736e168e936dc7e`). These current object hashes and path clues still do not bind archive objects
+to exact source bytes or show that the corresponding member compilation
+consumed a patched source/header postimage.
 
 The separate Android smoke log reports emulator-only loader rejection and one
 `Bonjour.` sample (`vcs-read/ebd8643b34544a958045fe6b1802c8b0`), not translation
@@ -476,9 +506,10 @@ Docker/Podman, pinned LLVM checkout or compile database were available
 libc++ source-build command database (`vcs-read/d597508867784bdbb4ba70d0c9d2a89d`);
 its patch-source manifest contains only hash/size/Git-blob metadata and says raw
 patch blobs are not retained (`vcs-read/7386b884e33b49c6b94a82a48f2d61b1`).
-No object was rebuilt or compared. The exact selected `regex` header hash match
-and the distinct candidate patch-commit header hash remain useful source clues,
-but do not identify the archive member's source bytes or prove patch application.
+No object was rebuilt or compared. The exact selected-header/candidate-
+postimage match and builder-reported source-tree patch record are relevant
+provenance evidence, but they do not identify `regex.cpp.o` source bytes or
+prove that its runtime-builder compilation consumed the postimage.
 A targeted rebuild in the pinned source/build environment, with its generated
 command, source/patch postimages, and comparison to the captured member digest,
 would be needed to advance that claim; a matching rebuild would be reproducibility
@@ -1064,9 +1095,9 @@ Android `toolchain/llvm-project` commit lists
 first parent `d8003a456d14a3deb8054cdaa529ffbf02d9b262`) and describes a merge
 for LLVM update 530567
 (`fetch/8f681f457b8f4d193fae4939e74314310bcbdb648f32cce753e927e90ca2d0af`).
-Thus the banner revision and source-info base are ancestry-related, not conflicting
-revision claims. This commit graph does not prove patch application to installed
-files or identify selected archive-member source bytes. The current patch metadata
+Thus the banner revision and source-info base are ancestry-related, not
+conflicting revision claims. This commit graph alone does not prove patch
+application to installed files or identify selected archive-member source bytes. The current patch metadata
 is the 1,526-byte exact-SHA artifact `vcs-read/36db48b5025e49c68da696c62b80e289`
 (SHA-256 `d8dc351b4d2a681fa16997a47c02b01f3921970c62146aa3c776b1dd048ef0b1`).
 
@@ -1113,7 +1144,7 @@ applicability. Paths in the table's selected-input column are relative to
 | Source-info patch | Exact diff path | Exact selected compiler input | Link-map relation and remaining limit |
 | --- | --- | --- | --- |
 | `f886dfed3ae6cf70827cedc8d8aefde6250a239b.patch` (`experiments/15418f8ce0bb4431ad2c5081095d8142`) | `libcxx/include/__config` | `sysroot/usr/include/c++/v1/__config`, SHA-256 `4a2eb47672b4f8c68000044174ba4ea01a00e287483a3fda12b29ed268fa93da` (`vcs-read/c55baa2e6768434ea8cf0fb8494de267`) | Header input; no direct member-source path. Upstream patch-commit hash does not match the installed input hash; presence and binary effect are unproven. |
-| `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` (`experiments/52e149171bb14295972aaff3b7922196`) | `libcxx/include/regex` | `sysroot/usr/include/c++/v1/regex`, SHA-256 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` (`vcs-read/e4719ea39a8c4086b6b1df600ae8d707`) | `libc++_static.a(regex.cpp.o)` is selected; the upstream base, patch-commit and installed-header byte hashes differ, so patch-to-input or surviving-object identity is not established. |
+| `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562.patch` (`experiments/52e149171bb14295972aaff3b7922196`) | `libcxx/include/regex` | `sysroot/usr/include/c++/v1/regex`, SHA-256 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` (`vcs-read/e4719ea39a8c4086b6b1df600ae8d707`) | The exact pinned patch section applied to the compiler-reported candidate reproduces this installed header byte-for-byte; the source-info record reports successful toolchain source-tree application. Header-postimage identity is established, but selected `regex.cpp.o` source bytes and surviving-object effect remain unproved. |
 | `Revert-Fix-diagnostic-for-stdatomic.h-before-C++23.patch` (`experiments/fdd2d7dbe3f5413f959b130736580eae`) | `libcxx/include/atomic` | `sysroot/usr/include/c++/v1/atomic`, SHA-256 `99cb8c4b0cc7866a710f877a377c9749a3e3c6905d8eb7012b00859f20a4a1bd` (`vcs-read/800cb3aec4ed416da5af9ccce09ea7e4`) | Selected header input; the map has no `atomic.cpp.o` member. Header use/inline code and any emitted-section effect are not proven. |
 | `patches/cherry/7d20ea9d32954e8e5becab8495fa509a3f67b710.patch` (`experiments/b8af38156bb743bea1d01296e5ed72e5`; exact decoded-source receipt `mizu_fetch/d6ca16e583f81fbd55a5654f5036bdbffee22622c753abbd669ef73a6255960d`; patch SHA-256 `06959acf502eaa68656e8c5a858111ef0abf3a3efef086a203cd607a43a297a1` in `experiments/6255320b27ec481b861405620a9d3e0f`) | `clang/lib/Headers/limits.h` | `lib/clang/19/include/limits.h`, SHA-256 `201a7790932ddd1da2b69c0484d6d8ecd076e08684aabc5ce984bd0fa8ef2cf8` (`vcs-read/4b378905b66c401698249f915c141d39`) | The pinned upstream patch adds `__BIONIC__` to the visibility guard for `LONG_LONG_MIN`/`LONG_LONG_MAX` and adds an explicit arm64-linux syntax test. This is only the candidate patch effect: installed-header bytes were not compared to the patched source and no application, emitted-code effect, notice applicability or redistribution conclusion is established. |
 
@@ -1135,8 +1166,9 @@ changes influence emitted code.
 
 The source-info inventory closes only this bounded diff-path intersection. It
 does not close exact archive-member source identities or surviving sections,
-patch presence in installed files, per-file notice obligations, or user-facing
-notice delivery. The app has a user-accessible Flutter license page: the info
+postimages for other selected inputs, member-level patch state, per-file notice
+obligations, or user-facing notice delivery. The regex header is an established
+postimage match, but no selected archive member is bound to it. The app has a user-accessible Flutter license page: the info
 button in `lib/main.dart` opens it, and `test/licenses_test.dart` verifies
 bundled notice access. The current app registers only the Unicode and crypto
 notices from `assets/licenses/`; `pubspec.yaml` packages those two assets and
@@ -1156,9 +1188,10 @@ instrumentation pass and five tests. None names the candidate
 to that candidate source path by this patch only; member-source identity and
 surviving-section provenance remain open. The complete diff-path intersection
 is recorded above. The CodeGen patch is a
-compiler change. The regex patch
-affects a selected libc++ input, but neither patch-to-installed-header identity
-nor survival in the linked runtime object is established.
+compiler change. The regex patch's exact header-postimage identity to a selected libc++ input is
+established, and the source-info record reports successful toolchain source-
+tree application. Neither item links `regex.cpp.o` to those source/header bytes
+or establishes survival in the linked runtime object.
 
 The fourth captured patch raw payload was independently fetched from the exact
 `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3` through
@@ -1206,17 +1239,21 @@ diff's postimage prefix `46968357d397`
 That hunk adds `regex_iterator` friendship and updates prefix bookkeeping after
 successful search, preserving the previous match end for zero-length matches.
 This establishes the changed header bytes in the upstream patch tree and their
-absence from the compiler-reported upstream tree, whose header is byte-identical
-to the source-info base. It does not establish whether the installed NDK input
-is patched, backported, or behaviorally equivalent: its recorded hash
-`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` differs,
-and the installed header bytes and extracted object sections are not retained.
+absence from the unmodified compiler-reported source tree, whose header matches
+the source-info base. The exact pinned patch section applied to that candidate
+produces the installed input byte-for-byte (see the postimage comparison above),
+so the installed header is an exact candidate postimage despite its distinct
+hash from either unmodified source revision. The source-info record also reports
+the patch in the source tree's successful-application set. These findings
+establish header-postimage identity and support builder-reported source-tree
+application; they do not identify whether the release obtained those bytes by
+that patch application or another route.
 
-The selected read proves the installed header is
-a compiler input, while the map member proves an object was linked; neither
-proves that this source patch's changed code survives in that object or the final
-executable. Patch-to-installed-header and patch-to-binary provenance therefore
-remain unresolved. The changed source/header files carry Apache-2.0 WITH
+The selected-input record establishes that the header is a compiler input, and
+the link map selects `libc++_static.a(regex.cpp.o)`. Neither links that object
+to the header's bytes or proves that the patch's changed code survives in the
+object or final executable. Header identity is established; member-to-source
+and patch-to-binary provenance remain unresolved. The changed source/header files carry Apache-2.0 WITH
 LLVM-exception SPDX identifiers; component-level legacy alternatives and the
 license choice for any selected binary section remain as described above.
 
