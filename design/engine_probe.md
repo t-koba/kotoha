@@ -413,7 +413,24 @@ invocation, compile database, or per-member source/object attestation;
 therefore do not
 prove that any captured archive member was built from a particular source file
 or that listed patches were applied. No exact member rebuild/hash comparison
-has been run; patch postimages and actual per-member command inputs remain open.
+has been run; installed patch postimages and actual per-member command inputs remain open.
+
+A bounded rebuild preflight selected `libc++_static.a(regex.cpp.o)`, whose
+candidate source/header overlap is documented below. The sandbox has host
+`/usr/bin/clang++`, CMake and Ninja but no Android NDK environment variables or
+NDK compiler/binutils in the checked standard roots (`commands/9c715789ea3f4f33979da99e88be8cc5`).
+The latest probe's `selected-commands.txt` is an engine-probe build artifact,
+not an NDK libc++ source-build command database (`vcs-read/d597508867784bdbb4ba70d0c9d2a89d`);
+its patch-source manifest contains only hash/size/Git-blob metadata and says
+raw patch blobs are not retained (`vcs-read/7386b884e33b49c6b94a82a48f2d61b1`).
+The exact r28c release invocation is therefore still unavailable. For the
+regex patch, the immutable patch-commit header candidate has SHA-256
+`60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`, while the
+captured installed-header input is
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`; these are
+not the same bytes. Without the release command and installed header content,
+compiling with host Clang would not be a valid comparison, so no object was
+rebuilt or compared.
 
 A June 2023 NDK issue discussion about prebuilt libc++ (NDK issue #1894, fetched
 as `mizu_fetch/1d7a64911c4a5062a30c0d63eb61fa82d3ffc8ef87b740ae2651eb35110b9bbd`,
