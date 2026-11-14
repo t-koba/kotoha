@@ -30,6 +30,7 @@ CHUNK_BYTES = 1024 * 1024
 ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
 PATH_RE = re.compile(
     r'''(?<![A-Za-z0-9_-])(?:[A-Za-z]:[\\/]|[\\/]{1,2}|\.{1,2}[\\/]|[^\s\"'<>:=]+[\\/])[^\s\"'<>]*''')
+QUOTED_VALUE_RE = re.compile(r'''(["'])(?:\\.|(?!\1).)*(?:\1|$)''', re.DOTALL)
 
 
 def sha256_file(path):
@@ -126,6 +127,15 @@ def _safe_archive_manifest(path, linker_map, ndk_root, max_members,
 def _safe_tool_diagnostic(data, max_bytes, truncated=False):
     text = data.decode('utf-8', errors='replace')
     text = ANSI_ESCAPE_RE.sub('', text)
+
+    def redact_quoted_path(match):
+        quoted = match.group(0)
+        if '/' in quoted or '\\' in quoted:
+            quote = match.group(1)
+            return quote + '[path]' + (quote if quoted.endswith(quote) else '')
+        return quoted
+
+    text = QUOTED_VALUE_RE.sub(redact_quoted_path, text)
     text = PATH_RE.sub('[path]', text)
     text = ''.join(
         ' ' if ord(char) < 32 or 0x7f <= ord(char) <= 0x9f else char

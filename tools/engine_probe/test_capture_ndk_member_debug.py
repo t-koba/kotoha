@@ -483,6 +483,46 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertLessEqual(len(diagnostic.encode('utf-8')), 32)
         self.assertTrue(diagnostic.endswith('[truncated]'))
 
+    def test_tool_diagnostic_redacts_complete_quoted_paths_with_spaces(self):
+        diagnostic = capture._safe_tool_diagnostic(
+            b'DW_AT_comp_dir: "/home/alice/Private Project/secret.cpp"', 256)
+        self.assertEqual(diagnostic, 'DW_AT_comp_dir: "[path]"')
+        for leaked in ('/home/alice', 'Private', 'Project', 'secret.cpp'):
+            self.assertNotIn(leaked, diagnostic)
+
+    def test_tool_diagnostic_redacts_unterminated_quoted_path_with_spaces(self):
+        raw = b'DW_AT_comp_dir: "/home/alice/Private Project/secret.cpp'
+        diagnostic = capture._safe_tool_diagnostic(raw, 32)
+        for leaked in ('/home/alice', 'Private', 'Project', 'secret.cpp'):
+            self.assertNotIn(leaked, diagnostic)
+        self.assertLessEqual(len(diagnostic.encode('utf-8')), 32)
+        self.assertFalse(any(ord(char) < 32 or 0x7f <= ord(char) <= 0x9f
+                             for char in diagnostic))
+
+    def test_tool_diagnostic_redacts_quoted_windows_path_and_preserves_plain_text(self):
+        diagnostic = capture._safe_tool_diagnostic(
+            b'DW_AT_comp_dir: "C:\\Users\\Alice\\Private Project"', 256)
+        self.assertEqual(diagnostic, 'DW_AT_comp_dir: "[path]"')
+        plain = capture._safe_tool_diagnostic(b'warning: "ordinary value"', 256)
+        self.assertEqual(plain, 'warning: "ordinary value"')
+
+    def test_tool_diagnostic_redacts_path_with_escaped_quotes(self):
+        raw = br'DW_AT_comp_dir: "/home/alice/Private \"Project\"/secret.cpp"'
+        diagnostic = capture._safe_tool_diagnostic(raw, 256)
+        self.assertEqual(diagnostic, 'DW_AT_comp_dir: "[path]"')
+        for leaked in ('/home/alice', 'Private', 'Project', 'secret.cpp'):
+            self.assertNotIn(leaked, diagnostic)
+
+    def test_member_record_redacts_rejected_quoted_path_with_spaces(self):
+        raw = b'include_directories[ 0] = "/home/alice/Private Project"'
+        with self.assertRaisesRegex(ValueError, 'Malformed line-table directory record') as caught:
+            capture._member_record('a.o', b'', b'', raw)
+        message = str(caught.exception)
+        self.assertIn('diagnostic:', message)
+        self.assertIn('"[path]"', message)
+        for leaked in ('/home/alice', 'Private', 'Project'):
+            self.assertNotIn(leaked, message)
+
     @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_nonzero_debug_tool_reports_bounded_path_redacted_stderr(self):
         stderr = ('error: /home/runner/private/member.o: unsupported DWARF; '
