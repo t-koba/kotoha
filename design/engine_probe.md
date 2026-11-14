@@ -1553,12 +1553,17 @@ the full MIT grant, copyright, permission condition and disclaimer
 (`mizu_fetch/5dda1d061dc27ac53f1509b3444555bafd4f22a4396da0a424de11481c766d5d`,
 `mizu_fetch/4266f6f3fb38225ee338ff6ab977bb0c37878694087685da43b8fd181dad8765`,
 `mizu_fetch/d613d9b57ae6ee0781ca937f7f8ecfa6518acd3d9f5e38bd57b23a2a163613fc`).
-The upstream llama.cpp implementation commit `898aeca90a9bb992f506234cf3b8b7f7fa28a1df`
-(2023-11-01, co-authored by Jeffrey Quesnelle) repeats the source-file citation
-and MIT attribution in its code patch (`mizu_fetch/0b1e2054f37534946cfddb31e246f26be7c82b778fbaf6289ec4539d41bc11bb`).
-The PR API record identifies head `081f73815fa7d127a6e79fb8fc1a317c9e52405e`,
-but its body links to `jquesnelle/yarn`, the paper and errata without a source
-commit (`mizu_fetch/61e4dfe3c8290c2686df36023d6f771421b004c75b05c18182f26b67dbfe4cba`).
+The merged PR identifies its exact head commit as
+`081f73815fa7d127a6e79fb8fc1a317c9e52405e`; the merge commit
+`898aeca90a9bb992f506234cf3b8b7f7fa28a1df` (2023-11-01) is co-authored by
+Jeffrey Quesnelle. Its CPU `ggml.c` patch states that the YaRN algorithm is
+based on `LlamaYaRNScaledRotaryEmbedding.py` from `jquesnelle/yarn`, and declares
+MIT licensing and copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng. This is
+an explicit source-file and notice statement for the submitted implementation;
+neither the PR body nor the patch pins the referenced file to an upstream
+repository revision (`mizu_fetch/e2de7bc6b186ecb391089a5ba80ddcdd9df65bb21bf738f3d5297e68a6fda9b7`,
+`mizu_fetch/c2d17afa16a20e400bd8ccb6e0b29bcf05edb1b5fe17494944ba48a60076734d`,
+`mizu_fetch/d2074e9005b95c5ef21acca05eb304a515dd0f74b52f0b77bc007ab366404061`).
 A later author comment links to `jquesnelle/llama.cpp` commit
 `f51eed105de17c31aaf2ff49f6e631483207532e` specifically as the non-finetuned
 evaluation commit; it is a benchmark-checkout reference, not a revision pin for
