@@ -1768,20 +1768,49 @@ modules. Microsoft Learn separately states that distributing the VC++ runtime
 package, merge modules or individual binaries is limited to licensed Visual
 Studio users and governed by those terms. The current v14 deployment guidance
 requires a matching architecture and a Redistributable at least as recent as
-the build tools; it recommends the current supported package. These are
-conditional redistribution/deployment rules, not project authorization. The
-operator explicitly confirmed that Kotoha has no Visual Studio license
-entitlement or agreement and no basis to redistribute Microsoft VC++ runtime
-DLLs (`operator/kotoha/a-e1ceeae8-r1-1794137634`). No Windows runtime
-distribution path is chosen. Accordingly, do not ship the observed MSVC runtime
-DLLs or treat the CI runner's `windows/system32` copies as product files or as
-evidence that target users have an approved preinstalled prerequisite. Kotoha
-has not selected a preinstalled-runtime requirement or a supported
-Windows/runtime floor. The `/MD` imports keep this Windows engine distribution
-path blocked under the current operator constraint; any alternative toolchain
-or runtime requires a separate evidence and licensing review. Windows engine
-adoption remains disabled. The exact provider binaries and runner license terms
-are not retained.
+the build tools; it recommends the current supported package. Deployment and
+support decisions remain distinct from the conditional redistribution rules
+above. The operator explicitly confirmed that Kotoha has no Visual Studio
+license entitlement or agreement and no basis to redistribute Microsoft VC++
+runtime DLLs (`operator/kotoha/a-e1ceeae8-r1-1794137634`). Do not ship the
+observed MSVC runtime DLLs, a redist installer, or treat the CI runner's
+`windows/system32` copies as product files or proof that users have the
+runtime installed.
+
+**Conditional deployment decision:** if Windows x64 engine adoption is later
+approved, prefer a user-managed prerequisite over redistributing the runtime.
+Tell users to install the current supported Microsoft VC++ v14 Redistributable
+(x64), at least as recent as the pinned build tools, from the official [latest
+supported VC++ redistributable page](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170), then restart Kotoha.
+Link to Microsoft's page only; do not bundle DLLs or the installer and do not
+download or install it silently. Planned missing-runtime guidance must name
+the x64 prerequisite, link to that page, explain the restart, and stop before
+launching the dependent process. If the Kotoha runner itself cannot load
+without the runtime, the check must occur in the installer or a separate
+launcher: an app UI cannot display guidance before its own loader failure. The
+current capture is for `llama-simple.exe`, not the release runner; the
+runner's imports and the exact minimum toolset/runtime version are not yet
+captured. This is a preferred deployment path, not a tested prerequisite or
+redistribution authorization.
+
+**General-desktop floor decision (not yet validated):** Windows 11 x64 on a
+currently supported Windows 11 release. Microsoft lists Windows 10 Home/Pro
+support as ended on 2025-10-14, while Windows 11 Home/Pro remains
+in support as of 2026-11-14. The existing `windows/runner/runner.exe.manifest`
+compatibility entry is commented “Windows 10 and Windows 11”; it is not a
+tested product support contract. The current v14 runtime's OS compatibility
+also does not establish Kotoha's. CI currently uses `windows-latest`, and the
+provider capture observes one runner with the runtime already present; neither
+validates a Windows 11 client or the missing-runtime path. Do not advertise this
+support floor or enable the engine until a clean Windows 11 x64 test validates
+both runtime-present and runtime-absent behavior and confirms the release
+runner's dependencies. Windows 10 LTSC or other exceptional servicing
+arrangements require a separate support decision. This is necessary but does not
+close the independent source, terms, notice, or redistribution gates.
+
+Windows engine adoption remains disabled. The exact provider binaries and
+runner license terms are not retained.
+
 Microsoft Learn pages rechecked 2026-11-14: VS 2026 REDIST receipt
 `mizu_fetch/7803f903ad50092c27dea8a7dd86047c0daeae28efd85e7a73e02f4af210cb18`,
 SHA-256 `47760a35d83bb02d2931fdb7b2259dc2afe246c705f9fe58d5a7377287f267ba`;
@@ -1789,14 +1818,21 @@ VC++ redistribution page `mizu_fetch/b0d0345b2efd2615ecc5e6097ae80cf262d00d455d4
 SHA-256 `68a3961bffcf4ee9db3a20989e33fca343cb3ea4e884693e8b6d2f04880d5f5f`;
 latest supported runtime page `mizu_fetch/bd28bbbc022f4b56819fde3571ce96f02f20c895742e824fd02b297a9f74d0bd`,
 SHA-256 `8c0f9dbf2b057c38575b95460d05cdbefac1d2f97b5b68449b2ecf9e7647e891`.
+Windows lifecycle pages retrieved 2026-11-14: [Windows 10 Home and Pro](https://learn.microsoft.com/en-us/lifecycle/products/windows-10-home-and-pro),
+`mizu_fetch/c9deb300d3a63ebeb62194b0709896fd2cc8f39b426d2225ea9f7738ede76125`,
+SHA-256 `acc836899cdb87d21b5d728d67d52a6a9d6691d62b2bda0be24d615b134e0451`;
+[Windows 11 Home and Pro](https://learn.microsoft.com/en-us/lifecycle/products/windows-11-home-and-pro),
+`mizu_fetch/dbdfd852a911d624eb1c8a0d167fdf4b31a565366e5134b45b40098f261b0542`,
+SHA-256 `5d5ea7e5074b1b3ce68b2e554bbd3f3cd4e57f56cef1f0f369a311a14f7ef628`.
 
 Microsoft documents the Universal CRT as a Windows OS component included in
 Windows 10 or later and Windows Server 2016 or later; older supported systems may
 receive it through Windows Update, while local deployment is subject to specific
 restrictions. The system UCRT is always used on Windows 10/11 even if the app
 contains a local copy. This is conditional OS guidance, not a product support
-floor: neither Kotoha's supported Windows minimum nor this `windows-latest`
-runner's exact OS build is captured here. Thus API-set contracts do not establish
+floor. Windows 11 x64 is only a proposal above; the floor is unvalidated and
+this `windows-latest`
+runner's exact OS build is not captured. Thus API-set contracts do not establish
 the UCRT provider across all supported product targets; this CI run observes the
 provider on one runner only. Microsoft Learn page retrieved 2026-11-08: `mizu_fetch/30c74266cc7b61875a639168acac25a15014b7d83333442769b820c29e735f2b`,
 SHA-256 `ffb73fffc0daf9f3f973b39a7691c59d50fe79184d82e23e3ae00dc69feb568e`.
