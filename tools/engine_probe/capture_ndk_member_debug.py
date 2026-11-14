@@ -1,4 +1,4 @@
-"""Capture bounded DWARF metadata for selected NDK C++ runtime archive members.
+"""Capture bounded DWARF metadata for selected NDK runtime archive members.
 
 This developer-only probe hashes exact selected member bytes in memory and
 records sanitized DWARF compile-unit names; temporary object files are deleted

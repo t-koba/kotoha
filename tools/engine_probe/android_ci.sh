@@ -8,9 +8,7 @@ for name in ENGINE_BUILD_ROOT ENGINE_TEMP_ROOT ENGINE_BUILD_JOBS ENGINE_NDK_VERS
   ENGINE_ACCEPT_TERMS_SHA256 ENGINE_LINKER_MAP_MAX_BYTES ENGINE_NDK_TERMS_MAX_FILES \
   ENGINE_NDK_TERMS_MAX_BYTES ENGINE_NDK_PATCH_MAX_BYTES ENGINE_NDK_PATCH_FETCH_SECONDS \
   ENGINE_NDK_MEMBER_MAX_MEMBERS ENGINE_NDK_MEMBER_MAX_BYTES \
-  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS \
-  ENGINE_NDK_ABI_MEMBER_MAX_BYTES ENGINE_NDK_ABI_MEMBER_MAX_TOOL_OUTPUT_BYTES \
-  ENGINE_NDK_ABI_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_ABI_MEMBER_SECONDS; do
+  ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES ENGINE_NDK_MEMBER_SECONDS; do
   test -n "${!name:?required probe configuration}"
 done
 python3 - <<'PY'
@@ -114,33 +112,32 @@ python3 tools/engine_probe/linker_map.py "$build/llama-simple.map.pending" \
   --build-root "$build" --ndk-root "$ndk"
 llvm="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
 member_capture_status=0
-python3 tools/engine_probe/capture_ndk_member_debug.py \
-  --archive-manifest "$build/validated-linker-map/llama-simple.map.archives.json" \
-  --linker-map "$build/validated-linker-map/llama-simple.map" --ndk-root "$ndk" \
-  --llvm-ar "$llvm/llvm-ar" --llvm-dwarfdump "$llvm/llvm-dwarfdump" \
-  --temp-root "$owner" --output "$build/ndk-member-debug/ndk-member-debug.json" \
-  --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" \
-  --max-object-bytes "$ENGINE_NDK_MEMBER_MAX_BYTES" \
-  --max-tool-output-bytes "$ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
-  --max-line-table-output-bytes "$ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES" \
-  --max-diagnostic-bytes "$ENGINE_OUTPUT_BYTES" \
-  --timeout-seconds "$ENGINE_NDK_MEMBER_SECONDS" \
-  > "$build/ndk-member-debug-capture.log" 2>&1 || member_capture_status=$?
-cat "$build/ndk-member-debug-capture.log"
-abi_member_capture_status=0
-python3 tools/engine_probe/capture_ndk_member_debug.py \
-  --archive-manifest "$build/validated-linker-map/llama-simple.map.archives.json" \
-  --linker-map "$build/validated-linker-map/llama-simple.map" --ndk-root "$ndk" \
-  --llvm-ar "$llvm/llvm-ar" --llvm-dwarfdump "$llvm/llvm-dwarfdump" \
-  --temp-root "$owner" --output "$build/ndk-member-debug/libcxxabi-demangler.json" \
-  --archive-name libc++abi.a --component libcxxabi --selected-member cxa_demangle.cpp.o \
-  --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" --max-object-bytes "$ENGINE_NDK_ABI_MEMBER_MAX_BYTES" \
-  --max-tool-output-bytes "$ENGINE_NDK_ABI_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
-  --max-line-table-output-bytes "$ENGINE_NDK_ABI_MEMBER_LINE_OUTPUT_BYTES" \
-  --max-diagnostic-bytes "$ENGINE_OUTPUT_BYTES" \
-  --timeout-seconds "$ENGINE_NDK_ABI_MEMBER_SECONDS" \
-  > "$build/ndk-member-debug-abi-capture.log" 2>&1 || abi_member_capture_status=$?
-cat "$build/ndk-member-debug-abi-capture.log"
+capture_member_archive() {
+  local archive_name="$1" component="$2" report="$3"
+  local log="$build/ndk-member-debug-$component-capture.log" status
+  if python3 tools/engine_probe/capture_ndk_member_debug.py \
+    --archive-manifest "$build/validated-linker-map/llama-simple.map.archives.json" \
+    --linker-map "$build/validated-linker-map/llama-simple.map" --ndk-root "$ndk" \
+    --llvm-ar "$llvm/llvm-ar" --llvm-dwarfdump "$llvm/llvm-dwarfdump" \
+    --temp-root "$owner" --output "$build/ndk-member-debug/$report" \
+    --archive-name "$archive_name" --component "$component" \
+    --max-members "$ENGINE_NDK_MEMBER_MAX_MEMBERS" \
+    --max-object-bytes "$ENGINE_NDK_MEMBER_MAX_BYTES" \
+    --max-tool-output-bytes "$ENGINE_NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES" \
+    --max-line-table-output-bytes "$ENGINE_NDK_MEMBER_LINE_OUTPUT_BYTES" \
+    --max-diagnostic-bytes "$ENGINE_OUTPUT_BYTES" \
+    --timeout-seconds "$ENGINE_NDK_MEMBER_SECONDS" > "$log" 2>&1; then
+    status=0
+  else
+    status=$?
+  fi
+  if ! cat "$log"; then status=1; fi
+  return "$status"
+}
+capture_member_archive libc++_static.a libcxx ndk-member-debug.json || member_capture_status=1
+capture_member_archive libc++abi.a libcxxabi libcxxabi.json || member_capture_status=1
+capture_member_archive libunwind.a libunwind libunwind.json || member_capture_status=1
+capture_member_archive libclang_rt.builtins-x86_64-android.a compiler-rt compiler-rt.json || member_capture_status=1
 ninja -C "$build" -t deps > "$build/ninja-deps.txt"
 ninja -C "$build" -t commands llama-simple > "$build/selected-commands.txt"
 ninja -C "$build" -t query bin/llama-simple > "$build/link-inputs.txt"
@@ -192,5 +189,4 @@ python3 tools/engine_probe/android.py --adb "$ANDROID_HOME/platform-tools/adb" \
 if [[ "$capture_status" != 0 ]]; then exit "$capture_status"; fi
 if [[ "$patch_capture_status" != 0 ]]; then exit "$patch_capture_status"; fi
 if [[ "$member_capture_status" != 0 ]]; then exit "$member_capture_status"; fi
-if [[ "$abi_member_capture_status" != 0 ]]; then exit "$abi_member_capture_status"; fi
 cat "$build/android-compiler-summary.txt"

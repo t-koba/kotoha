@@ -2,21 +2,26 @@
 
 This is **developer tooling only**, not product inference or distribution
 approval. The latest exact probe and application-CI snapshot is publication
-`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
-`48a430f888442ed162987ac2b349ab5a4f59161b`. Its Android API 35 x86_64 and
-Windows x64 native CPU feasibility checks passed in run `43574641819` (jobs
-`132386120398` and `132386120607`). This establishes build/smoke feasibility
-only, not source identity, licensing, redistribution, adoption, or physical-
-device behavior.
+`1b0239717788a1d6504a1851d7cdc558eb085ab288d880f31388100129de0fb6` / SHA
+`3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` (source commit
+`a93d9ba479fdbb8146dd5d5e8ffbe823d050baf1`). The Android API 35 x86_64
+feasibility check succeeded in run `43600173259`, job `132463025650`; the
+Windows x64 CPU feasibility job `132463025479` failed in the SIMD-capture step
+with `upstream source revision mismatch`, so it produced no valid branch
+record (status `vcs-read/3f0fa4e04d7346da99ece6cfc467f017`, failure log
+`vcs-read/2695bc6507c7402db327be033f149aa7`). Neither result closes source,
+licensing, redistribution, adoption or physical-device behavior.
 
-Application CI for the same SHA completed in run `43574939450` (status
-`vcs-read/56e67b92ac5a4948b317a819eb855c4f`): Design, Flutter, Android,
-Windows and iOS checks passed; the macOS accessibility probe failed before the
-save-panel assertions. The Windows Release provider capture succeeded; its
-narrow loader evidence and remaining runtime limitations are recorded below.
-Neither platform's engine-adoption gates are closed. The macOS result is
-separate from engine feasibility; see `design/text_export_audit.md` for its
-current accessibility-test status.
+Application CI for that SHA completed in run `43600548177` (status
+`vcs-read/3f0fa4e04d7346da99ece6cfc467f017`): Design, Flutter, Android,
+Windows and iOS checks passed; the macOS accessibility probe failed before
+opening the save panel, so no panel, cancellation or draft-preservation
+assertion ran (log `vcs-read/0f82e5be2e974f5fb23ae06a206b8828`). The later local
+commit `14c503d` fixes the Windows capture's false revision check; it has no
+hosted result in this publication. Commit `43bb1c3` records the exact macOS
+failure and does not establish save-panel behavior. Engine adoption remains
+disabled, and the macOS result remains separate from engine feasibility; see
+`design/text_export_audit.md` for its accessibility-test status.
 
 Historical CI evidence follows; it does not supersede the exact current status
 above.
@@ -347,16 +352,20 @@ builder consumed this header when building a captured archive object, and
 neither is an object-source mapping.
 Applicable archive-member notices, redistribution authorization, surviving
 code, and device behavior remain unresolved.
-The capture invokes the pinned NDK `llvm-dwarfdump --debug-line` and retains
-only compact per-member line-table metadata: version, sanitized source
-path/state, and MD5 when present. Missing MD5 remains explicitly unavailable;
-it is neither synthesized nor passed to source comparison. Line output has a
-workflow-configured 32 MiB budget, with aggregate tool output bounded by the
-existing 64 MiB budget plus that configured addition. Malformed or over-budget
+The Android CI workflow now requests compact DWARF reports for all four
+map-selected NDK archives: 26 `libc++_static.a`, 15 `libc++abi.a`, five
+`libunwind.a`, and one compiler-rt member (the exact manifest is
+`vcs-read/ac920c4c37704eeaa6b7b7a2521749c2`). Each archive is captured
+separately with configured bounds of 16 MiB selected member bytes, 64 MiB
+DWARF/listing output, 32 MiB line-table output and 120 seconds. The report
+retains sanitized compile-unit/source-path clues and any DWARF line-table MD5;
+missing MD5 stays unavailable and is never synthesized. Malformed or over-budget
 output fails capture. Extracted objects and raw DWARF/line-table output are
-temporary and deleted. A DWARF MD5 is debug metadata, not an integrity proof or
-evidence of build/patch identity, surviving code, licensing, rights or device
-behavior. The exact Android API 35 x86_64 probe publication
+temporary and deleted. A DWARF MD5 is debug metadata, not a source attestation
+or evidence of build/patch identity, surviving code, licensing, rights or
+device behavior. This expanded 47-member capture has not yet completed in
+hosted CI; the earlier exact reports below cover all 26 libc++ members and only
+`libc++abi.a(cxa_demangle.cpp.o)`. The exact Android API 35 x86_64 probe publication
 `e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16` / SHA
 `5752035ff2adb68a51b78c020f1d52ec7d5be1ba` additionally captured only
 `libc++abi.a(cxa_demangle.cpp.o)` into
@@ -391,9 +400,9 @@ source-byte identity or per-member patch state, surviving linked sections,
 notice applicability, licensing, redistribution rights, device behavior, or
 adoption.
 
-The current exact probe publication
+An earlier exact probe publication
 `bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` /
-SHA `48a430f888442ed162987ac2b349ab5a4f59161b` retains a current libc++
+SHA `48a430f888442ed162987ac2b349ab5a4f59161b` retained a libc++
 member report with the same archive and link-map digests: 26 members and
 compile units, 1,506 line-table entries, and zero MD5 checksums
 (`vcs-read/9fb0ea5873264f4281718d2f805b4bbb`). Its libc++abi report
