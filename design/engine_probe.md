@@ -1443,7 +1443,60 @@ establish member source bytes, patch application, or applicable notices
 to question `c25999485d7b47c385c158c092eb5e5c`, no additional build-provenance
 input is available; Android adoption remains disabled.
 
-On that same snapshot, Windows Release `kotoha.exe` (x64, 91,136 bytes,
+The Windows x64 source-read capture on publication
+`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
+`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292` records 72 compiler source keys and
+581 unique inputs: 61 source keys, 11 generated keys, 302 source-root inputs,
+13 generated inputs and five MSVC read-tracking files
+(`vcs-read/1e7fe4c4f1f649109c736f6e98805777`,
+`vcs-read/1e3d1a3713d34f1cb16782f14f304d2a`). Its source manifest
+`faf08d710aacca675ffbebd3470592a9ae0efda170d6b4657fcb62fad446eb2c` binds the
+selected `ggml/src/ggml-cpu/ops.cpp` bytes to SHA-256
+`071c64257e4b625abd22e7c4670290d8477e220c8e684871b8d9c16abf867a73` and
+`src/unicode-data.cpp` to
+`5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`
+(`vcs-read/2daa9fe581554b2fac543c79d5899d4a`,
+`vcs-read/6a887f95777946f682cbe4a452ff6265`). These reads are not binary-member
+provenance or license closure. In `ops.cpp`, the selected YaRN rope function is
+attributed “MIT licensed. Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng”
+and links to `jquesnelle/yarn`; the root `LICENSE` has a different copyright
+line naming the ggml authors. The referenced repository's fetched `master`
+`LICENSE` contains the full MIT grant and notice, a permissive term under
+Kotoha's dependency policy. The exact imported YaRN revision is not pinned, and
+the app's explicit license-page registrations contain no YaRN entry; preserve
+and account for its separate copyright and permission notice before any
+redistribution (`experiments/21413b81ee7044aba5669c2300d30145`,
+`experiments/ac5621a3cc6245ae8a4973b1d3e8bbb4`,
+`experiments/4ce0b7165ce9475ba1d744418e3872dd`,
+`mizu_fetch/1c898a13d34f56167ff05f14fbda3b55b4a91fbc3e0f65205c2ccddaf5cc8d6`).
+
+At the same pinned llama.cpp revision, `scripts/gen-unicode-data.py`
+(SHA-256 `a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`)
+fetches `UnicodeData.txt` from the unversioned UCD `latest` URL and uses the
+invoking Python's `unicodedata` version for normalization; the selected output
+contains a “Unicode 16.0.0” normalization marker. The retained generated-input
+manifest binds only output hashes; it records no UCD bytes/version or generator
+Python environment. The output therefore does not establish complete data
+provenance or applicable notice scope (`vcs-read/50425157782045f78e96a7f2f4ba0230`,
+`experiments/e1af4e40316a44e39e1acaaa09d5595f`,
+`experiments/a1b7b1a91d28499192da29757face95a`). Unicode License v3 provides a
+permissive grant and requires its copyright/permission notice with the Data
+Files or associated documentation; that category meets Kotoha's policy if
+applicable, but the captured inputs do not settle whether or how these tables
+are covered (`assets/licenses/Unicode-3.0.txt`,
+`design/specs/dependency_policy.json`,
+`sources/search-310eb9337f9a49afbbff1c4d0db22865ffa9f9d103395ea7c94dbd00fa58c593`).
+Kotoha currently registers Unicode-3.0 text for the distinct package “Unicode
+Bidi Data” and crypto in its in-app `LicensePage`; its test checks those entries,
+but no llama.cpp or generated-table registration appears in the app source
+(`commands/302be0f0a856496bbd79e355b058517f`,
+`commands/14ae9951ea444252bf9ebf69f99916a5`). The existing page is a delivery
+route, not evidence that these engine notices are covered.
+
+Separately, Windows application-CI publication
+`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
+`48a430f888442ed162987ac2b349ab5a4f59161b` (run `43574939450`) captures
+Release `kotoha.exe` (x64, 91,136 bytes,
 SHA-256 `5cbaaacf08cf1cee2842b21f4eeddf6d032f6427ef9109c2bf36c44226b6cd15`)
 directly imports `msvcp140.dll`, `vcruntime140.dll` and
 `vcruntime140_1.dll`; the initial-breakpoint capture records 42 providers,
@@ -1457,13 +1510,16 @@ runtime-present, pre-entrypoint observation on one server image—not Windows 11
 behavior, runtime-installation provenance, or redistribution permission.
 Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
-engine adoption remains disabled. The current probe source also wires a
-`windows-simd.json` capture: it verifies the pinned llama.cpp revision and
-`vec.h` digest, uses the Release `ggml-cpu` C++ compile group from CMake File API
-and CMake-generated compiler metadata, then evaluates the exact `ggml_v_expf`
-preprocessor chain from a target-settings macro witness. This code has not yet
-run on Windows CI, so actual branch selection remains unverified; it does not
-change the runtime, redistribution, Windows 11, or adoption conclusions.
+engine adoption remains disabled.
+
+The current source snapshot adds a `windows-simd.json` capture bound to the
+pinned llama.cpp revision, `vec.h` digest, Release `ggml-cpu` CMake File API
+compile group and generated compiler metadata. It has not yet produced a CI
+artifact: the exact snapshot's publication search and commit status returned no
+receipt or checks (`vcs-read/c2ff77a131c84e0fb11c1fd076bdff13`,
+`vcs-read/ce45af4da1f94222b2dff67d0f0b2f05`). The macro-branch result therefore
+remains unknown and does not change runtime, redistribution, Windows 11 or
+adoption conclusions.
 
 The same application-CI snapshot's macOS accessibility job failed before the
 save-panel, cancellation and draft-preservation assertions; this does not
