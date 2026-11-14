@@ -1908,9 +1908,35 @@ without prior written authorization. Reviewed ancestor listings also found
 and others, SHA-256 `eccd9d05b25e26a29b6b868c777b73b1c6399ca318d857e606c2e06a90527f4c`:
 retain copyright/permission in copies **and** supporting docs, full AS-IS/nonendorsement.
 This is not an OR alternative for UnicodeData or evidence of an ICU4J dependency;
-ancestor-notice applicability remains open, not presumed overridden. Before adoption,
-resolve selected redistribution terms and deliver full applicable Unicode notices
-through the user-accessible license action below; none is claimed already shipped.
+ancestor-notice applicability remains open, not presumed overridden. The app
+already bundles full Unicode License V3 text in `assets/licenses/Unicode-3.0.txt`
+(SHA-256 `e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`)
+and registers it in `lib/main.dart:18–19` as `Unicode Bidi Data`. This proves
+user-visible notice text for that component, but does not map it to `src/unicode-data.cpp`,
+establish the exact release copyright/year for its inputs, or close provenance.
+Before adoption, verify the applicable release notice and label its generated-table
+scope in the same user-accessible license action; do not duplicate the payload or
+claim current coverage without that mapping.
+
+**Additional provider notice evidence.** CPython issue #154493 and merged PR #154651
+state that an extract of the Unicode Character Database, converted to an internal
+format and used by `unicodedata` and `str`, is distributed under Unicode License V3;
+the merged `Doc/license.rst` patch reproduces its full notice
+(`mizu_fetch/1c01bee1bc8dcaf401f526e7431788412d5bef3f7860a98e6a781a89ed81e6aa`,
+`mizu_fetch/08069f3c862fdaa3f4d4cb563b475a9c10211b27f2006922237c9c3dd131e74e`,
+merge commit `751707414cc7d2a7a7f0fa7552fa02c963d6a902`). CPython member
+Marc-André Lemburg commented that Unicode License V3 applies to current Python UCD
+versions and recommended documenting the extracted data (`mizu_fetch/bc2fcebfaee76b8fe62ff6fdeacfc98889dae1394574c102fbbbb44df1574682`).
+The PR author disclaimed legal expertise and chose inclusion as the cautious course
+(`mizu_fetch/7a67d4a730671efb6951098f074f44f8a3ee637b41982615bdfad38a06ce2545`).
+The notice was also backported to CPython 3.14 and 3.13
+(PRs #154693 and #154696; `mizu_fetch/8a4b1c455578b30222b38f7cb811f8bc1ff00cb42e9056cd14b6be481a3fde2b`,
+`mizu_fetch/99ffd14f5236112fb5863e4d78517d5790ff1a87d756cc086c97571817798356`).
+This upstream provider treatment supports the conservative decision to carry the full
+Unicode License V3 notice for UCD-derived tables, including the normalization data
+stored here, rather than assuming conversion to C++ removes notice obligations. It
+does not prove this blob's production input, exact UCD version, Python build, or
+historical notice text; use the exact release notice once provenance is established.
 
 Reviewed immutable origin evidence (not proof of the exact historical adaptation
 revision):
