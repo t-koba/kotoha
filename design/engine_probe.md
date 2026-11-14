@@ -1520,11 +1520,23 @@ reads returned no check or artifact (`vcs-read/c2ff77a131c84e0fb11c1fd076bdff13`
 query called `cl.exe /Bv` without an input file; Microsoft documents D8003 for a
 compiler command with no source filename (`mizu_fetch/cd908988fb90c69f8975b2d8e9902edda5c5e3ec79ede806d1941758899dc259`). The
 corrected query supplies a temporary valid C++ translation unit with `/Bv /c`;
-a regression test verifies the file is present at invocation. Focused local
-tests pass, but the corrected capture still needs exact Windows CI before any
-branch claim. The macro-branch result therefore remains unknown and does not
-change runtime, redistribution, Windows 11 or adoption conclusions
-(`commands/6f32d35c02994c8291cfeb3c71ca4ea5`).
+a regression test verifies the file is present at invocation. The exact Windows
+job for SHA `6ffeca67764e7c511354ed4faca6b38cabf0e6a9` failed in its synthetic
+test step (`vcs-read/ecef91518ec14412bc5a51150072ce1f`, log
+`vcs-read/6496df80f64a440b93012ef90b62dbbb`): six tests failed and one errored, all due to
+`pinned vec.h missing or changed` because `Path.write_text` translated the
+fixture's LF bytes on Windows. The `/Bv` source-input regression passed, but
+this run did not produce usable build metadata or branch evidence. An earlier
+Windows source manifest records the expected `vec.h` raw digest
+`6afaaa70b626987e15dc37594e434a0cec28437b02391e8f72367239654ec768`; that
+separate build supports the fixture-byte diagnosis only, not a branch result
+(`vcs-read/ecc6cfb2d2694e7397a6ba2440e38f25`). The fixtures now write explicit
+UTF-8 bytes; all seven focused tests pass (`commands/6e8846ee3945431883a95588eb555659`)
+and the engine-probe test suite, Python compilation and diff check pass
+(`commands/65d0ccea90654174a9ab9260445bed3e`). The corrected capture still
+needs a fresh exact Windows CI run before any branch claim. The macro-branch
+result remains unknown and does not change runtime, redistribution, Windows 11
+or adoption conclusions (`commands/6f32d35c02994c8291cfeb3c71ca4ea5`).
 
 The same application-CI snapshot's macOS accessibility job failed before the
 save-panel, cancellation and draft-preservation assertions; this does not

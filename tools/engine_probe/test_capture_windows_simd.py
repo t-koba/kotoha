@@ -70,7 +70,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             text = exp_source()
             with patch.object(capture, "REVISION", "revision"), patch.object(capture, "VEC_SHA256", __import__('hashlib').sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
-                (source / "ggml/src/ggml-cpu/vec.h").write_text(text)
+                (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
                 run.side_effect = [SimpleNamespace(returncode=0, stdout=b"revision", stderr=b""),
                                    SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""),
                                    SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.38.33135", stderr=b"")]
@@ -97,7 +97,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
                 source, build, compiler = self.fixture(Path(d), **kwargs)
                 text = exp_source()
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
-                (source / "ggml/src/ggml-cpu/vec.h").write_text(text)
+                (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
                 with patch.object(capture, "REVISION", "revision"), \
                      patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), \
                      patch.object(capture, "run", return_value=SimpleNamespace(returncode=0, stdout=b"revision", stderr=b"")):
@@ -133,7 +133,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             source, build, compiler = self.fixture(Path(d))
             text = exp_source()
             (source / "ggml/src/ggml-cpu").mkdir(parents=True)
-            (source / "ggml/src/ggml-cpu/vec.h").write_text(text)
+            (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
             import hashlib
             with patch.object(capture, "REVISION", "revision"), patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
                 run.side_effect = [SimpleNamespace(returncode=0, stdout=b"revision", stderr=b""), SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""), SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.39.1", stderr=b"")]
@@ -147,7 +147,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             source, build, _ = self.fixture(Path(d))
             text = exp_source()
             (source / "ggml/src/ggml-cpu").mkdir(parents=True)
-            (source / "ggml/src/ggml-cpu/vec.h").write_text(text)
+            (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
             (build / "CMakeFiles/4.4.5/CMakeCXXCompiler.cmake").unlink()
             with patch.object(capture, "REVISION", "revision"), \
                  patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), \
