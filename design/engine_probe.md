@@ -1556,11 +1556,20 @@ the full MIT grant, copyright, permission condition and disclaimer
 The upstream llama.cpp implementation commit `898aeca90a9bb992f506234cf3b8b7f7fa28a1df`
 (2023-11-01, co-authored by Jeffrey Quesnelle) repeats the source-file citation
 and MIT attribution in its code patch (`mizu_fetch/0b1e2054f37534946cfddb31e246f26be7c82b778fbaf6289ec4539d41bc11bb`).
-This is a documented source candidate and complete notice, not a binding record
-that the selected code came from that exact revision; the imported upstream
-revision remains unpinned. The app's explicit license-page registrations
-contain no YaRN entry; before any redistribution, preserve and account for its
-separate copyright and permission notice (`experiments/21413b81ee7044aba5669c2300d30145`,
+The PR API record identifies head `081f73815fa7d127a6e79fb8fc1a317c9e52405e`,
+but its body links to `jquesnelle/yarn`, the paper and errata without a source
+commit (`mizu_fetch/61e4dfe3c8290c2686df36023d6f771421b004c75b05c18182f26b67dbfe4cba`).
+A later author comment links to `jquesnelle/llama.cpp` commit
+`f51eed105de17c31aaf2ff49f6e631483207532e` specifically as the non-finetuned
+evaluation commit; it is a benchmark-checkout reference, not a revision pin for
+the separate `jquesnelle/yarn` repository (`mizu_fetch/b85d99cacc6b0608041175c38c0ad92e0f74820b09558794b22f79f1e9b920ef`,
+comment `1772083454`). The candidate external file and complete MIT notice are
+pinned above, and the selected llama.cpp blob and its attribution are exact;
+however, the PR history still does not bind the port to a particular external
+file revision. The exact original-source relationship remains unresolved. The
+app's explicit license-page registrations contain no YaRN entry; before any
+redistribution, preserve and account for its separate copyright and permission
+notice (`experiments/21413b81ee7044aba5669c2300d30145`,
 `experiments/ac5621a3cc6245ae8a4973b1d3e8bbb4`,
 `experiments/4ce0b7165ce9475ba1d744418e3872dd`).
 
