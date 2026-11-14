@@ -268,19 +268,29 @@ closure from the list, output alignment or path overlaps.
 The exact Android API 35 x86_64 selected-input artifact records the installed
 NDK `sysroot/usr/include/c++/v1/regex` header at SHA-256
 `2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`
-(`vcs-read/793221f35a6e416a9e8b95cb3ea25c91`). The upstream candidate header
-at the declared base revision has SHA-256
-`897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
-(`mizu_fetch/3c81f1fa1b71d4bb1611d87266176b37591367abf6b61636bfe2d14f48aa0709`);
-the file at upstream commit `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`,
-whose ID is named by the listed regex patch, has SHA-256
-`60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`
+(`vcs-read/793221f35a6e416a9e8b95cb3ea25c91`). A byte-backed comparison against
+the exact r28c AOSP prebuilt at
+`platform/prebuilts/clang/host/linux-x86`, tag `refs/tags/ndk-r28c`, path
+`clang-r530567e/include/c++/v1/regex`, resolves Git blob
+`970de6af11cc6811d2aa8ce2867016c1c657fdc4` (`mizu_fetch/413c4d4254f89ff3e7cd53c24ea1fc5d758ad0606f6dbe6a2684077726c36540`).
+The full Gitiles response decoded to 213,476 bytes and independently hashes to
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`, matching
+the selected input exactly (`mizu_fetch/d2dee10f28e0d3cf4ed58710e5c334119b401a628b354670e3768d35ec9df1a4`,
+`experiments/bb87085e24204e9a8dfb0a7b94a2a1a9`). This establishes byte
+identity for this selected header input with the public r28c prebuilt file.
+It does not bind any archive member to its source. The LLVM `libcxx/include/regex`
+file at the `BUILD_INFO` source revision `97a699bf4812a18fb657c2779f5296a4ab2694d2`
+hashes to `897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
+(`mizu_fetch/44ff63e9f6a9e3115b9cd5a5dbfe013c34c3d93732203ef51cc3ac70198ef742`,
+`experiments/2a01d8a4a62b4d45a9c448f3db334606`), while the file at upstream
+commit `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`, named by the regex patch,
+hashes to `60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`
 (`mizu_fetch/d681c8b6981951da65b7055c52e033a8aa250a7b18dfd44357de8bd296785fd8`).
-The installed-header digest differs from both candidates; neither is byte-
-identical under this SHA-256 comparison. This does not identify the installed
-header's source or show which patches or transformations produced it. Source
-identity, patch application, surviving code, applicable notice obligations,
-redistribution authorization, and device behavior remain unresolved.
+Both differ from the selected header. The exact public-header match therefore
+does not identify the transformation or patch chain that produced it, prove
+patch application to the runtime build, or establish an object-source mapping.
+Applicable member notices, redistribution authorization, surviving code, and
+device behavior remain unresolved.
 The capture invokes the pinned NDK `llvm-dwarfdump --debug-line` and retains
 only compact per-member line-table metadata: version, sanitized source
 path/state, and MD5 when present. Missing MD5 remains explicitly unavailable;
