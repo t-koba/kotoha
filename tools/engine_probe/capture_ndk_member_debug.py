@@ -30,7 +30,9 @@ CHUNK_BYTES = 1024 * 1024
 ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
 PATH_RE = re.compile(
     r'''(?<![A-Za-z0-9_-])(?:[A-Za-z]:[\\/]|[\\/]{1,2}|\.{1,2}[\\/]|[^\s\"'<>:=]+[\\/])[^\s\"'<>]*''')
-QUOTED_VALUE_RE = re.compile(r'''(?<!\w)(["'])(?:\\.|(?!\1).)*(?:\1|$)''', re.DOTALL)
+QUOTED_VALUE_RE = re.compile(
+    r'''(?:(?<!\w)'(?:\\.|(?!').)*(?:'|$)|"(?:\\.|(?!").)*(?:"|$))''',
+    re.DOTALL)
 
 
 def sha256_file(path):
@@ -131,7 +133,7 @@ def _safe_tool_diagnostic(data, max_bytes, truncated=False):
     def redact_quoted_path(match):
         quoted = match.group(0)
         if '/' in quoted or '\\' in quoted:
-            quote = match.group(1)
+            quote = quoted[0]
             return quote + '[path]' + (quote if quoted.endswith(quote) else '')
         return quoted
 
