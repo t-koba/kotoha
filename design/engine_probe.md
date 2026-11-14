@@ -1880,6 +1880,10 @@ cache-only WinVerifyTrust observation, not redistribution or installation
 provenance. The job log (`vcs-read/1fec5d1610214c07809d2d867c3d0ba9`) identifies
 Windows Server 2025 Datacenter, not Windows 11. Runtime-present behavior on
 that host is observed; Windows 11 and runtime-absent behavior remain untested.
+The operator confirms no paid CI runner or additional host will be provided;
+standard hosted CI is the only available target
+(`operator/kotoha/a-de1f783a-r1-1794644102331`). Treat the Windows 11 and
+runtime-absent gate as unverified, not inferred from the server runner.
 This is not a selected deployment path or redistribution authorization.
 
 **General-desktop floor decision (not yet validated):** Windows 11 x64 on a
