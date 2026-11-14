@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import CoreGraphics
 import XCTest
 
@@ -22,15 +23,34 @@ final class NativeExportPanelUITests: XCTestCase {
     app.terminate()
   }
 
-  private func focusRunnerWindowThroughVoiceOver() {
+  private func attemptVoiceOverFocus() {
     app.activate()
-    // VO-Shift-F4 moves VoiceOver's cursor to keyboard focus; VO-Shift-Down
-    // interacts with that focused item so the test can observe Flutter AX nodes.
+    // Request the standard VoiceOver focus/interact chords through XCUITest.
+    // Synthesized key delivery does not prove VoiceOver handled either chord.
     app.typeKey(.F4, modifierFlags: [.control, .option, .shift, .function])
     app.typeKey(.downArrow, modifierFlags: [.control, .option, .shift])
   }
 
-  private func logScrollDiagnostics(target: XCUIElement) {
+  private func appAccessibilityDiagnostic() -> String {
+    let trusted = AXIsProcessTrusted()
+    let application = AXUIElementCreateApplication(app.processID)
+    let timeoutStatus = AXUIElementSetMessagingTimeout(application, 1.0)
+    var enhancedUI: CFTypeRef?
+    let queryStatus = AXUIElementCopyAttributeValue(
+      application, "AXEnhancedUserInterface" as CFString, &enhancedUI)
+    let value: String
+    if queryStatus == .success, let enabled = enhancedUI as? Bool {
+      value = enabled ? "true" : "false"
+    } else if queryStatus == .success {
+      value = "nonBoolean"
+    } else {
+      value = "unavailable"
+    }
+    return "axClientTrusted=\(trusted) appEnhancedUIStatus=\(queryStatus.rawValue) "
+      + "appEnhancedUI=\(value) axTimeoutStatus=\(timeoutStatus.rawValue)"
+  }
+
+  private func logAccessibilityDiagnostics(target: XCUIElement) {
     func describe(_ identifier: String, element: XCUIElement) -> String {
       guard element.exists else { return "\(identifier){exists=false}" }
       return "\(identifier){exists=true,hittable=\(element.isHittable)," +
@@ -45,8 +65,8 @@ final class NativeExportPanelUITests: XCTestCase {
     }
     // Deliberately omit element values: these diagnostics report only geometry
     // and accessibility availability, never draft contents.
-    print("KotohaScrollDiagnostic voiceOverEnabled=\(NSWorkspace.shared.isVoiceOverEnabled) " +
-          "windowFrame=\(windowFrame) " +
+    print("KotohaAccessibilityDiagnostic voiceOverEnabled=\(NSWorkspace.shared.isVoiceOverEnabled) " +
+          appAccessibilityDiagnostic() + " windowFrame=\(windowFrame) " +
           "scrollViews=\(app.scrollViews.count) " +
           describe("target", element: target) + " " +
           visibleFields.joined(separator: " "))
@@ -78,11 +98,11 @@ final class NativeExportPanelUITests: XCTestCase {
       let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
       let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.20))
       start.press(forDuration: 0.05, thenDragTo: end)
-      focusRunnerWindowThroughVoiceOver()
+      attemptVoiceOverFocus()
     }
     let fieldExists = field.waitForExistence(timeout: panelTimeout)
     if !fieldExists || !field.isHittable {
-      logScrollDiagnostics(target: field)
+      logAccessibilityDiagnostics(target: field)
     }
     XCTAssertTrue(
       fieldExists,
