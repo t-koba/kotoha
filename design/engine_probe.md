@@ -1838,6 +1838,28 @@ APEX with provider hashes, real-loader rejection of missing/truncated GGUFs, and
 one generated-only `Bonjour.` sample. This is a narrow emulator observation,
 not language-quality, physical-device, ARM or other OS/ABI evidence.
 
+The installed-package `clang_source_info.md` (SHA-256
+`8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`) records
+base LLVM revision `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and lists patch
+links at `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`,
+including the libc++ regex patch `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`.
+The separate patch-source manifest hashes four selected blobs; its entry for
+that patch is 15,251 bytes and SHA-256
+`4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d`. Fetching
+the pinned Gitiles blob and decoding its base64 content reproduced that digest;
+the patch changes `libcxx/include/regex` and two test files
+(`vcs-read/b1b517450a194a5fa47c303332ccaf8c`,
+`vcs-read/f3b8ee2ca7974deeac824a507c5cad88`,
+`mizu_fetch/b107ecf1534603650358bfc8952e3e19aabf7ad6178923f1ebea780b1ff2757f`,
+`experiments/b1866611880e4686a612f89302008f48`). The selected archive manifest
+includes `regex.cpp.o` in `libc++_static.a` and `cxa_demangle.cpp.o` in
+`libc++abi.a` (`vcs-read/ab2a722d9101498797b9aa41fefb731a`), which gives a
+specific candidate patch/member relationship, not proof that the regex header
+was read for that member, that the patch was applied to the packaged NDK build,
+or that a resulting object has this postimage. The package source-info lists
+many more patch links than the four blobs hashed by the separate capture, so
+that capture is not exhaustive.
+
 NDK r28c package/source-info and patch captures, candidate-source hashes and
 license texts are described above. DWARF paths and basename/source-list matches
 still do not prove the installed archive-member source bytes; patch-to-installed-
