@@ -504,6 +504,13 @@ class CaptureMemberDebugTest(unittest.TestCase):
         for leaked in ('/home/alice', 'Private', 'Project'):
             self.assertNotIn(leaked, diagnostic)
 
+    def test_tool_diagnostic_does_not_pair_word_adjacent_closing_quote(self):
+        raw = b'error: size 5" at "/home/alice/Private Project"'
+        diagnostic = capture._safe_tool_diagnostic(raw, 256)
+        self.assertEqual(diagnostic, 'error: size 5" at "[path]"')
+        for leaked in ('/home/alice', 'Private', 'Project'):
+            self.assertNotIn(leaked, diagnostic)
+
     def test_tool_diagnostic_redacts_unterminated_quoted_path_with_spaces(self):
         raw = b'DW_AT_comp_dir: "/home/alice/Private Project/secret.cpp'
         diagnostic = capture._safe_tool_diagnostic(raw, 32)
