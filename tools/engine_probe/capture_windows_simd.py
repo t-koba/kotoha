@@ -147,10 +147,19 @@ def selected_branch(ordered, macros):
     return branch_name(next((expr for expr in ordered if evaluate(expr, macros)), None))
 
 
+def normalize_msvc_version(version):
+    match = re.fullmatch(r"([0-9]+\.[0-9]+\.[0-9]+)(?:\.0)?", version)
+    if not match:
+        fail("MSVC version is invalid")
+    return match.group(1)
+
+
 def compiler_version(output):
-    versions = set(re.findall(r"Compiler Version ([0-9]+\.[0-9]+\.[0-9]+)", output))
-    if len(versions) != 1: fail("MSVC version missing or ambiguous")
-    return next(iter(versions))
+    versions = set(re.findall(
+        r"Compiler Version ([0-9]+\.[0-9]+\.[0-9]+(?:\.0)?)(?=\s|$)", output))
+    if len(versions) != 1:
+        fail("MSVC version missing or ambiguous")
+    return normalize_msvc_version(next(iter(versions)))
 
 
 def invoked_compiler_version(compiler):
@@ -200,9 +209,8 @@ def compiler_identity(build):
         fail("CMake CXX compiler is not the selected MSVC toolset")
     if metadata["CMAKE_CXX_COMPILER_ID"] != "MSVC":
         fail("cached CXX compiler identity is not MSVC")
-    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", metadata["CMAKE_CXX_COMPILER_VERSION"]):
-        fail("CMake CXX compiler version is invalid")
-    return compiler, metadata["CMAKE_CXX_COMPILER_VERSION"]
+    cached_version = normalize_msvc_version(metadata["CMAKE_CXX_COMPILER_VERSION"])
+    return compiler, cached_version
 
 
 def capture(source_root, build, output):

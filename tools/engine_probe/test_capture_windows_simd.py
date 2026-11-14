@@ -67,6 +67,9 @@ class CaptureWindowsSimdTest(unittest.TestCase):
     def test_outer_build_capture_is_sanitized(self):
         with tempfile.TemporaryDirectory() as d:
             source, build, compiler = self.fixture(Path(d))
+            metadata = build / "CMakeFiles/4.4.5/CMakeCXXCompiler.cmake"
+            metadata.write_text(metadata.read_text().replace(
+                '"19.38.33135"', '"19.38.33135.0"'))
             text = exp_source()
             with patch.object(capture, "REVISION", "revision"), patch.object(capture, "VEC_SHA256", __import__('hashlib').sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
@@ -108,6 +111,16 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             with patch.object(capture, "REVISION", "revision"), patch.object(capture, "run", return_value=SimpleNamespace(returncode=0, stdout=b"revision", stderr=b"")):
                 with self.assertRaisesRegex(ValueError, "vec.h missing or changed"):
                     capture.capture(source, build, Path(d) / "out.json")
+
+    def test_msvc_version_formats_are_normalized_without_accepting_unknown_suffixes(self):
+        self.assertEqual(capture.normalize_msvc_version("19.51.36260"), "19.51.36260")
+        self.assertEqual(capture.normalize_msvc_version("19.51.36260.0"), "19.51.36260")
+        self.assertEqual(capture.compiler_version(
+            "Compiler Version 19.51.36260 for x64"), "19.51.36260")
+        self.assertEqual(capture.compiler_version(
+            "Compiler Version 19.51.36260.0 for x64"), "19.51.36260")
+        with self.assertRaisesRegex(ValueError, "MSVC version is invalid"):
+            capture.normalize_msvc_version("19.51.36260.1")
 
     def test_version_query_supplies_source_file(self):
         with tempfile.TemporaryDirectory() as d:
