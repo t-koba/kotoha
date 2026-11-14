@@ -1756,20 +1756,31 @@ version and cache-only signature status but not installation history, a
 OS image or were installed by a Visual C++ Redistributable, and it does not
 identify the applicable installation license.
 
-The developer-only Windows workflow captures actual `LOAD_DLL_DEBUG_EVENT`
-file handles before the executable entrypoint, hashes observed files, records
-file/product versions and cache-only Windows trust status without online
-certificate retrieval, and classifies paths under the probe directory or
-`%SystemRoot%`; providers outside those roots are represented by basename only.
-Direct ordinary PE imports must tie to observed module basenames;
-`api-ms-win-*` and `ext-ms-win-*` remain contract names, not fabricated DLL paths.
-The process is terminated before the initial breakpoint is released. Workflow
-defaults are a 60-second debug wait and 256 provider/import records;
+The developer-only Windows engine-probe workflow captures
+`LOAD_DLL_DEBUG_EVENT` file handles for `llama-simple.exe --help` before its
+entrypoint. The regular Windows CI job now also applies the same bounded helper
+to the built Release `kotoha.exe` with no arguments. It captures the actual
+pre-entrypoint loaded provider set, hashes observed files, records file/product
+versions and cache-only Windows trust status without online certificate
+retrieval, and classifies paths under the app directory or `%SystemRoot%`;
+providers outside those roots are represented by basename only. Direct ordinary
+PE imports must tie to observed module basenames; `api-ms-win-*` and
+`ext-ms-win-*` remain contract names, not fabricated DLL paths. For the app
+capture, `dumpbin /HEADERS /DEPENDENTS` text is written only to a temporary
+runner file and removed in `finally`; the artifact contains only the sanitized
+manifest and summary, not the linkage text or absolute paths. The debugger
+terminates the process at the initial breakpoint before the `kotoha.exe`
+entrypoint; this observes loader-resolved dependencies, not post-entrypoint
+loads, and is not a Windows 11 or runtime-absent test. The Windows CI job does
+not install, copy or bundle a VC++ runtime. Existing engine-probe defaults are
+a 60-second debug wait and 256 provider/import records;
 `ENGINE_RUNTIME_DEBUG_SECONDS`, `ENGINE_RUNTIME_MAX_PROVIDERS` and
-`ENGINE_RUNTIME_MAX_IMPORTS` configure them. The workflow's 15-minute job cap
-bounds runtime. These are capture limits, not the Windows loader or every
-supported runtime. The exact run establishes one host observation only, not
-redistribution approval.
+`ENGINE_RUNTIME_MAX_IMPORTS` configure them. The engine-probe workflow's
+15-minute job cap bounds its capture; the Windows CI job separately bounds its
+Release capture through the same 60-second helper timeout and 30-minute job
+cap. These are capture limits, not the Windows loader or every supported
+runtime. Each result is one host observation only, not redistribution
+approval.
 
 Microsoft's [Visual Studio 2026 REDIST
 list](https://learn.microsoft.com/en-us/visualstudio/releases/2026/redistribution)

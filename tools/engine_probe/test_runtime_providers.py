@@ -250,8 +250,29 @@ class TieTest(unittest.TestCase):
         self.assertEqual(rp.positive_count('4097'), 4097)
         self.assertEqual(rp.positive_seconds('601'), 601.0)
 
+    def test_kotoha_command_metadata_has_no_arguments(self):
+        self.assertEqual(rp.COMMANDS['llama-simple.exe'], ['llama-simple.exe', '--help'])
+        self.assertEqual(rp.COMMANDS['kotoha.exe'], ['kotoha.exe'])
+        linkage = LINKAGE.replace('llama-simple.exe', 'kotoha.exe')
+        manifest, summary = rp.assemble(
+            exe_name='kotoha.exe', exe_sha256='a' * 64, exe_size=999,
+            exe_classified='app/kotoha.exe', linkage_text=linkage,
+            linkage_sha256='b' * 64, debug_paths=self.debug(),
+            file_info=fake_info_factory(), app_root=APP, windows_root=WINDOWS)
+        self.assertEqual(manifest['command'], ['kotoha.exe'])
+        self.assertIn('command kotoha.exe\n', summary)
+        self.assertIn('Windows 11 behavior and runtime redistribution entitlement are not claimed.', summary)
+        llama_manifest, llama_summary = rp.assemble(
+            exe_name='llama-simple.exe', exe_sha256='a' * 64, exe_size=999,
+            exe_classified='app/llama-simple.exe', linkage_text=LINKAGE,
+            linkage_sha256='b' * 64, debug_paths=self.debug(),
+            file_info=fake_info_factory(), app_root=APP, windows_root=WINDOWS)
+        self.assertEqual(llama_manifest['command'], ['llama-simple.exe', '--help'])
+        self.assertNotIn('Windows 11 behavior', llama_summary)
+        self.assertIn('No model fixture reads, no DLL copies, no redistribution or licensing approval.', llama_summary)
+
     def test_unexpected_executable_fails(self):
-        with self.assertRaisesRegex(ValueError, 'scoped to llama-simple.exe'):
+        with self.assertRaisesRegex(ValueError, 'capture target is not configured'):
             rp.assemble(exe_name='other.exe', exe_sha256='a' * 64, exe_size=999,
                         exe_classified='app/other.exe', linkage_text=LINKAGE,
                         linkage_sha256='b' * 64, debug_paths=self.debug(),
@@ -357,6 +378,22 @@ class DebugTerminationTest(unittest.TestCase):
 
 
 class WorkflowTest(unittest.TestCase):
+    def test_release_provider_capture_wiring(self):
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/ci.yml').read_text(encoding='utf-8')
+        self.assertIn('Capture sanitized Release runner imports', workflow)
+        self.assertIn('Capture sanitized Release runtime providers before entrypoint', workflow)
+        self.assertIn('dumpbin /HEADERS /DEPENDENTS $exe', workflow)
+        self.assertIn('runtime_providers.py --executable $exe --linkage-log $linkage', workflow)
+        self.assertIn('windows-release-runtime-providers', workflow)
+        self.assertIn('runtime-providers.json', workflow)
+        self.assertIn('runtime-summary.txt', workflow)
+        capture = workflow[workflow.index('Capture sanitized Release runtime providers'):]
+        self.assertIn('kotoha-release-linkage.txt', capture)
+        self.assertIn('finally {', capture)
+        upload = capture[capture.index('Retain sanitized Release runtime provider evidence'):]
+        self.assertNotIn('kotoha-release-linkage.txt', upload)
+
     def test_windows_step_captures_pre_entrypoint_without_model(self):
         root = Path(__file__).resolve().parents[2]
         workflow = (root / '.github/workflows/engine-probe.yml').read_text(encoding='utf-8')

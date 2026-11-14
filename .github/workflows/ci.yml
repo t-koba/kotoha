@@ -392,3 +392,28 @@ jobs:
           name: windows-release-import-summary
           path: windows-release-import-summary.json
           if-no-files-found: error
+      - name: Capture sanitized Release runtime providers before entrypoint
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $dumpbin = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC/Tools/MSVC/**/bin/Hostx64/x64/dumpbin.exe' | Select-Object -First 1
+          if (-not $dumpbin) { throw 'dumpbin not found; runtime provider capture missing' }
+          $exe = (Resolve-Path 'build/windows/x64/runner/Release/kotoha.exe').Path
+          $linkage = Join-Path $env:RUNNER_TEMP 'kotoha-release-linkage.txt'
+          try {
+            & $dumpbin /HEADERS /DEPENDENTS $exe > $linkage
+            if ($LASTEXITCODE -ne 0) { throw 'dumpbin linkage capture failed' }
+            python tools/engine_probe/runtime_providers.py --executable $exe --linkage-log $linkage --output windows-release-runtime-providers
+            $captureExit = $LASTEXITCODE
+          } finally {
+            if (Test-Path -LiteralPath $linkage) { Remove-Item -LiteralPath $linkage -Force }
+          }
+          if ($captureExit -ne 0) { exit $captureExit }
+      - name: Retain sanitized Release runtime provider evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-release-runtime-providers
+          path: |
+            windows-release-runtime-providers/runtime-providers.json
+            windows-release-runtime-providers/runtime-summary.txt
+          if-no-files-found: error

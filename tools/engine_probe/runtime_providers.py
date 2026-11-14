@@ -4,14 +4,16 @@ Developer probe only. Not engine adoption, redistribution approval, or a
 licensing determination. No model fixture is read, no DLL is copied or
 shipped, and no product behavior or upstream engine source is changed.
 
-Method: launch the exact ``llama-simple.exe`` under the Windows debug API
+Method: launch the exact configured executable under the Windows debug API
 with ``DEBUG_PROCESS`` and observe ``LOAD_DLL_DEBUG_EVENT`` records until
 the initial ``EXCEPTION_BREAKPOINT`` fires. That breakpoint arrives before
 the application entrypoint runs, so the observed set is the loader-resolved
 pre-entrypoint provider set for the launched command
-(``llama-simple.exe --help``). ``--help`` exits without model reads if the
-debugger ever resumes it; provider capture terminates at the breakpoint and
-never runs inference.
+(``llama-simple.exe --help`` or the Release ``kotoha.exe`` with no args).
+The helper terminates at the first breakpoint before the executable entrypoint;
+the GUI target is never resumed. Windows loader and dependency initialization
+may run while providers are mapped, but the Kotoha entrypoint and inference do
+not run.
 
 Privacy: absolute provider paths exist only in debugger memory. Published
 records contain only SHA-256, size, file/product version, cache-only Windows
@@ -48,7 +50,10 @@ SCHEMA = 1
 PROVIDERS_JSON = 'runtime-providers.json'
 SUMMARY = 'runtime-summary.txt'
 CAPTURE = 'debug-initial-breakpoint'
-COMMAND = ['llama-simple.exe', '--help']
+COMMANDS = {
+    'llama-simple.exe': ['llama-simple.exe', '--help'],
+    'kotoha.exe': ['kotoha.exe'],
+}
 SIGNER_CHECK = 'WinVerifyTrust WTD_UI_NONE WTD_REVOKE_NONE WTD_CACHE_ONLY_URL_RETRIEVAL'
 
 DEFAULT_MAX_PROVIDERS = 256
@@ -266,8 +271,9 @@ def assemble(*, exe_name, exe_sha256, exe_size, exe_classified,
         raise ValueError('Import count limit must be positive; closure incomplete')
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.\-]*\.exe', exe_name):
         raise ValueError('Executable name is malformed; closure incomplete')
-    if exe_name.lower() != COMMAND[0].lower():
-        raise ValueError('Unexpected executable; this capture is scoped to llama-simple.exe')
+    command = COMMANDS.get(exe_name.lower())
+    if command is None:
+        raise ValueError('Unexpected executable; capture target is not configured')
     if not SHA_RE.fullmatch(exe_sha256):
         raise ValueError('Executable hash is malformed; closure incomplete')
     if not isinstance(exe_size, int) or isinstance(exe_size, bool) or exe_size <= 0:
@@ -322,7 +328,7 @@ def assemble(*, exe_name, exe_sha256, exe_size, exe_classified,
     manifest = {
         'schema': SCHEMA,
         'capture': CAPTURE,
-        'command': list(COMMAND),
+        'command': list(command),
         'exe': {
             'basename': exe_name.lower(),
             'classified_path': exe_classified,
@@ -348,7 +354,7 @@ def assemble(*, exe_name, exe_sha256, exe_size, exe_classified,
         'No model fixture reads, no DLL copies, no redistribution or licensing approval.',
         'Signer status: ' + SIGNER_CHECK + '.',
         'Rows: lowercase SHA256, size, classified path; UTF-8/LF. Contracts have no file paths.',
-        'Capture: ' + CAPTURE + ' command ' + ' '.join(COMMAND),
+        'Capture: ' + CAPTURE + ' command ' + ' '.join(command),
         'Executable ' + manifest['exe']['classified_path'] + ' SHA256 ' + exe_sha256,
         'Direct imports: ' + str(len(direct)) + '; delay: ' + str(len(delay)) +
         '; contracts: ' + str(len(contracts)) + '; providers: ' + str(len(providers)) +
@@ -359,6 +365,8 @@ def assemble(*, exe_name, exe_sha256, exe_size, exe_classified,
     for item in providers:
         lines.append(item['sha256'] + ' ' + str(item['size']) + ' ' + item['classified_path'] +
                      ' ' + item['file_version'] + ' ' + item['signer_status'] + ' ' + item['tie'])
+    if exe_name.lower() == 'kotoha.exe':
+        lines.insert(2, 'Windows 11 behavior and runtime redistribution entitlement are not claimed.')
     manifest_text = json.dumps(manifest, sort_keys=True, indent=2) + '\n'
     lines.append('Manifest SHA256: ' + hashlib.sha256(manifest_text.encode('utf-8')).hexdigest())
     summary = '\n'.join(lines) + '\n'
@@ -397,8 +405,8 @@ def debug_capture_windows(executable, timeout_seconds, max_providers=DEFAULT_MAX
     """Observe pre-entrypoint DLLs via DEBUG_PROCESS until initial breakpoint.
 
     Returns absolute provider paths in load order (memory only, never
-    published). Launches ``executable --help`` under the debugger so a
-    resumed process exits without model reads. Terminates at the first
+    published). Uses configured command metadata; the GUI target has no
+    arguments. Terminates at the first
     first-chance ``EXCEPTION_BREAKPOINT``; any exit before that breakpoint,
     timeout, or unreadable DLL handle fails closed.
     """
@@ -492,11 +500,15 @@ def debug_capture_windows(executable, timeout_seconds, max_providers=DEFAULT_MAX
         return buffer.value
 
     exe_str = str(executable)
-    command = ctypes.create_unicode_buffer('"' + exe_str + '" --help')
+    args = COMMANDS.get(Path(executable).name.lower())
+    if not args:
+        raise ValueError('Executable command metadata missing; closure incomplete')
+    command_line = ' '.join(['"' + exe_str + '"'] + args[1:])
+    command_buffer = ctypes.create_unicode_buffer(command_line)
     startup = STARTUPINFOW()
     startup.cb = ctypes.sizeof(STARTUPINFOW)
     proc = PROCESS_INFORMATION()
-    created = kernel32.CreateProcessW(None, command, None, None, False,
+    created = kernel32.CreateProcessW(None, command_buffer, None, None, False,
                                       DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS,
                                       None, None, ctypes.byref(startup), ctypes.byref(proc))
     if not created:
