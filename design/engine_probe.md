@@ -1593,11 +1593,16 @@ compile-group and MSVC checks. A fresh exact Windows CI result is still needed
 to establish the SIMD branch. Runtime-present observations, redistribution,
 Windows 11 behavior and engine adoption remain separate and unresolved.
 
-The same application-CI snapshot's macOS accessibility job failed before the
-save-panel, cancellation and draft-preservation assertions; this does not
-establish a product root cause or user-device behavior. Both engine candidates
-remain unapproved until their independent source, notice, legal and runtime
-gates close.
+Exact macOS job `132464452966` for the same publication/SHA failed in
+`NativeExportPanelUITests.testNativeSavePanelIsAccessibleAndCancelPreservesDraft`
+before opening the save panel: the test could not find the translation field
+after one window-coordinate scroll. The hosted diagnostic reports
+`voiceOverEnabled=true`, `axClientTrusted=false`, and missing source-language,
+source-text and scroll-view elements (`vcs-read/0f82e5be2e974f5fb23ae06a206b8828`).
+No save-panel accessibility, cancellation or draft-preservation assertion ran;
+this is a runner/test observation, not user-device behavior or a proven product
+root cause. Both engine candidates remain unapproved until their independent
+source, notice, legal and runtime gates close.
 
 The previous exact Android probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
