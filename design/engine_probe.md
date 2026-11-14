@@ -181,21 +181,33 @@ from the official r28c prebuilt tag (`clang-r530567e/clang_source_info.md`)
 hashes to `8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`,
 matching the NDK package manifest, and includes the regex patch URL
 (`mizu_fetch/fc36f115b303b3ea642e6daae8b8e6ef2d06853baef60668bc15ab0a8c3b7141`;
-`experiments/ae3cf212f603467091da4908ceaa89ce`). The pinned `source_manager.py`
-at `e727bfb014bd436f581a66a450c939a6983a1fc3` writes this file from
-`pi.applied_patches`; its parser populates that list only from the
-`The following patches applied successfully:` section
-(`mizu_fetch/5ea273a6a563cf5c18e171cad67bdf758c65e217c71431cac11008702791aeab`;
-`experiments/cffa42312f09473ab31a164f8ccae420`). Pinned `do_build.py` calls
-`source_manager.setup_sources` before the build steps, and
-`DeviceLibcxxBuilder` uses `paths.LLVM_PATH / 'runtimes'`
-(`mizu_fetch/bda5b6835c2c40fe89e41a45abe799f49d9525cf603b3e579cf7a729392268c2`;
-`experiments/845c92450858410bb7d50ca76c5102a5`;
-`mizu_fetch/3ee2fc4d85592d15d9d77ba4aaf258097042f4482331e8ba9d42fe70dc07b4ae`;
-`experiments/89f83f603879467b806563a3e2172bf0`). These source records support
-builder-reported patch application during toolchain source preparation, but do
-not prove that the captured runtime build used that tree or that any selected
-archive object consumed the header. The official prebuilt tree contains the
+`experiments/ae3cf212f603467091da4908ceaa89ce`). The pinned
+`source_manager.py` at
+`e727bfb014bd436f581a66a450c939a6983a1fc3` (11,594 bytes; SHA-256
+`8576c5fe3c0a4d596a42bf57a22f75fd151f9ddc465fa605cadf77a0021eef94`;
+`experiments/433d21f6f5934121ae38b5165ab29209`,
+`experiments/0e8290eac40e4edf9609d8e6611339b6`) applies the patch specification
+to `paths.LLVM_PATH` in its non-skip path. Its parser records only patch names
+from the patch-manager `The following patches applied successfully:` block,
+which its writer emits to
+`clang_source_info.md`. The exact packaged file lists the regex patch but, like
+that writer, records no source/postimage digest. In the same revision, `do_build.py` calls `setup_sources` before `build_runtimes` in
+the normal non-skip path; `build_runtimes` invokes `DeviceLibcxxBuilder`, whose
+NDK configuration uses `paths.LLVM_PATH / 'runtimes'` and
+`LLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'`. `LLVMRuntimeBuilder` passes that path
+to CMake as the source root (`experiments/0644080a5f02426a8c9f4eba530c2a86`,
+`experiments/0bcd37c5d8ce46ccae9b9fd604f8d53b`,
+`experiments/56aeb84a7b2b4b9cb3ead40c7c35747d`). This shows the pinned build
+path's intended patched-tree input, but does not attest that the exact build
+invocation produced the packaged archives or bind selected objects to source or
+header digests. Official r28c `docs/Toolchains.md` (3,574 bytes; SHA-256
+`b8f7fc03a6bd407c657e9e304ce29a14d04803fc67f660d565402a8d892388a2`;
+`experiments/00efe36766d243f29d7083f4e4c47dc9`) confirms the LLVM toolchain is
+built separately and repackaged by the NDK build, which may remove non-NDK
+runtime libraries. Closing the member gap requires a build-provenance manifest
+bound to exact archive/member hashes and recording the actual runtime invocation
+plus source/dependency digests; the inspected `libc++` and `cxa_demangle.cpp.o`
+line tables above have no MD5 checksums. The official prebuilt tree contains the
 source-info file alongside `android_libc++` and `runtimes_ndk_cxx` outputs
 (`mizu_fetch/f293b9eb178ac56e91af7a0bce95089b8a34097670d28944025d2a6499b79f3b`).
 The exact
@@ -1238,16 +1250,10 @@ diff's postimage prefix `46968357d397`
 (`mizu_fetch/ec7748ca84bf492028ca84db48a8810d99ef00fc3be3e3551e87efe1f655db4a`).
 That hunk adds `regex_iterator` friendship and updates prefix bookkeeping after
 successful search, preserving the previous match end for zero-length matches.
-This establishes the changed header bytes in the upstream patch tree and their
-absence from the unmodified compiler-reported source tree, whose header matches
-the source-info base. The exact pinned patch section applied to that candidate
+The exact pinned patch section applied to the compiler-reported candidate
 produces the installed input byte-for-byte (see the postimage comparison above),
-so the installed header is an exact candidate postimage despite its distinct
-hash from either unmodified source revision. The source-info record also reports
-the patch in the source tree's successful-application set. These findings
-establish header-postimage identity and support builder-reported source-tree
-application; they do not identify whether the release obtained those bytes by
-that patch application or another route.
+so the header is an exact candidate postimage despite its distinct hash from
+either unmodified source revision.
 
 The selected-input record establishes that the header is a compiler input, and
 the link map selects `libc++_static.a(regex.cpp.o)`. Neither links that object
