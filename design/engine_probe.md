@@ -1575,23 +1575,23 @@ Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
 engine adoption remains disabled.
 
-The Windows SIMD branch remains unknown. The capture binds a successful
-`windows-simd.json` to the pinned llama.cpp revision, `vec.h` digest, Release
-`ggml-cpu` File API compile group and verified MSVC identity. Its `/Bv` query
-uses a temporary C++ input, and the parser fixtures preserve exact UTF-8 bytes.
-The exact Windows x64 job for publication
-`b894e53620709a46f8324bb711d4e035be51ade5f8e17042439f2c3992fe2030` / SHA
-`c16c604354eba222186c308b5cbf6a8a1d00ec0d` failed at the SIMD capture after
-build and synthetic smoke succeeded; the complete log reports only the generic
-failure (`vcs-read/04fcb917d4884b18b3aaa43034d29ee3`). The requested JSON is not
-present in the retained artifact inventory (`vcs-read/6a6a6e3543be43a4bffaf384224ab906`).
-CMake metadata records compiler version `19.51.36260.0` and a compiler path
-under MSVC toolset `14.51.36231` (`vcs-read/f0f42b38b95d441393c0e24946e501c9`);
-that discrepancy does not identify the failed capture condition or prove a
-branch. The capture now reports only its bounded, path-free failure reason;
-retry the exact target before assigning a branch. Windows runtime-present
-observations, redistribution, Windows 11 behavior and engine adoption remain
-separate and unresolved.
+The Windows SIMD branch remains unknown. Exact Windows x64 job `132463025479`
+for publication `1b0239717788a1d6504a1851d7cdc558eb085ab288d880f31388100129de0fb6`
+/ SHA `3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` failed at the SIMD capture
+with `upstream source revision mismatch` after the build and synthetic smoke
+succeeded (`vcs-read/2695bc6507c7402db327be033f149aa7`). This was a capture
+provenance-check defect, not evidence of a changed upstream source: the probe
+uses a GitHub source archive URL and pinned archive SHA (`vcs-read/638c188707114cbbbbae6b427e35f35a`,
+`vcs-read/28ddb9fbd8884c3cb74524e1301f44d6`), while its generated version
+header reports Kotoha's enclosing commit prefix `3cfbd48` (`vcs-read/96df28e1a7a841689fef34e2f2dc303c`).
+The build's source manifest independently records the pinned `vec.h` digest
+(`vcs-read/362bf74e70ee476b87fe95ee67b60f10`); the failed run did not produce
+`windows-simd.json` or a branch result. The capture now binds the revision to
+the pinned archive URL/SHA, verifies the CMake-configured source root and
+rejects a FetchContent source override, then retains the exact `vec.h`, target,
+compile-group and MSVC checks. A fresh exact Windows CI result is still needed
+to establish the SIMD branch. Runtime-present observations, redistribution,
+Windows 11 behavior and engine adoption remain separate and unresolved.
 
 The same application-CI snapshot's macOS accessibility job failed before the
 save-panel, cancellation and draft-preservation assertions; this does not

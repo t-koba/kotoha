@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 
 REVISION = "31424b7cf14604ca65a9195123da1413f31c4472"
+FIXTURE_PATH = Path(__file__).with_name("fixtures.json")
 VEC_SHA256 = "6afaaa70b626987e15dc37594e434a0cec28437b02391e8f72367239654ec768"
 EXP_CONDITIONS = (
     "defined(__ARM_FEATURE_SVE) && defined(__aarch64__)",
@@ -43,6 +44,39 @@ def cache_values(path):
         if match:
             found.setdefault(match.group(1), []).append(match.group(2))
     return found
+
+
+def pinned_source_archive():
+    manifest = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    files = manifest.get("files")
+    if not isinstance(files, list) or len(files) != 1 or not isinstance(files[0], dict):
+        fail("pinned source archive manifest missing or ambiguous")
+    entry = files[0]
+    url = f"https://github.com/ggml-org/llama.cpp/archive/{REVISION}.tar.gz"
+    if entry.get("url") != url:
+        fail("pinned source archive revision mismatch")
+    digest, size = entry.get("sha256"), entry.get("size")
+    if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+        fail("pinned source archive digest missing or invalid")
+    if type(size) is not int or size <= 0:
+        fail("pinned source archive size missing or invalid")
+    return digest, size
+
+
+def validate_source_root(root, build):
+    cache = cache_values(Path(build) / "CMakeCache.txt")
+    roots = cache.get("llama.cpp_SOURCE_DIR", [])
+    if len(roots) != 1 or not roots[0]:
+        fail("configured upstream source root missing or ambiguous")
+    try:
+        configured = Path(roots[0]).resolve(strict=True)
+    except OSError:
+        fail("configured upstream source root unavailable")
+    if configured != root:
+        fail("configured upstream source root mismatch")
+    overrides = cache.get("FETCHCONTENT_SOURCE_DIR_LLAMA_CPP", [])
+    if overrides != [""]:
+        fail("upstream source override missing or set")
 
 
 def file_api(build):
@@ -219,9 +253,8 @@ def compiler_identity(build):
 
 def capture(source_root, build, output):
     root = Path(source_root).resolve(strict=True)
-    revision = run(["git", "-C", str(root), "rev-parse", "HEAD"])
-    if revision.returncode or revision.stdout.decode("ascii", "ignore").strip() != REVISION:
-        fail("upstream source revision mismatch")
+    archive_sha256, _ = pinned_source_archive()
+    validate_source_root(root, build)
     source = root / "ggml/src/ggml-cpu/vec.h"
     if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != VEC_SHA256:
         fail("pinned vec.h missing or changed")
@@ -257,7 +290,8 @@ def capture(source_root, build, output):
     invoked_version = invoked_compiler_version(passed)
     if invoked_version != cached_version:
         fail(f"invoked MSVC version {invoked_version} disagrees with CMake compiler metadata {cached_version}")
-    result_data = {"schema": 2, "source_revision": REVISION, "source_sha256": VEC_SHA256,
+    result_data = {"schema": 3, "source_revision": REVISION,
+        "source_archive_sha256": archive_sha256, "source_sha256": VEC_SHA256,
         "target": "ggml-cpu", "configuration": "Release", "architecture": "x64",
         "compiler": "MSVC", "compiler_version": invoked_version,
         "macros": {name: name in macros for name in macro_names}, "selected_branch": selected,

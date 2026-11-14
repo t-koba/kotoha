@@ -47,7 +47,9 @@ class CaptureWindowsSimdTest(unittest.TestCase):
         compiler = (instance / "VC/Tools/MSVC/14.51.36231/bin/Hostx64/x64/cl.exe" if compiler_inside else root / "Other/cl.exe")
         compiler.parent.mkdir(parents=True, exist_ok=True); compiler.write_text("")
         cache = ["CMAKE_GENERATOR:INTERNAL=Visual Studio 18 2026", "CMAKE_GENERATOR_PLATFORM:INTERNAL=x64",
-                 "CMAKE_GENERATOR_INSTANCE:INTERNAL=" + str(instance), "CMAKE_CACHE_MAJOR_VERSION:INTERNAL=4",
+                 "CMAKE_GENERATOR_INSTANCE:INTERNAL=" + str(instance),
+                 "llama.cpp_SOURCE_DIR:STATIC=" + str(source), "FETCHCONTENT_SOURCE_DIR_LLAMA_CPP:PATH=",
+                 "CMAKE_CACHE_MAJOR_VERSION:INTERNAL=4",
                  "CMAKE_CACHE_MINOR_VERSION:INTERNAL=4", "CMAKE_CACHE_PATCH_VERSION:INTERNAL=5"]
         (build / "CMakeCache.txt").write_text("\n".join(cache))
         metadata = build / "CMakeFiles/4.4.5/CMakeCXXCompiler.cmake"; metadata.parent.mkdir(parents=True)
@@ -71,16 +73,17 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             metadata.write_text(metadata.read_text().replace(
                 '"19.38.33135"', '"19.38.33135.0"'))
             text = exp_source()
-            with patch.object(capture, "REVISION", "revision"), patch.object(capture, "VEC_SHA256", __import__('hashlib').sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
+            with patch.object(capture, "VEC_SHA256", __import__('hashlib').sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
                 (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
-                run.side_effect = [SimpleNamespace(returncode=0, stdout=b"revision", stderr=b""),
-                                   SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""),
+                run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""),
                                    SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.38.33135", stderr=b"")]
                 output = Path(d) / "result.json"
                 data = capture.capture(source, build, output)
             self.assertEqual(data["selected_branch"], "none")
-            probe_args = run.call_args_list[1].args[0]
+            self.assertEqual(run.call_count, 2)
+            probe_args = run.call_args_list[0].args[0]
+            self.assertEqual(probe_args[0], str(compiler))
             self.assertIn("/O2", probe_args)
             self.assertIn("/DTEST=1", probe_args)
             self.assertIn("/DGOOD=1", probe_args)
@@ -88,7 +91,9 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             raw = output.read_text()
             for secret in (str(Path(d)), "/O2", "GOOD=1", "private/include"):
                 self.assertNotIn(secret, raw)
-            self.assertEqual(set(json.loads(raw)), {"schema", "source_revision", "source_sha256", "target", "configuration", "architecture", "compiler", "compiler_version", "macros", "selected_branch", "method"})
+            self.assertEqual(set(json.loads(raw)), {"schema", "source_revision", "source_archive_sha256", "source_sha256", "target", "configuration", "architecture", "compiler", "compiler_version", "macros", "selected_branch", "method"})
+            self.assertEqual(json.loads(raw)["source_archive_sha256"],
+                             json.loads(capture.FIXTURE_PATH.read_text())["files"][0]["sha256"])
 
     def test_invalid_target_compiler_and_source_fail_closed(self):
         import hashlib
@@ -101,16 +106,46 @@ class CaptureWindowsSimdTest(unittest.TestCase):
                 text = exp_source()
                 (source / "ggml/src/ggml-cpu").mkdir(parents=True)
                 (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
-                with patch.object(capture, "REVISION", "revision"), \
-                     patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), \
+                with patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), \
                      patch.object(capture, "run", return_value=SimpleNamespace(returncode=0, stdout=b"revision", stderr=b"")):
                     with self.assertRaisesRegex(ValueError, message):
                         capture.capture(source, build, Path(d) / "out.json")
         with tempfile.TemporaryDirectory() as d:
             source, build, compiler = self.fixture(Path(d))
-            with patch.object(capture, "REVISION", "revision"), patch.object(capture, "run", return_value=SimpleNamespace(returncode=0, stdout=b"revision", stderr=b"")):
+            with patch.object(capture, "run", return_value=SimpleNamespace(returncode=0, stdout=b"revision", stderr=b"")):
                 with self.assertRaisesRegex(ValueError, "vec.h missing or changed"):
                     capture.capture(source, build, Path(d) / "out.json")
+
+    def test_archive_pin_and_cmake_source_root_are_bound(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            source, build, _ = self.fixture(root)
+            digest, size = capture.pinned_source_archive()
+            self.assertEqual((digest, size), (
+                "541aeea240dbceb48de352122b30a26ac32ec5fd936c62442037bf04310a0270",
+                39104147))
+            capture.validate_source_root(source.resolve(), build)
+
+            manifest = root / "fixtures.json"
+            manifest.write_text(json.dumps({"files": [{
+                "url": "https://github.com/ggml-org/llama.cpp/archive/not-the-pin.tar.gz",
+                "sha256": "a" * 64, "size": 1}]}))
+            with patch.object(capture, "FIXTURE_PATH", manifest):
+                with self.assertRaisesRegex(ValueError, "archive revision mismatch"):
+                    capture.pinned_source_archive()
+
+            other_source = root / "other-source"
+            other_source.mkdir()
+            cache_path = build / "CMakeCache.txt"
+            good_cache = cache_path.read_text()
+            cache_path.write_text(good_cache.replace(str(source), str(other_source)))
+            with self.assertRaisesRegex(ValueError, "source root mismatch"):
+                capture.validate_source_root(source.resolve(), build)
+            cache_path.write_text(good_cache.replace(
+                "FETCHCONTENT_SOURCE_DIR_LLAMA_CPP:PATH=",
+                "FETCHCONTENT_SOURCE_DIR_LLAMA_CPP:PATH=" + str(other_source)))
+            with self.assertRaisesRegex(ValueError, "source override missing or set"):
+                capture.validate_source_root(source.resolve(), build)
 
     def test_msvc_version_formats_are_normalized_without_accepting_unknown_suffixes(self):
         self.assertEqual(capture.normalize_msvc_version("19.51.36260"), "19.51.36260")
@@ -148,8 +183,8 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             (source / "ggml/src/ggml-cpu").mkdir(parents=True)
             (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
             import hashlib
-            with patch.object(capture, "REVISION", "revision"), patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
-                run.side_effect = [SimpleNamespace(returncode=0, stdout=b"revision", stderr=b""), SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""), SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.39.1", stderr=b"")]
+            with patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), patch.object(capture, "run") as run:
+                run.side_effect = [SimpleNamespace(returncode=0, stdout=b"KOTOHA_PROBE_OK\n", stderr=b""), SimpleNamespace(returncode=0, stdout=b"Compiler Version 19.39.1", stderr=b"")]
                 with self.assertRaisesRegex(ValueError, "disagrees"):
                     capture.capture(source, build, Path(d) / "output.json")
 
@@ -162,8 +197,7 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             (source / "ggml/src/ggml-cpu").mkdir(parents=True)
             (source / "ggml/src/ggml-cpu/vec.h").write_bytes(text.encode("utf-8"))
             (build / "CMakeFiles/4.4.5/CMakeCXXCompiler.cmake").unlink()
-            with patch.object(capture, "REVISION", "revision"), \
-                 patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), \
+            with patch.object(capture, "VEC_SHA256", hashlib.sha256(text.encode()).hexdigest()), \
                  patch.object(capture, "run", return_value=SimpleNamespace(returncode=0, stdout=b"revision", stderr=b"")):
                 with self.assertRaisesRegex(ValueError, "CMake CXX compiler metadata missing"):
                     capture.capture(source, build, Path(d) / "out.json")
