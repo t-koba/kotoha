@@ -33,7 +33,14 @@ final class NativeExportPanelUITests: XCTestCase {
 
   private func appAccessibilityDiagnostic() -> String {
     let trusted = AXIsProcessTrusted()
-    let application = AXUIElementCreateApplication(app.processID)
+    let processes = NSRunningApplication.runningApplications(
+      withBundleIdentifier: "org.kotoha.app")
+    guard processes.count == 1, let process = processes.first else {
+      return "axClientTrusted=\(trusted) appProcessCount=\(processes.count) "
+        + "appEnhancedUIStatus=notQueried appEnhancedUI=unavailable "
+        + "axTimeoutStatus=notQueried"
+    }
+    let application = AXUIElementCreateApplication(process.processIdentifier)
     let timeoutStatus = AXUIElementSetMessagingTimeout(application, 1.0)
     var enhancedUI: CFTypeRef?
     let queryStatus = AXUIElementCopyAttributeValue(
