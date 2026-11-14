@@ -490,6 +490,13 @@ class CaptureMemberDebugTest(unittest.TestCase):
         for leaked in ('/home/alice', 'Private', 'Project', 'secret.cpp'):
             self.assertNotIn(leaked, diagnostic)
 
+    def test_tool_diagnostic_ignores_contraction_before_quoted_path(self):
+        raw = b"can't open '/home/alice/Private Project'"
+        diagnostic = capture._safe_tool_diagnostic(raw, 256)
+        self.assertEqual(diagnostic, "can't open '[path]'")
+        for leaked in ('/home/alice', 'Private', 'Project'):
+            self.assertNotIn(leaked, diagnostic)
+
     def test_tool_diagnostic_redacts_unterminated_quoted_path_with_spaces(self):
         raw = b'DW_AT_comp_dir: "/home/alice/Private Project/secret.cpp'
         diagnostic = capture._safe_tool_diagnostic(raw, 32)
