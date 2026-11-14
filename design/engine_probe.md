@@ -433,30 +433,41 @@ and builds separate NDK
 bounded inspections `experiments/b6f07362db8c4900afd628ff592ef5d7`,
 `experiments/12189b92b73248c19723dc628a760e67`,
 `experiments/fe0d7a38246647238bfd6c9e9a496926`). This narrows the expected
-source-build settings, but the captured release record provides no exact CMake
-invocation, compile database, or per-member source/object attestation;
-`BUILD_INFO` has empty `build_configs`. The build recipe and target flags
-therefore do not
-prove that any captured archive member was built from a particular source file
-or that listed patches were applied. No exact member rebuild/hash comparison
-has been run; installed patch postimages and actual per-member command inputs remain open.
+source-build settings, but the captured release record
+provides no original per-member compile command/database or source-to-object
+attestation; `BUILD_INFO` records no build-config overrides (`build_configs: {}`).
+The pinned `BUILD.md` gives a manifest-based full-toolchain rebuild, and pinned
+`do_build.py` has a `--build` filter for named builders; its runtime path invokes
+`DeviceLibcxxBuilder` (`device-libcxx`). That builder covers multiple runtime
+configurations, not an individual archive member. This is a plausible public
+candidate-rebuild route, not evidence that the captured objects followed it or
+that a selected member is byte-reproducible. Its dependency closure and actual
+targeted output were not exercised (`experiments/87a8dfb674ac4db295036f300c0a70df`,
+`experiments/5d5e1a2503934d09844ae8a396d40dd9`,
+`experiments/fec9725adc0d4ea1b94f975547ee36a1`,
+`experiments/6b910f837d55450e8c6d44e6af28e5d4`). `BUILD_INFO` source revisions,
+container digest and empty config map were independently decoded from the pinned
+record (`experiments/88753b0631824620aba66ee97cf3d4ce`).
 
 A bounded rebuild preflight selected `libc++_static.a(regex.cpp.o)`, whose
-candidate source/header overlap is documented below. The sandbox has host
-`/usr/bin/clang++`, CMake and Ninja but no Android NDK environment variables or
-NDK compiler/binutils in the checked standard roots (`commands/9c715789ea3f4f33979da99e88be8cc5`).
-The latest probe's `selected-commands.txt` is an engine-probe build artifact,
-not an NDK libc++ source-build command database (`vcs-read/d597508867784bdbb4ba70d0c9d2a89d`);
-its patch-source manifest contains only hash/size/Git-blob metadata and says
-raw patch blobs are not retained (`vcs-read/7386b884e33b49c6b94a82a48f2d61b1`).
-The exact r28c release invocation is therefore still unavailable. For the
-regex patch, the immutable patch-commit header candidate has SHA-256
-`60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`, while the
-captured installed-header input is
-`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982`; these are
-not the same bytes. Without the release command and installed header content,
-compiling with host Clang would not be a valid comparison, so no object was
-rebuilt or compared.
+candidate source/header overlap is documented below. The official recipe and
+builder source do not make host Clang a valid substitute for the NDK build.
+Fresh isolated checks found only Debian Clang 14.0.6 targeting host x86_64; no
+Android SDK/NDK, NDK compiler/binutils, `llvm-ar`, `llvm-dwarfdump`, `llvm-strip`,
+Docker/Podman, pinned LLVM checkout or compile database were available
+(`experiments/d409a0d6364f4066bcf763259db34985`,
+`experiments/7de500b43d8640a8a313444613f1b4a7`). The latest probe's
+`selected-commands.txt` is an engine-probe application build artifact, not an NDK
+libc++ source-build command database (`vcs-read/d597508867784bdbb4ba70d0c9d2a89d`);
+its patch-source manifest contains only hash/size/Git-blob metadata and says raw
+patch blobs are not retained (`vcs-read/7386b884e33b49c6b94a82a48f2d61b1`).
+No object was rebuilt or compared. The exact selected `regex` header hash match
+and the distinct candidate patch-commit header hash remain useful source clues,
+but do not identify the archive member's source bytes or prove patch application.
+A targeted rebuild in the pinned source/build environment, with its generated
+command, source/patch postimages, and comparison to the captured member digest,
+would be needed to advance that claim; a matching rebuild would be reproducibility
+evidence, not a signed attestation of the original build.
 
 A June 2023 NDK issue discussion about prebuilt libc++ (NDK issue #1894, fetched
 as `mizu_fetch/1d7a64911c4a5062a30c0d63eb61fa82d3ffc8ef87b740ae2651eb35110b9bbd`,
