@@ -286,11 +286,26 @@ hashes to `897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
 commit `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`, named by the regex patch,
 hashes to `60ae1433a22fac00ed0935778d1f3fa7e33b37e99aa33e1907273fa02fdd685a`
 (`mizu_fetch/d681c8b6981951da65b7055c52e033a8aa250a7b18dfd44357de8bd296785fd8`).
-Both differ from the selected header. The exact public-header match therefore
-does not identify the transformation or patch chain that produced it, prove
-patch application to the runtime build, or establish an object-source mapping.
-Applicable member notices, redistribution authorization, surviving code, and
-device behavior remain unresolved.
+Both differ from the selected header as unmodified files. In a bounded
+isolated experiment, the exact `libcxx/include/regex` diff section from the
+pinned `llvm_android` patch blob (full patch SHA-256
+`4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d`,
+`mizu_fetch/a60795358ad8d7f07ddc5085b1e55cfc73e8f1cecfe1a5379b1a8c08b475e8e7`)
+was applied to the exact `97a699bf4812a18fb657c2779f5296a4ab2694d2` source candidate. The section hash is
+`df98c2d11858c0494487c2264408a172e875c625c07ac9f1c3d80f627a84c8b4`; the
+complete 212,825-byte source hash was verified as
+`897795afd99ac6fea51498ab5bdcdfac55bfd652e82200e8a0fe8a3d9ea35451`
+(`mizu_fetch/95e89aab16d02da55096c29288014cca0be38cdca33b7ceecce5f1e4834a059a`).
+The resulting 213,476-byte postimage has SHA-256
+`2ea7d95853a15ef16925668750ccdface9deead18c79fb3e8064447ff326d982` and Git
+blob `970de6af11cc6811d2aa8ce2867016c1c657fdc4`, exactly matching the selected
+installed/public r28c header (`experiments/563b00d934af4ea686a9bccfd3c9c2bc`,
+`experiments/05b52d485eed490eb535ae02c95b7960`). This establishes one exact
+candidate patch postimage for the installed header. It does not show that the
+NDK runtime builder applied the patch or consumed this header when building
+any captured archive object, and it is not an object-source mapping.
+Applicable archive-member notices, redistribution authorization, surviving
+code, and device behavior remain unresolved.
 The capture invokes the pinned NDK `llvm-dwarfdump --debug-line` and retains
 only compact per-member line-table metadata: version, sanitized source
 path/state, and MD5 when present. Missing MD5 remains explicitly unavailable;
@@ -346,8 +361,8 @@ compile unit and 69 line-table entries, again with zero MD5 checksums
 (`vcs-read/1b776b1c3dc84be09b9ba22ba3837acf`). The exact patch-source
 manifest states that it retains metadata for four selected patch blobs,
 not raw blobs (`vcs-read/e1a1076b709d4ea1b736e168e936dc7e`). These
-current object hashes and path clues still do not bind the objects to
-source bytes or establish patch postimages/application.
+current object hashes and path clues still do not bind the archive objects to
+exact source bytes or establish patch application in their build.
 
 The separate Android smoke log reports emulator-only loader rejection and one
 `Bonjour.` sample (`vcs-read/ebd8643b34544a958045fe6b1802c8b0`), not translation
