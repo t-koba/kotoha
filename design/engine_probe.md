@@ -1542,10 +1542,12 @@ upstream revision or patch provenance; the reads are not binary-member
 provenance or license closure. In `ops.cpp`, the selected YaRN rope function is
 attributed “MIT licensed. Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng”
 and links to `jquesnelle/yarn`; the root `LICENSE` has a different copyright
-line naming the ggml authors. The GitHub API path-history response for
-`scaled_rope/LlamaYaRNScaledRotaryEmbedding.py` lists one published commit,
-`a18e54988639030e706f6ff9db224cf74e08a65a` (2023-08-31, “publish YaRN”). The
-file at that commit (SHA-256
+line naming the ggml authors. The GitHub API path-history query for
+`scaled_rope/LlamaYaRNScaledRotaryEmbedding.py`, bounded through the PR merge
+time, lists one published root commit,
+`a18e54988639030e706f6ff9db224cf74e08a65a` (2023-08-31, “publish YaRN”;
+`mizu_fetch/f6027d063a2c11fd545b0037333a2b990a3e88b36ba28b176e6bb849c479b1cd`).
+The file at that commit (SHA-256
 `fa097066e5792239ff4375dd84ed65d6c01bce8a2b6f1083dd4504151210a4af`) contains
 the cited algorithm, and its `LICENSE` at the same commit (SHA-256
 `c3ec00ded224ebaaa673373961babc2d79f3081914897f3325cb7927a76234c1`) contains
@@ -1571,10 +1573,18 @@ the separate `jquesnelle/yarn` repository (`mizu_fetch/b85d99cacc6b0608041175c38
 comment `1772083454`). The candidate external file and complete MIT notice are
 pinned above, and the selected llama.cpp blob and its attribution are exact;
 however, the PR history still does not bind the port to a particular external
-file revision. The exact original-source relationship remains unresolved. The
-app's explicit license-page registrations contain no YaRN entry; before any
-redistribution, preserve and account for its separate copyright and permission
-notice (`experiments/21413b81ee7044aba5669c2300d30145`,
+file revision. A follow-up review of PR issue comments, review comments and
+commit history (`mizu_fetch/c57d0b0f0c04e1bcc0577a58e99a7613a0251c79bed99e9bf15e8104a12819f7`,
+`mizu_fetch/c5d55eab8b6bdb8f706106d30ceb0a81cc03e5b1c252ac83814d81ab034a1dc5`,
+`mizu_fetch/a5b0d97078da37510e71e8e329a1c4d9c301de966f1fda221b9c363fbc521d24`)
+found no explicit upstream source commit pin in the records reviewed. The
+single path-history candidate is not a record of the author's checkout or
+adaptation input. The remaining provenance artifact is a contemporaneous source-import or
+checkout record, or an author/build attestation binding the implemented code
+to the exact YaRN file bytes at a revision. The app's explicit license-page
+registrations contain no YaRN entry; before any redistribution, preserve and
+account for its separate copyright and permission notice
+(`experiments/21413b81ee7044aba5669c2300d30145`,
 `experiments/ac5621a3cc6245ae8a4973b1d3e8bbb4`,
 `experiments/4ce0b7165ce9475ba1d744418e3872dd`).
 
@@ -1924,12 +1934,23 @@ This is not an OR alternative for UnicodeData or evidence of an ICU4J dependency
 ancestor-notice applicability remains open, not presumed overridden. The app
 already bundles full Unicode License V3 text in `assets/licenses/Unicode-3.0.txt`
 (SHA-256 `e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`)
-and registers it in `lib/main.dart:18–19` as `Unicode Bidi Data`. This proves
-user-visible notice text for that component, but does not map it to `src/unicode-data.cpp`,
-establish the exact release copyright/year for its inputs, or close provenance.
-Before adoption, verify the applicable release notice and label its generated-table
-scope in the same user-accessible license action; do not duplicate the payload or
-claim current coverage without that mapping.
+and registers it in `lib/main.dart:18–19` as `Unicode Bidi Data`. The
+`test/licenses_test.dart` check verifies that exact Unicode License V3 text is
+visible under the LicenseRegistry package label `Unicode Bidi Data`; this
+maps the notice to Kotoha's own UCD 17 bidi projection only. It does not map the
+notice to the candidate engine's distinct `src/unicode-data.cpp`. The selected
+engine output begins only with a generated-file marker; its pinned generator
+uses the invoking Python `unicodedata` tables and, on the full path, fetches
+unversioned UCD `latest`. The exact selected source and generator were re-read
+at the pinned revision (`mizu_fetch/17c24a3de5237c3f34cbf02b56213f56c041f37824ff06b13c1b5b16b2bacc5a`,
+`mizu_fetch/952443f1763884be2be657d146b74f429fd9878161e586b39fabc6a2c171fc59`).
+CPython's upstream provider notice supports conservatively carrying Unicode
+License V3 for UCD-derived tables, including normalization, but it does not bind
+this output to the producer's Python/UCD inputs or exact historical notice and
+copyright year. No product notice change is warranted while engine adoption is
+disabled. Before adoption, bind the selected table to its producer inputs and
+map the applicable full notice to that engine component in the user-accessible
+license action, with a test; do not claim current coverage before then.
 
 **Additional provider notice evidence.** CPython issue #154493 and merged PR #154651
 state that an extract of the Unicode Character Database, converted to an internal
