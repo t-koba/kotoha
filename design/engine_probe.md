@@ -1542,15 +1542,27 @@ upstream revision or patch provenance; the reads are not binary-member
 provenance or license closure. In `ops.cpp`, the selected YaRN rope function is
 attributed “MIT licensed. Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng”
 and links to `jquesnelle/yarn`; the root `LICENSE` has a different copyright
-line naming the ggml authors. The referenced repository's fetched `master`
-`LICENSE` contains the full MIT grant and notice, a permissive term under
-Kotoha's dependency policy. The exact imported YaRN revision is not pinned, and
-the app's explicit license-page registrations contain no YaRN entry; preserve
-and account for its separate copyright and permission notice before any
-redistribution (`experiments/21413b81ee7044aba5669c2300d30145`,
+line naming the ggml authors. The GitHub API path-history response for
+`scaled_rope/LlamaYaRNScaledRotaryEmbedding.py` lists one published commit,
+`a18e54988639030e706f6ff9db224cf74e08a65a` (2023-08-31, “publish YaRN”). The
+file at that commit (SHA-256
+`fa097066e5792239ff4375dd84ed65d6c01bce8a2b6f1083dd4504151210a4af`) contains
+the cited algorithm, and its `LICENSE` at the same commit (SHA-256
+`c3ec00ded224ebaaa673373961babc2d79f3081914897f3325cb7927a76234c1`) contains
+the full MIT grant, copyright, permission condition and disclaimer
+(`mizu_fetch/5dda1d061dc27ac53f1509b3444555bafd4f22a4396da0a424de11481c766d5d`,
+`mizu_fetch/4266f6f3fb38225ee338ff6ab977bb0c37878694087685da43b8fd181dad8765`,
+`mizu_fetch/d613d9b57ae6ee0781ca937f7f8ecfa6518acd3d9f5e38bd57b23a2a163613fc`).
+The upstream llama.cpp implementation commit `898aeca90a9bb992f506234cf3b8b7f7fa28a1df`
+(2023-11-01, co-authored by Jeffrey Quesnelle) repeats the source-file citation
+and MIT attribution in its code patch (`mizu_fetch/0b1e2054f37534946cfddb31e246f26be7c82b778fbaf6289ec4539d41bc11bb`).
+This is a documented source candidate and complete notice, not a binding record
+that the selected code came from that exact revision; the imported upstream
+revision remains unpinned. The app's explicit license-page registrations
+contain no YaRN entry; before any redistribution, preserve and account for its
+separate copyright and permission notice (`experiments/21413b81ee7044aba5669c2300d30145`,
 `experiments/ac5621a3cc6245ae8a4973b1d3e8bbb4`,
-`experiments/4ce0b7165ce9475ba1d744418e3872dd`,
-`mizu_fetch/1c898a13d34f56167ff05f14fbda3b55b4a91fbc3e0f65205c2ccddaf5cc8d6`).
+`experiments/4ce0b7165ce9475ba1d744418e3872dd`).
 
 At pinned llama.cpp revision
 `31424b7cf14604ca65a9195123da1413f31c4472`, the raw-source receipt for
