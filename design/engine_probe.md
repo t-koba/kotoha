@@ -1,24 +1,25 @@
 # Native-engine feasibility probe
 
 This is **developer tooling only**, not product inference or distribution
-approval. The latest exact native-probe publication is
-`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
-`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292` (code digest
-`83bdaf711b349221f18dd99fddf02aba2203e946ea91ed3d55b9d10784044558`). Its
-receipt-bound status (`vcs-read/f495e27f1c2a4884afdf58455436fca0`) reports the
-Android API 35 x86_64 and Windows x64 native-probe checks successful in run
-`42548704285` (jobs `128939244180` and `128939244483`). These are feasibility
-observations only, not source, license, redistribution, adoption, or physical-
-device approval.
+approval. The latest exact probe and application-CI snapshot is publication
+`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
+`48a430f888442ed162987ac2b349ab5a4f59161b`. Its Android API 35 x86_64 and
+Windows x64 native CPU feasibility checks passed in run `43574641819` (jobs
+`132386120398` and `132386120607`). This establishes build/smoke feasibility
+only, not source identity, licensing, redistribution, adoption, or physical-
+device behavior.
 
-The latest exact application-CI publication is
-`4f6f52ea633ec5f63764556d9461f75b2cfda597c4ba593d6ed8a74c6a249cea` / SHA
-`f2fcd2da091e3146a20cdd4f78232684bce28680` (code digest
-`89c968db201a784d2a8125336f03b5fa56a8105543afda77693ceab5db755fec`; status
-`vcs-read/d084501b24404954aaa4c90c64ab04c4`, run `42550784673`). Design,
-Flutter, and Windows checks passed; Android, iOS, and macOS checks failed. This
-application CI is distinct from the developer engine probes and does not close
-engine source, licensing, runtime, or adoption gates.
+Application CI for the same SHA completed in run `43574939450` (status
+`vcs-read/56e67b92ac5a4948b317a819eb855c4f`): Design, Flutter, Android,
+Windows and iOS checks passed; the macOS accessibility probe failed before the
+save-panel assertions. The Windows Release provider capture succeeded; its
+narrow loader evidence and remaining runtime limitations are recorded below.
+Neither platform's engine-adoption gates are closed. The macOS result is
+separate from engine feasibility; see `design/text_export_audit.md` for its
+current accessibility-test status.
+
+Historical CI evidence follows; it does not supersede the exact current status
+above.
 
 An earlier exact full-CI publication
 `523041581cee6bae793cc1ec6be19f5debbdad74b74a0078cbb2a99c49d8b823` / SHA
@@ -1393,19 +1394,40 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Current evidence limits:** the latest exact native-engine probe publication is
-`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
-`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`. Receipt-bound status
-`vcs-read/f495e27f1c2a4884afdf58455436fca0` shows the Android API 35 x86_64
-and Windows x64 feasibility checks passed in run `42548704285`. The Android
-link-map-bound archive manifest identifies four NDK archives and 47 member
-entries; the sanitized line-table capture covers 26 libc++ members but reports
-no source-file checksums. Windows loader capture observes 11 providers on one
-CI runner, including the Microsoft C++ runtime DLLs. Neither platform's probe
-establishes selected-member source identity, patch application, applicable
-terms/notices, redistribution, supported-target runtime coverage, or
-physical-device behavior. Adoption remains disabled until each platform's
-gates close independently.
+**Current evidence limits:** the exact Android API 35 x86_64 and Windows x64
+native probes passed in run `43574641819` on publication
+`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
+`48a430f888442ed162987ac2b349ab5a4f59161b`
+(`vcs-read/56e67b92ac5a4948b317a819eb855c4f`). The Android link-map artifact
+names 47 NDK r28c archive members; the selected-member debug report has no file
+checksums for 26 libc++ members, and the bounded terms/patch captures do not
+establish member source bytes, patch application, or applicable notices
+(`vcs-read/7d8df45d843b4c7599f8cac395dc375c`,
+`vcs-read/12b7de0adf764aa4b400b59ae039941a`). Following the operator's reply
+to question `c25999485d7b47c385c158c092eb5e5c`, no additional build-provenance
+input is available; Android adoption remains disabled.
+
+On that same snapshot, Windows Release `kotoha.exe` (x64, 91,136 bytes,
+SHA-256 `5cbaaacf08cf1cee2842b21f4eeddf6d032f6427ef9109c2bf36c44226b6cd15`)
+directly imports `msvcp140.dll`, `vcruntime140.dll` and
+`vcruntime140_1.dll`; the initial-breakpoint capture records 42 providers,
+17 direct imports, six API-set contracts and zero redacted rows. The three
+Microsoft C++ runtime providers resolve from `windows/system32`, each at
+14.51.36247.0 with signer status `Valid` under cache-only WinVerifyTrust
+(`vcs-read/a867727da13749709da2431f432515a9`; summary
+`vcs-read/10dc6b6fdbfb4985a04ccd8e5c7888cf`). The log identifies Windows
+Server 2025 (`vcs-read/1fec5d1610214c07809d2d867c3d0ba9`). This is a
+runtime-present, pre-entrypoint observation on one server image—not Windows 11
+behavior, runtime-installation provenance, or redistribution permission.
+Operator-confirmed lack of a redistribution basis means no runtime DLL or
+installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
+engine adoption remains disabled.
+
+The same application-CI snapshot's macOS accessibility job failed before the
+save-panel, cancellation and draft-preservation assertions; this does not
+establish a product root cause or user-device behavior. Both engine candidates
+remain unapproved until their independent source, notice, legal and runtime
+gates close.
 
 The previous exact Android probe publication
 `20ab85fc177a5dfa821f148cda27dac71473b5e51b486c4e87f9b887f67d9785` / SHA
@@ -1815,21 +1837,25 @@ the x64 prerequisite, link to that page, explain the restart, and stop before
 launching the dependent process. If the Kotoha runner itself cannot load
 without the runtime, the check must occur in the installer or a separate
 launcher: an app UI cannot display guidance before its own loader failure.
-The exact application-CI artifact
-`windows-release-import-summary/windows-release-import-summary.json` for
+The exact Release artifact
+`windows-release-import-summary/windows-release-import-summary.json` on
 publication
-`d8f404a7fc6c921332ba00e377c9b39585600b43b674c943a53a764841c3e277` / SHA
-`2939dcd2d70d085ee6930bab13900691f8f3318a` (run `43563759314`; read
-`vcs-read/c5e03f34d58540b3bd986e9d5e2022f6`) records x64 `kotoha.exe`
+`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
+`48a430f888442ed162987ac2b349ab5a4f59161b` (run `43574939450`; import
+summary `vcs-read/ae86efca42654d17b00ba0b96fc9d151`) records x64 `kotoha.exe`
 (91,136 bytes; SHA-256
-`87113b3bf56b45db1a3be0d4d4cf88d7cee3174c3eb1f4c6c8695e877552ee7d`) with
-direct imports `msvcp140.dll`, `vcruntime140.dll`, and `vcruntime140_1.dll`,
-and no delay imports. This PE import evidence does not establish resolved paths,
-loaded providers, versions, or the minimum compatible v14 runtime. The exact
-job log identifies Windows Server 2025 Datacenter (`vcs-read/aac3d8f9cb79436083237e8266fa85a0`),
-not Windows 11; runtime-present and runtime-absent behavior on a clean Windows
-11 host remains untested. This is a preferred
-deployment path, not a tested prerequisite or redistribution authorization.
+`5cbaaacf08cf1cee2842b21f4eeddf6d032f6427ef9109c2bf36c44226b6cd15`) with
+17 direct imports, including `msvcp140.dll`, `vcruntime140.dll`, and
+`vcruntime140_1.dll`, and no delay imports. The successful initial-breakpoint
+provider capture (`vcs-read/a867727da13749709da2431f432515a9`) resolves all
+three VC++ providers from `windows/system32`, version `14.51.36247.0`; the
+capture reports 42 providers and is summarized in
+`vcs-read/10dc6b6fdbfb4985a04ccd8e5c7888cf`. Its signature field is a
+cache-only WinVerifyTrust observation, not redistribution or installation
+provenance. The job log (`vcs-read/1fec5d1610214c07809d2d867c3d0ba9`) identifies
+Windows Server 2025 Datacenter, not Windows 11. Runtime-present behavior on
+that host is observed; Windows 11 and runtime-absent behavior remain untested.
+This is not a selected deployment path or redistribution authorization.
 
 **General-desktop floor decision (not yet validated):** Windows 11 x64 on a
 currently supported Windows 11 release. Microsoft lists Windows 10 Home/Pro
