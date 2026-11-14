@@ -382,6 +382,25 @@ class CaptureMemberDebugTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unrecognized'):
             capture.parse_line_tables(b'x' * 64)
 
+    def test_capture_reports_safe_bounded_diagnostic_for_rejected_line_table(self):
+        raw = (b'not a line table /private/build/secret.cpp\x1b[31m\x01 ' + b'x' * 256)
+        self.line_file.write_bytes(raw)
+        with self.assertRaises(ValueError) as raised:
+            self.run_capture(max_diagnostic_bytes=96)
+        message = str(raised.exception)
+        diagnostic = message.split('; diagnostic: ', 1)[1].split('; capture incomplete', 1)[0]
+        self.assertIn('[path]', diagnostic)
+        self.assertNotIn('/private/build/secret.cpp', diagnostic)
+        self.assertTrue(diagnostic.endswith('[truncated]'))
+        self.assertLessEqual(len(diagnostic.encode('utf-8')), 96)
+        self.assertFalse(any(ord(char) < 32 or 0x7f <= ord(char) <= 0x9f
+                             for char in diagnostic))
+
+    def test_successful_capture_artifact_has_no_diagnostics(self):
+        result = self.run_capture()
+        self.assertEqual(result['members'][0]['line_tables'], capture.parse_line_tables(LINE_TABLE_V19))
+        self.assertNotIn('diagnostic', json.dumps(result))
+
     def test_line_table_empty_is_no_table(self):
         self.assertEqual(capture.parse_line_tables(b''), [])
         self.assertEqual(capture.parse_line_tables(b'  \n '), [])

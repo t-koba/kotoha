@@ -509,13 +509,18 @@ def parse_line_tables(data, component=COMPONENT):
     return tables
 
 
-def _member_record(name, data, dwarfdump_output, line_table_output=b'', component=COMPONENT):
+def _member_record(name, data, dwarfdump_output, line_table_output=b'', component=COMPONENT,
+                   max_diagnostic_bytes=8192):
     try:
         text = dwarfdump_output.decode('utf-8', errors='replace')
     except AttributeError as error:
         raise ValueError('Debug tool output is malformed; capture incomplete') from error
     units = parse_compile_units(text)
-    line_tables = parse_line_tables(line_table_output, component)
+    try:
+        line_tables = parse_line_tables(line_table_output, component)
+    except ValueError as error:
+        diagnostic = _safe_tool_diagnostic(line_table_output, max_diagnostic_bytes)
+        raise ValueError(str(error) + '; diagnostic: ' + diagnostic) from error
     safe_units = []
     for unit in units:
         source_path, path_state = _safe_source_path(unit.get('name'), unit.get('comp_dir'), component)
@@ -617,7 +622,8 @@ def capture(*, archive_manifest, linker_map, ndk_root, llvm_ar, llvm_dwarfdump,
                 raise ValueError('Aggregate tool output exceeds its configured byte bound; capture incomplete')
             if total_line_output_bytes > max_line_table_output_bytes:
                 raise ValueError('Line-table output exceeds its configured byte bound; capture incomplete')
-            member_records.append(_member_record(name, data, dwarf, line_table, component))
+            member_records.append(_member_record(
+                name, data, dwarf, line_table, component, max_diagnostic_bytes))
             object_path.unlink()
     final_map_size, final_map_hash = sha256_file(linker_map)
     final_archive_size, final_archive_hash = sha256_file(archive_path)
