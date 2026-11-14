@@ -25,8 +25,7 @@ for key in ('BUILD_JOBS', 'API', 'EMULATOR_PORT', 'OUTPUT_BYTES', 'TOKENS',
             'LINKER_MAP_MAX_BYTES', 'NDK_TERMS_MAX_FILES', 'NDK_TERMS_MAX_BYTES',
             'NDK_PATCH_MAX_BYTES', 'NDK_PATCH_FETCH_SECONDS', 'NDK_MEMBER_MAX_MEMBERS',
             'NDK_MEMBER_MAX_BYTES', 'NDK_MEMBER_MAX_TOOL_OUTPUT_BYTES',
-            'NDK_MEMBER_LINE_OUTPUT_BYTES', 'NDK_ABI_MEMBER_MAX_BYTES',
-            'NDK_ABI_MEMBER_MAX_TOOL_OUTPUT_BYTES', 'NDK_ABI_MEMBER_LINE_OUTPUT_BYTES'):
+            'NDK_MEMBER_LINE_OUTPUT_BYTES'):
     value = os.environ['ENGINE_' + key]
     if not value.isascii() or not value.isdigit() or int(value) <= 0:
         raise SystemExit('invalid positive integer: ' + key)
@@ -35,7 +34,7 @@ port = int(os.environ['ENGINE_EMULATOR_PORT'])
 if port % 2 or not 5554 <= port <= 5682:
     raise SystemExit('invalid emulator console port')
 for key in ('BOOT_SECONDS', 'BOOT_POLL_SECONDS', 'ADB_SECONDS', 'PROBE_SECONDS',
-            'DOWNLOAD_SECONDS', 'NDK_MEMBER_SECONDS', 'NDK_ABI_MEMBER_SECONDS'):
+            'DOWNLOAD_SECONDS', 'NDK_MEMBER_SECONDS'):
     value = float(os.environ['ENGINE_' + key])
     if not math.isfinite(value) or value <= 0:
         raise SystemExit('invalid finite positive timeout: ' + key)
