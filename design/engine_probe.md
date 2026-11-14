@@ -379,7 +379,9 @@ The bounded `BUILD_INFO` inspection records build ID `13624864`, branch
 `toolchain/llvm-project=97a699bf4812a18fb657c2779f5296a4ab2694d2`,
 `toolchain/llvm_android=e727bfb014bd436f581a66a450c939a6983a1fc3`, and
 `toolchain/common=0bce8b062126242872e9f3fc66760d3f76773c49`
-(`experiments/268c2dbd59a14bcead0c14a9a838f337`). The official `BUILD.md`
+(`experiments/268c2dbd59a14bcead0c14a9a838f337`). `BUILD_INFO` also pins a
+Docker image digest `sha256:84e96344ba21d8975e3eb1ae87d913729f2e0734d6a0f26c367b6f4ced3c086d`
+and has an empty `build_configs` map (`mizu_fetch/595aab0ee3bfc3608572e46c23eb8e76fa1c92d93497417e6d1884dced7be357`). The official `BUILD.md`
 rebuild route syncs a named manifest and supports rebuilding a particular
 toolchain (`mizu_fetch/b90aad88d722d497243b86972572f68eee92363ba3c254dd0e22e2d9b14876dc`;
 `experiments/50d7e4d44d3d43e3bbe31215031c4aa9`). This is official
@@ -388,6 +390,30 @@ archive/member/hash/digest fields in `BUILD_INFO`
 (`experiments/9ca5cd1b929645f98739c7f32ab12a25`); the manifest supplies no
 archive-member-to-source map. These records contain no signed per-member build
 attestation.
+
+The pinned `llvm_android` builder source declares the intended NDK libc++
+configuration. `DeviceLibcxxBuilder` includes an x86_64 NDK config
+(`platform=false`, `hwasan=false`, `noexcept=false`); `AndroidX64Config` defaults
+to API 21 and target `x86_64-linux-android21`. Its C/C++ flags include the target,
+function/data sections, `__BIONIC_NO_PAGE_SIZE_MACRO`, and file-prefix mapping.
+The libc++ builder adds `-fdebug-info-for-profiling`, the two LLVM FS-
+discriminator flags, and `-DHAS_THREAD_LOCAL` for C++. It composes those flags
+with the NDK sysroot, enables position-independent code, sets `RelWithDebInfo`,
+and builds separate NDK
+`libc++_static.a` and `libc++abi.a` outputs with ABI namespace `__ndk1`
+(`mizu_fetch/1efd35fffcb8a201e7361500ea3a391a403016e8d6d22f64b21da6221d881912`,
+`mizu_fetch/1e5e2527933b57b0d859614d4a2c636d73869071eca89ba8663ee65688cc026f`,
+`mizu_fetch/7f278ecde8a942f071f89c28ab607b2e5c2f5f885a6e149913dec0f787cb4f86`;
+bounded inspections `experiments/b6f07362db8c4900afd628ff592ef5d7`,
+`experiments/12189b92b73248c19723dc628a760e67`,
+`experiments/fe0d7a38246647238bfd6c9e9a496926`). This narrows the expected
+source-build settings, but the captured release record provides no exact CMake
+invocation, compile database, or per-member source/object attestation;
+`BUILD_INFO` has empty `build_configs`. The build recipe and target flags
+therefore do not
+prove that any captured archive member was built from a particular source file
+or that listed patches were applied. No exact member rebuild/hash comparison
+has been run; patch postimages and actual per-member command inputs remain open.
 
 A June 2023 NDK issue discussion about prebuilt libc++ (NDK issue #1894, fetched
 as `mizu_fetch/1d7a64911c4a5062a30c0d63eb61fa82d3ffc8ef87b740ae2651eb35110b9bbd`,
