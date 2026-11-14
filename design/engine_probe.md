@@ -498,18 +498,23 @@ installed NDK archive manifest (`experiments/3a0bd1e667174204a688138f9b9da2b2`,
 `vcs-read/ea337517054446ce9609fb934cb61c55`).
 
 The exact Android API 35 x86_64 probe on publication
-`e4aba22248d229aad5e332313fe7e01dd79b2b30f36df47af849688b38e1dd85`, SHA
-`3b01112722440130634f9d835057602c09de0dce`, passed job `128914661486`. Its
-5,685-byte archive manifest (`vcs-read/31a3a90a5e1f4de3a67df541efd1a0d8`,
-SHA-256 `625fa883ac3ec4e01aaf59b59a057eead4d600659bcb05c23d9364fa8436a8ff`)
-records Git blob SHA-1s for all four NDK-linked archives, each matching the
-official r28c Gitiles IDs listed above. This establishes byte identity for all
-four archive files. The files list 47 selected members in the probe manifest. It
-does not map individual object bytes
-to source, establish patch application or surviving sections, or settle
-applicable notices, licensing, redistribution, device behavior, or engine
-adoption. The capture streams the Git `blob <size>\0<bytes>`
-framing alongside SHA-256 and retains no archive or member bytes.
+`6b063c4cfa0d0975e22b040e481e7161ed209b0e0422f363da076dd29ebaefc6`, SHA
+`6ffeca67764e7c511354ed4faca6b38cabf0e6a9`, passed job `132428311196`
+(`vcs-read/bc119bf590cc4a3bb724520110f0cc25`). Its 5,685-byte map-bound
+archive manifest (`vcs-read/d6ab90447df646c08b737d4d3728e6f3`, local SHA-256
+`ea60cf181d7239b914c79f4b73d945bfed696e90e845ca39340d6a582be333b9`) records
+all four NDK archive sizes, raw SHA-256 values and locally computed Git blob
+SHA-1s. Those four Git object IDs match the official r28c Gitiles entries listed
+above (`mizu_fetch/5c6462635a572f8f9defb1ea300ab28140c50b5a160319740f2de9f4ad7c5189`,
+`mizu_fetch/0f6f33370603d110dde18ae053776ee33c986dbfe81a115f6aa960d632ebe311`,
+`mizu_fetch/e3c1c3758496b2171ad68f922a3999145c4b1899f4dfb1cdfc8224c15cb86d5`).
+The capture computes each Git blob ID over the exact opened NDK archive bytes
+with Git's `blob <size>\0` framing (`commands/66cb95a3c42d4a01b09c0f946816d254`),
+so the full archive files are bound to those official Git objects for this
+probe. The manifest lists 47 selected members, but it does not map individual
+object bytes to source, establish patch application or surviving sections, or
+settle applicable notices, licensing, redistribution, device behavior or engine
+adoption. Archive/member bytes are not retained.
 
 ### NDK archive-member source terms (partial)
 
