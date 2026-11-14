@@ -15,8 +15,40 @@ The version tags and registry metadata identify the source and pinned package ve
 
 These conclusions are about the pinned source and the documented platform APIs, not observations of a user's Windows/macOS runtime or physical device. Once the chooser returns a path, Kotoha still writes to it directly; the audit does not establish atomic replacement, protection against intervening filesystem changes, or behavior for every OS version and configuration.
 
-## Existing test coverage
+## Existing test coverage and hosted accessibility limit
 
-`test/text_export_test.dart` checks exact UTF-8 output, selected-translation-only writing, save-dialog arguments, cancellation, and write-error behavior using a fake selector; it does not show native UI or exercise overwrite confirmation. `macos/RunnerUITests/NativeExportPanelUITests.swift` opens the real save panel, verifies that `Export` and `Cancel` are accessible, cancels, and checks that the in-memory translation remains. It does not select an existing file or exercise the confirm-replacement alert. There is no equivalent end-to-end overwrite-dialog test in the Windows probe.
+`test/text_export_test.dart` checks exact UTF-8 output,
+selected-translation-only writing, save-dialog arguments, cancellation, and
+write-error behavior using a fake selector; it does not show native UI or
+exercise overwrite confirmation. `macos/RunnerUITests/NativeExportPanelUITests.swift`
+is intended to verify the accessible native save panel, cancellation, and
+preservation of the in-memory translation. It does not select an existing file
+or exercise the confirm-replacement alert. There is no equivalent end-to-end
+overwrite-dialog test in the Windows probe.
 
-No export code change is required by the source/API evidence: both pinned native implementations preserve their documented default overwrite confirmation. Do not claim end-to-end overwrite behavior was observed in runtime testing. A future UI test would need a bounded, stable way to create/select a unique existing temporary file and verify both cancel-preserves-bytes and confirmed-replacement behavior; current tests do not provide that route.
+On the exact hosted macOS job for publication
+`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
+`48a430f888442ed162987ac2b349ab5a4f59161b`, run `43574939450`, the UI test
+again failed at `NativeExportPanelUITests.swift:114` after one coordinate scroll:
+VoiceOver was enabled, but `axClientTrusted=false`, direct AX status was
+`-25211`, the 800×632 window exposed zero scroll views, and the
+translation/source fields were absent (`vcs-read/fa702e9eda1d4e05a1404777041f8afa`).
+It did not reach the save panel, `Cancel`, or draft-preservation assertions.
+This confirms the test remains failing in hosted CI; it does not identify a
+product root cause or establish how VoiceOver sees the app on a user device.
+
+The operator confirmed hosted CI is the only available macOS test context and
+no TCC-authorized runner will be provided (response to question
+`fb5e1fcf557f4c7c9e2f9e94d50094aa`). Therefore, save-panel
+accessibility/cancellation/draft-preservation coverage is currently
+**unverifiable in that hosted context**. Preserve the assertions and OS privacy
+controls; do not bypass TCC or call this a pass. If a supported verification
+route that works within the hosted context cannot be established, retain this
+as an explicit coverage gap rather than attributing it to the product.
+
+Source/API inspection still finds no export-code change required to retain the
+documented default overwrite prompt. That does not substitute for a runtime UI
+result: do not claim end-to-end overwrite behavior was observed. A future UI
+test would need a bounded, stable way to create/select a unique existing
+temporary file and verify both cancel-preserves-bytes and confirmed-replacement
+behavior; current tests do not provide that route.
