@@ -1573,12 +1573,29 @@ the c938 source-manifest final-page entry above. The pinned generator
 `scripts/gen-unicode-data.py` receipt
 (`mizu_fetch/ef91b3fca8b4ce6c61b7014556c9ccc888ec7d710b079dab367599f7545f0810`)
 reports SHA-256
-`a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`. The
-generator fetches `UnicodeData.txt` from the unversioned UCD `latest` URL and
-uses the invoking Python's `unicodedata` version for normalization; the selected
-output contains a “Unicode 16.0.0” normalization marker. These source references
-identify the checked-in output and generator, not the historical UCD response
-or Python runtime that produced the output. The c938 `generated-sha256.txt`
+`a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`.
+The pinned generator's full path fetches `UnicodeData.txt` from the
+unversioned UCD `latest` URL, parses categories and case mappings, and uses
+Python `unicodedata.normalize` for NFD; its whitespace set is hard-coded, though
+its comment points to PropList. `--normalization-only` emits only canonical
+tables from `unicodedata` and exits before the HTTP request; full generation
+also appends those tables. The function writes `unicodedata.unidata_version`
+into the output marker, which is `16.0.0` in the selected output. This identifies
+the Unicode database version for normalization only, not the Python
+interpreter/build or the historical `UnicodeData.txt` response; it does not
+prove those separate inputs were version-aligned
+(`mizu_fetch/c6e8b525475ba145f46c28738aeca935b392af5cd4fb5dbdad43be3584ede2e4`).
+
+The path-history response pinned to candidate revision
+`31424b7cf14604ca65a9195123da1413f31c4472` lists commit
+`10da8c463f735c7eaff904c6474e6cf38dccbe83` (2026-10-14, PR #30390) as the latest
+change to `src/unicode-data.cpp`. The PR added 3,985 generated lines and the
+normalization-only mode, but the reviewed PR body and changed-file list record
+no invocation, raw UCD input, response digest, or Python runtime manifest. These
+records do not bind the selected base tables to a particular UCD response, and
+the exact Python interpreter/build remains unidentified (`mizu_fetch/d2614e8e466c08dc626e8705bed0089af29750970b749d81523af8a7db027dd3`,
+`mizu_fetch/a5c991ccac2464b13018d35ae2ff316c08ec283cf6998127965590713e408454`).
+The c938 `generated-sha256.txt`
 artifact (`vcs-read/4bc19dc386374794ab2f6527ee0d3129`) is 1,420 bytes; its
 full-file SHA-256 equals its locally verified page SHA-256
 `c73a6d1df52452b70888929ada82bd37bd5bb43c5663186c510f1678e07fd9c2`. It lists
