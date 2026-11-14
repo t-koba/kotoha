@@ -174,4 +174,25 @@ class CaptureWindowsSimdTest(unittest.TestCase):
             with self.assertRaises(ValueError): capture.file_api(build)
             with self.assertRaises(ValueError): capture.compiler_version("Compiler Version 1.2.3\nCompiler Version 2.3.4")
 
+
+    def test_main_reports_only_sanitized_capture_failure(self):
+        from contextlib import redirect_stderr
+        from io import StringIO
+
+        with tempfile.TemporaryDirectory() as d:
+            stderr = StringIO()
+            argv = ["capture_windows_simd.py", "--source-root", d,
+                    "--build", d, "--output", str(Path(d) / "out.json")]
+            with patch("sys.argv", argv), \
+                 patch.object(capture, "capture", side_effect=capture.CaptureError(
+                     "invoked MSVC version 19.51.36231 disagrees with CMake compiler metadata 19.51.36260")), \
+                 redirect_stderr(stderr):
+                with self.assertRaises(SystemExit) as result:
+                    capture.main()
+            self.assertEqual(result.exception.code, 1)
+            self.assertIn("19.51.36231", stderr.getvalue())
+            self.assertIn("19.51.36260", stderr.getvalue())
+            self.assertNotIn(d, stderr.getvalue())
+
+
 if __name__ == "__main__": unittest.main()

@@ -1532,31 +1532,23 @@ Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
 engine adoption remains disabled.
 
-The Windows SIMD capture binds `windows-simd.json` to the pinned llama.cpp
-revision, `vec.h` digest, Release `ggml-cpu` CMake File API compile group and
-generated compiler metadata. The former snapshot's exact publication/status
-reads returned no check or artifact (`vcs-read/c2ff77a131c84e0fb11c1fd076bdff13`,
-`vcs-read/ce45af4da1f94222b2dff67d0f0b2f05`). Review found its compiler-version
-query called `cl.exe /Bv` without an input file; Microsoft documents D8003 for a
-compiler command with no source filename (`mizu_fetch/cd908988fb90c69f8975b2d8e9902edda5c5e3ec79ede806d1941758899dc259`). The
-corrected query supplies a temporary valid C++ translation unit with `/Bv /c`;
-a regression test verifies the file is present at invocation. The exact Windows
-job for SHA `6ffeca67764e7c511354ed4faca6b38cabf0e6a9` failed in its synthetic
-test step (`vcs-read/ecef91518ec14412bc5a51150072ce1f`, log
-`vcs-read/6496df80f64a440b93012ef90b62dbbb`): six tests failed and one errored, all due to
-`pinned vec.h missing or changed` because `Path.write_text` translated the
-fixture's LF bytes on Windows. The `/Bv` source-input regression passed, but
-this run did not produce usable build metadata or branch evidence. An earlier
-Windows source manifest records the expected `vec.h` raw digest
-`6afaaa70b626987e15dc37594e434a0cec28437b02391e8f72367239654ec768`; that
-separate build supports the fixture-byte diagnosis only, not a branch result
-(`vcs-read/ecc6cfb2d2694e7397a6ba2440e38f25`). The fixtures now write explicit
-UTF-8 bytes; all seven focused tests pass (`commands/6e8846ee3945431883a95588eb555659`)
-and the engine-probe test suite, Python compilation and diff check pass
-(`commands/65d0ccea90654174a9ab9260445bed3e`). The corrected capture still
-needs a fresh exact Windows CI run before any branch claim. The macro-branch
-result remains unknown and does not change runtime, redistribution, Windows 11
-or adoption conclusions (`commands/6f32d35c02994c8291cfeb3c71ca4ea5`).
+The Windows SIMD branch remains unknown. The capture binds a successful
+`windows-simd.json` to the pinned llama.cpp revision, `vec.h` digest, Release
+`ggml-cpu` File API compile group and verified MSVC identity. Its `/Bv` query
+uses a temporary C++ input, and the parser fixtures preserve exact UTF-8 bytes.
+The exact Windows x64 job for publication
+`b894e53620709a46f8324bb711d4e035be51ade5f8e17042439f2c3992fe2030` / SHA
+`c16c604354eba222186c308b5cbf6a8a1d00ec0d` failed at the SIMD capture after
+build and synthetic smoke succeeded; the complete log reports only the generic
+failure (`vcs-read/04fcb917d4884b18b3aaa43034d29ee3`). The requested JSON is not
+present in the retained artifact inventory (`vcs-read/6a6a6e3543be43a4bffaf384224ab906`).
+CMake metadata records compiler version `19.51.36260.0` and a compiler path
+under MSVC toolset `14.51.36231` (`vcs-read/f0f42b38b95d441393c0e24946e501c9`);
+that discrepancy does not identify the failed capture condition or prove a
+branch. The capture now reports only its bounded, path-free failure reason;
+retry the exact target before assigning a branch. Windows runtime-present
+observations, redistribution, Windows 11 behavior and engine adoption remain
+separate and unresolved.
 
 The same application-CI snapshot's macOS accessibility job failed before the
 save-panel, cancellation and draft-preservation assertions; this does not

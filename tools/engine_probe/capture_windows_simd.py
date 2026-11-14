@@ -21,8 +21,12 @@ EXP_CONDITIONS = (
 )
 
 
+class CaptureError(ValueError):
+    """A bounded, path-free reason that is safe to report in CI."""
+
+
 def fail(message):
-    raise ValueError(message)
+    raise CaptureError(message)
 
 
 def run(args, **kwargs):
@@ -252,7 +256,7 @@ def capture(source_root, build, output):
     selected = selected_branch(ordered, macros)
     invoked_version = invoked_compiler_version(passed)
     if invoked_version != cached_version:
-        fail("invoked MSVC version disagrees with CMake compiler metadata")
+        fail(f"invoked MSVC version {invoked_version} disagrees with CMake compiler metadata {cached_version}")
     result_data = {"schema": 2, "source_revision": REVISION, "source_sha256": VEC_SHA256,
         "target": "ggml-cpu", "configuration": "Release", "architecture": "x64",
         "compiler": "MSVC", "compiler_version": invoked_version,
@@ -271,8 +275,14 @@ def main():
     args.output.unlink(missing_ok=True)
     try:
         capture(args.source_root, args.build, args.output)
-    except (OSError, ValueError, subprocess.SubprocessError, KeyError, TypeError, json.JSONDecodeError):
-        parser.exit(1, "Windows SIMD capture failed; evidence incomplete\n")
+    except CaptureError as exc:
+        parser.exit(1, f"Windows SIMD capture failed; evidence incomplete: {exc}\n")
+    except json.JSONDecodeError:
+        parser.exit(1, "Windows SIMD capture failed; evidence incomplete: invalid CMake File API data\n")
+    except (OSError, subprocess.SubprocessError):
+        parser.exit(1, "Windows SIMD capture failed; evidence incomplete: required input or tool unavailable\n")
+    except (KeyError, TypeError, ValueError):
+        parser.exit(1, "Windows SIMD capture failed; evidence incomplete: malformed or incomplete target data\n")
 
 
 if __name__ == "__main__":
