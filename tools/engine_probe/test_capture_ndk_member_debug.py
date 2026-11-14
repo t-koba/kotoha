@@ -382,6 +382,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unrecognized'):
             capture.parse_line_tables(b'x' * 64)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_capture_reports_safe_bounded_diagnostic_for_rejected_line_table(self):
         raw = (b'not a line table /private/build/secret.cpp\x1b[31m\x01 ' + b'x' * 256)
         self.line_file.write_bytes(raw)
@@ -396,6 +397,7 @@ class CaptureMemberDebugTest(unittest.TestCase):
         self.assertFalse(any(ord(char) < 32 or 0x7f <= ord(char) <= 0x9f
                              for char in diagnostic))
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX pipe tools are exercised on the Android Linux runner')
     def test_successful_capture_artifact_has_no_diagnostics(self):
         result = self.run_capture()
         self.assertEqual(result['members'][0]['line_tables'], capture.parse_line_tables(LINE_TABLE_V19))
