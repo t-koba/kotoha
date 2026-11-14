@@ -1,29 +1,28 @@
 # Native-engine feasibility probe
 
 This is **developer tooling only**, not product inference or distribution
-approval. The latest exact probe and application-CI snapshot is publication
-`1b0239717788a1d6504a1851d7cdc558eb085ab288d880f31388100129de0fb6` / SHA
-`3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` (source commit
-`a93d9ba479fdbb8146dd5d5e8ffbe823d050baf1`). The Android API 35 x86_64
-feasibility check succeeded in run `43600173259`, job `132463025650`; the
-Windows x64 CPU feasibility job `132463025479` failed in the SIMD-capture step
-with `upstream source revision mismatch`, so it produced no valid branch
-record (status `vcs-read/3f0fa4e04d7346da99ece6cfc467f017`, failure log
-`vcs-read/2695bc6507c7402db327be033f149aa7`). Neither result closes source,
-licensing, redistribution, adoption or physical-device behavior.
+approval. The latest exact native-engine probe publication is
+`7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
+`c93832fb23347f50350eb3afd6caa0f796ffa7e0` (source commit
+`cfe1a6d17d051a9ae9db317b2c222d7eb5f3dd62`). The Windows x64 CPU feasibility
+job `132531217461` passed (status `vcs-read/deae3dd2ab9a489a83f94e9dbab8bff4`,
+log `vcs-read/c3861e006741403c8bc6e06fad4951c9`); its bounded SIMD witness is
+reported below. The Android API 35 x86_64 job `132531217209` failed on line-table
+capture and emulator/adb readiness (status `vcs-read/ca1cb4b6b5634c4b8cba50dff0d481ad`,
+log `vcs-read/3921c57ee2724895b8021465d43246ae`). These probe results do not
+close source, licensing, redistribution, adoption or physical-device behavior.
 
-Application CI for that SHA completed in run `43600548177` (status
-`vcs-read/3f0fa4e04d7346da99ece6cfc467f017`): Design, Flutter, Android,
-Windows and iOS checks passed; the macOS accessibility probe failed before
-opening the save panel, so no panel, cancellation or draft-preservation
-assertion ran (log `vcs-read/0f82e5be2e974f5fb23ae06a206b8828`). The later local
-commit `14c503d` fixes the Windows capture's false revision check; it has no
-hosted result in this publication. Commit `43bb1c3` records the exact macOS
-failure and does not establish save-panel behavior. Engine adoption remains
-disabled, and the macOS result remains separate from engine feasibility; see
-`design/text_export_audit.md` for its accessibility-test status.
+The separately recorded full application-CI run on SHA
+`3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` (run `43600548177`; exact-SHA
+status `vcs-read/52aa297f227a4362a324165b72686a54`) passed Design, Flutter, Android,
+Windows and iOS checks, but its macOS accessibility probe failed before opening
+the save panel; no panel, cancellation or draft-preservation assertion ran (log
+`vcs-read/0f82e5be2e974f5fb23ae06a206b8828`). This application-CI result is
+separate from the later `c93832f` engine-probe publication; see
+`design/text_export_audit.md` for the save-panel status. Engine adoption remains
+disabled.
 
-Historical CI evidence follows; it does not supersede the exact current status
+Historical CI evidence follows; it does not supersede the exact probe status
 above.
 
 An earlier exact full-CI publication
@@ -1502,8 +1501,8 @@ included in selected-read membership. Raw evidence remains available if strict
 capture fails. The script still attempts independent native smoke, but returns
 failure for incomplete capture, never inferred closure.
 
-**Current evidence limits:** the exact Android API 35 x86_64 and Windows x64
-native probes passed in run `43574641819` on publication
+**Earlier full-feasibility evidence:** the exact Android API 35 x86_64 and
+Windows x64 native probes passed in run `43574641819` on publication
 `bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
 `48a430f888442ed162987ac2b349ab5a4f59161b`
 (`vcs-read/56e67b92ac5a4948b317a819eb855c4f`). The Android link-map artifact
@@ -1528,7 +1527,18 @@ selected `ggml/src/ggml-cpu/ops.cpp` bytes to SHA-256
 `src/unicode-data.cpp` to
 `5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`
 (`vcs-read/2daa9fe581554b2fac543c79d5899d4a`,
-`vcs-read/6a887f95777946f682cbe4a452ff6265`). These reads are not binary-member
+`vcs-read/6a887f95777946f682cbe4a452ff6265`). The later c938 run's verified first and final pages of
+`source-sha256.txt`
+(`vcs-read/a3810c0145454a12b3b0982b58da568f`, page SHA-256
+`291fe8f06ed26403dd6e5c8cb21b4a9dffb622ba6e991d328712453e1ad232ba`;
+`vcs-read/3299afeab31b4b78b41bc3d1bffd69ca`, page SHA-256
+`fd499925e049986ce3af5a94845ca203f15412c67f4650e2146b3cd7f0a35896`) contain
+the same `ops.cpp` and `vec.h` hashes plus the `src/unicode-data.cpp` hash.
+The adapter reports whole-file digest
+`faf08d710aacca675ffbebd3470592a9ae0efda170d6b4657fcb62fad446eb2c`, but the
+middle pages were not read, so full-manifest identity was not independently
+verified. These selected-file rows establish input-byte identity only, not
+upstream revision or patch provenance; the reads are not binary-member
 provenance or license closure. In `ops.cpp`, the selected YaRN rope function is
 attributed “MIT licensed. Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng”
 and links to `jquesnelle/yarn`; the root `LICENSE` has a different copyright
@@ -1542,16 +1552,30 @@ redistribution (`experiments/21413b81ee7044aba5669c2300d30145`,
 `experiments/4ce0b7165ce9475ba1d744418e3872dd`,
 `mizu_fetch/1c898a13d34f56167ff05f14fbda3b55b4a91fbc3e0f65205c2ccddaf5cc8d6`).
 
-At the same pinned llama.cpp revision, `scripts/gen-unicode-data.py`
-(SHA-256 `a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`)
-fetches `UnicodeData.txt` from the unversioned UCD `latest` URL and uses the
-invoking Python's `unicodedata` version for normalization; the selected output
-contains a “Unicode 16.0.0” normalization marker. The retained generated-input
-manifest binds only output hashes; it records no UCD bytes/version or generator
-Python environment. The output therefore does not establish complete data
-provenance or applicable notice scope (`vcs-read/50425157782045f78e96a7f2f4ba0230`,
+At pinned llama.cpp revision
+`31424b7cf14604ca65a9195123da1413f31c4472`, the raw-source receipt for
+`src/unicode-data.cpp` (`mizu_fetch/2cc3f8f06accfbd18d98dceddc5f4568d458c85866d06277a1803a8b661e2b05`)
+reports SHA-256
+`5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`, matching
+the c938 source-manifest final-page entry above. The pinned generator
+`scripts/gen-unicode-data.py` receipt
+(`mizu_fetch/ef91b3fca8b4ce6c61b7014556c9ccc888ec7d710b079dab367599f7545f0810`)
+reports SHA-256
+`a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`. The
+generator fetches `UnicodeData.txt` from the unversioned UCD `latest` URL and
+uses the invoking Python's `unicodedata` version for normalization; the selected
+output contains a “Unicode 16.0.0” normalization marker. These source references
+identify the checked-in output and generator, not the historical UCD response
+or Python runtime that produced the output. The c938 `generated-sha256.txt`
+artifact (`vcs-read/4bc19dc386374794ab2f6527ee0d3129`) is 1,420 bytes; its
+full-file SHA-256 equals its locally verified page SHA-256
+`c73a6d1df52452b70888929ada82bd37bd5bb43c5663186c510f1678e07fd9c2`. It lists
+11 Unity units and two version headers, not Unicode UCD inputs. The prior
+retained generator-output audit likewise records output hashes but not UCD
+response bytes/version or the Python environment (`vcs-read/50425157782045f78e96a7f2f4ba0230`,
 `experiments/e1af4e40316a44e39e1acaaa09d5595f`,
-`experiments/a1b7b1a91d28499192da29757face95a`). Unicode License v3 provides a
+`experiments/a1b7b1a91d28499192da29757face95a`). Complete data provenance and
+applicable notice scope therefore remain unresolved. Unicode License v3 provides a
 permissive grant and requires its copyright/permission notice with the Data
 Files or associated documentation; that category meets Kotoha's policy if
 applicable, but the captured inputs do not settle whether or how these tables
@@ -1584,38 +1608,34 @@ Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
 engine adoption remains disabled.
 
-The Windows SIMD branch remains unknown. Exact Windows x64 job `132463025479`
-for publication `1b0239717788a1d6504a1851d7cdc558eb085ab288d880f31388100129de0fb6`
-/ SHA `3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` failed in its then-current
-capture with `upstream source revision mismatch` after the build and synthetic
-smoke succeeded (`vcs-read/2695bc6507c7402db327be033f149aa7`). That mismatch was
-not evidence of a changed upstream source, and the run produced no
-`windows-simd.json` or branch result.
+The latest exact Windows x64 probe on publication
+`7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
+`c93832fb23347f50350eb3afd6caa0f796ffa7e0` passed job `132531217461` (status
+`vcs-read/deae3dd2ab9a489a83f94e9dbab8bff4`; log
+`vcs-read/c3861e006741403c8bc6e06fad4951c9`). Its retained
+`windows-simd.json` artifact (`vcs-read/f8a7d12494ee4b01882603ab1ba5d8ec`)
+is 752 bytes with SHA-256
+`a87b709826c8679172005cc294e80fbd2949791e996d668a7c867605a35ffb43`. It
+records the exact file `ggml/src/ggml-cpu/vec.h` with SHA-256
+`6afaaa70b626987e15dc37594e434a0cec28437b02391e8f72367239654ec768`, MSVC
+`19.51.36260`, x64 Release target `ggml-cpu`, `__SSE2__=false`,
+`__AVX2__=false`, `__AVX512F__=false`, `__AVX512DQ__=false`, `__FMA__=false`,
+and `selected_branch=none`. The artifact labels its method a CMake File API
+Release CXX compile-group preprocessing witness and says source identity is
+`vec.h` bytes only. This establishes that bounded compile-group result, not the
+upstream archive/revision, full source provenance, runtime dispatch or behavior,
+selected-source/license closure, redistribution or Windows support.
 
-The follow-up capture implementation in `14c503d` checked the archive URL/SHA
-manifest and CMake source-root path, but did not bind the source-root contents
-to the verified archive. Its synthetic-source test could therefore emit the
-manifest's archive digest without acquiring those bytes. The CMake build
-configuration pins an archive URL/SHA and a separate source manifest records
-the expected `vec.h` digest (`vcs-read/638c188707114cbbbbae6b427e35f35a`,
-`vcs-read/362bf74e70ee476b87fe95ee67b60f10`); neither establishes the actual
-source-root provenance. The corrected capture format identifies
-`ggml/src/ggml-cpu/vec.h` by that file's SHA-256 only and retains exact
-target/compiler/macro checks; it makes no archive revision or archive SHA
-claim.
-
-A subsequent exact Windows x64 job `132475334984` on publication
-`da4733351ee49213bcf2feb138269307f1d4e09500f82e661d8e234125e1e4e9` / SHA
-`3fd4414d1434d07a5525a8774e4bfdf31bc4eff5` failed before configure/build: its
-capture test compared the compiler's original temporary path to `Path.resolve()`
-output, which used the runner's 8.3 short-name form. Later `always()` captures
-had no build artifacts, so this run produced no `windows-simd.json` or branch
-observation (`vcs-read/e1bdfb8892e0459993c0e9746aebe210`). A fresh exact Windows
-CI result is still needed to establish the SIMD branch. Runtime-present
-observations, redistribution, Windows 11
-behavior and engine adoption remain separate and unresolved.
-
-Exact macOS job `132464452966` for the same publication/SHA failed in
+Earlier Windows capture attempts failed before producing a branch result; the
+`c93832f` artifact supersedes those failures only for this narrow witness. The
+capture does not bind the complete source-root contents to the verified archive:
+the archive URL/SHA manifest and separate expected `vec.h` digest do not prove
+the checked-out source-root identity. Runtime-present observations,
+redistribution, Windows 11 behavior and engine adoption remain independent and
+unresolved.
+The separate macOS application-CI job `132464452966` on SHA
+`3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` (exact-SHA status
+`vcs-read/52aa297f227a4362a324165b72686a54`) failed in
 `NativeExportPanelUITests.testNativeSavePanelIsAccessibleAndCancelPreservesDraft`
 before opening the save panel: the test could not find the translation field
 after one window-coordinate scroll. The hosted diagnostic reports
@@ -1974,22 +1994,21 @@ redistribution authorization remain open; Android engine adoption stays disabled
 
 ### Windows runtime and delivery gate
 
-The latest successful exact Windows x64 native-engine probe (the later failed
-attempt is documented above) is publication
-`877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
-`e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`; its Windows check passed in run
-`42548704285` (job `128939244483`; status `vcs-read/f495e27f1c2a4884afdf58455436fca0`).
-The exact `runtime-providers.json` artifact (`vcs-read/48bcf2c49d564ffd8e30c524ad23b648`,
-5,692 bytes, SHA-256 `f15d808ad9f60019bb74430ae17651ace0a2875f2bcbcc7931308ed84605ea7f`)
-and summary (`vcs-read/8a16e9783db2457e8ffd82048941d9e3`, 2,845 bytes, SHA-256
-`0cb01d17a258de559a7833f74f40b656c7e52336119a0a2d2f2ebb7057810435`) bind the
-pre-entrypoint `llama-simple.exe --help` capture to executable SHA-256
-`bceb196cc19f3c640617059b564f661591acc09862e2c4077568a6a7d9bc1f95` and linkage
-SHA-256 `d221d76bd973734c5e2d99ea4a7586f11414c0e9d3fef110df5ce24736880fec`.
-They report 14 direct imports, zero delay imports, 9 API-set contracts, 11
-loader-resolved providers and zero redacted paths. Direct imports include
-`MSVCP140.dll`, `VCRUNTIME140.dll` and `VCRUNTIME140_1.dll`; each resolved under
-`windows/system32` at version `14.51.36247.0`:
+The latest exact Windows engine-probe provider capture is publication
+`7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
+`c93832fb23347f50350eb3afd6caa0f796ffa7e0` (job `132531217461`; status
+`vcs-read/deae3dd2ab9a489a83f94e9dbab8bff4`, log
+`vcs-read/c3861e006741403c8bc6e06fad4951c9`). Its `runtime-providers.json`
+artifact (`vcs-read/50ce6d4f109d4574bd61f618dd31ea57`) is 5,692 bytes with
+SHA-256 `a7ddcf27a10e56514bab1bffb58a4f90945ed435094a021ccc06c571d4b1bf48`.
+It binds a pre-entrypoint `llama-simple.exe --help` capture to executable
+SHA-256 `9254f8bf41f2e8aae5c3f6d185a67d2499a102c03b85fdf7fd209e817d1674b5`
+and linkage SHA-256
+`7d8df4f8bbfaa36fc68dca010e4d4716b18adb93ee11781f91e5d54483c5a4a1`.
+The report records 14 direct imports, zero delay imports, nine API-set
+contracts, 11 loader-resolved providers and zero redacted paths. Direct imports
+include `MSVCP140.dll`, `VCRUNTIME140.dll` and `VCRUNTIME140_1.dll`; each
+resolved under `windows/system32` at version `14.51.36247.0`:
 
 | Provider | SHA-256 | Observed version |
 | --- | --- | --- |
@@ -1997,16 +2016,14 @@ loader-resolved providers and zero redacted paths. Direct imports include
 | `VCRUNTIME140.dll` | `d1f4225df2cd877dbf130d5668a021dce3f94118455ff5ec952061c30afc9ce7` | `14.51.36247.0` |
 | `VCRUNTIME140_1.dll` | `a7146c08f89fe5b04541ab507cdb59ff7b44534d4ba3c668a426c6450a03434e` | `14.51.36247.0` |
 
-The observed System32 providers have cache-only `WinVerifyTrust` signer status
-`Valid`; no online revocation retrieval or provider binaries are retained. This
-is one CI-runner loader observation, not a Windows runtime entitlement or
-redistribution authorization. The exact run does not establish providers or
-installation terms on other Windows versions. Because capture records path,
-version and cache-only signature status but not installation history, a
-`windows/system32` path does not establish whether these VC++ DLLs came with the
-OS image or were installed by a Visual C++ Redistributable, and it does not
-identify the applicable installation license.
-
+The observed providers have cache-only `WinVerifyTrust` signer status `Valid`;
+no online revocation retrieval or provider binaries are retained. This is one
+CI-runner loader observation, not Windows runtime entitlement or redistribution
+authorization. The capture records path, version and cache-only signature
+status, not installation history: `windows/system32` does not establish whether
+the VC++ DLLs came with the OS image or were installed by a Redistributable, nor
+the applicable installation license. It does not establish runtime-absent or
+Windows 11 behavior.
 On exact publication `dd4e37f6eb785d982748827cc7f6088b50374814fb3d0a1c3e7c96a30b9b70f5` / SHA `4ae1b83eace3ec3cd3c97bb92d0b427ac9b63ee6`, regular CI run `43572760207` built the Windows Release app and uploaded its sanitized import summary (`vcs-read/92415740d19d42068722ef239fe3621a`). The x64 `kotoha.exe` is 91,136 bytes with SHA-256 `5326df2ebc099d7ee5d98159bb97ef2b2ccfe8d9eda9e9280c1ae7b407a05e66`; it directly imports `msvcp140.dll`, `vcruntime140.dll`, and `vcruntime140_1.dll`, with no delay imports. The same job (Windows Server 2025) failed at the pre-entrypoint provider capture with `Ambiguous provider basename` (`vcs-read/ba84ac57b53a469b833e44badee38fdb`), so it produced no Release provider artifact; the duplicate name and paths were not retained. This does not establish which provider files were loaded, their versions or signers, installation provenance, Windows 11 behavior, or redistribution rights.
 
 The helper now treats repeated observations of the same normalized case-insensitive Windows path as one provider, but still rejects distinct paths sharing a basename. Its ambiguity error reports only the already-sanitized basename, not an absolute path. Exact CI has not yet exercised this correction.
