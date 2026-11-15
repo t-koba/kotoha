@@ -37,7 +37,13 @@ failure-only diagnostic reports `voiceOverEnabled=true`, `axClientTrusted=false`
 field entry or reaching the native save panel, Cancel, or draft-preservation
 assertions. This is evidence that this hosted accessibility-query path is
 unavailable, not a product root-cause diagnosis or proof of how a user-run Mac
-exposes the app to VoiceOver.
+exposes the app to VoiceOver. A later exact run `43718257468`, job
+`132824669921`, on SHA `548c92ba16fbd85c446e17059fc1fa093a87d4a0`, failed at
+the same line with the same diagnostic: `axClientTrusted=false`, enhanced UI
+status `-25211`/unavailable, zero scroll views, and missing target,
+source-language, and source-text nodes (`vcs-read/8b9d1ab4e0164d45befd066b4b4f7500`).
+This repeats the hosted query failure; it still does not reach field entry or
+the save panel and does not establish behavior on a consented user Mac.
 
 The operator confirmed that no macOS runner or session is available
 (`operator/kotoha/a-q1edb9445c51e96eeb98faaea04a8f7129714884a-1794746647`).
