@@ -26,19 +26,19 @@ preservation of the in-memory translation. It does not select an existing file
 or exercise the confirm-replacement alert. There is no equivalent end-to-end
 overwrite-dialog test in the Windows probe.
 
-The latest exact hosted macOS job, run `43680441354` on publication
-`f462494dd6dd2306c8bb763f9a1b7703e8325ee9e84db767b1f4f658b37693ef` / SHA
-`53809a016da85eb2394e63ffcdfafdf1003e133d`, failed at
-`NativeExportPanelUITests.swift:114` after one window-coordinate drag and the
-VoiceOver-focus key attempt. The diagnostic reports VoiceOver enabled,
-`AXIsProcessTrusted() == false`, AX enhanced-UI status `-25211`, zero exposed
-scroll views, and no translation/source fields while the application window is
-present (`vcs-read/14f452ce42e2462f8b25a623f9f3cf92`,
-`vcs-read/8e5d616f9aca45e4bc0d24cae8c63c11`). The test therefore fails before
-filling a field or reaching the native save panel, Cancel, or draft-preservation
-assertions. This is strong evidence that the hosted accessibility-query path is
-untrusted/unavailable, not a product root-cause diagnosis or proof of how a
-user-run Mac exposes the app to VoiceOver.
+The latest exact hosted macOS job, run `43703481622` on publication
+`8bcf0a2f5ea4c878474efca1c3dac4550d32637ac6b7ecfd5982b2786f770221` / SHA
+`a261cce924d3214d220ae61ba3c23989c2dccd58`, failed at
+`NativeExportPanelUITests.swift:114` after one window-coordinate scroll. Its
+failure-only diagnostic reports `voiceOverEnabled=true`, `axClientTrusted=false`,
+`appEnhancedUIStatus=-25211`/unavailable, `scrollViews=0`, and
+`target{exists=false}`, `source-language{exists=false}`, and
+`source-text{exists=false}` while the application window is present
+(`vcs-read/6a5bfd7785034860bc8f43e06382156f`). The test therefore fails
+before field entry or reaching the native save panel, Cancel, or
+draft-preservation assertions. This repeats the earlier hosted-run observation:
+the hosted accessibility-query path is unavailable, not a product root-cause
+diagnosis or proof of how a user-run Mac exposes the app to VoiceOver.
 
 The operator confirmed hosted CI is the only available macOS test context and
 no TCC-authorized runner will be provided (response to question
