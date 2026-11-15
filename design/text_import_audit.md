@@ -19,9 +19,16 @@ input, intercepts bubbled hardware-key events, marks text fields read-only to
 reject text-input edits, and excludes the covered workspace's semantics; the
 localized cover appears instead. Widget tests dispatch synthetic lifecycle,
 keyboard, and text-input events, checking unchanged drafts, retained focus, and
-editing after resume. This Flutter-layer behavior is not evidence that an OS
-app-switcher snapshot or screenshot is protected on any target; native lifecycle
-and platform privacy behavior remain unverified.
+editing after resume. Android native code sets and conditionally restores
+`FLAG_SECURE` around Activity pause/resume; `MainActivityPrivacyTest` directly
+exercises those callbacks and checks flag state. iOS `SceneDelegate` adds and
+removes an opaque cover; `RunnerTests.testPrivacyCoverIsIdempotentAndLeavesContentAttached`
+directly invokes scene callbacks and checks the view hierarchy. These native
+tests exercise implementation state, not OS-generated app-switcher snapshots,
+screenshot suppression, physical devices, or OEM behavior. The separate
+keyboard/IME Flutter change has local widget evidence, but exact
+publication-bound Android/iOS CI for that change is still pending. No native
+OS-level privacy or screenshot-protection claim is made.
 
 The audited umbrella `file_selector` uses an Android cache copy and iOS
 `asCopy: true`; the app-owned mobile adapter below replaces those paths rather
