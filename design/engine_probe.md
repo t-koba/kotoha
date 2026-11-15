@@ -1600,14 +1600,27 @@ line naming the ggml authors. The GitHub API path-history query for
 time, lists one published root commit,
 `a18e54988639030e706f6ff9db224cf74e08a65a` (2023-08-31, “publish YaRN”;
 `mizu_fetch/f6027d063a2c11fd545b0037333a2b990a3e88b36ba28b176e6bb849c479b1cd`).
-The file at that commit (SHA-256
-`fa097066e5792239ff4375dd84ed65d6c01bce8a2b6f1083dd4504151210a4af`) contains
-the cited algorithm, and its `LICENSE` at the same commit (SHA-256
-`c3ec00ded224ebaaa673373961babc2d79f3081914897f3325cb7927a76234c1`) contains
-the full MIT grant, copyright, permission condition and disclaimer
-(`mizu_fetch/5dda1d061dc27ac53f1509b3444555bafd4f22a4396da0a424de11481c766d5d`,
-`mizu_fetch/4266f6f3fb38225ee338ff6ab977bb0c37878694087685da43b8fd181dad8765`,
-`mizu_fetch/d613d9b57ae6ee0781ca937f7f8ecfa6518acd3d9f5e38bd57b23a2a163613fc`).
+At that exact commit, GitHub identifies the 4,339-byte Python file as blob
+`f4b82cb37b3584cb0f878ab453815e27e946925d` and the 1,088-byte `LICENSE` as
+blob `bf8c87304a63657d159dabdf69d029d035c6b639`. Recomputing each Git blob ID
+from the pinned raw response bytes matches the API object IDs; their SHA-256s
+are respectively
+`fa097066e5792239ff4375dd84ed65d6c01bce8a2b6f1083dd4504151210a4af` and
+`c3ec00ded224ebaaa673373961babc2d79f3081914897f3325cb7927a76234c1`. The
+selected engine `ops.cpp` was also fetched at commit
+`31424b7cf14604ca65a9195123da1413f31c4472`; its SHA-256
+`071c64257e4b625abd22e7c4670290d8477e220c8e684871b8d9c16abf867a73` matches
+the Windows source-manifest row. Evidence: raw/API fetch receipts
+`mizu_fetch/cf92075f6849488fe01a06e0ff018292ce9dda64227b49ffc085decf1e61c65f`,
+`mizu_fetch/a623bfa609b73b142f1d3a0dd124e83ce8a64a06474146aa22995bd91b6576f5`,
+`mizu_fetch/343dd19e1307f9bbcc16a4ea7cf1ede2477bc15c8769356e929b95196614cf4a`,
+`mizu_fetch/a2653ce6c11553880c4bc4931a5faec34f5253428c4e281ebb214f5091bcb720`,
+`mizu_fetch/87a0fb25744582c2409677f781826a319a4b3e9ae52fe41172ccb02fba3898fa`;
+byte-level checks `experiments/5e8a7d1b2e314e409b619ab59ad70eee` and
+`experiments/7427b05eb04e4529afdf90f47636255e`. The candidate source contains
+the cited algorithm, and its pinned `LICENSE` supplies the full MIT grant,
+copyright, permission condition and disclaimer. This pins candidate bytes and
+terms, not the unrecorded external revision used by the YaRN implementation PR.
 The merged PR identifies its exact head commit as
 `081f73815fa7d127a6e79fb8fc1a317c9e52405e`; the merge commit
 `898aeca90a9bb992f506234cf3b8b7f7fa28a1df` (2023-11-01) is co-authored by
@@ -1630,11 +1643,12 @@ file revision. A follow-up review of PR issue comments, review comments and
 commit history (`mizu_fetch/c57d0b0f0c04e1bcc0577a58e99a7613a0251c79bed99e9bf15e8104a12819f7`,
 `mizu_fetch/c5d55eab8b6bdb8f706106d30ceb0a81cc03e5b1c252ac83814d81ab034a1dc5`,
 `mizu_fetch/a5b0d97078da37510e71e8e329a1c4d9c301de966f1fda221b9c363fbc521d24`)
-found no explicit upstream source commit pin in the records reviewed. The
-single path-history candidate is not a record of the author's checkout or
-adaptation input. The remaining provenance artifact is a contemporaneous source-import or
-checkout record, or an author/build attestation binding the implemented code
-to the exact YaRN file bytes at a revision. The app's explicit license-page
+found no public upstream source commit pin in the records reviewed. The
+single path-history candidate is not proof of the author's checkout or
+adaptation input. No producer attestation is available or will be sought; absent
+a contemporaneous public import record, the exact historical external revision
+remains unproven. Keep that distinction explicit rather than treating a missing
+private record as a task dependency. The app's explicit license-page
 registrations contain no YaRN entry; before any redistribution, preserve and
 account for its separate copyright and permission notice
 (`experiments/21413b81ee7044aba5669c2300d30145`,
