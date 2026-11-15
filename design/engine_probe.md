@@ -1781,6 +1781,24 @@ applicable, but the captured inputs do not settle whether or how these tables
 are covered (`assets/licenses/Unicode-3.0.txt`,
 `design/specs/dependency_policy.json`,
 `sources/search-310eb9337f9a49afbbff1c4d0db22865ffa9f9d103395ea7c94dbd00fa58c593`).
+The official `unicode-org/unicodetools` history provides a versioned source
+comparison: commit `8e5668798448fab87bab62416f2b18186c40dff5` (“Unicode
+16.0→ 17.0”) copies `ucd/dev` into `ucd/16.0.0`; that release tree's
+`UnicodeData.txt` has Git blob `64258a37395359c2f8875fdf3432817c1c459c31`,
+the same blob as the earlier `dev` file. Its `ReadMe.txt` retains `PUB_DATE`,
+`COPY_YEAR`, and `UNICODE_VER` placeholders and points to the terms-of-use page;
+the tree-root `LICENSE` identifies Unicode License V3 and says `Copyright ©
+2001-2024 Unicode, Inc.` This pins a public UCD 16 data copy and that tree's
+repository-level license, not the Python `unicodedata` database or exact
+historical notice used by llama.cpp's generator; the output marker and Kotoha's
+later CPython license asset do not bind that missing producer input or notice
+(`mizu_fetch/11aad434a6f9ecec404e7c68c652f550a351ffdea29c7bfac11d7b5c06ac6e95`,
+`mizu_fetch/174505671207ba256d375e28904a2b81725c51b75d9a8458a06f64d14373c492`,
+`mizu_fetch/de9b8c74880219181d5d265f1e7f2ea76dfa797a10e7aabfe3aac3db250ef172`,
+`mizu_fetch/5868f2459a2515ec68ce3abd70d8059428e851138344294fbc885725511f763a`,
+`mizu_fetch/52ea5304eac7c1d665ffef79c14f2cb98d2bd291719945af72fe735ea5834e72`,
+`mizu_fetch/210e042e8ccae90604bac7aa7319177723b20caa505fcdec4becc61dda08c060`).
+
 Kotoha currently registers Unicode-3.0 text for the distinct package “Unicode
 Bidi Data” and crypto in its in-app `LicensePage`; its test checks those entries,
 but no llama.cpp or generated-table registration appears in the app source
