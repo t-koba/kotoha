@@ -1,4 +1,5 @@
 """Regression tests for the portal probe's sanitized child-stage channel."""
+import errno
 import subprocess
 import sys
 import unittest
@@ -36,6 +37,19 @@ class SandboxFailureStageTest(unittest.TestCase):
                     _sandbox_failure_stage(f"Linux portal probe failed: {value}\n")
                 )
 
+    def test_forwards_fixed_bwrap_preflight_codes(self):
+        for stage in (
+            "sandbox-bwrap-setup-failed",
+            "sandbox-bwrap-timeout",
+            "sandbox-bwrap-executable-missing",
+            "sandbox-bwrap-exec-failed",
+        ):
+            with self.subTest(stage=stage):
+                self.assertEqual(
+                    _sandbox_failure_stage(f"Linux portal probe failed: {stage}\n"),
+                    stage,
+                )
+
     def test_ignores_diagnostics_outside_bounded_tail(self):
         stderr = "Linux portal probe failed: stage\n" + "x" * 8192
         self.assertIsNone(_sandbox_failure_stage(stderr))
@@ -70,14 +84,34 @@ class SandboxFailureStageTest(unittest.TestCase):
         self.assertEqual(caught.exception.stage, "sandbox-python-startup-failed")
         self.assertNotIn(private, str(caught.exception))
 
-    def test_preflight_timeout_is_fixed_bwrap_setup_failure(self):
+    def test_preflight_classifies_bwrap_timeout_without_forwarding_output(self):
         private = "/private/timeout output"
         with patch("tools.linux_portal_probe.subprocess.run") as run:
             run.side_effect = subprocess.TimeoutExpired("private command", 5, stderr=private)
             with self.assertRaises(ProbeFailure) as caught:
                 _run_sandbox_preflight(["bwrap", "--", "prefix"])
-        self.assertEqual(caught.exception.stage, "sandbox-bwrap-setup-failed")
+        self.assertEqual(caught.exception.stage, "sandbox-bwrap-timeout")
         self.assertNotIn(private, str(caught.exception))
+
+    def test_preflight_classifies_bwrap_exec_errors_without_forwarding_paths(self):
+        failures = (
+            (
+                FileNotFoundError(errno.ENOENT, "missing executable", "/private/bwrap"),
+                "sandbox-bwrap-executable-missing",
+            ),
+            (
+                PermissionError(errno.EACCES, "execution denied", "/private/bwrap"),
+                "sandbox-bwrap-exec-failed",
+            ),
+        )
+        for failure, expected_stage in failures:
+            with self.subTest(stage=expected_stage):
+                with patch("tools.linux_portal_probe.subprocess.run") as run:
+                    run.side_effect = failure
+                    with self.assertRaises(ProbeFailure) as caught:
+                        _run_sandbox_preflight(["bwrap", "--", "prefix"])
+                self.assertEqual(caught.exception.stage, expected_stage)
+                self.assertNotIn("/private/bwrap", str(caught.exception))
 
     def test_python_preflight_timeout_is_classified_as_python_startup(self):
         private = "/private/python timeout output"

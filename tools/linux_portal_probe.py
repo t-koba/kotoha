@@ -78,32 +78,45 @@ def _sandbox_client_started(stderr: str) -> bool:
 
 def _run_sandbox_preflight(bwrap_prefix: list[str]) -> None:
     """Check bwrap setup and Python startup without exposing child output."""
-    checks = (
-        ("sandbox-bwrap-setup-failed", ["/bin/true"], None),
-        (
-            "sandbox-python-startup-failed",
-            [sys.executable, "-c", f"print({PYTHON_PREFLIGHT_MARKER!r})"],
-            PYTHON_PREFLIGHT_MARKER,
-        ),
-    )
-    for failure_stage, command, marker in checks:
-        try:
-            completed = subprocess.run(
-                [*bwrap_prefix, *command],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=5,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise ProbeFailure(failure_stage) from exc
-        except OSError as exc:
-            raise ProbeFailure(failure_stage) from exc
-        if completed.returncode != 0 or (
-            marker is not None and marker not in completed.stdout.splitlines()
-        ):
-            raise ProbeFailure(failure_stage)
+    try:
+        completed = subprocess.run(
+            [*bwrap_prefix, "/bin/true"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ProbeFailure("sandbox-bwrap-timeout") from exc
+    except FileNotFoundError as exc:
+        raise ProbeFailure("sandbox-bwrap-executable-missing") from exc
+    except OSError as exc:
+        raise ProbeFailure("sandbox-bwrap-exec-failed") from exc
+    if completed.returncode != 0:
+        raise ProbeFailure("sandbox-bwrap-setup-failed")
+
+    try:
+        completed = subprocess.run(
+            [
+                *bwrap_prefix,
+                sys.executable,
+                "-c",
+                f"print({PYTHON_PREFLIGHT_MARKER!r})",
+            ],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        raise ProbeFailure("sandbox-python-startup-failed") from exc
+    if (
+        completed.returncode != 0
+        or PYTHON_PREFLIGHT_MARKER not in completed.stdout.splitlines()
+    ):
+        raise ProbeFailure("sandbox-python-startup-failed")
 
 
 def _sandbox_failure_stage(stderr: str) -> str | None:

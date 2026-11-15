@@ -362,7 +362,12 @@ only the allowlisted stage `sandbox-bwrap-setup-failed` (status
 `vcs-read/d73e05250c334ee8997cf19941ab5705`). No chooser/URI, revocation,
 post-close access, or persistent-state result was emitted. This is startup
 failure evidence only, not portal behavior or Kotoha support; Linux import
-remains disabled.
+remains disabled. Source review shows this stage previously conflated a bwrap
+launch error, a timeout, and a launched process returning nonzero. The probe
+now reports fixed, path-free codes for executable missing, launch error, timeout,
+and nonzero sandbox setup; captured child output remains suppressed. This
+classifies the next failure without changing chooser, permission, or persistence
+assertions.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
