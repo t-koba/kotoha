@@ -356,6 +356,151 @@ void main() {
     );
   });
 
+  testWidgets('pages the lazy workspace from the toolbar using only keys', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    tester.view.physicalSize = const Size(420, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      await tester.pumpWidget(const KotohaApp());
+
+      final position = tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position;
+      bool hasFocus(Finder finder) {
+        final elements = finder.evaluate();
+        final context = tester.binding.focusManager.primaryFocus?.context;
+        if (elements.isEmpty || context == null) return false;
+        var found = context == elements.single;
+        context.visitAncestorElements((element) {
+          if (element == elements.single) found = true;
+          return !found;
+        });
+        return found;
+      }
+
+      bool focused(String key) => hasFocus(find.byKey(ValueKey(key)));
+
+      Future<void> press(LogicalKeyboardKey key) async {
+        await tester.sendKeyEvent(key);
+        await tester.pumpAndSettle();
+      }
+
+      // Toolbar focus is outside the Scrollable: it must still be possible to
+      // page the workspace without a pointer or stealing text-editing keys.
+      await press(LogicalKeyboardKey.tab);
+      expect(focused('ui-language'), isTrue);
+      final toolbarFocus = tester.binding.focusManager.primaryFocus;
+      await press(LogicalKeyboardKey.pageDown);
+      expect(position.pixels, greaterThan(0));
+      expect(tester.binding.focusManager.primaryFocus, same(toolbarFocus));
+      await press(LogicalKeyboardKey.pageUp);
+      expect(position.pixels, 0);
+
+      for (var tab = 0; tab < 10 && !focused('source-text'); tab++) {
+        await press(LogicalKeyboardKey.tab);
+      }
+      expect(focused('source-text'), isTrue);
+      tester.testTextInput.enterText('first\nsecond');
+      await tester.pumpAndSettle();
+      final editingOffset = position.pixels;
+      await press(LogicalKeyboardKey.arrowDown);
+      await press(LogicalKeyboardKey.space);
+      expect(focused('source-text'), isTrue);
+      expect(position.pixels, editingOffset);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('source-text')))
+            .controller!
+            .text,
+        'first\nsecond',
+      );
+
+      // Reach Add translation by Tab, and activate it without pointer scrolling.
+      final addTranslation = find.widgetWithText(
+        OutlinedButton,
+        'Add translation',
+      );
+      for (var tab = 0; tab < 30 && !hasFocus(addTranslation); tab++) {
+        await press(LogicalKeyboardKey.tab);
+      }
+      expect(hasFocus(addTranslation), isTrue);
+      final addFocus = tester.binding.focusManager.primaryFocus;
+      for (var index = 1; index < 12; index++) {
+        await press(
+          index.isEven ? LogicalKeyboardKey.space : LogicalKeyboardKey.enter,
+        );
+      }
+
+      // Return to the toolbar. Page back to the top so later cards leave the
+      // bounded cache; then visit every field/action by paging and tabbing.
+      for (var tab = 0; tab < 100 && !focused('ui-language'); tab++) {
+        await press(LogicalKeyboardKey.tab);
+      }
+      expect(focused('ui-language'), isTrue);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+      await press(LogicalKeyboardKey.tab);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+      expect(tester.binding.focusManager.primaryFocus, same(addFocus));
+      for (var page = 0; page < 10 && position.extentAfter > 0; page++) {
+        await press(LogicalKeyboardKey.pageDown);
+      }
+      expect(hasFocus(addTranslation), isTrue);
+      expect(
+        tester
+            .getRect(addTranslation)
+            .overlaps(tester.getRect(find.byType(Scrollable).first)),
+        isTrue,
+      );
+      await press(LogicalKeyboardKey.tab);
+      expect(focused('ui-language'), isTrue);
+      for (var page = 0; page < 40 && position.pixels > 0; page++) {
+        await press(LogicalKeyboardKey.pageUp);
+      }
+      expect(position.pixels, 0);
+      expect(find.byKey(const ValueKey('translation-text-11')), findsNothing);
+      final expected = <String>{
+        'ui-language',
+        'show-licenses',
+        'source-language',
+        'import-source',
+        'source-text',
+        for (var index = 0; index < 12; index++) ...[
+          'target-language-$index',
+          'copy-translation-$index',
+          'export-translation-$index',
+          'remove-translation-$index',
+          'translation-text-$index',
+        ],
+      };
+      final reached = <String>{};
+      for (var tab = 0; tab < 100 && !reached.containsAll(expected); tab++) {
+        for (final key in expected) {
+          if (focused(key)) {
+            expect(
+              tester
+                  .getRect(find.byKey(ValueKey(key)))
+                  .overlaps(Offset.zero & tester.view.physicalSize),
+              isTrue,
+              reason: '$key must be visible when reached',
+            );
+            reached.add(key);
+          }
+        }
+        await press(LogicalKeyboardKey.tab);
+        if (focused('ui-language')) await press(LogicalKeyboardKey.pageDown);
+      }
+      expect(reached, containsAll(expected));
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('does not allow deleting the final translation field', (
     tester,
   ) async {

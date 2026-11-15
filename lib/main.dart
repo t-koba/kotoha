@@ -421,144 +421,153 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           ),
         ],
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 920),
-            child: ListView(
-              // Lazy children need to be built before Tab can reach them.
-              // Scale this bounded cache with the viewport and accessibility text.
-              scrollCacheExtent: ScrollCacheExtent.viewport(
-                4 * MediaQuery.textScalerOf(context).scale(1),
-              ),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(20),
-              children: [
-                // Keep the initial fields focusable even when a short
-                // viewport excludes them from the lazy scroll cache.
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      strings.workspaceTitle,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      strings.manualEditingNotice,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    const _TemporaryDraftNotice(),
-                    const SizedBox(height: 8),
-                    if (defaultTargetPlatform == TargetPlatform.android)
-                      SwitchListTile(
-                        key: const ValueKey(
-                          'android-ime-personalized-learning',
-                        ),
-                        contentPadding: EdgeInsets.zero,
-                        focusNode: _imePersonalizedLearningFocusNode,
-                        value: _allowImePersonalizedLearning,
-                        onChanged: (value) {
-                          // Reopen the input connection on the next field focus so
-                          // Android receives the updated IME configuration.
-                          if (!_imePersonalizedLearningFocusNode.hasFocus) {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                          }
-                          setState(() => _allowImePersonalizedLearning = value);
-                        },
-                        title: Text(strings.androidImePersonalizedLearning),
-                        subtitle: Text(
-                          strings.androidImePersonalizedLearningDescription,
-                        ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(strings.externalKeyboardPrivacyNotice),
+      // Keep offscreen body geometry from reordering traversal around the toolbar.
+      body: FocusTraversalGroup(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 920),
+              child: ListView(
+                // Let toolbar focus use the standard Page Up/Down scroll actions
+                // on desktop too, without overriding text-editing shortcuts.
+                primary: true,
+                // Lazy children need to be built before Tab can reach them.
+                // Scale this bounded cache with the viewport and accessibility text.
+                scrollCacheExtent: ScrollCacheExtent.viewport(
+                  4 * MediaQuery.textScalerOf(context).scale(1),
+                ),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  // Keep the initial fields focusable even when a short
+                  // viewport excludes them from the lazy scroll cache.
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        strings.workspaceTitle,
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
-                    const SizedBox(height: 12),
-                    _languageField(
-                      _sourceLanguage,
-                      strings.sourceLanguage,
-                      strings.sourceLanguageHint,
-                      key: const ValueKey('source-language'),
-                    ),
-                    const SizedBox(height: 12),
-                    if (!kIsWeb &&
-                        (defaultTargetPlatform == TargetPlatform.macOS ||
-                            defaultTargetPlatform == TargetPlatform.windows ||
-                            defaultTargetPlatform == TargetPlatform.android ||
-                            defaultTargetPlatform == TargetPlatform.iOS))
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          key: const ValueKey('import-source'),
-                          onPressed: _importing || _reviewingModel
-                              ? null
-                              : _importSource,
-                          icon: const Icon(Icons.file_open_outlined),
-                          label: Text(strings.importSource),
-                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        strings.manualEditingNotice,
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
-                    if (defaultTargetPlatform == TargetPlatform.android) ...[
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          key: const ValueKey('review-model-terms'),
-                          onPressed: _reviewingModel || _importing
-                              ? null
-                              : _importModelTerms,
-                          icon: const Icon(Icons.policy_outlined),
-                          label: Text(strings.reviewModelTerms),
-                        ),
-                      ),
-                      if (_sessionModelAuthorization != null)
+                      const SizedBox(height: 16),
+                      const _TemporaryDraftNotice(),
+                      const SizedBox(height: 8),
+                      if (defaultTargetPlatform == TargetPlatform.android)
+                        SwitchListTile(
+                          key: const ValueKey(
+                            'android-ime-personalized-learning',
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                          focusNode: _imePersonalizedLearningFocusNode,
+                          value: _allowImePersonalizedLearning,
+                          onChanged: (value) {
+                            // Reopen the input connection on the next field focus so
+                            // Android receives the updated IME configuration.
+                            if (!_imePersonalizedLearningFocusNode.hasFocus) {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                            }
+                            setState(
+                              () => _allowImePersonalizedLearning = value,
+                            );
+                          },
+                          title: Text(strings.androidImePersonalizedLearning),
+                          subtitle: Text(
+                            strings.androidImePersonalizedLearningDescription,
+                          ),
+                        )
+                      else
                         Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            strings.modelSessionActive,
-                            key: const ValueKey('model-session-active'),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(strings.externalKeyboardPrivacyNotice),
+                        ),
+                      const SizedBox(height: 12),
+                      _languageField(
+                        _sourceLanguage,
+                        strings.sourceLanguage,
+                        strings.sourceLanguageHint,
+                        key: const ValueKey('source-language'),
+                      ),
+                      const SizedBox(height: 12),
+                      if (!kIsWeb &&
+                          (defaultTargetPlatform == TargetPlatform.macOS ||
+                              defaultTargetPlatform == TargetPlatform.windows ||
+                              defaultTargetPlatform == TargetPlatform.android ||
+                              defaultTargetPlatform == TargetPlatform.iOS))
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('import-source'),
+                            onPressed: _importing || _reviewingModel
+                                ? null
+                                : _importSource,
+                            icon: const Icon(Icons.file_open_outlined),
+                            label: Text(strings.importSource),
                           ),
                         ),
-                    ],
-                    _manualTextField(
-                      key: const ValueKey('source-text'),
-                      controller: _sourceText,
-                      label: strings.sourceText,
-                      minLines: 5,
-                      maxLines: 12,
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      strings.translations,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(strings.clipboardNotice),
-                    if (!kIsWeb &&
-                        (defaultTargetPlatform == TargetPlatform.macOS ||
-                            defaultTargetPlatform ==
-                                TargetPlatform.windows)) ...[
+                      if (defaultTargetPlatform == TargetPlatform.android) ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('review-model-terms'),
+                            onPressed: _reviewingModel || _importing
+                                ? null
+                                : _importModelTerms,
+                            icon: const Icon(Icons.policy_outlined),
+                            label: Text(strings.reviewModelTerms),
+                          ),
+                        ),
+                        if (_sessionModelAuthorization != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              strings.modelSessionActive,
+                              key: const ValueKey('model-session-active'),
+                            ),
+                          ),
+                      ],
+                      _manualTextField(
+                        key: const ValueKey('source-text'),
+                        controller: _sourceText,
+                        label: strings.sourceText,
+                        minLines: 5,
+                        maxLines: 12,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        strings.translations,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
                       const SizedBox(height: 8),
-                      Text(strings.exportTranslationNotice),
+                      Text(strings.clipboardNotice),
+                      if (!kIsWeb &&
+                          (defaultTargetPlatform == TargetPlatform.macOS ||
+                              defaultTargetPlatform ==
+                                  TargetPlatform.windows)) ...[
+                        const SizedBox(height: 8),
+                        Text(strings.exportTranslationNotice),
+                      ],
+                      const SizedBox(height: 12),
+                      _translationCard(0),
                     ],
-                    const SizedBox(height: 12),
-                    _translationCard(0),
-                  ],
-                ),
-                for (var index = 1; index < _translations.length; index++)
-                  _translationCard(index),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    focusNode: _addTranslationFocusNode,
-                    onPressed: _addTranslation,
-                    icon: const Icon(Icons.add),
-                    label: Text(strings.addTranslation),
                   ),
-                ),
-              ],
+                  for (var index = 1; index < _translations.length; index++)
+                    _translationCard(index),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      focusNode: _addTranslationFocusNode,
+                      onPressed: _addTranslation,
+                      icon: const Icon(Icons.add),
+                      label: Text(strings.addTranslation),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

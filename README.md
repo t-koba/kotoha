@@ -5,6 +5,11 @@ manual text-workspace draft: enter a source text, add one or more target languag
 and write translations without an installed model. It does not claim to translate
 text automatically.
 
+For keyboard navigation, use Tab and Shift+Tab to move between controls. With a
+toolbar button focused, Page Up and Page Down scroll the workspace to reveal
+lazy-loaded translation cards; Tab then reaches their fields and actions. Text
+fields retain their standard editing keys, and Space/Enter still activate buttons.
+
 The source editor can import UTF-8 `.txt`, `.md` and `.markdown` documents through
 an explicit system picker on macOS/Windows and the Android/iOS adapters.
 Import replaces only source text after consent; translations remain manual and
