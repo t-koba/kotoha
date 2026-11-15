@@ -26,16 +26,19 @@ preservation of the in-memory translation. It does not select an existing file
 or exercise the confirm-replacement alert. There is no equivalent end-to-end
 overwrite-dialog test in the Windows probe.
 
-On the exact hosted macOS job for publication
-`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
-`48a430f888442ed162987ac2b349ab5a4f59161b`, run `43574939450`, the UI test
-again failed at `NativeExportPanelUITests.swift:114` after one coordinate scroll:
-VoiceOver was enabled, but `axClientTrusted=false`, direct AX status was
-`-25211`, the 800×632 window exposed zero scroll views, and the
-translation/source fields were absent (`vcs-read/fa702e9eda1d4e05a1404777041f8afa`).
-It did not reach the save panel, `Cancel`, or draft-preservation assertions.
-This confirms the test remains failing in hosted CI; it does not identify a
-product root cause or establish how VoiceOver sees the app on a user device.
+The latest exact hosted macOS job, run `43680441354` on publication
+`f462494dd6dd2306c8bb763f9a1b7703e8325ee9e84db767b1f4f658b37693ef` / SHA
+`53809a016da85eb2394e63ffcdfafdf1003e133d`, failed at
+`NativeExportPanelUITests.swift:114` after one window-coordinate drag and the
+VoiceOver-focus key attempt. The diagnostic reports VoiceOver enabled,
+`AXIsProcessTrusted() == false`, AX enhanced-UI status `-25211`, zero exposed
+scroll views, and no translation/source fields while the application window is
+present (`vcs-read/14f452ce42e2462f8b25a623f9f3cf92`,
+`vcs-read/8e5d616f9aca45e4bc0d24cae8c63c11`). The test therefore fails before
+filling a field or reaching the native save panel, Cancel, or draft-preservation
+assertions. This is strong evidence that the hosted accessibility-query path is
+untrusted/unavailable, not a product root-cause diagnosis or proof of how a
+user-run Mac exposes the app to VoiceOver.
 
 The operator confirmed hosted CI is the only available macOS test context and
 no TCC-authorized runner will be provided (response to question
