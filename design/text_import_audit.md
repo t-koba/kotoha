@@ -306,10 +306,12 @@ allowlisted client-stage result or establishes permission, post-close-access,
 lowercase/digit/hyphen failure code bounded to 64 characters; raw child stderr,
 paths, URI, and document contents remain suppressed. A startup sentinel is now
 added to distinguish failure before the sandboxed Python client reaches `main`
-from an unclassified client failure. The four-test stdlib suite covers exact
+from an unclassified client failure. The five-test stdlib suite covers exact
 marker handling, bounded allowlisted codes, rejection of path-like,
-malformed/out-of-window diagnostics, and the bounded startup signal. It is wired
-into CI and passes locally; this sentinel has not yet run in hosted CI. Linux
+malformed/out-of-window diagnostics, and startup-marker preservation after more
+than 8 KiB of client warnings. The sentinel is searched in the complete captured
+stderr, while failure-stage parsing remains limited to its bounded tail. It is
+wired into CI and passes locally; this sentinel has not yet run in hosted CI. Linux
 import remains disabled pending exact runtime results and a supported
 permission lifecycle.
 

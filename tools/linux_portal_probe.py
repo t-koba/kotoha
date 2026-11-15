@@ -70,7 +70,9 @@ def _decode_dbus_path(value: object, failure_stage: str) -> str:
 
 
 def _sandbox_client_started(stderr: str) -> bool:
-    return CLIENT_STARTED_MARKER in stderr[-8192:]
+    # subprocess.run already captures stderr; search all of it because later
+    # diagnostics can evict this early marker from the bounded stage tail.
+    return CLIENT_STARTED_MARKER in stderr
 
 
 def _sandbox_failure_stage(stderr: str) -> str | None:

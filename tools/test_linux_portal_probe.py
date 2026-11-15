@@ -40,7 +40,11 @@ class SandboxFailureStageTest(unittest.TestCase):
     def test_distinguishes_started_client_from_launch_failure(self):
         self.assertTrue(_sandbox_client_started(f"{CLIENT_STARTED_MARKER}\n"))
         self.assertFalse(_sandbox_client_started("bwrap setup failed\n"))
-        self.assertFalse(_sandbox_client_started(CLIENT_STARTED_MARKER + "x" * 8192))
+
+    def test_start_marker_survives_diagnostics_beyond_stage_tail(self):
+        stderr = CLIENT_STARTED_MARKER + "\n" + "GLib warning\n" * 700
+        self.assertTrue(_sandbox_client_started(stderr))
+        self.assertIsNone(_sandbox_failure_stage(stderr))
 
 
 if __name__ == "__main__":
