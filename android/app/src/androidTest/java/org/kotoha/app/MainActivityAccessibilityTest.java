@@ -106,9 +106,6 @@ public final class MainActivityAccessibilityTest
         assertField(id, label, "p");
         String currentValue = "p";
         for (String value : new String[] {"العربية", "Latin"}) {
-            // Keyboard paste exercises the focused editor, not ACTION_SET_TEXT's
-            // optimistic semantics prediction, without a Unicode key-map dependency.
-            setClipboardText(value);
             // Delete one scalar per exact update: Ctrl+A and rapid key bursts were unreliable.
             while (!currentValue.isEmpty()) {
                 currentValue = currentValue.substring(0,
@@ -123,6 +120,11 @@ public final class MainActivityAccessibilityTest
                     throw failure;
                 }
             }
+            // Update the clipboard only after deleting the current value, keeping
+            // clipboard changes outside the focused editor's deletion sequence.
+            // Paste exercises this editor, not ACTION_SET_TEXT's optimistic
+            // semantics prediction, without a Unicode key-map dependency.
+            setClipboardText(value);
             controlKey(KeyEvent.KEYCODE_V);
             assertField(id, label, value);
             // No re-tap: input must still reach this field after its direction rebuild.
