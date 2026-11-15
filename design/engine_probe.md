@@ -2223,6 +2223,13 @@ stored here, rather than assuming conversion to C++ removes notice obligations. 
 does not prove this blob's production input, exact UCD version, Python build, or
 historical notice text; use the exact release notice once provenance is established.
 
+The separate `.github/workflows/unicode-replay.yml` experiment requests exact CPython
+3.14.0, asserts its Unicode database is 16.0.0, verifies the pinned generator/table
+hashes, and byte-compares only the `--normalization-only` output against the selected
+source suffix. That path uses runtime `unicodedata` and exits before UCD download; it
+does not exercise full generation or bind the historical producer inputs/runtime.
+Its eventual result is reproducibility evidence only; no run is available yet.
+
 **YaRN source-history bracket.** The llama.cpp PR #2268 merge commit
 [`898aeca90a9bb992f506234cf3b8b7f7fa28a1df`](https://github.com/ggml-org/llama.cpp/commit/898aeca90a9bb992f506234cf3b8b7f7fa28a1df)
 (2023-11-01) explicitly attributes the implementation to

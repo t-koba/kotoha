@@ -1,0 +1,110 @@
+name: Unicode normalization reproducibility replay
+
+# This is a bounded reproducibility check, not evidence of historical production.
+on:
+  push:
+    branches: [mizu]
+    paths:
+      - .github/workflows/unicode-replay.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  normalization-replay:
+    name: CPython 3.14 Unicode normalization replay
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out Kotoha source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up exact CPython release
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14.0'
+          check-latest: false
+
+      - name: Check out immutable upstream generator source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ggml-org/llama.cpp
+          ref: 10da8c463f735c7eaff904c6474e6cf38dccbe83
+          path: upstream/llama.cpp
+          persist-credentials: false
+
+      - name: Replay normalization tables and compare selected source suffix
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python - <<'PY'
+          import contextlib
+          import hashlib
+          import io
+          import runpy
+          import sys
+          import types
+          import unicodedata
+          from pathlib import Path
+
+          expected_runtime = (3, 14, 0)
+          if sys.implementation.name != 'cpython':
+              raise SystemExit(f'Expected CPython, got {sys.implementation.name!r}')
+          if sys.version_info[:3] != expected_runtime:
+              raise SystemExit(f'Expected CPython 3.14.0, got {sys.version}')
+          if unicodedata.unidata_version != '16.0.0':
+              raise SystemExit(f'Expected Unicode 16.0.0, got {unicodedata.unidata_version}')
+          print(f'Runtime: {sys.implementation.name} {sys.version}')
+          import platform
+          print(f'Platform: {platform.platform()}')
+          print(f'unicodedata.unidata_version: {unicodedata.unidata_version}')
+
+          generator = Path('upstream/llama.cpp/scripts/gen-unicode-data.py')
+          source = Path('upstream/llama.cpp/src/unicode-data.cpp')
+          expected = {
+              generator: 'a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55',
+              source: '5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29',
+          }
+          for path, digest in expected.items():
+              actual = hashlib.sha256(path.read_bytes()).hexdigest()
+              print(f'SHA-256 {path}: {actual}')
+              if actual != digest:
+                  raise SystemExit(f'SHA-256 mismatch for {path}; expected {digest}')
+
+          original = source.read_bytes()
+          marker = b'// Canonical normalization tables:'
+          start = original.find(marker)
+          if start < 0:
+              raise SystemExit('Selected source lacks normalization-table suffix marker')
+          selected_suffix = original[start:]
+
+          # The generator imports requests at module scope, but this mode does not
+          # use it. Supply an in-memory stub; install and network access are absent.
+          sys.modules['requests'] = types.ModuleType('requests')
+          sys.argv = [str(generator), '--normalization-only']
+          output_stream = io.BytesIO()
+          text_output = io.TextIOWrapper(output_stream, encoding='utf-8', newline='')
+          with contextlib.redirect_stdout(text_output):
+              try:
+                  runpy.run_path(str(generator), run_name='__main__')
+              except SystemExit as exc:
+                  if exc.code not in (None, 0):
+                      raise
+              text_output.flush()
+          text_output.detach()
+          generated = output_stream.getvalue()
+          generated_hash = hashlib.sha256(generated).hexdigest()
+          suffix_hash = hashlib.sha256(selected_suffix).hexdigest()
+          equal = generated == selected_suffix
+          print(f'Generated normalization output SHA-256: {generated_hash}')
+          print(f'Selected source suffix SHA-256: {suffix_hash}')
+          print(f'Byte equality: {equal}')
+          print('Reproducibility check only: this path uses stdlib unicodedata and does not fetch UCD.')
+          print('It proves neither a historical generator invocation/runtime nor producer provenance.')
+          if not equal:
+              raise SystemExit('Generated normalization output does not match selected source suffix')
+
+          PY
