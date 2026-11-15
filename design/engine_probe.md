@@ -1981,7 +1981,7 @@ Retain each full original notice alongside ggml MIT for prospective distribution
 | BPE in [`src/llama-vocab.cpp:242–245`](https://github.com/ggml-org/llama.cpp/blob/31424b7cf14604ca65a9195123da1413f31c4472/src/llama-vocab.cpp#L242-L245), declared MIT, adapted from `cmp-nct/ggllm.cpp` | **permissive MIT origin terms** from the complete reviewed ggllm license below. Retain both copyright lines: `Copyright (c) 2023 https://github.com/cmp-nct`; `This project includes work that is Copyright (c) 2023 by Georgi Gerganov`. Retain the full permission/warranty notice. Origin `libfalcon.cpp:2590–2620,2622–2752,2755–2776` matches the rank/left tie-break, symbol merge/outdated-bigram check and linked neighbors in pinned `llama-vocab.cpp:265–279,741–771,827–850`; later regex/tokenizer extensions remain unresolved. |
 | Z-algorithm in `src/llama-sampler.cpp:3485–3539`, attributed to Ivan Yurchenko | **public-domain**, selected Unlicense: complete origin terms dedicate all copyright to the public domain in perpetuity for public benefit and permit anyone to copy/modify/publish/use/compile/sell/distribute source or binary for any commercial/noncommercial purpose, by any means, with full AS-IS warranty/liability disclaimer and no added conditions. No legal notice-retention requirement; project notice policy will retain the complete text and existing attribution. Origin `z_algorithm.py` matches the lt/rt Z-box bounds and inside/outside cases, adapted for reversed tokens and range limits, not an identical whole file. |
 | Arm exponential adaptation in `ggml/src/ggml-cpu/vec.h:1320–1348` (SSE2 branch at 1306/1316) | **permissive MIT origin terms**, selecting only MIT from `MIT OR Apache-2.0 WITH LLVM-exception`. Retain root `Copyright (c) 1999-2022, Arm Limited.` and originating file `Copyright (c) 2019-2023, Arm Limited.` with the complete MIT permission/warranty notice. Origin `math/aarch64/v_expf.c` matches five exact polynomial coefficients, `0x1.8p23f` rounding shift, split ln2 range reduction, exponent construction, 126/192 bounds and special-scale biases. This is an attributed intrinsic-algorithm adaptation, not an Arm library/header dependency; no unrelated Arm EULA or glibc copy is selected. **MSVC branch applicability remains unverified**: disabled Arm/AVX flags do not establish `__SSE2__` selection/exclusion; actual compiler/preprocessor evidence is required. |
-| Generated `src/unicode-data.cpp` and generator `scripts/gen-unicode-data.py` | **Reference-data terms permissive; selected redistribution/provenance closure open.** All eight numeric tables are semantically matched to immutable Unicode 16.0/15.1 audit references below, not byte-identically regenerated. The generator mixes moving UCD `latest/ucd/UnicodeData.txt` and Python `unicodedata`; original production-host inputs and exact historical generator/Python provenance remain unverified. Root MIT and the app's UCD 17 bidi notice do not establish these data terms. |
+| Generated `src/unicode-data.cpp` and generator `scripts/gen-unicode-data.py` | **Reference-data terms permissive; selected redistribution/provenance closure open.** All eight numeric tables are semantically matched to immutable Unicode 16.0/15.1 audit references below, not byte-identically regenerated. The generator mixes moving UCD `latest/ucd/UnicodeData.txt` and Python `unicodedata`; original production-host inputs and exact historical generator/Python provenance remain unverified. The existing `Unicode Bidi Data` registry/test covers only Kotoha's distinct UCD 17 bidi projection, not these tables. Any future engine redistribution needs a separate `Unicode Engine Data` entry with the full Unicode License V3 notice and applicable copyright line(s); the selected historical source line(s) remain unresolved, so no engine entry is added while adoption is disabled. |
 
 **Unicode audit references and equivalence.**
 [Audit fixture manifest](fixtures/engine_unicode/fixtures.json) pins five inputs'
@@ -2121,6 +2121,18 @@ The PR author disclaimed legal expertise and chose inclusion as the cautious cou
 The notice was also backported to CPython 3.14 and 3.13
 (PRs #154693 and #154696; `mizu_fetch/8a4b1c455578b30222b38f7cb811f8bc1ff00cb42e9056cd14b6be481a3fde2b`,
 `mizu_fetch/99ffd14f5236112fb5863e4d78517d5790ff1a87d756cc086c97571817798356`).
+At CPython commit `751707414cc7d2a7a7f0fa7552fa02c963d6a902`,
+`Doc/license.rst` explicitly covers an extract of the UCD converted to an internal
+format for `unicodedata` and `str`; its full Unicode License V3 block uses copyright
+`1991-2026` (`mizu_fetch/210e042e8ccae90604bac7aa7319177723b20caa505fcdec4becc61dda08c060`,
+`experiments/2c2fe1a2237a4d9f94e25fd57b2d1d72`). Removing documentation indentation,
+that notice is byte-identical to Kotoha's bundled license asset (SHA-256
+`e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`;
+`experiments/16b944eb77194cd5b32af0a60ead1c8c`). This confirms the Unicode V3
+text and current provider treatment, not the historical copyright line for the
+selected engine tables. Kotoha's registry/test still binds the asset only to
+`Unicode Bidi Data`; no engine-specific registration exists.
+
 This upstream provider treatment supports the conservative decision to carry the full
 Unicode License V3 notice for UCD-derived tables, including the normalization data
 stored here, rather than assuming conversion to C++ removes notice obligations. It
