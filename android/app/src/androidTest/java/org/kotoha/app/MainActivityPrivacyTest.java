@@ -3,12 +3,12 @@ package org.kotoha.app;
 import android.app.UiAutomation;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.test.ActivityInstrumentationTestCase2;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewGroupOverlay;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 
 /**
  * Emulator callback/flag and in-memory screenshot coverage using synthetic content.
@@ -48,26 +48,31 @@ public final class MainActivityPrivacyTest extends ActivityInstrumentationTestCa
         UiAutomation automation = getInstrumentation().getUiAutomation();
         assertNotNull("Screenshot automation must be available", automation);
 
-        View marker = new View(activity);
+        View decor = activity.getWindow().getDecorView();
+        ViewGroupOverlay overlay = ((ViewGroup) decor).getOverlay();
+        ColorDrawable marker = new ColorDrawable(Color.MAGENTA);
         int size = Math.round(48 * activity.getResources().getDisplayMetrics().density);
         int[] center = {-1, -1};
         boolean[] paused = {false};
+        boolean[] markerAdded = {false};
         try {
             runTestOnUiThread(() -> {
                 assertFalse("Foreground capture starts enabled", isSecure(activity));
-                marker.setBackgroundColor(Color.MAGENTA);
-                // Opaque synthetic overlay; preserve the Flutter view underneath.
-                activity.addContentView(marker,
-                        new FrameLayout.LayoutParams(size, size, Gravity.CENTER));
+                assertTrue("Activity decor must be laid out",
+                        decor.getWidth() > 0 && decor.getHeight() > 0);
+                int left = (decor.getWidth() - size) / 2;
+                int top = (decor.getHeight() - size) / 2;
+                int[] decorLocation = new int[2];
+                decor.getLocationOnScreen(decorLocation);
+                marker.setBounds(left, top, left + size, top + size);
+                // Draw in the window's topmost view overlay, above Flutter's rendering surface.
+                overlay.add(marker);
+                markerAdded[0] = true;
+                decor.invalidate();
+                center[0] = decorLocation[0] + left + size / 2;
+                center[1] = decorLocation[1] + top + size / 2;
             });
             getInstrumentation().waitForIdleSync();
-            runTestOnUiThread(() -> {
-                assertTrue("Synthetic marker must be laid out", marker.getWidth() > 0
-                        && marker.getHeight() > 0);
-                marker.getLocationOnScreen(center);
-                center[0] += marker.getWidth() / 2;
-                center[1] += marker.getHeight() / 2;
-            });
             assertMarkerScreenshot(automation, center, true);
 
             runTestOnUiThread(() -> {
@@ -91,8 +96,9 @@ public final class MainActivityPrivacyTest extends ActivityInstrumentationTestCa
                 try {
                     if (paused[0]) getInstrumentation().callActivityOnResume(activity);
                 } finally {
-                    if (marker.getParent() instanceof ViewGroup) {
-                        ((ViewGroup) marker.getParent()).removeView(marker);
+                    if (markerAdded[0]) {
+                        overlay.remove(marker);
+                        decor.invalidate();
                     }
                 }
             });
