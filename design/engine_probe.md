@@ -2062,13 +2062,43 @@ consumer, not common/vendor/optional backend libraries. The exact captured PE
 imports below provide runtime-provider evidence for this build, not license or
 redistribution approval.
 
-The Windows compiler reads and source/Unity projection are not surviving binary
-membership, actual intrinsic preprocessing, complete static-provider/runtime
-redistribution or license/notice closure, or Unicode production provenance. The
-separate Android archive/member inventory below identifies its map-selected
-archives, but not surviving executable sections or legal/runtime closure. Product
-integration, quality and privacy are also unverified. Adoption gates remain open
-independently for each platform.
+The same-run Windows build log gives a path-level compile/link trace for two
+selected sources: `ggml/src/ggml-cpu/ops.cpp` (manifest SHA-256
+`071c64257e4b625abd22e7c4e1990290d8477e220c8e684871b8d9c16abf867a73`)
+compiles to `ops.obj`, which is archived in `ggml-cpu.lib`; `src/unicode-data.cpp`
+(manifest SHA-256
+`5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`)
+compiles to `unicode-data.obj`, which is archived in `llama.lib`. The final
+`llama-simple.exe` link command includes both libraries; its recorded SHA-256 is
+`6e697bcc371771d7a0a97947c7c4db110902d8992a9fdd4ee6666edd7d07e881`
+(`vcs-read/e35e684a2f694fc692a721319790757f`,
+`vcs-read/24c1701547b342459f33d64265eeaa77`). These records connect the source
+paths to the developer-probe link, not the precise source bytes to object or PE
+contents. The retained `compiler_reads.py` hashes current files at paths parsed
+from compiler tracking records; it does not capture compiler-read byte streams.
+The source manifest and compiler summary bind to one another, but only hashes of
+the five compiler tracking files are retained; raw tracking files, object files,
+static libraries and a link map are absent (`vcs-read/a4761d98a1c74691a2c7c70e9970dbfa`,
+`vcs-read/73a43f6f1e554dcda999db891d2c0ccb`,
+`vcs-read/e83b565cdaae43429c477ba49d2d8928`). Accordingly, the executable hash
+does not prove exact hash-to-object binding or that the particular YaRN/table
+sections survived linking. The build log also contains MSB8027, warning that
+`src/llama.cpp` and `src/models/llama.cpp` collide at the same object output;
+the probe is not an unqualified build-correctness result.
+
+`generated-sha256.txt` contains eleven CMake Unity translation units and the two
+version headers, not the Unicode table or its producer inputs
+(`vcs-read/ee38c0189c0645bb82f06c77d6f30584`). `src/unicode-data.cpp` is a
+committed compiler input in this probe; the generator itself, its moving UCD
+response, and its invoking Python `unicodedata` version are not recorded as
+build inputs. The separate Unicode audit below traces the pinned generator and
+explains why historical data identity, notice applicability and delivery remain
+open. More generally, the Windows compiler reads and source/Unity projection do
+not establish actual intrinsic preprocessing, complete runtime redistribution
+or license/notice closure. The separate Android archive/member inventory below
+identifies its map-selected archives, but not surviving executable sections or
+legal/runtime closure. Product integration, quality and privacy are also
+unverified. Adoption gates remain open independently for each platform.
 
 ### Android API 35 x86_64 selected archives and runtime
 
