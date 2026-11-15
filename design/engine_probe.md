@@ -1992,6 +1992,25 @@ and root `LICENSE`. The revision's [README](https://raw.githubusercontent.com/un
 against production use of this repository's data and points to unicode.org.
 These are **audit references, not replacement product data**.
 
+A complete public copy of Unicode 16.0 `UnicodeData.txt` is pinned in
+[Elixir commit `13d3cc0a`](https://github.com/elixir-lang/elixir/commit/13d3cc0a3f0da7b58cfddeb6c2901bcf7f489118),
+whose update instructions say to copy the original versioned UCD file. The exact
+commit's contents API identifies `lib/elixir/unicode/UnicodeData.txt` as 2,175,362
+bytes, Git blob `64258a37395359c2f8875fdf3432817c1c459c31`
+(`mizu_fetch/c79cf11bba2cdaa1ced70de4cb0f990c7cb25b5442fa19e6327b251396ad6b98`,
+`mizu_fetch/7313c88616dec5453ec8d4d45cc66975001c4dcb82206637e106b8d66ab660f1`).
+This is the same blob and size listed for the official unicodetools audit reference
+at commit `addf0c992050b10a0bfe8647f90fcc8fdbfe71fc` (`mizu_fetch/21672eb7a42e1cf4e028ca10a6a7c6da5def46be27cf0640dd8c2a4c8b543ec9`);
+the commit patch independently shows that blob prefix (`mizu_fetch/53fb9e8247592227757e3fd02f90c39957d4d27ad639bee631acf98ee639ce74`,
+`experiments/ea9adceb494f49e4ad6573cedd0c9518`). The fixture manifest and pinned
+turbohtml generator both record SHA-256
+`ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f` for this
+Unicode 16 source. The full public copy is therefore bound by Git blob identity and
+independent SHA-256 references, but the 2,175,362-byte body exceeds the configured
+fetch limit, so its SHA-256 was not recomputed locally. This pins an obtainable
+versioned source copy; it cannot establish that llama.cpp's unversioned `latest`
+fetch received those bytes.
+
 A reviewed strict comparison parsed the complete selected 288,635-byte C++ file
 (hash below) and semantically reconstructed all eight numeric initializers:
 - Unicode 16: canonical CCC 934, raw decomposition 2,081, composition 961
