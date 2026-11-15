@@ -2083,10 +2083,17 @@ one generated-only `Bonjour.` sample. This is a narrow emulator observation,
 not language-quality, physical-device, ARM or other OS/ABI evidence.
 
 The installed-package `clang_source_info.md` (SHA-256
-`8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`) records
-base LLVM revision `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c` and lists patch
-links at `llvm_android` revision `e727bfb014bd436f581a66a450c939a6983a1fc3`,
-including the libc++ regex patch `e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`.
+`8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`) matches
+byte-for-byte the 11,370-byte file at the exact public NDK r28c Linux prebuilt
+path `platform/prebuilts/clang/host/linux-x86/+/refs/tags/ndk-r28c/clang-r530567e/clang_source_info.md`
+(Gitiles fetch receipt `c6b5d31e58c2e6e7dfa17efd01dfaca7423eef0f74f97a48655f811cad612b90`,
+decoded and hashed in `experiments/71eb0e35443a42bb9aad9653d89c2359`). This
+confirms that the source-info metadata file matches that public tagged prebuilt,
+not that the selected runtime archives or their NDK-repackaging postimages do.
+The file records base LLVM revision `3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`
+and lists patch links at `llvm_android` revision
+`e727bfb014bd436f581a66a450c939a6983a1fc3`, including the libc++ regex patch
+`e9adcc488f96a9f2b8c4344f5e3c7ca6639b9562`.
 The separate patch-source manifest hashes four selected blobs; its entry for
 that patch is 15,251 bytes and SHA-256
 `4ff1cd2a122ecafc3d8920386bc3387b22c9b01e541931f9096b0f3d1047849d`. Fetching
