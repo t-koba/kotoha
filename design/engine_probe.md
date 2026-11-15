@@ -605,6 +605,27 @@ object bytes to source, establish patch application or surviving sections, or
 settle applicable notices, licensing, redistribution, device behavior or engine
 adoption. Archive/member bytes are not retained.
 
+The exact r28c `clang-r530567e` prebuilt directory also contains `NOTICE`. Its
+Gitiles entry is blob `b051002f8a69f553700ee907ccd3c56d9a2c6c8e` (130,424 bytes;
+raw SHA-256 `f96f763beb66a7ba7a667647fc64c0226ace875e590c831fdd9579ec1c1d91e1`;
+tree listing `mizu_fetch/c9beeed1b886f311ecde33c9efaa3fddcce29fe7f40fdc5a687d49dc35096ff7`,
+fetch `mizu_fetch/2245ec8584030417585ce3c47c5ced281a7793a13e8eb170e839677140f4cc21`,
+identity/content checks `experiments/32b36532f4824e37821e1193ffe2320d`,
+`experiments/ed3e7e323f194293beb6f26bed04b45f`,
+`experiments/951d2524f3fb44fb80ea5ce920b97162`). The file declares the LLVM
+Project under Apache 2.0 with LLVM Exceptions, includes third-party and legacy
+University of Illinois/NCSA license material, and explicitly says compiler_rt,
+libc++, and libc++abi are dual licensed under the University of Illinois
+“BSD-Like” and MIT licenses with their full texts included. `libunwind` is not
+separately named there; its `LICENSE.TXT` at the compiler-reported LLVM source
+revision gives the same alternatives, but remains source-candidate evidence,
+not a selected-member binding. This is stronger public package-level notice
+evidence because the notice and all four byte-matched archive entries share the
+exact `clang-r530567e` tree. It still does not identify the source/patches for
+any selected object, establish third-party code within a member, or choose the
+applicable alternative notice subset. The whole NDK ZIP checksum remains
+unverified; no product adoption or user-facing notice set is approved.
+
 ### NDK archive-member source terms (partial)
 
 The exact manifest's four NDK archives name 47 members: one compiler-rt builtin,
