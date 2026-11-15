@@ -311,8 +311,18 @@ marker handling, bounded allowlisted codes, rejection of path-like,
 malformed/out-of-window diagnostics, and startup-marker preservation after more
 than 8 KiB of client warnings. The sentinel is searched in the complete captured
 stderr, while failure-stage parsing remains limited to its bounded tail. It is
-wired into CI and passes locally; this sentinel has not yet run in hosted CI. Linux
-import remains disabled pending exact runtime results and a supported
+wired into CI. Exact hosted run `43733871275`, job `132872070436`, on publication
+`7391cfceaf472162b1780796485c229c1ec94b2b21c1132b600933edd9a631b7` / SHA
+`b4dcae7037afad94b3319ae5bc2a19593f109c34` (`vcs-read/0b94103f7cfc4981bf101d382ce29174`)
+used Ubuntu 22.04.5 x86_64, `xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2, and
+GTK backend 1.14.0-1build1. The probe reported the allowlisted stage
+`sandbox-client-launch-failed`. In the probe, this stage means the subprocess
+exited nonzero without the sandboxed client's startup marker; it does not
+identify whether bubblewrap setup or interpreter/import startup failed. The
+sanitized log establishes no underlying cause. No chooser request, returned URI,
+application/document identity mapping, permission
+revocation, post-close access check, or persistent-state observation occurred.
+Linux import remains disabled pending a runnable client and the supported
 permission lifecycle.
 
 The exact hosted Ubuntu portal probe ran on publication
