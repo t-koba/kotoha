@@ -32,6 +32,7 @@ DOCS_PATH = "/org/freedesktop/portal/documents"
 DOCS_IFACE = "org.freedesktop.portal.Documents"
 FIXTURE = b"Kotoha portal probe fixture v1\n"
 CLIENT_STARTED_MARKER = "KOTOHA_PORTAL_PROBE_CLIENT_STARTED"
+PYTHON_PREFLIGHT_MARKER = "KOTOHA_PORTAL_PROBE_PYTHON_PREFLIGHT"
 
 
 class ProbeFailure(Exception):
@@ -75,6 +76,36 @@ def _sandbox_client_started(stderr: str) -> bool:
     return CLIENT_STARTED_MARKER in stderr
 
 
+def _run_sandbox_preflight(bwrap_prefix: list[str]) -> None:
+    """Check bwrap setup and Python startup without exposing child output."""
+    checks = (
+        ("sandbox-bwrap-setup-failed", ["/bin/true"], None),
+        (
+            "sandbox-python-startup-failed",
+            [sys.executable, "-c", f"print({PYTHON_PREFLIGHT_MARKER!r})"],
+            PYTHON_PREFLIGHT_MARKER,
+        ),
+    )
+    for failure_stage, command, marker in checks:
+        try:
+            completed = subprocess.run(
+                [*bwrap_prefix, *command],
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise ProbeFailure(failure_stage) from exc
+        except OSError as exc:
+            raise ProbeFailure(failure_stage) from exc
+        if completed.returncode != 0 or (
+            marker is not None and marker not in completed.stdout.splitlines()
+        ):
+            raise ProbeFailure(failure_stage)
+
+
 def _sandbox_failure_stage(stderr: str) -> str | None:
     marker = "Linux portal probe failed: "
     allowed = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
@@ -85,6 +116,15 @@ def _sandbox_failure_stage(stderr: str) -> str | None:
         if stage and len(stage) <= 64 and all(char in allowed for char in stage):
             return stage
     return None
+
+
+def _sandbox_client_failure_stage(stderr: str) -> str:
+    stage = _sandbox_failure_stage(stderr)
+    if stage is not None:
+        return f"sandbox-client-{stage}"
+    if not _sandbox_client_started(stderr):
+        return "sandbox-client-script-startup-failed"
+    return "sandbox-client-failed"
 
 
 def run_backend() -> None:
@@ -393,7 +433,7 @@ def run_host() -> dict[str, object]:
         client_env = env.copy()
         client_env["DBUS_SESSION_BUS_ADDRESS"] = os.environ["DBUS_SESSION_BUS_ADDRESS"]
         client_env["KOTOHA_PORTAL_FIXTURE_PATH"] = str(fixture)
-        command = [
+        bwrap_prefix = [
             "bwrap",
             "--die-with-parent",
             "--unshare-all",
@@ -409,8 +449,10 @@ def run_host() -> dict[str, object]:
             "--setenv", "KOTOHA_PORTAL_FIXTURE_PATH", client_env["KOTOHA_PORTAL_FIXTURE_PATH"],
             "--setenv", "XDG_RUNTIME_DIR", str(runtime),
             "--setenv", "PYTHONUNBUFFERED", "1",
-            "--", sys.executable, "/run/portal-probe.py", "--client",
+            "--",
         ]
+        _run_sandbox_preflight(bwrap_prefix)
+        command = [*bwrap_prefix, sys.executable, "/run/portal-probe.py", "--client"]
         try:
             completed = subprocess.run(
                 command,
@@ -424,12 +466,7 @@ def run_host() -> dict[str, object]:
         except subprocess.TimeoutExpired as exc:
             raise ProbeFailure("sandbox-client-timeout") from exc
         if completed.returncode != 0:
-            stage = _sandbox_failure_stage(completed.stderr)
-            if stage is not None:
-                raise ProbeFailure(f"sandbox-client-{stage}")
-            if not _sandbox_client_started(completed.stderr):
-                raise ProbeFailure("sandbox-client-launch-failed")
-            raise ProbeFailure("sandbox-client-failed")
+            raise ProbeFailure(_sandbox_client_failure_stage(completed.stderr))
         try:
             client = json.loads(completed.stdout)
         except (json.JSONDecodeError, TypeError) as exc:
