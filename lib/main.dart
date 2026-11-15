@@ -553,13 +553,18 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   Widget _privacyShield(Widget child, AppLocalizations strings) => Stack(
     fit: StackFit.expand,
     children: [
-      AbsorbPointer(
-        key: const ValueKey('workspace-input-shield'),
-        absorbing: !_appResumed,
-        child: ExcludeSemantics(
-          key: const ValueKey('workspace-semantics-shield'),
-          excluding: !_appResumed,
-          child: child,
+      Focus(
+        key: const ValueKey('workspace-keyboard-shield'),
+        onKeyEvent: (_, _) =>
+            _appResumed ? KeyEventResult.ignored : KeyEventResult.handled,
+        child: AbsorbPointer(
+          key: const ValueKey('workspace-input-shield'),
+          absorbing: !_appResumed,
+          child: ExcludeSemantics(
+            key: const ValueKey('workspace-semantics-shield'),
+            excluding: !_appResumed,
+            child: child,
+          ),
         ),
       ),
       if (!_appResumed)
@@ -651,6 +656,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       child: TextField(
         key: key,
         controller: controller,
+        readOnly: !_appResumed,
         enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
         textDirection: firstStrongDirection(value.text),
         decoration: InputDecoration(
@@ -675,6 +681,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       child: TextField(
         key: key,
         controller: controller,
+        readOnly: !_appResumed,
         enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
         textDirection: firstStrongDirection(value.text),
         minLines: minLines,

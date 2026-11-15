@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -131,6 +133,74 @@ void main() {
       'Hello',
     );
     expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
+  });
+
+  testWidgets('blocks hardware and IME edits while inactive', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await tester.pumpWidget(const KotohaApp());
+      final translationField = find.byKey(const ValueKey('translation-text-0'));
+      await tester.dragUntilVisible(
+        translationField,
+        find.byType(Scrollable).first,
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(translationField, 'secret');
+      final focusedNode = tester.binding.focusManager.primaryFocus;
+      expect(focusedNode, isNotNull);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(translationField).controller!.text,
+        'secret',
+      );
+
+      tester.testTextInput.enterText('replacement');
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(translationField).controller!.text,
+        'secret',
+      );
+      expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      tester.testTextInput.enterText('resumed');
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(translationField).controller!.text,
+        'resumed',
+      );
+      expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
+
+      final addTranslation = find.text('訳先を追加');
+      await tester.dragUntilVisible(
+        addTranslation,
+        find.byType(Scrollable).first,
+        const Offset(0, -400),
+      );
+      await tester.tap(addTranslation);
+      await tester.pumpAndSettle();
+      final buttonFocus = tester.binding.focusManager.primaryFocus;
+      expect(buttonFocus, isNotNull);
+      expect(find.byKey(const ValueKey('translation-text-1')), findsOneWidget);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+      expect(tester.binding.focusManager.primaryFocus, same(buttonFocus));
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('does not allow deleting the final translation field', (
