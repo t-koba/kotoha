@@ -1847,11 +1847,19 @@ is limited to this exact API 35 x86_64 system image.
 The NDK r28c release page identifies `clang-r530567e` and directs users to the
 installed `clang_source_info.md`. The Android Clang toolchain guide explains that
 this file identifies the LLVM project commit, cherry-picks and downstream changes.
-Android NDK C++ documentation describes `libc++` as LLVM's standard library and
-states the LLVM Project is under Apache License 2.0 with LLVM Exceptions. These
-general statements are not a hash-bound license record for the selected archive
-members. Earlier probe artifacts omitted the exact `clang_source_info.md`, NDK
-package metadata and license/NOTICE files. The workflow now runs a bounded capture
+The exact r28c `platform/ndk` `docs/Toolchains.md` says the shipped LLVM toolchain
+is built separately, checked into the Android tree as a prebuilt, then repackaged
+and modified for the NDK (including deleting non-NDK runtimes and installing the
+NDK sysroot; fetch receipt `42acb3e53b5b1aad89155443ea26f1d2af7015db3e28e07b96c5ef894411fa5c`,
+decoded in `experiments/1e60b6b383004323a2c7408c03ea2c2e`). This makes the
+installed-member-to-prebuilt and NDK-repackaging/postimage mapping necessary:
+the LLVM base commit and patch list alone cannot establish the selected shipped
+archive bytes. Android NDK C++ documentation describes `libc++` as LLVM's standard
+library and states the LLVM Project is under Apache License 2.0 with LLVM
+Exceptions. These general statements are not a hash-bound license record for the
+selected archive members. Earlier probe artifacts omitted the exact
+`clang_source_info.md`, NDK package metadata and license/NOTICE files. The workflow
+now runs a bounded capture
 of `source.properties`, `package.xml`, required
 `clang-r530567/clang_source_info.md` and `clang-r530567/NOTICE`, plus regular
 license/notice/copying/copyright-named records at the NDK root and under
