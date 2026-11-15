@@ -622,10 +622,18 @@ separately named there; its `LICENSE.TXT` at the compiler-reported LLVM source
 revision gives the same alternatives, but remains source-candidate evidence,
 not a selected-member binding. This is stronger public package-level notice
 evidence because the notice and all four byte-matched archive entries share the
-exact `clang-r530567e` tree. It still does not identify the source/patches for
-any selected object, establish third-party code within a member, or choose the
-applicable alternative notice subset. The whole NDK ZIP checksum remains
-unverified; no product adoption or user-facing notice set is approved.
+exact `clang-r530567e` tree. The pinned root listing also carries empty
+`MODULE_LICENSE_APACHE2`, `MODULE_LICENSE_BSD_LIKE`, and `MODULE_LICENSE_MIT`
+markers, but does not map them to individual archives
+(`mizu_fetch/1a7512161ea21f9937f0216dfde3528b7afae254c5477a92ab23ce65fe20f232`).
+The x86_64 libc++ and libunwind archive-directory listings contain only archive
+blobs, with no adjacent component license files
+(`mizu_fetch/2e246ca30b64907139a45740f40f8abee66f3a5265f1f65689d9f454837133a0`,
+`mizu_fetch/5673b5ce8eb36099aede95334fdc4e8bb058b8d2b510c799f35c805626b49935`).
+These package-tree entries do not identify selected object sources or prove
+which source-revision patches/license alternative applies. The whole NDK ZIP
+checksum remains unverified; no product adoption or user-facing notice set is
+approved.
 
 ### NDK archive-member source terms (partial)
 
