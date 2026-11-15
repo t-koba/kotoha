@@ -1,7 +1,7 @@
 # Native-engine feasibility probe
 
 This is **developer tooling only**, not product inference or distribution
-approval. The latest exact native-engine probe publication is
+approval. The recorded cross-platform native-engine probe publication is
 `7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
 `c93832fb23347f50350eb3afd6caa0f796ffa7e0` (source commit
 `cfe1a6d17d051a9ae9db317b2c222d7eb5f3dd62`). The Windows x64 CPU feasibility
@@ -9,8 +9,20 @@ job `132531217461` passed (status `vcs-read/deae3dd2ab9a489a83f94e9dbab8bff4`,
 log `vcs-read/c3861e006741403c8bc6e06fad4951c9`); its bounded SIMD witness is
 reported below. The Android API 35 x86_64 job `132531217209` failed on line-table
 capture and emulator/adb readiness (status `vcs-read/ca1cb4b6b5634c4b8cba50dff0d481ad`,
-log `vcs-read/3921c57ee2724895b8021465d43246ae`). These probe results do not
-close source, licensing, redistribution, adoption or physical-device behavior.
+log `vcs-read/3921c57ee27246a9b8021465d43246ae`).
+
+A later exact Android API 35 x86_64 parser/capture job passed on publication
+`5b9a3e4664b46519d9aca643b82627b597c8142afec4c2483c3f625da7907598` / SHA
+`d931a6f329ff035e3337b105abc9577234733456` (job `132568833814`; status
+`vcs-read/2a503ed877be40f59d2d1a6ffc5cfbdc`). Its selected-member capture
+recorded libunwind 5/5 and compiler-rt 1/1 without DWARF/line tables, and
+completed line-table capture for libc++ 26/26 and libc++abi 15/15; the bounded
+real-model smoke also passed (`vcs-read/31d15484e7d94556828ecab6187597ef`).
+These results establish parser/capture feasibility only, not member source-byte
+or patch identity, notice applicability, redistribution rights, translation
+quality, adoption, or physical-device behavior. The retained evidence cited
+here does not state a Windows outcome for the later snapshot; the Windows result
+above is the separately inspected c938 job.
 
 The separately recorded full application-CI run on SHA
 `3cfbd484d16045f8d5d73c7364ed1d2152ff66c5` (run `43600548177`; exact-SHA
@@ -521,7 +533,7 @@ Fresh isolated checks found only Debian Clang 14.0.6 targeting host x86_64; no
 Android SDK/NDK, NDK compiler/binutils, `llvm-ar`, `llvm-dwarfdump`, `llvm-strip`,
 Docker/Podman, pinned LLVM checkout or compile database were available
 (`experiments/d409a0d6364f4066bcf763259db34985`,
-`experiments/7de500b43d8640a8a313444613f1b4a7`). The latest probe's
+`experiments/7de500b43d8640a8a313444613f1b4a7`). The cited probe's
 `selected-commands.txt` is an engine-probe application build artifact, not an NDK
 libc++ source-build command database (`vcs-read/d597508867784bdbb4ba70d0c9d2a89d`);
 its patch-source manifest contains only hash/size/Git-blob metadata and says raw
@@ -1669,7 +1681,7 @@ Operator-confirmed lack of a redistribution basis means no runtime DLL or
 installer may be shipped (`operator/kotoha/a-e1ceeae8-r1-1794137634`); Windows
 engine adoption remains disabled.
 
-The latest exact Windows x64 probe on publication
+The separately inspected exact Windows x64 probe on publication
 `7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
 `c93832fb23347f50350eb3afd6caa0f796ffa7e0` passed job `132531217461` (status
 `vcs-read/deae3dd2ab9a489a83f94e9dbab8bff4`; log
@@ -2008,7 +2020,8 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 
 ### Android selected runtime and delivery gate
 
-The latest exact Android API 35 x86_64 native-engine probe is publication
+The earlier Android API 35 x86_64 probe underlying this detailed archive
+inventory is publication
 `877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
 `e3f995dfd0ce10bfd53dee28b7da7d4b1330d292`; its Android check passed in run
 `42548704285` (job `128939244180`; status `vcs-read/f495e27f1c2a4884afdf58455436fca0`).
@@ -2043,6 +2056,8 @@ an unused `ENGINE_NDK_ABI_MEMBER_MAX_BYTES` setting absent from the workflow
 (`vcs-read/b7096e9797bc47118674fb8de3c13405`). No updated four-archive,
 47-member DWARF report was produced. The obsolete ABI-specific checks are now
 removed locally; hosted recapture and source/object provenance remain pending.
+The later exact parser/capture pass is summarized at the beginning; it closes
+only that feasibility step, not source-byte or notice provenance.
 
 An earlier contribution artifact (`vcs-read/c017d0011315425ca607cad010b4733a`,
 459,104 bytes, SHA-256
@@ -2092,7 +2107,7 @@ redistribution authorization remain open; Android engine adoption stays disabled
 
 ### Windows runtime and delivery gate
 
-The latest exact Windows engine-probe provider capture is publication
+The latest retained Windows engine-probe provider capture is publication
 `7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
 `c93832fb23347f50350eb3afd6caa0f796ffa7e0` (job `132531217461`; status
 `vcs-read/deae3dd2ab9a489a83f94e9dbab8bff4`, log
