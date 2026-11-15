@@ -11,6 +11,7 @@ from tools.linux_portal_probe import (
     ProbeFailure,
     PYTHON_PREFLIGHT_MARKER,
     _run_sandbox_preflight,
+    _sandbox_bwrap_failure_stage,
     _sandbox_client_prefix,
     _sandbox_client_failure_stage,
     _sandbox_client_started,
@@ -47,6 +48,33 @@ class SandboxPrefixTest(unittest.TestCase):
 
 
 class SandboxFailureStageTest(unittest.TestCase):
+    def test_classifies_common_bwrap_failures_without_host_paths(self):
+        cases = (
+            (
+                "bwrap: No permissions to create a new namespace at /home/private",
+                "sandbox-bwrap-namespace-failed",
+            ),
+            (
+                "bwrap: Creating new namespace failed: Operation not permitted",
+                "sandbox-bwrap-namespace-failed",
+            ),
+            (
+                "bwrap: Can't find source path /home/private/script.py",
+                "sandbox-bwrap-source-path-missing",
+            ),
+            (
+                "bwrap: Can't make /tmp/private: Operation not permitted",
+                "sandbox-bwrap-operation-not-permitted",
+            ),
+            ("unexpected /tmp/private diagnostic", "sandbox-bwrap-setup-failed"),
+        )
+        for diagnostic, expected in cases:
+            with self.subTest(expected=expected):
+                stage = _sandbox_bwrap_failure_stage(diagnostic)
+                self.assertEqual(stage, expected)
+                self.assertNotIn("/home/private", stage)
+                self.assertNotIn("/tmp/private", stage)
+
     def test_forwards_only_short_allowlisted_stage_codes(self):
         self.assertEqual(
             _sandbox_failure_stage(
@@ -70,6 +98,10 @@ class SandboxFailureStageTest(unittest.TestCase):
     def test_forwards_fixed_bwrap_preflight_codes(self):
         for stage in (
             "sandbox-bwrap-setup-failed",
+            "sandbox-bwrap-namespace-failed",
+            "sandbox-bwrap-source-path-missing",
+            "sandbox-bwrap-operation-not-permitted",
+            "sandbox-bwrap-permission-denied",
             "sandbox-bwrap-timeout",
             "sandbox-bwrap-executable-missing",
             "sandbox-bwrap-exec-failed",

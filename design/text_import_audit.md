@@ -378,9 +378,19 @@ binding `Path(__file__).resolve()` from that checkout. The app-info source is
 also passed through a later bind, so the prefix now binds all required sources
 before masking `/home`, while
 keeping the fixture under the masked path and preserving all portal assertions.
-This is a cause-based setup repair, not evidence that chooser, URI mapping,
-revocation, post-close access, or persistence ran; the next exact hosted check
-must validate the corrected setup.
+The exact follow-up on publication
+`dd6136cbcdf48dfa59267d178dbb0c2c94c4829ef725f4cd78f48440f57839a8` / SHA
+`594d96f497f10a797a8ce73ca0f8f5fc13df40b6` (run `43745515388`, job
+`132907827884`) still failed with `sandbox-bwrap-setup-failed` (status
+`vcs-read/6b473df365f948be99d1e1b53b59ceb7`, log
+`vcs-read/ecb8d508fa664a87b971d35c9f7c17bb`). Thus the `/home` bind ordering
+repair was insufficient; the failure still precedes the sandboxed client and all
+portal lifecycle assertions. The preflight now maps only recognized namespace,
+missing-source, and permission-denial stderr patterns to fixed path-free stages;
+unknown messages remain `sandbox-bwrap-setup-failed`, and child output remains
+suppressed. This is diagnostic only: no chooser, URI mapping, revocation,
+post-close access, or persistence result is claimed, and the next exact hosted
+check must establish whether setup reaches the client.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,

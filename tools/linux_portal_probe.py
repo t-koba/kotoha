@@ -76,6 +76,26 @@ def _sandbox_client_started(stderr: str) -> bool:
     return CLIENT_STARTED_MARKER in stderr
 
 
+def _sandbox_bwrap_failure_stage(stderr: str) -> str:
+    """Classify common bwrap errors without forwarding host paths or output."""
+    diagnostic = stderr.casefold()
+    if "namespace" in diagnostic and any(
+        marker in diagnostic
+        for marker in ("permission", "denied", "failed", "not permitted")
+    ):
+        return "sandbox-bwrap-namespace-failed"
+    if "source path" in diagnostic and any(
+        marker in diagnostic
+        for marker in ("can't find", "cannot find", "no such file")
+    ):
+        return "sandbox-bwrap-source-path-missing"
+    if "operation not permitted" in diagnostic:
+        return "sandbox-bwrap-operation-not-permitted"
+    if "permission denied" in diagnostic:
+        return "sandbox-bwrap-permission-denied"
+    return "sandbox-bwrap-setup-failed"
+
+
 def _run_sandbox_preflight(bwrap_prefix: list[str]) -> None:
     """Check bwrap setup and Python startup without exposing child output."""
     try:
@@ -94,7 +114,7 @@ def _run_sandbox_preflight(bwrap_prefix: list[str]) -> None:
     except OSError as exc:
         raise ProbeFailure("sandbox-bwrap-exec-failed") from exc
     if completed.returncode != 0:
-        raise ProbeFailure("sandbox-bwrap-setup-failed")
+        raise ProbeFailure(_sandbox_bwrap_failure_stage(completed.stderr))
 
     try:
         completed = subprocess.run(
