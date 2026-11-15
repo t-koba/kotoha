@@ -354,6 +354,16 @@ post-close access check, or persistent-state observation occurred. This remains
 interface-availability and cleanup evidence only, not portal behavior or
 Kotoha support. Linux import remains disabled.
 
+The later exact run `43741468020`, job `132895364912`, on publication
+`c92613c01b70908ea95729bb34c5a74d9ddbfda830112e8cb61e530628629c0a` / SHA
+`4c37e21a27f201015e382aaaeece6fd53d507369`, failed the Linux portal probe with
+only the allowlisted stage `sandbox-bwrap-setup-failed` (status
+`vcs-read/4c55c106f35741b6b33428406617a33f`, log
+`vcs-read/d73e05250c334ee8997cf19941ab5705`). No chooser/URI, revocation,
+post-close access, or persistent-state result was emitted. This is startup
+failure evidence only, not portal behavior or Kotoha support; Linux import
+remains disabled.
+
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
 SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),
