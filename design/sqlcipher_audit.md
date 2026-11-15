@@ -1,13 +1,26 @@
 # SQLCipher candidate dependency audit
 
-**Status: blocked; not approved for distribution or draft persistence.**
-This is a static review of the 17 SQLCipher candidates pinned by `sqlite3` 3.9.0,
-not a claim about shipped Kotoha binaries. The current `pubspec.yaml` and lockfile
-contain no `sqlite3` dependency or SQLCipher hook selection. No native library was
-executed, no target-platform behavior was tested, and no user text was persisted.
-The host will not verify native archives or attestations. If Kotoha later selects
-SQLCipher, its own pinned build workflow must verify the inputs and retain the
-source-to-binary evidence. The governing rules are
+**Workspace storage decision: no encrypted persistence backend is selected.**
+`TextWorkspaceDraft` has JSON model methods, but current `lib/` production code has
+no draft-serialization call site; drafts remain in memory. Explicit selected-text
+export is separate. `ProtectedKeyStore` is an opaque-key helper with no implicit
+key generation, reset, update, or recovery policy. Its only platform protector is
+Windows user-scope DPAPI, invoked for the key file; it does not encrypt workspace
+data. No Android, iOS, or macOS key-store provider is present in the current
+platform source or package selection. A platform-native encrypted-file store is
+not an implemented or audited alternative here. These pieces do not yet satisfy
+the storage adapter's encrypted-data requirement or the required key recovery,
+backup/restore, and platform behavior gates.
+
+**SQLCipher status: blocked; not approved for distribution or draft persistence.**
+This is a static review of 17 vendor-prebuilt SQLCipher candidates pinned by
+`sqlite3` 3.9.0, not a claim about shipped Kotoha binaries. The current
+`pubspec.yaml` and lockfile contain no `sqlite3` dependency or SQLCipher hook
+selection. No native library was executed, no target-platform behavior was tested,
+and no user text was persisted. The host will not verify vendor archives or
+attestations. Keep drafts volatile. If Kotoha selects SQLCipher, its own pinned
+build workflow must verify inputs and retain source-to-binary, component, and
+notice evidence. The governing rules are
 [dependency_policy.json](specs/dependency_policy.json).
 
 ## Provider finding
