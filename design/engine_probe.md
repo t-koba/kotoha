@@ -2013,7 +2013,18 @@ and registers it in `lib/main.dart:18–19` as `Unicode Bidi Data`. The
 `test/licenses_test.dart` check verifies that exact Unicode License V3 text is
 visible under the LicenseRegistry package label `Unicode Bidi Data`; this
 maps the notice to Kotoha's own UCD 17 bidi projection only. It does not map the
-notice to the candidate engine's distinct `src/unicode-data.cpp`. The selected
+notice to the candidate engine's distinct `src/unicode-data.cpp`. A byte
+comparison of that 1,995-byte app asset (SHA-256
+`e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`) with the
+2,033-byte Unicode 16 audit-reference `LICENSE` (SHA-256
+`fe5c62b543e287981db198f2acfa0ca732d12591a1024536dc8fd85dacd77104`; fixture
+manifest above) found line-identical license clauses after removing the
+copyright and SPDX lines, apart from one trailing blank line. The copyright
+lines differ: the app asset says `1991-2026`, while that pinned release notice
+says `2001-2024` and carries `SPDX-License-Identifier: Unicode-3.0`. This
+confirms shared Unicode License V3 terms but not the exact historical notice
+required for the selected engine data or a registry mapping to that component;
+no engine notice entry is added while adoption is disabled. The selected
 engine output begins only with a generated-file marker; its pinned generator
 uses the invoking Python `unicodedata` tables and, on the full path, fetches
 unversioned UCD `latest`. The exact selected source and generator were re-read
