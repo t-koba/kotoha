@@ -432,14 +432,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
-            dbus-x11 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
+            dbus-x11 fuse3 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
           cat /etc/os-release
           printf 'runner architecture: '
           uname -m
           printf 'dpkg architecture: '
           dpkg --print-architecture
           dpkg-query -W -f='${binary:Package} ${Version}\n' \
-            dbus-x11 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
+            dbus-x11 fuse3 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
       - name: Start isolated portal and introspect its interfaces
         shell: bash
         run: |
@@ -449,7 +449,21 @@ jobs:
           runtime_dir="$(mktemp -d "$RUNNER_TEMP/xdg-runtime.XXXXXX")"
           chmod 700 "$runtime_dir"
           export XDG_RUNTIME_DIR="$runtime_dir"
-          trap 'rm -rf "$runtime_dir"' EXIT
+          cleanup_runtime_dir() {
+            local status=$?
+            trap - EXIT
+            if mountpoint -q "$runtime_dir/doc" &&
+                ! fusermount3 -u "$runtime_dir/doc"; then
+              echo "Could not unmount the Documents portal runtime directory" >&2
+              [[ $status -ne 0 ]] || status=1
+            fi
+            if ! rm -rf -- "$runtime_dir"; then
+              echo "Could not remove the isolated XDG runtime directory" >&2
+              [[ $status -ne 0 ]] || status=1
+            fi
+            exit "$status"
+          }
+          trap cleanup_runtime_dir EXIT
           xvfb-run -a dbus-run-session -- bash -euo pipefail -c '
             for attempt in {1..30}; do
               if dbus-send --session --type=method_call \

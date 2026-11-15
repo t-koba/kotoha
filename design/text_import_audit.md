@@ -239,6 +239,26 @@ but it is not ruled out solely by the missing `delete` permission. End-to-end
 runtime evidence must establish both the no-retained-grant behavior and what
 portal state remains before Linux import can be considered.
 
+The exact hosted Ubuntu portal probe ran on publication
+`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463` / SHA
+`a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` (run `43711356595`, job
+`132803401399`; status `vcs-read/403c391ecd9e4ea4b17bb353b3143731`, log
+`vcs-read/840943a2da454beb9c402ed8fc7ec75f`). It observed Ubuntu 22.04.5
+x86_64/amd64, `xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2,
+`xdg-desktop-portal-gtk` 1.14.0-1build1, `dbus-x11` 1.12.20-2ubuntu4.1, and
+`xvfb` 2:21.1.4-2ubuntu1.7~22.04.16. The default portal exposed
+`org.freedesktop.portal.FileChooser` v3 and the GTK backend exposed
+`org.freedesktop.impl.portal.FileChooser`; both interface checks were reached.
+The job failed afterward because its EXIT cleanup could not remove the private
+`XDG_RUNTIME_DIR/doc` directory. The log does not establish whether that path
+was mounted or why `rm` returned `EISDIR`; no chooser call, returned URI,
+application/document identity mapping, revocation, post-close access, or
+persistent-state observation occurred. The workflow now detects and unmounts
+that path when it is a mountpoint before removing the private runtime directory;
+that cleanup change still requires an exact hosted rerun. This is package and
+interface-availability evidence only, not portal behavior or Kotoha support.
+Linux import remains disabled.
+
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
 SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),
