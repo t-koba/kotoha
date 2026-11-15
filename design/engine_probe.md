@@ -207,16 +207,47 @@ to `paths.LLVM_PATH` in its non-skip path. Its parser records only patch names
 from the patch-manager `The following patches applied successfully:` block,
 which its writer emits to
 `clang_source_info.md`. The exact packaged file lists the regex patch but, like
-that writer, records no source/postimage digest. In the same revision, `do_build.py` calls `setup_sources` before `build_runtimes` in
-the normal non-skip path; `build_runtimes` invokes `DeviceLibcxxBuilder`, whose
-NDK configuration uses `paths.LLVM_PATH / 'runtimes'` and
-`LLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'`. `LLVMRuntimeBuilder` passes that path
-to CMake as the source root (`experiments/0644080a5f02426a8c9f4eba530c2a86`,
+that writer, records no source/postimage digest. In the same revision, normal
+`do_build.py` runs `setup_sources` before `build_runtimes`; the latter builds
+`BuiltinsBuilder`, `LibUnwindBuilder`, `DeviceLibcxxBuilder`, and
+`CompilerRTBuilder` among other runtimes. The libc++/libc++abi and
+libunwind builders use `paths.LLVM_PATH / 'runtimes'` as their CMake source
+root; `BuiltinsBuilder` uses `compiler-rt/lib/builtins`. `DeviceLibcxxBuilder`
+sets `LLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'` and copies the NDK
+`libc++_static.a` and `libc++abi.a` to `android_libc++/ndk/<arch>/lib`.
+`LibUnwindBuilder` selects the `libunwind` runtime and copies its archive to the
+Clang resource directory and `runtimes_ndk_cxx/<arch>`; `BuiltinsBuilder`
+installs its Android-suffixed archive to the resource directory and
+`runtimes_ndk_cxx`. These intended copy destinations match the selected package
+paths (`mizu_fetch/72c27f89522d2f7844f7d834fadffe353081ea6a9e7a6d3f0feab3d7e2ea27ab`,
+`mizu_fetch/7cc2bb4b42ac11918c627199cdad98bd1cb7accfd15a4f06281caee18cde9898`,
+`mizu_fetch/72c3328f77bc75e87f5a3891d87c66413b4bf26ca5d9c30c5fcaaa8e08f0a75a`;
+extracted recipe evidence `experiments/d4248f5366ab40d7a9622d29e34c8a6c`,
+`experiments/131ef5811f67468483383877d1fc8db5`,
+`experiments/9f9b6c81ec0145f587d943c9690307bf`,
+`experiments/fed614085be44cce83974d`,
+`experiments/b5f618faa1014bacae3acbbb8f4cc64c`; source-preparation/CMake
+checks `experiments/0644080a5f02426a8c9f4eba530c2a86`,
 `experiments/0bcd37c5d8ce46ccae9b9fd604f8d53b`,
-`experiments/56aeb84a7b2b4b9cb3ead40c7c35747d`). This shows the pinned build
-path's intended patched-tree input, but does not attest that the exact build
-invocation produced the packaged archives or bind selected objects to source or
-header digests. Official r28c `docs/Toolchains.md` (3,574 bytes; SHA-256
+`experiments/56aeb84a7b2b4b9cb3ead40c7c35747d`). This is recipe-level path
+evidence only: no matching invocation, build log, output digest, or selected
+member/source/postimage comparison ties one execution to these archive bytes.
+It also does not reconcile `BUILD_INFO`'s compiler-reported LLVM revision
+`97a699bf4812a18fb657c2779f5296a4ab2694d2` with
+`clang_source_info.md`'s base revision
+`3b5e7c83a6e226d5bd7ed2e9b67449b64812074c`; identical candidate hashes for some
+files do not resolve the provenance of all 47 members.
+
+The pinned `do_build.py::install_license_files()` helper collects `LICENSE.*`
+from `llvm`, `compiler-rt`, `libcxx`, `libcxxabi`, `openmp`, `clang`,
+`clang-tools-extra`, and `lld`, but omits `libunwind`
+(`experiments/c15c23a488514701b0d976d1097f2628`). This project list does not
+explain why the candidate's license blocks appear in the package `NOTICE`; they
+may be shared with other included projects. With no matching packaging
+execution or selected-member/source binding, neither the helper nor the repeated
+license text establishes which terms apply to the selected `libunwind.a`.
+
+Official r28c `docs/Toolchains.md` (3,574 bytes; SHA-256
 `b8f7fc03a6bd407c657e9e304ce29a14d04803fc67f660d565402a8d892388a2`;
 `experiments/00efe36766d243f29d7083f4e4c47dc9`) confirms the LLVM toolchain is
 built separately and repackaged by the NDK build, which may remove non-NDK
@@ -620,7 +651,15 @@ libc++, and libc++abi are dual licensed under the University of Illinois
 “BSD-Like” and MIT licenses with their full texts included. `libunwind` is not
 separately named there; its `LICENSE.TXT` at the compiler-reported LLVM source
 revision gives the same alternatives, but remains source-candidate evidence,
-not a selected-member binding. This is stronger public package-level notice
+not a selected-member binding. A byte comparison finds the candidate's complete
+NCSA and MIT license blocks, including the corresponding copyright lines, in
+the package `NOTICE`, but not the libunwind-specific dual-license preamble
+(`mizu_fetch/8515affa1d4bedf47569d3dc3ca69418d9dac6433b46fffd91f1d67394ed6fa7`,
+`mizu_fetch/9dbf4c00e327e89ba08d237525c7863ffeb23f3e6031b0fcd242e22943e7b675`;
+`experiments/1ee1be639e1e4fe1b9f7133d4330a4c0`,
+`experiments/930e6878d9fc48419ff6816bf31a159f`,
+`experiments/6c05e3ef2e02424d88ebb9c59671db2c`). The full text is present but
+not attributed to libunwind. This is stronger public package-level notice
 evidence because the notice and all four byte-matched archive entries share the
 exact `clang-r530567e` tree. The pinned root listing also carries empty
 `MODULE_LICENSE_APACHE2`, `MODULE_LICENSE_BSD_LIKE`, and `MODULE_LICENSE_MIT`
