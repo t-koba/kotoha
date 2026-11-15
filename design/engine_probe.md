@@ -473,6 +473,17 @@ prove which linked sections survive or close licensing.
 
 ### Official r28c build record and prebuilt archive identity
 
+The official `android/ndk` r28c release API lists the Linux distribution
+archive `android-ndk-r28c-linux.zip` as 722,261,334 bytes with SHA-1
+`a7b54a5de87fecd125a17d54f73c446199e72a64`, and has no GitHub release assets.
+It provides no per-file checksums or member manifest for the four runtime
+archives (`mizu_fetch/dba72d9588166625f16e24552e206efafd9ebf467af4c88795e2dd7b227d1581`,
+`experiments/2f6a7559b8e64b2fbf288abc5c09b862`). This whole-package checksum
+would identify their bytes only if the exact downloaded ZIP were verified and
+its contents tied to the installed package; that package-level comparison has
+not been made here. The file-level matches below come instead from the official
+r28c Gitiles prebuilt tree and the probe's computed Git blob IDs.
+
 The official `platform/prebuilts/clang/host/linux-x86` tree at
 `refs/tags/ndk-r28c/clang-r530567e` contains `BUILD_INFO` and
 `manifest_13624864.xml` (fetch receipts `mizu_fetch/3aba4abb8040e8e9f2da4c9443c00dd2ff66c1d26863c389a7dc1034aa76fdd4` and
@@ -559,15 +570,15 @@ member.
 
 The same r28c prebuilt tree lists the probe's four x86_64 NDK archives: the
 libc++ files under `android_libc++/ndk/x86_64/lib/`,
-`libunwind.a` under `runtimes_ndk_cxx/x86_64/`, and
+`libunwind.a` under `lib/clang/19/lib/linux/x86_64/`, and
 `libclang_rt.builtins-x86_64-android.a` under `runtimes_ndk_cxx/`. Its Gitiles
 blob IDs are `b5416bc9c2e386d7f0c4561d8cca99d397cda14f`
 (`libc++_static.a`), `dab6da029cdfac8c822954bd4be98e3dfcbcb896`
 (`libc++abi.a`), `8150ca0f28c986030276ba92bf1808c4691f73a9` (`libunwind.a`), and
 `b681ebb13e6c285dc6516496817c68bed2e410ba` (compiler-rt builtins)
-(`mizu_fetch/5c6462635a572f8f9defb1ea300ab28140c50b5a160319740f2de9f4ad7c5189`,
-`mizu_fetch/0f6f33370603d110dde18ae053776ee33c986dbfe81a115f6aa960d632ebe311`,
-`mizu_fetch/e3c1c3758496b2171ad68f922a3999145c4b1899f4dfb1cdfc8224c15cb86d5a`).
+(`mizu_fetch/07f94b7b37fb9d2945c9e3b9a550723943181ba0230120861b1e8235862552a4`,
+`mizu_fetch/f9a3ae40f139f6f2dedb0c7dd3260a4baccb642f1786fe8489d581c4903f4eb4`,
+`mizu_fetch/26eb96c3527d1d71afc823faa2aaa3c05bde17ae28252ecfa39866e44be5fcb9`).
 Bounded experiments decoded only the two smaller upstream archive responses in
 memory: `libunwind.a` (94,182 bytes) and compiler-rt builtins (303,678 bytes)
 have Git blob IDs and raw SHA-256 values matching both the r28c tree and the
