@@ -2238,6 +2238,34 @@ fields of the fetched `UnicodeData.txt`; `normalization_tables` alone uses
 `unicodedata`. The marker cannot label category/case data, and the original
 `latest` response bytes and historical interpreter remain unknown.
 
+Upstream history narrows the table change but does not preserve its producer
+inputs. The selected table hash `5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`
+is identical at pinned llama.cpp commit
+`31424b7cf14604ca65a9195123da1413f31c4472` and NFC merge commit
+`10da8c463f735c7eaff904c6474e6cf38dccbe83` (PR #30390, 2026-10-14; fetches
+`mizu_fetch/2cc3f8f06accfbd18d98dceddc5f4568d458c85866d06277a1803a8b661e2b05`,
+`mizu_fetch/676c9f9f14ae62b9038a08dec5ec274554c96e68f690d7020ce5fdbb6f7a6e15`,
+`mizu_fetch/9b4b1e76269533284fba77625dc420c81e5d10fb5c65ddf895704941bf85c19d`);
+the merge adds 3,985 lines to `src/unicode-data.cpp` and changes the generator
+(`mizu_fetch/8f74d82bee4949a9f28fe91d3db6a246458005f5dc6820abfa790a67b15783f6`).
+Its parent `eca5458ce0340eeac234619d425ba04cfd1c9cc2` has the prior table hash
+`95170cd1c105a5b41a1b2dce73b0fae8ce8011ef7897600828bb2babe8b26e5d` and
+prior generator hash `1263a483de7fc2b00e4a04a6dd9ef8fe7029f208aa692365b63d43551a7808e5`
+(`mizu_fetch/878ec4ffa63452ecf14ce9c4ca51744902c995971f18feef9686f13560da80a0`,
+`mizu_fetch/6c15a81d53a351060702e2e48793821d3a893599e8e04bfcff9bf6048c907e22`).
+The PR adds a `--normalization-only` mode that avoids the UCD network download
+and builds canonical tables from `unicodedata`, but no retained command or
+execution record establishes which generator mode produced the merged source.
+The PR description and its automated review discuss generated tables and
+cross-checks against UCD data, but provide no versioned `UnicodeData.txt`
+response, Python runtime/build identity, generator invocation, or input digests
+(`mizu_fetch/9b4b1e76269533284fba77625dc420c81e5d10fb5c65ddf895704941bf85c19d`,
+`mizu_fetch/8f74d82bee4949a9f28fe91d3db6a246458005f5dc6820abfa790a67b15783f6`,
+`mizu_fetch/c5fb4409e3a9cd47ccaf56dd16c518b26ecb49ccffe9ea781e24133512a4b6b7`).
+This history identifies the table's exact Git source revision and a normalization
+data version marker, not immutable full-generation inputs or exact notice
+applicability.
+
 Two independent pinned table comparisons reinforce that split. The generator at
 [tox-dev/turbohtml commit `37cf021b`](https://github.com/tox-dev/turbohtml/blob/37cf021b318bd9bc07c952e608aa407acc767c21/tools/generate_idna.py)
 pins official Unicode 16.0 `UnicodeData.txt` and `DerivedNormalizationProps.txt`
