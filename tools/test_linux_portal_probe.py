@@ -86,6 +86,33 @@ class SandboxFailureStageTest(unittest.TestCase):
                 "sandbox-bwrap-source-path-missing",
             ),
             (
+                "bwrap: Can't create tmpfile for /home/private/.flatpak-info",
+                "sandbox-bwrap-bind-file-tempfile-failed",
+            ),
+            (
+                "bwrap: Can't set mode 444 on file to be used for "
+                "/tmp/private/.flatpak-info",
+                "sandbox-bwrap-bind-file-mode-failed",
+            ),
+            (
+                "bwrap: Can't write data to file /home/private/.flatpak-info",
+                "sandbox-bwrap-bind-file-copy-failed",
+            ),
+            (
+                "bwrap: Can't create file at /tmp/private/.flatpak-info",
+                "sandbox-bwrap-bind-file-target-failed",
+            ),
+            (
+                "bwrap: Can't bind mount /bindfile/private on "
+                "/home/private/.flatpak-info: Operation not permitted",
+                "sandbox-bwrap-bind-file-mount-failed",
+            ),
+            ("bwrap: Invalid fd: 3", "sandbox-bwrap-data-fd-invalid"),
+            (
+                "bwrap: --ro-bind-data takes two arguments",
+                "sandbox-bwrap-data-arguments-invalid",
+            ),
+            (
                 "bwrap: Can't make /tmp/private: Operation not permitted",
                 "sandbox-bwrap-operation-not-permitted",
             ),
@@ -95,8 +122,8 @@ class SandboxFailureStageTest(unittest.TestCase):
             with self.subTest(expected=expected):
                 stage = _sandbox_bwrap_failure_stage(diagnostic)
                 self.assertEqual(stage, expected)
-                self.assertNotIn("/home/private", stage)
-                self.assertNotIn("/tmp/private", stage)
+                for private_path in ("/home/private", "/tmp/private", "/bindfile/private"):
+                    self.assertNotIn(private_path, stage)
 
     def test_forwards_only_short_allowlisted_stage_codes(self):
         self.assertEqual(
@@ -123,6 +150,13 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-bwrap-setup-failed",
             "sandbox-bwrap-namespace-failed",
             "sandbox-bwrap-source-path-missing",
+            "sandbox-bwrap-bind-file-tempfile-failed",
+            "sandbox-bwrap-bind-file-mode-failed",
+            "sandbox-bwrap-bind-file-copy-failed",
+            "sandbox-bwrap-bind-file-target-failed",
+            "sandbox-bwrap-bind-file-mount-failed",
+            "sandbox-bwrap-data-fd-invalid",
+            "sandbox-bwrap-data-arguments-invalid",
             "sandbox-bwrap-operation-not-permitted",
             "sandbox-bwrap-permission-denied",
             "sandbox-bwrap-core-setup-failed",

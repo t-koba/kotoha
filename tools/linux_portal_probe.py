@@ -78,7 +78,7 @@ def _sandbox_client_started(stderr: str) -> bool:
 
 
 def _sandbox_bwrap_failure_stage(stderr: str) -> str:
-    """Classify common bwrap errors without forwarding host paths or output."""
+    """Classify bwrap errors without forwarding host paths or output."""
     diagnostic = stderr.casefold()
     if "namespace" in diagnostic and any(
         marker in diagnostic
@@ -90,6 +90,18 @@ def _sandbox_bwrap_failure_stage(stderr: str) -> str:
         for marker in ("can't find", "cannot find", "no such file")
     ):
         return "sandbox-bwrap-source-path-missing"
+    operation_errors = (
+        ("can't create tmpfile for ", "sandbox-bwrap-bind-file-tempfile-failed"),
+        ("can't set mode ", "sandbox-bwrap-bind-file-mode-failed"),
+        ("can't write data to file ", "sandbox-bwrap-bind-file-copy-failed"),
+        ("can't create file at ", "sandbox-bwrap-bind-file-target-failed"),
+        ("can't bind mount ", "sandbox-bwrap-bind-file-mount-failed"),
+        ("invalid fd:", "sandbox-bwrap-data-fd-invalid"),
+        ("--ro-bind-data takes two arguments", "sandbox-bwrap-data-arguments-invalid"),
+    )
+    for marker, stage in operation_errors:
+        if marker in diagnostic:
+            return stage
     if "operation not permitted" in diagnostic:
         return "sandbox-bwrap-operation-not-permitted"
     if "permission denied" in diagnostic:

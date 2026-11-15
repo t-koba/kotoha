@@ -367,12 +367,32 @@ also records bubblewrap `0.6.1-1ubuntu0.3` and still fails before the sandboxed
 client, so chooser, URI mapping, permission revocation, post-close access, and
 persistent-state behavior remain untested.
 
-The probe now supplies the synthetic `/.flatpak-info` contents through an
-inherited, rewound descriptor and bubblewrap's read-only data-bind option rather
-than binding a host temporary path onto the read-only root. This avoids relying
-on host-path visibility and tests the failing operation directly; the next exact
-Ubuntu 22.04 run must confirm the option works with the installed bubblewrap,
-then determine whether setup reaches the client. Linux import remains disabled.
+Commit `284c46a` changed the synthetic `/.flatpak-info` input from a host-path
+bind to bubblewrap's read-only data-bind option, passing a rewound temporary-file
+descriptor through `pass_fds`. Its focused tests and local acceptance passed, but
+the exact descendant publication `8bc68450090b535955967cc695424aa4d5267950d519089cbcc5276f2406e56f`
+/ SHA `5f0e43922e7f39ef3542ab5ecdf15d070eec5884` (run `43766934760`, job
+`132974073161`; status `vcs-read/265c320d1def48eab96012e8d16d6fb4`, log
+`vcs-read/4f2b6f13acb5412087974378954acdd4`) still fails at
+`sandbox-bwrap-app-info-bind-failed` after core, `/run`, proc and dev setup pass.
+The runner reports Ubuntu 22.04.5 x86_64/amd64, bubblewrap
+`0.6.1-1ubuntu0.3`, Documents portal `1.14.4-1ubuntu2~22.04.2`, and GTK backend
+`1.14.0-1build1`. The probe reaches this ladder only after its Documents
+mountpoint and mount-seed checks; it still fails before the sandboxed client, so
+there was no FileChooser request, returned-URI mapping, permission revocation,
+post-close access check or persistent-state observation. Raw bwrap stderr remains
+suppressed, so the exact data-bind failure remains unknown; this recurrence
+shows the descriptor change did not resolve it.
+
+The probe now classifies known bubblewrap bind-file, descriptor-argument and
+copy/setup errors into fixed stage codes without forwarding paths or raw stderr.
+The phrase patterns match upstream bubblewrap v0.6.1 `bubblewrap.c` (`mizu_fetch/84186c7af621220970d26b3b39715e0a2801668e0d348a41e587343cb7c1bedb`,
+SHA-256 `aaa4effa46873a7c7b6b6e9e8e7cdb91153ecd2c028dbeadd043166efdb9ea0c`);
+the Ubuntu `-1ubuntu0.3` source delta is not bound. Tests cover these categories
+and ensure the sanitized codes remain within the bounded log grammar. Unknown or
+Ubuntu-specific messages still fall back to the operation stage; an exact later
+Ubuntu 22.04 run is needed to learn whether this narrows the failure. Linux
+import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
