@@ -25,13 +25,32 @@ class SandboxPrefixTest(unittest.TestCase):
         script = Path("/home/runner/work/kotoha/kotoha/tools/linux_portal_probe.py")
         mountpoint = "/tmp/kotoha-portal-runtime/doc"
         fixture = Path("/home/runner/work/_temp/probe/fixture.md")
-        prefix = _sandbox_client_prefix(
-            app_info,
-            script,
-            mountpoint,
-            "unix:path=/tmp/bus",
-            fixture,
-            Path("/tmp/kotoha-portal-runtime"),
+        dbus_address = "unix:path=/tmp/bus"
+        runtime = Path("/tmp/kotoha-portal-runtime")
+        prefix, stages = _sandbox_client_prefix(
+            app_info, script, mountpoint, dbus_address, fixture, runtime
+        )
+        self.assertEqual(
+            prefix,
+            [
+                "bwrap", "--die-with-parent", "--unshare-all",
+                *(option for _, options in stages for option in options),
+                "--",
+            ],
+        )
+        self.assertEqual(
+            [stage for stage, _ in stages],
+            [
+                "sandbox-bwrap-core-setup-failed",
+                "sandbox-bwrap-run-mask-failed",
+                "sandbox-bwrap-proc-bind-failed",
+                "sandbox-bwrap-dev-bind-failed",
+                "sandbox-bwrap-app-info-bind-failed",
+                "sandbox-bwrap-client-script-bind-failed",
+                "sandbox-bwrap-documents-bind-failed",
+                "sandbox-bwrap-home-mask-failed",
+                "sandbox-bwrap-environment-failed",
+            ],
         )
         home_mask = next(
             index
@@ -102,6 +121,16 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-bwrap-source-path-missing",
             "sandbox-bwrap-operation-not-permitted",
             "sandbox-bwrap-permission-denied",
+            "sandbox-bwrap-core-setup-failed",
+            "sandbox-bwrap-run-mask-failed",
+            "sandbox-bwrap-proc-bind-failed",
+            "sandbox-bwrap-dev-bind-failed",
+            "sandbox-bwrap-app-info-bind-failed",
+            "sandbox-bwrap-client-script-bind-failed",
+            "sandbox-bwrap-documents-bind-failed",
+            "sandbox-bwrap-home-mask-failed",
+            "sandbox-bwrap-environment-failed",
+            "sandbox-bwrap-prefix-inconsistent",
             "sandbox-bwrap-timeout",
             "sandbox-bwrap-executable-missing",
             "sandbox-bwrap-exec-failed",
@@ -133,6 +162,38 @@ class SandboxFailureStageTest(unittest.TestCase):
         self.assertEqual(caught.exception.stage, "sandbox-bwrap-setup-failed")
         self.assertNotIn(private, str(caught.exception))
         run.assert_called_once()
+
+    def test_unknown_preflight_failure_is_localized_by_cumulative_setup_stage(self):
+        private = "/home/private/unclassified"
+        prefix = [
+            "bwrap", "--die-with-parent", "--unshare-all",
+            "--ro-bind", "/", "/", "--tmpfs", "/run", "--",
+        ]
+        stages = [
+            ("sandbox-bwrap-core-setup-failed", ["--ro-bind", "/", "/"]),
+            ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
+        ]
+        with patch("tools.linux_portal_probe.subprocess.run") as run:
+            run.side_effect = [
+                subprocess.CompletedProcess([], 1, "", private),
+                subprocess.CompletedProcess([], 0, "", ""),
+                subprocess.CompletedProcess([], 1, "", private),
+            ]
+            with self.assertRaises(ProbeFailure) as caught:
+                _run_sandbox_preflight(prefix, stages)
+        self.assertEqual(caught.exception.stage, "sandbox-bwrap-run-mask-failed")
+        self.assertNotIn(private, str(caught.exception))
+        self.assertEqual(
+            [call.args[0] for call in run.call_args_list],
+            [
+                [*prefix, "/bin/true"],
+                [*prefix[:3], "--ro-bind", "/", "/", "--", "/bin/true"],
+                [
+                    *prefix[:3], "--ro-bind", "/", "/", "--tmpfs", "/run",
+                    "--", "/bin/true",
+                ],
+            ],
+        )
 
     def test_preflight_classifies_python_failure_and_missing_marker(self):
         private = "secret stderr /tmp/private"

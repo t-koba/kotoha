@@ -385,10 +385,13 @@ The exact follow-up on publication
 `vcs-read/6b473df365f948be99d1e1b53b59ceb7`, log
 `vcs-read/ecb8d508fa664a87b971d35c9f7c17bb`). Thus the `/home` bind ordering
 repair was insufficient; the failure still precedes the sandboxed client and all
-portal lifecycle assertions. The preflight now maps only recognized namespace,
+portal lifecycle assertions. The preflight maps recognized namespace,
 missing-source, and permission-denial stderr patterns to fixed path-free stages;
-unknown messages remain `sandbox-bwrap-setup-failed`, and child output remains
-suppressed. This is diagnostic only: no chooser, URI mapping, revocation,
+unknown messages remain `sandbox-bwrap-setup-failed`. Because this exact run
+still returned that generic stage, the next revision adds a bounded cumulative
+`/bin/true` setup ladder only after an unclassified failure, identifying the
+first failing root/mount/bind/mask/environment group without forwarding child
+output. This is diagnostic only: no chooser, URI mapping, revocation,
 post-close access, or persistence result is claimed, and the next exact hosted
 check must establish whether setup reaches the client.
 

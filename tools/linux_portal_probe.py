@@ -96,11 +96,10 @@ def _sandbox_bwrap_failure_stage(stderr: str) -> str:
     return "sandbox-bwrap-setup-failed"
 
 
-def _run_sandbox_preflight(bwrap_prefix: list[str]) -> None:
-    """Check bwrap setup and Python startup without exposing child output."""
+def _run_sandbox_bwrap(prefix: list[str]):
     try:
-        completed = subprocess.run(
-            [*bwrap_prefix, "/bin/true"],
+        return subprocess.run(
+            [*prefix, "/bin/true"],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
@@ -113,8 +112,28 @@ def _run_sandbox_preflight(bwrap_prefix: list[str]) -> None:
         raise ProbeFailure("sandbox-bwrap-executable-missing") from exc
     except OSError as exc:
         raise ProbeFailure("sandbox-bwrap-exec-failed") from exc
+
+
+def _run_sandbox_preflight(
+    bwrap_prefix: list[str], stages: list[tuple[str, list[str]]] | None = None
+) -> None:
+    """Check bwrap and Python startup without exposing child output."""
+    completed = _run_sandbox_bwrap(bwrap_prefix)
     if completed.returncode != 0:
-        raise ProbeFailure(_sandbox_bwrap_failure_stage(completed.stderr))
+        failure = _sandbox_bwrap_failure_stage(completed.stderr)
+        if failure != "sandbox-bwrap-setup-failed" or stages is None:
+            raise ProbeFailure(failure)
+
+        prefix = bwrap_prefix[:3]
+        for stage, options in stages:
+            prefix.extend(options)
+            diagnostic = _run_sandbox_bwrap([*prefix, "--"])
+            if diagnostic.returncode != 0:
+                failure = _sandbox_bwrap_failure_stage(diagnostic.stderr)
+                raise ProbeFailure(
+                    stage if failure == "sandbox-bwrap-setup-failed" else failure
+                )
+        raise ProbeFailure("sandbox-bwrap-prefix-inconsistent")
 
     try:
         completed = subprocess.run(
@@ -377,6 +396,42 @@ def _get_property(dbus, bus, name: str, interface: str) -> int:
     return int(properties.Get(interface, "version", timeout=5))
 
 
+def _sandbox_client_prefix_stages(
+    app_info_path: Path,
+    script_path: Path,
+    mountpoint: str,
+    dbus_address: str,
+    fixture_path: Path,
+    runtime: Path,
+) -> list[tuple[str, list[str]]]:
+    # Bind host sources before masking /home; the CI checkout is under /home.
+    return [
+        ("sandbox-bwrap-core-setup-failed", ["--ro-bind", "/", "/"]),
+        ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
+        ("sandbox-bwrap-proc-bind-failed", ["--proc", "/proc"]),
+        ("sandbox-bwrap-dev-bind-failed", ["--dev", "/dev"]),
+        (
+            "sandbox-bwrap-app-info-bind-failed",
+            ["--ro-bind", str(app_info_path), "/.flatpak-info"],
+        ),
+        (
+            "sandbox-bwrap-client-script-bind-failed",
+            ["--ro-bind", str(script_path), "/run/portal-probe.py"],
+        ),
+        ("sandbox-bwrap-documents-bind-failed", ["--bind", mountpoint, mountpoint]),
+        ("sandbox-bwrap-home-mask-failed", ["--tmpfs", "/home"]),
+        (
+            "sandbox-bwrap-environment-failed",
+            [
+                "--setenv", "DBUS_SESSION_BUS_ADDRESS", dbus_address,
+                "--setenv", "KOTOHA_PORTAL_FIXTURE_PATH", str(fixture_path),
+                "--setenv", "XDG_RUNTIME_DIR", str(runtime),
+                "--setenv", "PYTHONUNBUFFERED", "1",
+            ],
+        ),
+    ]
+
+
 def _sandbox_client_prefix(
     app_info_path: Path,
     script_path: Path,
@@ -384,26 +439,12 @@ def _sandbox_client_prefix(
     dbus_address: str,
     fixture_path: Path,
     runtime: Path,
-) -> list[str]:
-    # Bind host sources before masking /home; the CI checkout is under /home.
-    return [
-        "bwrap",
-        "--die-with-parent",
-        "--unshare-all",
-        "--ro-bind", "/", "/",
-        "--tmpfs", "/run",
-        "--proc", "/proc",
-        "--dev", "/dev",
-        "--ro-bind", str(app_info_path), "/.flatpak-info",
-        "--ro-bind", str(script_path), "/run/portal-probe.py",
-        "--bind", mountpoint, mountpoint,
-        "--tmpfs", "/home",
-        "--setenv", "DBUS_SESSION_BUS_ADDRESS", dbus_address,
-        "--setenv", "KOTOHA_PORTAL_FIXTURE_PATH", str(fixture_path),
-        "--setenv", "XDG_RUNTIME_DIR", str(runtime),
-        "--setenv", "PYTHONUNBUFFERED", "1",
-        "--",
-    ]
+) -> tuple[list[str], list[tuple[str, list[str]]]]:
+    stages = _sandbox_client_prefix_stages(
+        app_info_path, script_path, mountpoint, dbus_address, fixture_path, runtime
+    )
+    options = [option for _, group in stages for option in group]
+    return ["bwrap", "--die-with-parent", "--unshare-all", *options, "--"], stages
 
 
 def run_host() -> dict[str, object]:
@@ -495,15 +536,16 @@ def run_host() -> dict[str, object]:
         client_env = env.copy()
         client_env["DBUS_SESSION_BUS_ADDRESS"] = os.environ["DBUS_SESSION_BUS_ADDRESS"]
         client_env["KOTOHA_PORTAL_FIXTURE_PATH"] = str(fixture)
-        bwrap_prefix = _sandbox_client_prefix(
+        script_path = Path(__file__).resolve()
+        bwrap_prefix, bwrap_stages = _sandbox_client_prefix(
             app_info_path,
-            Path(__file__).resolve(),
+            script_path,
             mountpoint,
             client_env["DBUS_SESSION_BUS_ADDRESS"],
             fixture,
             runtime,
         )
-        _run_sandbox_preflight(bwrap_prefix)
+        _run_sandbox_preflight(bwrap_prefix, bwrap_stages)
         command = [*bwrap_prefix, sys.executable, "/run/portal-probe.py", "--client"]
         try:
             completed = subprocess.run(
