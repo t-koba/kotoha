@@ -1700,6 +1700,18 @@ only that this configured runtime does not reproduce the selected suffix; it
 does not identify historical generation inputs, establish notice applicability,
 or prove provenance.
 
+The pinned CPython 3.14 replay subsequently passed on publication
+`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463` / SHA
+`a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` (run `43710085821`, job
+`132799540888`; status `vcs-read/b45c1c55fc1f49c1923dce335bb6bc6a`, log
+`vcs-read/c91dd9890a594ebd8901eeb6b51bc14f`). Hosted Ubuntu 22.04.5 x86_64
+used CPython 3.14.0 with Unicode 16.0.0; the exact generator and selected
+source hashes matched, and generated output and selected suffix both hashed to
+`298eebd2ca4cff8b2130ce75f7c47e8b042a5686ab5abdeb497792ed7185e60a` with byte
+equality true. This is bounded normalization-table reproducibility only; it
+does not identify the historical generator invocation, UCD response, producer
+runtime, or applicable notice.
+
 The path-history response pinned to candidate revision
 `31424b7cf14604ca65a9195123da1413f31c4472` lists commit
 `10da8c463f735c7eaff904c6474e6cf38dccbe83` (2026-10-14, PR #30390) as the
