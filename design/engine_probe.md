@@ -2058,6 +2058,29 @@ stored here, rather than assuming conversion to C++ removes notice obligations. 
 does not prove this blob's production input, exact UCD version, Python build, or
 historical notice text; use the exact release notice once provenance is established.
 
+**YaRN source-history bracket.** The llama.cpp PR #2268 merge commit
+[`898aeca90a9bb992f506234cf3b8b7f7fa28a1df`](https://github.com/ggml-org/llama.cpp/commit/898aeca90a9bb992f506234cf3b8b7f7fa28a1df)
+(2023-11-01) explicitly attributes the implementation to
+`jquesnelle/yarn/scaled_rope/LlamaYaRNScaledRotaryEmbedding.py` and states MIT
+plus `Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng`. GitHub's path
+history through the later `jquesnelle/yarn` commit
+`995db5b575e75230b3384d658f8b944c9662f775` (2024-04-17) returns only the
+source-file introduction commit `a18e54988639030e706f6ff9db224cf74e08a65a`
+(2023-08-31; `mizu_fetch/2cab7b6ef3571d5321b43c12c7093a681f37c6f08c1cd0478506ed5daffbc3df`).
+Contents at both revisions report the same source blob
+`f4b82cb37b3584cb0f878ab453815e27e946925d`, 4,339 bytes
+(`mizu_fetch/953d24fac8f28d5469d9f194db90abccca65ee82832836d05405ece3f28c6319`,
+`mizu_fetch/409867dee4178c24bc0494a723e3244cb6ccb9e95aba647a7324263d46b6dbd9`);
+the full MIT license at both reports the same blob
+`bf8c87304a63657d159dabdf69d029d035c6b639`, 1,088 bytes
+(`mizu_fetch/b164f210538e1256e5a0cd341cb2efba5e68b57777fb79941c4d7f0a5cf323d0`,
+`mizu_fetch/fed413cb5eba86a431efcf7c3353f7c026faacb31437328c9d24baa55adf6fad`).
+This brackets the merge date with unchanged public source and notice bytes and
+materially strengthens the attribution mapping. The PR still points to a
+mutable repository path rather than recording an external commit/blob or the
+integrator's retrieval; treat that as the remaining direct-binding limitation,
+not as grounds to demand an unavailable producer attestation.
+
 Reviewed immutable origin evidence (not proof of the exact historical adaptation
 revision):
 
