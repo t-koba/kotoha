@@ -21,7 +21,8 @@ import time
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
-APP_ID = "org.kotoha.PortalProbe"
+APP_ID = "org.kotoha.portalprobe"
+CONTROL_APP_ID = "org.kotoha.portalcontrol"
 BACKEND_BUS = "org.freedesktop.impl.portal.desktop.kotoha_test"
 BACKEND_IFACE = "org.freedesktop.impl.portal.FileChooser"
 DESKTOP_BUS = "org.freedesktop.portal.Desktop"
@@ -193,6 +194,8 @@ def run_client() -> None:
 
     digest = hashlib.sha256()
     fd = None
+    revoke_returned = False
+    revoke_error = None
     try:
         fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
         total = 0
@@ -205,12 +208,34 @@ def run_client() -> None:
                 raise ProbeFailure("fixture-read-exceeded-bound")
             digest.update(block)
         docs = dbus.Interface(bus.get_object(DOCS_BUS, DOCS_PATH), DOCS_IFACE)
-        docs.RevokePermissions(
-            doc_id,
-            APP_ID,
-            dbus.Array(["read", "grant-permissions"], signature="s"),
-            timeout=10,
-        )
+        # Prove grant-permissions works before testing same-app revocation.
+        try:
+            docs.GrantPermissions(
+                doc_id,
+                CONTROL_APP_ID,
+                dbus.Array(["read"], signature="s"),
+                timeout=10,
+            )
+            docs.RevokePermissions(
+                doc_id,
+                CONTROL_APP_ID,
+                dbus.Array(["read"], signature="s"),
+                timeout=10,
+            )
+        except dbus.DBusException as exc:
+            raise ProbeFailure("other-app-grant-revoke-control-failed") from exc
+        try:
+            docs.RevokePermissions(
+                doc_id,
+                APP_ID,
+                dbus.Array(["read", "grant-permissions"], signature="s"),
+                timeout=10,
+            )
+            revoke_returned = True
+        except dbus.DBusException as exc:
+            if not str(exc.get_dbus_name()).endswith(".NotAllowed"):
+                raise ProbeFailure("self-revoke-failed-unexpectedly") from exc
+            revoke_error = "NotAllowed"
     except ProbeFailure:
         raise
     except (OSError, dbus.DBusException) as exc:
@@ -222,14 +247,16 @@ def run_client() -> None:
     try:
         denied_fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
     except OSError as exc:
-        denied = exc.errno in (errno.EACCES, errno.EPERM, errno.ENOENT)
+        if exc.errno not in (errno.EACCES, errno.EPERM, errno.ENOENT):
+            raise ProbeFailure("post-revoke-open-failed-unexpectedly") from exc
+        denied = True
         denied_errno = exc.errno
     else:
         os.close(denied_fd)
         denied = False
         denied_errno = 0
-    if not denied:
-        raise ProbeFailure("access-remained-after-revocation-and-close")
+    if denied != revoke_returned:
+        raise ProbeFailure("post-close-access-does-not-match-revocation-result")
 
     print(
         json.dumps(
@@ -239,8 +266,10 @@ def run_client() -> None:
                 "doc_id": doc_id,
                 "fixture_sha256": digest.hexdigest(),
                 "read_bytes": total,
-                "revoke_returned": True,
-                "post_close_open_denied": True,
+                "other_app_control_succeeded": True,
+                "revoke_returned": revoke_returned,
+                "revoke_error": revoke_error,
+                "post_close_open_denied": denied,
                 "post_close_errno": denied_errno,
             },
             sort_keys=True,
@@ -386,10 +415,14 @@ def run_host() -> dict[str, object]:
             raise ProbeFailure("portal-app-id-mismatch")
         if client.get("fixture_sha256") != hashlib.sha256(FIXTURE).hexdigest():
             raise ProbeFailure("fixture-content-mismatch")
+        revoke_returned = client.get("revoke_returned")
         if (
             client.get("read_bytes") != len(FIXTURE)
-            or not client.get("post_close_open_denied")
             or not client.get("fixture_path_hidden")
+            or not isinstance(revoke_returned, bool)
+            or not client.get("other_app_control_succeeded")
+            or client.get("post_close_open_denied") is not revoke_returned
+            or client.get("revoke_error") != (None if revoke_returned else "NotAllowed")
         ):
             raise ProbeFailure("sandbox-access-check-failed")
 
@@ -400,8 +433,12 @@ def run_host() -> dict[str, object]:
         if os.path.realpath(source_path) != os.path.realpath(fixture):
             raise ProbeFailure("document-source-mismatch")
         remaining = set(app_permissions.get(APP_ID, []))
-        if remaining.intersection({"read", "grant-permissions"}):
-            raise ProbeFailure("revoked-permissions-still-recorded")
+        control_remaining = set(app_permissions.get(CONTROL_APP_ID, []))
+        expected_permissions = set() if revoke_returned else {"read", "grant-permissions"}
+        if remaining.intersection({"read", "grant-permissions"}) != expected_permissions:
+            raise ProbeFailure("app-permissions-do-not-match-revocation-result")
+        if control_remaining:
+            raise ProbeFailure("other-app-control-permissions-remain")
         all_docs = docs.List("", timeout=10)
         if client["doc_id"] not in all_docs:
             raise ProbeFailure("document-record-not-retained")
@@ -424,12 +461,15 @@ def run_host() -> dict[str, object]:
             "fixture_path_hidden_from_client": client["fixture_path_hidden"],
             "fixture_sha256": client["fixture_sha256"],
             "read_bytes": client["read_bytes"],
-            "revoke_read_and_grant_permissions_succeeded": client["revoke_returned"],
+            "other_app_control_succeeded": client["other_app_control_succeeded"],
+            "self_revoke_succeeded": client["revoke_returned"],
+            "self_revoke_error": client["revoke_error"],
             "post_close_open_denied": client["post_close_open_denied"],
             "persistent_document_record_retained": True,
-            "revoked_permissions_remaining": sorted(
+            "app_permissions_remaining": sorted(
                 remaining.intersection({"read", "grant-permissions"})
             ),
+            "other_app_control_permissions_remaining": sorted(control_remaining),
         }
     finally:
         backend.terminate()
