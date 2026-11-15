@@ -5,6 +5,80 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
 
+Future<void> _verifyLazyKeyboardTraversal(
+  WidgetTester tester, {
+  required double textScale,
+  required Size viewSize,
+}) async {
+  tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+  tester.binding.platformDispatcher.textScaleFactorTestValue = textScale;
+  addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+  addTearDown(tester.binding.platformDispatcher.clearTextScaleFactorTestValue);
+  tester.view.physicalSize = viewSize;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  try {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    await tester.pumpWidget(const KotohaApp());
+    final scrollable = find.byType(Scrollable).first;
+    for (var index = 0; index < 4; index++) {
+      final addTranslation = find.text('Add translation');
+      await tester.dragUntilVisible(
+        addTranslation,
+        scrollable,
+        const Offset(0, -800),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(addTranslation);
+      await tester.pumpAndSettle();
+    }
+    tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+    await tester.pumpAndSettle();
+
+    final expected = <String>{
+      for (var index = 0; index < 5; index++) ...[
+        'target-language-$index',
+        'translation-text-$index',
+      ],
+    };
+    final reached = <String>{};
+    var maximumMountedFields = 0;
+    for (var tab = 0; tab < 240 && !reached.containsAll(expected); tab++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final mountedFields = find.byType(TextField).evaluate().length;
+      if (mountedFields > maximumMountedFields) {
+        maximumMountedFields = mountedFields;
+      }
+      for (final key in expected) {
+        final field = find.byKey(ValueKey(key));
+        if (field.evaluate().isEmpty) {
+          continue;
+        }
+        final editable = find.descendant(
+          of: field,
+          matching: find.byType(EditableText),
+        );
+        if (editable.evaluate().isNotEmpty &&
+            identical(
+              tester.binding.focusManager.primaryFocus,
+              tester.widget<EditableText>(editable).focusNode,
+            )) {
+          reached.add(key);
+        }
+      }
+    }
+
+    expect(reached, containsAll(expected));
+    expect(maximumMountedFields, lessThan(expected.length + 2));
+    expect(tester.takeException(), isNull);
+  } finally {
+    debugDefaultTargetPlatformOverride = null;
+  }
+}
+
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
   setUp(
@@ -224,125 +298,24 @@ void main() {
     }
   });
 
-  testWidgets('keeps offscreen translation fields in keyboard traversal', (
+  testWidgets('keeps lazy translation fields keyboard-reachable at 2x scale', (
     tester,
   ) async {
-    binding.platformDispatcher.localesTestValue = [const Locale('en')];
-    binding.platformDispatcher.textScaleFactorTestValue = 2.0;
-    addTearDown(binding.platformDispatcher.clearLocalesTestValue);
-    addTearDown(binding.platformDispatcher.clearTextScaleFactorTestValue);
-    tester.view.physicalSize = const Size(320, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    try {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      await tester.pumpWidget(const KotohaApp());
-      final scrollable = find.byType(Scrollable).first;
-      for (var index = 0; index < 4; index++) {
-        final addTranslation = find.text('Add translation');
-        await tester.dragUntilVisible(
-          addTranslation,
-          scrollable,
-          const Offset(0, -400),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(addTranslation);
-        await tester.pumpAndSettle();
-      }
-      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
-      await tester.pumpAndSettle();
-
-      final expected = <String>{
-        for (var index = 0; index < 5; index++) ...[
-          'target-language-$index',
-          'translation-text-$index',
-        ],
-      };
-      final reached = <String>{};
-      var maximumMountedFields = 0;
-      for (var tab = 0; tab < 160 && !reached.containsAll(expected); tab++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-        await tester.pump();
-        final mountedFields = find.byType(TextField).evaluate().length;
-        if (mountedFields > maximumMountedFields) {
-          maximumMountedFields = mountedFields;
-        }
-        for (final key in expected) {
-          final field = find.byKey(ValueKey(key));
-          if (field.evaluate().isEmpty) {
-            continue;
-          }
-          final editable = find.descendant(
-            of: field,
-            matching: find.byType(EditableText),
-          );
-          if (editable.evaluate().isNotEmpty &&
-              identical(
-                tester.binding.focusManager.primaryFocus,
-                tester.widget<EditableText>(editable).focusNode,
-              )) {
-            reached.add(key);
-          }
-        }
-      }
-
-      expect(reached, containsAll(expected));
-      expect(maximumMountedFields, lessThan(expected.length + 2));
-      expect(tester.takeException(), isNull);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
+    await _verifyLazyKeyboardTraversal(
+      tester,
+      textScale: 2.0,
+      viewSize: const Size(320, 640),
+    );
   });
 
-  testWidgets('keeps translation traversal at very large text scale', (
+  testWidgets('keeps lazy translation fields keyboard-reachable at 4x scale', (
     tester,
   ) async {
-    binding.platformDispatcher.localesTestValue = [const Locale('en')];
-    binding.platformDispatcher.textScaleFactorTestValue = 4.0;
-    addTearDown(binding.platformDispatcher.clearLocalesTestValue);
-    addTearDown(binding.platformDispatcher.clearTextScaleFactorTestValue);
-    tester.view.physicalSize = const Size(420, 760);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    try {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      await tester.pumpWidget(const KotohaApp());
-      var reachedTarget = false;
-      var maximumMountedFields = 0;
-      for (var tab = 0; tab < 120 && !reachedTarget; tab++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-        await tester.pump();
-        final mountedFields = find.byType(TextField).evaluate().length;
-        if (mountedFields > maximumMountedFields) {
-          maximumMountedFields = mountedFields;
-        }
-        final field = find.byKey(const ValueKey('target-language-0'));
-        if (field.evaluate().isEmpty) {
-          continue;
-        }
-        final editable = find.descendant(
-          of: field,
-          matching: find.byType(EditableText),
-        );
-        if (editable.evaluate().isNotEmpty &&
-            identical(
-              tester.binding.focusManager.primaryFocus,
-              tester.widget<EditableText>(editable).focusNode,
-            )) {
-          reachedTarget = true;
-        }
-      }
-
-      expect(reachedTarget, isTrue);
-      expect(maximumMountedFields, lessThan(4));
-      expect(tester.takeException(), isNull);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
+    await _verifyLazyKeyboardTraversal(
+      tester,
+      textScale: 4.0,
+      viewSize: const Size(420, 760),
+    );
   });
 
   testWidgets('does not allow deleting the final translation field', (
