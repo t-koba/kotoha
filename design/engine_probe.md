@@ -1201,6 +1201,45 @@ scope is hashes, sizes and Git object IDs only; the raw patch blobs are not
 retained in CI. The checked-out temporary Git fetch has a 120-second deadline,
 but the pack has no independent hard byte cap.
 
+#### Official r28c prebuilt/build-record cross-check
+
+The fetched AOSP platform manifest at `refs/tags/ndk-r28c` lists
+`platform/ndk`, `platform/prebuilts/clang/host/linux-x86`, and
+`platform/prebuilts/ndk` at that release tag (`mizu_fetch/1446e06620cf3a41e426ac3129c126185c6512364cf40480a84ef51a74757775`, SHA-256
+`3ba7d35acb7c1f1cdec2e083e076c17034a914ad1484ed8ad3ca3c937ca681fd`). The
+host-prebuilt tag tree (`mizu_fetch/d94361421e012c1611ed71be2e50b46bddb20981a375964231c2c1ee09fed4f7`)
+contains `clang-r530567e`; its x86_64 libc++ tree identifies
+`libc++_static.a` as Git blob `b5416bc9c2e386d7f0c4561d8cca99d397cda14f`
+and `libc++abi.a` as `dab6da029cdfac8c822954bd4be98e3dfcbcb896`
+(`mizu_fetch/487907202cd89381e4036cfd8f7dfcff27ed6698143f829ce7b55b0ae4123ba4`).
+
+The same pinned `clang-r530567e` prebuilt tree's `BUILD_INFO` reports build ID
+`13624864`, branch `aosp-llvm-r530567`, and source revisions
+`llvm-project` `97a699bf4812a18fb657c2779f5296a4ab2694d2` and
+`llvm_android` `e727bfb014bd436f581a66a450c939a6983a1fc3`
+(`mizu_fetch/0919e9fc782b5175146b229c93857c267f7a16732c4f7cc9e5b60d8446ebea91`,
+`experiments/08e7927e61a34cc0a296ee99588e87aa`). The NDK package's exact
+`clang_source_info.md` bytes (11,370 bytes, SHA-256
+`8ffa6ebc4941a0f0de492584444c08b65ce96ba32d824d674fd35aa0398f1454`) match
+the file in that AOSP prebuilt tree (`mizu_fetch/7141d9bde0ac493e82d893d2f7cc0f567baf9fd5d1a1355483b9433c895d31db`,
+`experiments/f85fc5aaddfb4685a7bb4cf35880b24d`). Its 130,424-byte `NOTICE`
+also matches the NDK package's LLVM toolchain `NOTICE` SHA-256
+`f96f763beb66a7ba7a667647fc64c0226ace875e590c831fdd9579ec1c1d91e1`
+(`mizu_fetch/a46756cdc7b3a72c441c0d02cbca32a83e07f77d495464888725a3955adf13cd`,
+`experiments/7b509b84264e4a9f9ff86a34554d5f88`; package manifest
+`vcs-read/4995c5cc44c24fbea2e2f794343675c5`). This is byte-backed evidence
+that the release package includes the matching prebuilt source-info and
+artifact-level NOTICE; it does not assign an applicable notice subset to each
+selected object.
+
+The bounded `BUILD_INFO` key scan found no SHA/digest/artifact/output fields
+(`experiments/dffa1a5d772844cfacbc96e64af32086`). The Git blob IDs name files
+in the AOSP prebuilt tree but are not a byte-level comparison to the NDK
+package's raw archive SHA-256. Thus the build/source metadata and notice
+cross-check strengthen the common prebuilt-tree link, but do not prove the
+47 selected archive-member bytes, their source/postimage identities, or
+member-level notice applicability. Keep Android adoption disabled.
+
 The four-entry capture allowlist and metadata-only manifest remain incomplete
 as payload retention; the full installed source-info inventory has now been
 intersected with the exact archive-member and compiler-read manifests. The
