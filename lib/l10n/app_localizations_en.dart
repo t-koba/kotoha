@@ -24,6 +24,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This draft is temporary. It is not saved in this app.';
 
   @override
+  String get inactiveDraftNotice =>
+      'Drafts stay only in memory and are hidden while Kotoha is inactive.';
+
+  @override
   String get androidImePersonalizedLearning =>
       'Allow Android keyboard learning';
 

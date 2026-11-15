@@ -78,12 +78,14 @@ class TextWorkspacePage extends StatefulWidget {
   State<TextWorkspacePage> createState() => _TextWorkspacePageState();
 }
 
-class _TextWorkspacePageState extends State<TextWorkspacePage> {
+class _TextWorkspacePageState extends State<TextWorkspacePage>
+    with WidgetsBindingObserver {
   final TextEditingController _sourceLanguage = TextEditingController();
   final TextEditingController _sourceText = TextEditingController();
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   bool _allowImePersonalizedLearning = false;
+  bool _appResumed = true;
   bool _importing = false;
   bool _reviewingModel = false;
   // Volatile session-only digest binding; never persisted. Cleared on a new,
@@ -92,7 +94,24 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   final List<_TranslationFields> _translations = [_TranslationFields()];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null) {
+      _appResumed = lifecycle == AppLifecycleState.resumed;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final resumed = state == AppLifecycleState.resumed;
+    if (_appResumed != resumed) setState(() => _appResumed = resumed);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sessionModelAuthorization = null;
     _sourceLanguage.dispose();
     _sourceText.dispose();
@@ -365,7 +384,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: Text(strings.appTitle),
         actions: [
@@ -528,7 +547,39 @@ class _TextWorkspacePageState extends State<TextWorkspacePage> {
         ),
       ),
     );
+    return _privacyShield(scaffold, strings);
   }
+
+  Widget _privacyShield(Widget child, AppLocalizations strings) => Stack(
+    fit: StackFit.expand,
+    children: [
+      AbsorbPointer(
+        key: const ValueKey('workspace-input-shield'),
+        absorbing: !_appResumed,
+        child: ExcludeSemantics(
+          key: const ValueKey('workspace-semantics-shield'),
+          excluding: !_appResumed,
+          child: child,
+        ),
+      ),
+      if (!_appResumed)
+        Positioned.fill(
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.surface,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  strings.inactiveDraftNotice,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 
   Widget _translationCard(int index) {
     final strings = AppLocalizations.of(context)!;

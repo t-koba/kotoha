@@ -49,7 +49,7 @@ void main() {
     expect(find.byKey(const ValueKey('translation-text-0')), findsOneWidget);
   });
 
-  testWidgets('retains in-memory drafts through background transitions', (
+  testWidgets('hides draft content while inactive and restores it on resume', (
     tester,
   ) async {
     await tester.pumpWidget(const KotohaApp());
@@ -74,6 +74,49 @@ void main() {
     ]) {
       tester.binding.handleAppLifecycleStateChanged(state);
       await tester.pump();
+      if (state == AppLifecycleState.resumed) {
+        expect(
+          find.text('下書きはメモリ内にのみ保持され、Kotohaが非アクティブの間は非表示です。'),
+          findsNothing,
+        );
+        expect(
+          tester
+              .widget<ExcludeSemantics>(
+                find.byKey(const ValueKey('workspace-semantics-shield')),
+              )
+              .excluding,
+          isFalse,
+        );
+        expect(
+          tester
+              .widget<AbsorbPointer>(
+                find.byKey(const ValueKey('workspace-input-shield')),
+              )
+              .absorbing,
+          isFalse,
+        );
+      } else {
+        expect(
+          find.text('下書きはメモリ内にのみ保持され、Kotohaが非アクティブの間は非表示です。'),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<ExcludeSemantics>(
+                find.byKey(const ValueKey('workspace-semantics-shield')),
+              )
+              .excluding,
+          isTrue,
+        );
+        expect(
+          tester
+              .widget<AbsorbPointer>(
+                find.byKey(const ValueKey('workspace-input-shield')),
+              )
+              .absorbing,
+          isTrue,
+        );
+      }
     }
 
     expect(

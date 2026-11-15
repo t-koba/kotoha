@@ -22,6 +22,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get temporaryDraftNotice => 'この下書きは一時的なものです。このアプリには保存されません。';
 
   @override
+  String get inactiveDraftNotice => '下書きはメモリ内にのみ保持され、Kotohaが非アクティブの間は非表示です。';
+
+  @override
   String get androidImePersonalizedLearning => 'Androidキーボードの個人学習を許可';
 
   @override

@@ -122,6 +122,12 @@ abstract class AppLocalizations {
   /// **'この下書きは一時的なものです。このアプリには保存されません。'**
   String get temporaryDraftNotice;
 
+  /// No description provided for @inactiveDraftNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'下書きはメモリ内にのみ保持され、Kotohaが非アクティブの間は非表示です。'**
+  String get inactiveDraftNotice;
+
   /// No description provided for @androidImePersonalizedLearning.
   ///
   /// In ja, this message translates to:

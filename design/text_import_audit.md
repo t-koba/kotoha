@@ -13,6 +13,14 @@ unchanged. No model inference, network client call, selected path retention, cac
 copy, or draft persistence is part of this workflow. The user's original file
 remains outside this guarantee.
 
+While Flutter reports the app as anything other than `resumed`, the editor
+keeps draft controllers in memory but covers the workspace, absorbs input and
+excludes its semantics; the localized cover appears instead. A widget test
+checks the inactive/resumed lifecycle and draft retention. This Flutter-layer
+behavior is not evidence that an OS app-switcher snapshot or screenshot is
+protected on any target; native lifecycle and platform privacy behavior remain
+unverified.
+
 The audited umbrella `file_selector` uses an Android cache copy and iOS
 `asCopy: true`; the app-owned mobile adapter below replaces those paths rather
 than attempting to delete copies afterward. No mobile dependency is added.
