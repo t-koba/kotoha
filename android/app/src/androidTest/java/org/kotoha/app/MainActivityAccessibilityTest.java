@@ -255,8 +255,12 @@ public final class MainActivityAccessibilityTest
         // Flutter's Android bridge omits hidden children, so an absent field cannot
         // be addressed with ACTION_SHOW_ON_SCREEN.
         clearDiagnosticEvents();
-        int scrollAttempts = 0;
-        int scrollAccepted = 0;
+        int forwardAttempts = 0;
+        int forwardAccepted = 0;
+        int backwardAttempts = 0;
+        int backwardAccepted = 0;
+        int direction = AccessibilityNodeInfo.ACTION_SCROLL_FORWARD;
+        boolean scrollExhausted = false;
         long deadline = SystemClock.uptimeMillis() + timeoutMillis;
         do {
             AccessibilityNodeInfo node = findInApplication(
@@ -265,26 +269,51 @@ public final class MainActivityAccessibilityTest
                 node.recycle();
                 return;
             }
-            AccessibilityNodeInfo scroll = findInApplication(
+            AccessibilityNodeInfo scroll = scrollExhausted ? null : findInApplication(
                     n -> n.isScrollable() && !n.isEditable());
             if (scroll != null) {
                 try {
-                    scrollAttempts++;
-                    boolean accepted = scroll.performAction(
-                            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
-                    if (accepted) scrollAccepted++;
-                    recordDiagnosticMarker("scroll-action=" + scrollAttempts
-                            + ",accepted=" + accepted);
+                    int attempts;
+                    boolean accepted = scroll.performAction(direction);
+                    if (direction == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) {
+                        attempts = ++forwardAttempts;
+                        if (accepted) forwardAccepted++;
+                    } else {
+                        attempts = ++backwardAttempts;
+                        if (accepted) backwardAccepted++;
+                    }
+                    // Counts in the failure summary carry repeated failures; retain the first
+                    // result and successful actions so the bounded event ring keeps useful state.
+                    if (accepted || attempts == 1) {
+                        recordDiagnosticMarker("scroll-direction="
+                                + (direction == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                                        ? "forward" : "backward")
+                                + ",attempt=" + attempts + ",accepted=" + accepted);
+                    }
+                    if (!accepted) {
+                        if (direction == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) {
+                            // The current position can already be at the forward edge. Search
+                            // back through the same scrollable before declaring the field absent.
+                            direction = AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
+                            recordDiagnosticMarker("scroll-direction=backward");
+                        } else {
+                            // Keep the original deadline for delayed semantics updates, but
+                            // do not keep issuing an action the container has rejected.
+                            scrollExhausted = true;
+                            recordDiagnosticMarker("scroll-container=exhausted");
+                        }
+                    }
                 } finally {
                     scroll.recycle();
                 }
-            } else {
+            } else if (!scrollExhausted) {
                 recordDiagnosticMarker("scroll-container=missing");
             }
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
         fail("Native field unavailable after scrolling: " + id
-                + "; forwardAccepted/attempted=" + scrollAccepted + "/" + scrollAttempts
+                + "; forwardAccepted/attempted=" + forwardAccepted + "/" + forwardAttempts
+                + "; backwardAccepted/attempted=" + backwardAccepted + "/" + backwardAttempts
                 + "; target=" + fieldAvailability(id)
                 + "; scrollables=" + scrollableState()
                 + "; events=" + diagnosticEventState());
@@ -354,12 +383,16 @@ public final class MainActivityAccessibilityTest
     // Failure-only structure diagnostics distinguish an absent/hidden target from
     // an incorrectly selected scroll container without emitting labels or text.
     private String fieldAvailability(String id) {
-        AccessibilityNodeInfo node = findInApplication(n -> field(n, id));
-        if (node == null) return "not-in-tree";
+        AccessibilityNodeInfo node = findInApplication(
+                n -> id.equals(string(n.getViewIdResourceName())));
+        if (node == null) return "identifier-not-in-tree";
         try {
             Rect bounds = new Rect();
             node.getBoundsInScreen(bounds);
-            return "present{visible=" + node.isVisibleToUser()
+            return "present{class=" + string(node.getClassName())
+                    + ",editable=" + node.isEditable()
+                    + ",enabled=" + node.isEnabled()
+                    + ",visible=" + node.isVisibleToUser()
                     + ",bounds=" + bounds.toShortString() + "}";
         } finally {
             node.recycle();
