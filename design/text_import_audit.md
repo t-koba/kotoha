@@ -20,13 +20,25 @@ test tapped `Cancel` after two Import requests; afterward the existing
 allowance expired. The CI action then timed out after 15 minutes; the job log
 (`vcs-read/b5ba005dad3f4918919dcb70c3c41be9`) records no accessibility hierarchy
 contents, and the exact-SHA artifact listing (`vcs-read/5b3d693669854fc6a267ebdaf3126ad3`)
-contains the job log but no `.xcresult`. Treat the latest failure as a recurrence,
-not a pass or explanation of the original. Keep its assertions and deadline
-unchanged. The separate macOS and Linux jobs failed in both runs; these mobile
-results do not make either aggregate run green. This evidence covers configured
-hosted simulator/emulator tests, not live provider-selected reads, physical
-devices or offline availability; the local sandbox lacks native mobile SDKs, so
-its Dart tests are not mobile runtime evidence.
+contains the job log but no `.xcresult`. Treat this failure as a recurrence,
+not a pass or explanation of the original.
+The separate macOS and Linux jobs also failed on these aggregate runs, and both
+failed again in run `43723433412`; mobile results do not make either aggregate
+run green.
+
+A subsequent exact run `43723433412`, job `132840442366`, on SHA
+`78d0bc90d5124dbf3413597114447179cc06ac62` passed all five accessibility UI
+tests (`vcs-read/cd79642718bc43e98a05ad215bb2996a`). The picker test found and
+tapped Cancel twice and the direct `source-text` lookup succeeded after each
+cancellation; that test passed in 22.777 seconds, with all five UI tests passing
+in 148.153 seconds. This is another non-reproduction and does not explain the
+previous two-minute timeout. The current source change conditionally calls
+`reveal("source-text")` only when the node is absent after cancellation
+(`d8ddc54`); it preserves the exact draft assertion and deadline and has not yet
+been exercised by an exact CI run. Hosted simulator/emulator tests do not
+establish live provider-selected reads, physical-device behavior, or offline
+availability; the local sandbox lacks native mobile SDKs, so its Dart tests are
+not mobile runtime evidence.
 
 The selected content is decoded into the source editor in memory and can then be
 edited manually; existing translation fields and the copy action remain
