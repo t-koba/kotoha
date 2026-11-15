@@ -15,8 +15,10 @@ import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
+import java.util.ArrayDeque;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -30,8 +32,13 @@ import junit.framework.AssertionFailedError;
 @SuppressWarnings("deprecation") // SDK instrumentation only; no third-party dependencies.
 public final class MainActivityAccessibilityTest
         extends ActivityInstrumentationTestCase2<MainActivity> {
+    private static final int MAX_DIAGNOSTIC_EVENTS = 24;
     private UiAutomation automation;
     private ClipboardManager clipboard;
+    private String appPackageName;
+    private final Object diagnosticLock = new Object();
+    private final ArrayDeque<String> diagnosticEvents = new ArrayDeque<>();
+    private String lastWindowContentChange = "none";
     private long timeoutMillis;
     private long pollMillis;
 
@@ -47,13 +54,22 @@ public final class MainActivityAccessibilityTest
         timeoutMillis = Long.parseLong(args.getString("axTimeoutMillis", "10000"));
         pollMillis = Long.parseLong(args.getString("axPollMillis", "100"));
         assertTrue(timeoutMillis > 0 && pollMillis > 0);
+        appPackageName = getInstrumentation().getTargetContext().getPackageName();
         // Enables native semantics exposure without installing/enabling TalkBack.
         automation = getInstrumentation().getUiAutomation();
         assertNotNull(automation);
         AccessibilityServiceInfo service = automation.getServiceInfo();
         service.flags |= AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
                 | AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+        service.eventTypes |= AccessibilityEvent.TYPE_VIEW_SCROLLED
+                | AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED
+                | AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                | AccessibilityEvent.TYPE_VIEW_FOCUSED
+                | AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED
+                | AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                | AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED;
         automation.setServiceInfo(service);
+        automation.setOnAccessibilityEventListener(this::recordAccessibilityEvent);
         clipboard = getActivity().getSystemService(ClipboardManager.class);
         assertNotNull(clipboard);
     }
@@ -61,6 +77,7 @@ public final class MainActivityAccessibilityTest
     @Override
     protected void tearDown() throws Exception {
         try {
+            if (automation != null) automation.setOnAccessibilityEventListener(null);
             // Only synthetic test input is placed on the clipboard.
             if (clipboard != null) {
                 getInstrumentation().runOnMainSync(() -> clipboard.clearPrimaryClip());
@@ -111,12 +128,14 @@ public final class MainActivityAccessibilityTest
                 currentValue = currentValue.substring(0,
                         currentValue.offsetByCodePoints(currentValue.length(), -1));
                 String before = inputFocusState();
-                injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
+                clearDiagnosticEvents();
                 try {
+                    injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
                     assertField(id, label, currentValue);
                 } catch (AssertionFailedError failure) {
                     failure.addSuppressed(new AssertionFailedError(
-                            "Backspace native focus before=" + before + "; after=" + inputFocusState()));
+                            "Backspace native focus before=" + before + "; after=" + inputFocusState()
+                                    + "; events=" + diagnosticEventState()));
                     throw failure;
                 }
             }
@@ -235,6 +254,7 @@ public final class MainActivityAccessibilityTest
     private void revealField(String id) {
         // Flutter's Android bridge omits hidden children, so an absent field cannot
         // be addressed with ACTION_SHOW_ON_SCREEN.
+        clearDiagnosticEvents();
         int scrollAttempts = 0;
         int scrollAccepted = 0;
         long deadline = SystemClock.uptimeMillis() + timeoutMillis;
@@ -250,19 +270,85 @@ public final class MainActivityAccessibilityTest
             if (scroll != null) {
                 try {
                     scrollAttempts++;
-                    if (scroll.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)) {
-                        scrollAccepted++;
-                    }
+                    boolean accepted = scroll.performAction(
+                            AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+                    if (accepted) scrollAccepted++;
+                    recordDiagnosticMarker("scroll-action=" + scrollAttempts
+                            + ",accepted=" + accepted);
                 } finally {
                     scroll.recycle();
                 }
+            } else {
+                recordDiagnosticMarker("scroll-container=missing");
             }
             SystemClock.sleep(pollMillis);
         } while (SystemClock.uptimeMillis() < deadline);
         fail("Native field unavailable after scrolling: " + id
                 + "; forwardAccepted/attempted=" + scrollAccepted + "/" + scrollAttempts
                 + "; target=" + fieldAvailability(id)
-                + "; scrollables=" + scrollableState());
+                + "; scrollables=" + scrollableState()
+                + "; events=" + diagnosticEventState());
+    }
+
+    private void clearDiagnosticEvents() {
+        synchronized (diagnosticLock) {
+            diagnosticEvents.clear();
+            lastWindowContentChange = "none";
+        }
+    }
+
+    private void recordDiagnosticMarker(String marker) {
+        appendDiagnosticEvent(SystemClock.uptimeMillis() + ":" + marker);
+    }
+
+    // Keep the bounded event trail structural; never record text-bearing event fields.
+    private void recordAccessibilityEvent(AccessibilityEvent event) {
+        if (event == null
+                || !appPackageName.contentEquals(string(event.getPackageName()))) return;
+        int type = event.getEventType();
+        String className = string(event.getClassName());
+        if (className.length() > 128) className = className.substring(0, 128);
+        String summary;
+        if (type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+            summary = "scrolled{" + className + ",xy=" + event.getScrollX() + "/"
+                    + event.getMaxScrollX() + "," + event.getScrollY() + "/"
+                    + event.getMaxScrollY() + ",items=" + event.getFromIndex() + ".."
+                    + event.getToIndex() + "/" + event.getItemCount() + "}";
+        } else if (type == AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED) {
+            summary = "selection{" + className + ",range=" + event.getFromIndex() + ".."
+                    + event.getToIndex() + ",items=" + event.getItemCount() + "}";
+        } else if (type == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+            summary = "text-changed{" + className + ",from=" + event.getFromIndex()
+                    + ",added=" + event.getAddedCount() + ",removed="
+                    + event.getRemovedCount() + "}";
+        } else if (type == AccessibilityEvent.TYPE_VIEW_FOCUSED
+                || type == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED) {
+            summary = "focused{" + className + ",type=" + Integer.toHexString(type) + "}";
+        } else if (type == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            synchronized (diagnosticLock) {
+                lastWindowContentChange = SystemClock.uptimeMillis() + ":" + className;
+            }
+            return;
+        } else if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            summary = "window-state-change{" + className + "}";
+        } else {
+            return;
+        }
+        appendDiagnosticEvent(SystemClock.uptimeMillis() + ":" + summary);
+    }
+
+    private void appendDiagnosticEvent(String event) {
+        synchronized (diagnosticLock) {
+            if (diagnosticEvents.size() == MAX_DIAGNOSTIC_EVENTS) diagnosticEvents.removeFirst();
+            diagnosticEvents.addLast(event);
+        }
+    }
+
+    private String diagnosticEventState() {
+        synchronized (diagnosticLock) {
+            return "lastContentChange=" + lastWindowContentChange
+                    + ",events=" + diagnosticEvents;
+        }
     }
 
     // Failure-only structure diagnostics distinguish an absent/hidden target from
@@ -281,14 +367,13 @@ public final class MainActivityAccessibilityTest
     }
 
     private String scrollableState() {
-        String packageName = getInstrumentation().getTargetContext().getPackageName();
         StringBuilder state = new StringBuilder("[");
         int[] count = {0};
         List<AccessibilityWindowInfo> windows = automation.getWindows();
         try {
             for (AccessibilityWindowInfo window : windows) {
                 if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
-                appendScrollableState(window.getRoot(), packageName, state, count);
+                appendScrollableState(window.getRoot(), appPackageName, state, count);
             }
         } finally {
             for (AccessibilityWindowInfo window : windows) window.recycle();
@@ -313,7 +398,15 @@ public final class MainActivityAccessibilityTest
                             .append(",visible=").append(node.isVisibleToUser())
                             .append(",bounds=").append(bounds.toShortString())
                             .append(",children=").append(node.getChildCount())
-                            .append(",actions=").append(actions).append("}");
+                            .append(",actions=").append(actions);
+                    if (Build.VERSION.SDK_INT >= 19) {
+                        AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
+                        if (range != null) {
+                            state.append(",range=").append(range.getCurrent()).append("/")
+                                    .append(range.getMin()).append("..").append(range.getMax());
+                        }
+                    }
+                    state.append("}");
                 }
                 count[0]++;
             }
@@ -340,7 +433,10 @@ public final class MainActivityAccessibilityTest
                             : "unavailable";
                     state[0] = "{windowFocus=" + activity.hasWindowFocus()
                             + ", currentFocusExists=" + (focus != null)
+                            + ", currentFocusClass="
+                            + (focus == null ? "none" : focus.getClass().getName())
                             + ", currentFocusHasFocus=" + (focus != null && focus.hasFocus())
+                            + ", currentFocusShown=" + (focus != null && focus.isShown())
                             + ", imeVisible=" + imeVisible + "}";
                 } catch (RuntimeException | AssertionError ignored) { /* Keep unavailable. */ }
             });
@@ -410,13 +506,12 @@ public final class MainActivityAccessibilityTest
     // application's windows, including popup menus, without substituting AX focus
     // for the input focus asserted above.
     private AccessibilityNodeInfo findInApplication(Predicate<AccessibilityNodeInfo> predicate) {
-        String packageName = getInstrumentation().getTargetContext().getPackageName();
         List<AccessibilityWindowInfo> windows = automation.getWindows();
         try {
             for (AccessibilityWindowInfo window : windows) {
                 if (window.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
                 AccessibilityNodeInfo node = find(window.getRoot(), n ->
-                        packageName.contentEquals(string(n.getPackageName()))
+                        appPackageName.contentEquals(string(n.getPackageName()))
                                 && predicate.test(n));
                 if (node != null) return node;
             }
