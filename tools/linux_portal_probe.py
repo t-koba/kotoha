@@ -292,8 +292,40 @@ def run_host() -> dict[str, object]:
         )
         manager.StartServiceByName(DESKTOP_BUS, 0, timeout=10)
         docs = dbus.Interface(bus.get_object(DOCS_BUS, DOCS_PATH), DOCS_IFACE)
-        mountpoint = os.fsdecode(bytes(docs.GetMountPoint(timeout=10))).rstrip(os.sep)
-        if mountpoint != str(runtime / "doc") or not os.path.ismount(mountpoint):
+        mountpoint_bytes = bytes(docs.GetMountPoint(byte_arrays=True, timeout=10))
+        if not mountpoint_bytes.endswith(b"\x00") or b"\x00" in mountpoint_bytes[:-1]:
+            raise ProbeFailure("documents-mountpoint-format-invalid")
+        mountpoint = os.fsdecode(mountpoint_bytes[:-1])
+        if mountpoint != str(runtime / "doc") or not os.path.isdir(mountpoint):
+            raise ProbeFailure("documents-mountpoint-path-invalid")
+
+        # GetMountPoint returns the path before the Documents FUSE filesystem is
+        # necessarily mounted. Add a separate temporary seed document first;
+        # the selected fixture remains new so FileChooser must create/map it.
+        mount_seed = root / "mount-seed.txt"
+        seed_content = b"portal probe mount seed\n"
+        mount_seed.write_bytes(seed_content)
+        try:
+            with open(mount_seed, "rb") as handle:
+                seed_doc_id = str(docs.Add(handle.fileno(), True, False, timeout=10))
+        except (OSError, dbus.DBusException) as exc:
+            raise ProbeFailure("documents-mount-seed-add-failed") from exc
+        seed_id_path = Path(seed_doc_id)
+        if (
+            not seed_doc_id
+            or seed_id_path.is_absolute()
+            or len(seed_id_path.parts) != 1
+            or seed_doc_id in (".", "..")
+        ):
+            raise ProbeFailure("documents-mount-seed-id-invalid")
+        try:
+            with open(Path(mountpoint) / seed_id_path / mount_seed.name, "rb") as handle:
+                seeded_content = handle.read(len(seed_content) + 1)
+        except OSError as exc:
+            raise ProbeFailure("documents-mount-seed-read-failed") from exc
+        if seeded_content != seed_content:
+            raise ProbeFailure("documents-mount-seed-read-mismatch")
+        if not os.path.ismount(mountpoint):
             raise ProbeFailure("documents-fuse-mount-not-established")
 
         client_env = env.copy()
