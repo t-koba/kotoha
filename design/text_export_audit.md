@@ -26,28 +26,29 @@ preservation of the in-memory translation. It does not select an existing file
 or exercise the confirm-replacement alert. There is no equivalent end-to-end
 overwrite-dialog test in the Windows probe.
 
-The latest exact hosted macOS job, run `43703481622` on publication
-`8bcf0a2f5ea4c878474efca1c3dac4550d32637ac6b7ecfd5982b2786f770221` / SHA
-`a261cce924d3214d220ae61ba3c23989c2dccd58`, failed at
+The exact hosted macOS probe in run `43715005994`, job `132814879210`, on
+SHA `548ccbc99275e6dd264e8d953bdc0cf023c3ae5d`, failed at
 `NativeExportPanelUITests.swift:114` after one window-coordinate scroll. Its
 failure-only diagnostic reports `voiceOverEnabled=true`, `axClientTrusted=false`,
 `appEnhancedUIStatus=-25211`/unavailable, `scrollViews=0`, and
 `target{exists=false}`, `source-language{exists=false}`, and
 `source-text{exists=false}` while the application window is present
-(`vcs-read/6a5bfd7785034860bc8f43e06382156f`). The test therefore fails
-before field entry or reaching the native save panel, Cancel, or
-draft-preservation assertions. This repeats the earlier hosted-run observation:
-the hosted accessibility-query path is unavailable, not a product root-cause
-diagnosis or proof of how a user-run Mac exposes the app to VoiceOver.
+(`vcs-read/a6701edfddaf46a39f12bf8446980572`). The test therefore fails before
+field entry or reaching the native save panel, Cancel, or draft-preservation
+assertions. This is evidence that this hosted accessibility-query path is
+unavailable, not a product root-cause diagnosis or proof of how a user-run Mac
+exposes the app to VoiceOver.
 
-The operator confirmed hosted CI is the only available macOS test context and
-no TCC-authorized runner will be provided (response to question
-`fb5e1fcf557f4c7c9e2f9e94d50094aa`). Therefore, save-panel
-accessibility/cancellation/draft-preservation coverage is currently
-**unverifiable in that hosted context**. Preserve the assertions and OS privacy
-controls; do not bypass TCC or call this a pass. If a supported verification
-route that works within the hosted context cannot be established, retain this
-as an explicit coverage gap rather than attributing it to the product.
+The operator confirmed that no macOS runner or session is available
+(`operator/kotoha/a-q1edb9445c51e96eeb98faaea04a8f7129714884a-1794746647`).
+Therefore, keep native macOS accessibility, save-panel, cancellation, and
+draft-preservation behavior explicitly **unverified** until there is a
+consented environment or an independently valid verification route. Existing
+Flutter widget/semantics and fake-selector tests cover in-process behavior only;
+they do not establish the native app accessibility tree, native save panel, or
+user-run VoiceOver behavior. Preserve the native test assertions and deadlines
+and OS privacy controls; do not bypass TCC or call the hosted failure a pass.
+This remains an explicit coverage gap rather than a product-behavior finding.
 
 Source/API inspection still finds no export-code change required to retain the
 documented default overwrite prompt. That does not substitute for a runtime UI
