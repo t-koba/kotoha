@@ -68,6 +68,18 @@ def _decode_dbus_path(value: object, failure_stage: str) -> str:
     return os.fsdecode(raw[:-1])
 
 
+def _sandbox_failure_stage(stderr: str) -> str | None:
+    marker = "Linux portal probe failed: "
+    allowed = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+    for line in reversed(stderr[-8192:].splitlines()):
+        if not line.startswith(marker):
+            continue
+        stage = line[len(marker) :]
+        if stage and len(stage) <= 64 and all(char in allowed for char in stage):
+            return stage
+    return None
+
+
 def run_backend() -> None:
     dbus, service, DBusGMainLoop, GLib = _dbus_modules()
     DBusGMainLoop(set_as_default=True)
@@ -405,6 +417,9 @@ def run_host() -> dict[str, object]:
         except subprocess.TimeoutExpired as exc:
             raise ProbeFailure("sandbox-client-timeout") from exc
         if completed.returncode != 0:
+            stage = _sandbox_failure_stage(completed.stderr)
+            if stage is not None:
+                raise ProbeFailure(f"sandbox-client-{stage}")
             raise ProbeFailure("sandbox-client-failed")
         try:
             client = json.loads(completed.stdout)
@@ -488,9 +503,11 @@ def main() -> int:
     stage = "initialization"
     try:
         if args.backend:
+            stage = "test-backend"
             run_backend()
             return 0
         if args.client:
+            stage = "sandbox-client"
             run_client()
             return 0
         stage = "portal-documents-revocation"
