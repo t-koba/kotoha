@@ -1,17 +1,21 @@
 # Memory-only plain-text and Markdown import
 
 Kotoha implements user-triggered import on macOS, Windows, Android and iOS.
-The latest exact mobile evidence is CI run `43680441354` on published SHA
-`53809a016da85eb2394e63ffcdfafdf1003e133d` (publication
-`f462494dd6dd2306c8bb763f9a1b7703e8325ee9e84db767b1f4f658b37693ef`). Android
-job `132709964300` passed all 20 instrumentation tests on the API 35 x86_64
-emulator; iOS job `132709964132` passed 4 RunnerTests and 5 UI tests in the
-hosted simulator (`vcs-read/14f452ce42e2462f8b25a623f9f3cf92`,
-`vcs-read/7be031d92187439990ac17f14a294072`,
-`vcs-read/0b30a3f422aa44cca3ce3aea15612dd1`). The separate macOS job
-`132709964140` failed in that run; these mobile passes do not make the aggregate
-run green. This evidence
-covers configured tests, not live provider-selected reads, physical devices or
+The latest exact mobile evidence is CI run `43711356595` on published SHA
+`a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` (publication
+`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463`). Android
+job `132803707892` passed; iOS job `132803707904` passed 4 RunnerTests and 5 UI
+tests in the hosted simulator (`vcs-read/44b7b02603fa4d36b49492be07d60fef`).
+The UI log shows `testImportChannelPresentsSystemPickerAndCancellationKeepsDraft`
+was exercised: after the unsaved-source entry and Import tap, `Cancel` was found
+and tapped, then found and tapped again after a second Import tap. This is a
+further non-reproduction of the original timeout in run `128353947337` on SHA
+`4d3256d260b32a876a4a5ff687698a48d2b0e312` (`vcs-read/0441c8bc5ea842e3b8c59b1e10090f10`);
+that failed run still lacks its failure hierarchy and `.xcresult`, so the later
+pass does not explain it. The separate macOS job `132803707896` and Linux
+portal job `132803401399` failed in run `43711356595`; these mobile passes do
+not make the aggregate run green. This evidence covers configured hosted
+simulator/emulator tests, not live provider-selected reads, physical devices or
 offline availability; the local sandbox lacks native mobile SDKs, so its Dart
 tests are not mobile runtime evidence.
 
@@ -254,10 +258,19 @@ The job failed afterward because its EXIT cleanup could not remove the private
 was mounted or why `rm` returned `EISDIR`; no chooser call, returned URI,
 application/document identity mapping, revocation, post-close access, or
 persistent-state observation occurred. The workflow now detects and unmounts
-that path when it is a mountpoint before removing the private runtime directory;
-that cleanup change still requires an exact hosted rerun. This is package and
-interface-availability evidence only, not portal behavior or Kotoha support.
-Linux import remains disabled.
+that path when it is a mountpoint before removing the private runtime directory.
+The exact rerun on publication
+`1e3108a6212c9bbfbd68e82622bb8bdeaa5749e3cfcf7c5a263da2307a71eac7` / SHA
+`a3999abe6a35e37f481f31fc79f4d7b35a9c2c10` passed in CI run `43712787300`,
+job `132807802464` (status `vcs-read/b3f1c1c8fbe442fea7536a19a58d500f`, log
+`vcs-read/d93e897763c240bdb5ef686bfea096b5`). The log again shows the default
+FileChooser v3 and GTK backend FileChooser interfaces; the successful job also
+shows that its mount-aware EXIT cleanup completed. The recorded output does not
+say whether `doc` was mounted or actually needed unmounting. No chooser request,
+returned URI, application/document identity mapping, permission revocation,
+post-close access check, or persistent-state observation occurred. This remains
+interface-availability and cleanup evidence only, not portal behavior or
+Kotoha support. Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
