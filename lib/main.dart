@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
@@ -425,8 +426,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 920),
             child: ListView(
-              // Keep the first lazy translation controls in the focus tree.
-              cacheExtent: MediaQuery.sizeOf(context).height * 4,
+              // Lazy children need to be built before Tab can reach them.
+              // Scale this bounded cache with the viewport and accessibility text.
+              scrollCacheExtent: ScrollCacheExtent.viewport(
+                4 * MediaQuery.textScalerOf(context).scale(1),
+              ),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(20),
               children: [

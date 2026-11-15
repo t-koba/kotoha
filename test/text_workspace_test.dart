@@ -296,6 +296,55 @@ void main() {
     }
   });
 
+  testWidgets('keeps translation traversal at very large text scale', (
+    tester,
+  ) async {
+    binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    binding.platformDispatcher.textScaleFactorTestValue = 4.0;
+    addTearDown(binding.platformDispatcher.clearLocalesTestValue);
+    addTearDown(binding.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.view.physicalSize = const Size(420, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    try {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      await tester.pumpWidget(const KotohaApp());
+      var reachedTarget = false;
+      var maximumMountedFields = 0;
+      for (var tab = 0; tab < 120 && !reachedTarget; tab++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final mountedFields = find.byType(TextField).evaluate().length;
+        if (mountedFields > maximumMountedFields) {
+          maximumMountedFields = mountedFields;
+        }
+        final field = find.byKey(const ValueKey('target-language-0'));
+        if (field.evaluate().isEmpty) {
+          continue;
+        }
+        final editable = find.descendant(
+          of: field,
+          matching: find.byType(EditableText),
+        );
+        if (editable.evaluate().isNotEmpty &&
+            identical(
+              tester.binding.focusManager.primaryFocus,
+              tester.widget<EditableText>(editable).focusNode,
+            )) {
+          reachedTarget = true;
+        }
+      }
+
+      expect(reachedTarget, isTrue);
+      expect(maximumMountedFields, lessThan(4));
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('does not allow deleting the final translation field', (
     tester,
   ) async {
