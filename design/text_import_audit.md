@@ -222,26 +222,51 @@ SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
 `ashpd` exposes `Documents::delete` as a separate API
 (`fetch/b546771bd6472d409f2b4d2dd9636ba33baf122c68f00d0a4fd58be4d45c8a97`),
 but the FileChooser registration path grants no `delete` permission. That
-alone does not establish that the app must retain its read access: the XDG
-Documents API defines `RevokePermissions`, available inside the sandbox when
-the app has `grant-permissions`, and specifies that it revokes listed
+alone does not establish that the app must retain its read access. The XDG
+Documents API specification says `RevokePermissions` is available inside the
+sandbox when the app has `grant-permissions` and describes revoking listed
 permissions for an application (`search/16eee028f3c1a576da38435f7ac5da4a3ece6f3282eadb6132ee733108aa6823`).
-`ashpd` 0.14.0 likewise exposes `Documents::revoke_permissions` under that
-permission (`search/8fb9e29428f55a95b0b7e0b3d2c5de46f70b44586b1b28246a4d6cb2c5b8ad06`).
-Because FileChooser grants `grant-permissions`, a GTK-free sandboxed client
-may be able to revoke its own `read` and `grant-permissions` access after
-reading. This is an API-supported candidate, not verified Kotoha behavior:
-mapping the returned URI to a document ID and exact application ID, successful
-revocation on supported portal implementations, and loss of access after open
-handles close have not been tested.
+`ashpd` 0.14.0 exposes the corresponding method
+(`search/8fb9e29428f55a95b0b7e0b3d2c5de46f70b44586b1b28246a4d6cb2c5b8ad06`),
+but the method's existence does not establish that an app can revoke its own
+grant. In upstream `xdg-desktop-portal` 1.14.4 and Ubuntu's `nmp-1.14-backport`,
+`portal_revoke_permissions` explicitly rejects a request when the caller's app
+ID equals the target app ID, returning `NotAllowed` even if the caller has
+`grant-permissions`. The source files have identical SHA-256
+`3d08cab5b8e769bdfc467964ce090116beb3602ac2078f6818fb872d4c9d61bf`
+(`fetch/dd6c6aece4644d24a314b6cb23cf1236828a82e5b9701950447cb209fa43e1ae`,
+`fetch/5e777502ae408e61829d1f328c3ba3080254926d293f2e28f12a33b48d0d62fd`).
+The XDG FileChooser registration source passes the selected app ID to Documents
+and grants it `read` and `grant-permissions`
+(`fetch/1dd4826998aee0acc527e107847d52b4ebd0ec7cf021d9f66bb724026dac95ac`,
+SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
+Thus this pinned source predicts that a sandboxed client cannot revoke its own
+permissions on that implementation. This is source evidence, not yet a binding
+of the CI-installed binary to the source or a Kotoha runtime result.
 
-The FileChooser registration path also requests a persistent Documents entry.
-`RevokePermissions` revokes listed app permissions; it is distinct from
-`Delete`, and available evidence does not establish that revocation removes the
-persistent document-store entry. The sandboxed path is therefore not approved,
-but it is not ruled out solely by the missing `delete` permission. End-to-end
-runtime evidence must establish both the no-retained-grant behavior and what
-portal state remains before Linux import can be considered.
+The FileChooser registration path requests a persistent Documents entry.
+`RevokePermissions` is distinct from `Delete`; FileChooser does not grant
+`delete`, and the API's persistent entry is not removed by revoking app
+permissions. The exact Ubuntu 22.04 runtime probe is being corrected to observe the
+source-predicted self-revocation denial, whether access remains after the open
+handle closes, the permissions reported by `Info`, and whether the record remains
+in `List`. Run `43718257468`, job `132824396757`, on SHA
+`548c92ba16fbd85c446e17059fc1fa093a87d4a0` failed at
+`documents-fuse-mount-not-established` before the sandboxed client
+(`vcs-read/f6e6831117974ef79b80036a9d00eac3`). The corrected probe decodes the
+NUL-terminated `ay` path values for `GetMountPoint` and `Info`, seeds the mount
+with a separate temporary entry before the chooser call, constrains the returned
+URI to `<doc-id>/<fixture-basename>`. It first grants and revokes `read` for a
+separate synthetic target to prove the caller's `grant-permissions` works for
+other apps, then measures self-revocation, post-close access, permissions, and
+record retention under a synthetic app ID. The selected source encodes `Info`
+paths with `g_variant_new_bytestring`
+(`fetch/dd6c6aece4644d24a314b6cb23cf1236828a82e5b9701950447cb209fa43e1ae`);
+upstream Documents tests likewise strip the trailing NUL from path byte arrays
+(`fetch/0bf06ce822543a485417ebda893ad7b6515b567510bfa798249f2ecac6837bd2`,
+SHA-256 `13244c64c2b060e7b6e4804c46f2b2c5d7e096301e12235486c245e72020a0de`).
+This corrected revision has not yet run in CI; Linux import remains disabled
+pending exact runtime evidence and a supported permission lifecycle.
 
 The exact hosted Ubuntu portal probe ran on publication
 `cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463` / SHA
