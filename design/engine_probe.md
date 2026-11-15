@@ -1676,6 +1676,21 @@ the Unicode database version for normalization only, not the Python
 interpreter/build or the historical `UnicodeData.txt` response; it does not
 prove those separate inputs were version-aligned
 (`mizu_fetch/c6e8b525475ba145f46c28738aeca935b392af5cd4fb5dbdad43be3584ede2e4`).
+A bounded replay of the exact generator's `--normalization-only` path under
+sandbox Python 3.13.16 / Unicode 15.1.0 emitted 118,685 bytes (SHA-256
+`17407fb1e0fad567906053eb0377b4aa973f52b85498ddb527a531e4834cd4ad`), with
+922 combining-class, 4,122 decomposition, and 941 composition entries. The
+selected file's suffix from its final normalization marker identifies Unicode
+16.0.0 and is 120,261 bytes (SHA-256
+`298eebd2ca4cff8b2130ce75f7c47e8b042a5686ab5abdeb497792ed7185e60a`), with
+934, 4,162, and 961 entries respectively. These measurements use pinned raw
+generator/source receipts and bounded experiments (`mizu_fetch/32ea631d3c2e04b0dde78fb774e2ab6aead6f089b8c0f95ac835e876639e56ad`,
+`mizu_fetch/9c5c75baafb741f36d915f93746c2a2c394d1255a0b2b09ae7cd23aedc076fdb`,
+`experiments/9059f7757026431f87589524b2810ecf`,
+`experiments/fae35ba075db4bd2b18786f9b5721bba`). The difference establishes
+only that this configured runtime does not reproduce the selected suffix; it
+does not identify historical generation inputs, establish notice applicability,
+or prove provenance.
 
 The path-history response pinned to candidate revision
 `31424b7cf14604ca65a9195123da1413f31c4472` lists commit
