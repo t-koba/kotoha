@@ -425,6 +425,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 920),
             child: ListView(
+              // Keep the first lazy translation controls in the focus tree.
+              cacheExtent: MediaQuery.sizeOf(context).height * 4,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(20),
               children: [

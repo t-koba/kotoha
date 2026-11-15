@@ -224,6 +224,78 @@ void main() {
     }
   });
 
+  testWidgets('keeps offscreen translation fields in keyboard traversal', (
+    tester,
+  ) async {
+    binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    binding.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(binding.platformDispatcher.clearLocalesTestValue);
+    addTearDown(binding.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    try {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      await tester.pumpWidget(const KotohaApp());
+      final scrollable = find.byType(Scrollable).first;
+      for (var index = 0; index < 4; index++) {
+        final addTranslation = find.text('Add translation');
+        await tester.dragUntilVisible(
+          addTranslation,
+          scrollable,
+          const Offset(0, -400),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(addTranslation);
+        await tester.pumpAndSettle();
+      }
+      tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+      await tester.pumpAndSettle();
+
+      final expected = <String>{
+        for (var index = 0; index < 5; index++) ...[
+          'target-language-$index',
+          'translation-text-$index',
+        ],
+      };
+      final reached = <String>{};
+      var maximumMountedFields = 0;
+      for (var tab = 0; tab < 160 && !reached.containsAll(expected); tab++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        final mountedFields = find.byType(TextField).evaluate().length;
+        if (mountedFields > maximumMountedFields) {
+          maximumMountedFields = mountedFields;
+        }
+        for (final key in expected) {
+          final field = find.byKey(ValueKey(key));
+          if (field.evaluate().isEmpty) {
+            continue;
+          }
+          final editable = find.descendant(
+            of: field,
+            matching: find.byType(EditableText),
+          );
+          if (editable.evaluate().isNotEmpty &&
+              identical(
+                tester.binding.focusManager.primaryFocus,
+                tester.widget<EditableText>(editable).focusNode,
+              )) {
+            reached.add(key);
+          }
+        }
+      }
+
+      expect(reached, containsAll(expected));
+      expect(maximumMountedFields, lessThan(expected.length + 2));
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('does not allow deleting the final translation field', (
     tester,
   ) async {
