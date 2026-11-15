@@ -1731,6 +1731,27 @@ Python runtime (workflow sources/scans: `mizu_fetch/0d7fe412cd7d1e4bd7aa2882eef8
 `mizu_fetch/4eda87313329b30810324458edd4087f02cb916a027269eb7e1d04f2dfa47186`,
 `mizu_fetch/bc4357d34521a322502ec17b55a6969d1b48421cc0f3a80606ab64d40459e0a6`).
 
+The contributor fork, `sandrohanea/llama.cpp` branch `sandroh/unigram-nfc`, has
+five recorded Actions runs across the PR's three commits. Its initial commit
+`2e326a2fd8e271055eb72cede7840b3152e8d46c` adds the normalization-only generator
+path and 3,985 lines to `src/unicode-data.cpp`. Its only run with an executed job
+is Python Type-Check: Python 3.11 setup and `ty check`; its artifact endpoint
+shows zero retained artifacts at audit time. The other run on that commit is
+`build-cann`, with zero jobs and zero retained artifacts at audit time;
+its only workflow job is commented out as disabled. The remaining branch runs
+are the same type-check and disabled CANN workflows. These records show no
+fork-CI generation command or input capture, but cannot exclude a contributor-
+local invocation or bind the historical Python runtime/UCD response (PR/fork
+records: `mizu_fetch/7dd9b362b620e65162ef57ec09d26a673b3d3892626f91592d93bc078981ae26`,
+`mizu_fetch/d01f6a628dae132a43ab96fece3783e2fcf21d11d9e5a3eb70d14a0bd0ba44c1`,
+`mizu_fetch/90abd5345b24a29af7e859baad64b9407ed1e73dce32d7a6321f7439736ef060`,
+`mizu_fetch/b4ca59e1be69568ffae9a5d59fbcd380dd0c61b3ce558d6c684c35d0d8cbd878`,
+`mizu_fetch/50c4d844f654c76baa9f2eddeb2cb46668d02d8ed72d16085d8207c39c39875d`,
+`mizu_fetch/1e9871b7632fc6c774e50c6e34fb59bf49cdc3476b07a73e4fc6d9b811ddab55`,
+`mizu_fetch/65054226298bba090db7b7d670f6ed399fd3c69e0edcb47e9be77ad853796dc1`,
+`mizu_fetch/da80ce10ef82b7a2f00bcd20cdaa958c43dab7085ac56610896d8de47d3a7260`,
+`mizu_fetch/9d78f8d66531284b215c626f0420390d87df6e1241dffa1b45963cd35a134a45`).
+
 The PR's 17 issue comments and two inline review comments supply no invocation,
 versioned UCD bytes, or Python build. An automated review reports comparison with
 unspecified “UCD reference data” and an “older local Unicode 14 database”, without
