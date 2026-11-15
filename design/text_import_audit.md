@@ -367,7 +367,20 @@ launch error, a timeout, and a launched process returning nonzero. The probe
 now reports fixed, path-free codes for executable missing, launch error, timeout,
 and nonzero sandbox setup; captured child output remains suppressed. This
 classifies the next failure without changing chooser, permission, or persistence
-assertions.
+assertions. On the exact rerun for that classifier (publication
+`b054549938170000a62d72353ee859e26c362b5759973daa009b183ad0892367` / SHA
+`6cafacb85006d48ab89e43014bdf2011974d6519`, run `43743932354`, job
+`132902963751`), the stage remained `sandbox-bwrap-setup-failed`, confirming a
+launched bwrap process returned nonzero (`vcs-read/5f0e61f416a446c08f0c7d8f71eef541`,
+`vcs-read/565e79222f484bd78a6832e6e04f2b1b`). The exact log places the
+checkout under `/home`; source review shows the prefix masked `/home` before
+binding `Path(__file__).resolve()` from that checkout. The app-info source is
+also passed through a later bind, so the prefix now binds all required sources
+before masking `/home`, while
+keeping the fixture under the masked path and preserving all portal assertions.
+This is a cause-based setup repair, not evidence that chooser, URI mapping,
+revocation, post-close access, or persistence ran; the next exact hosted check
+must validate the corrected setup.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,

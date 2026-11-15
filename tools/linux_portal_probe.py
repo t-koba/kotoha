@@ -357,6 +357,35 @@ def _get_property(dbus, bus, name: str, interface: str) -> int:
     return int(properties.Get(interface, "version", timeout=5))
 
 
+def _sandbox_client_prefix(
+    app_info_path: Path,
+    script_path: Path,
+    mountpoint: str,
+    dbus_address: str,
+    fixture_path: Path,
+    runtime: Path,
+) -> list[str]:
+    # Bind host sources before masking /home; the CI checkout is under /home.
+    return [
+        "bwrap",
+        "--die-with-parent",
+        "--unshare-all",
+        "--ro-bind", "/", "/",
+        "--tmpfs", "/run",
+        "--proc", "/proc",
+        "--dev", "/dev",
+        "--ro-bind", str(app_info_path), "/.flatpak-info",
+        "--ro-bind", str(script_path), "/run/portal-probe.py",
+        "--bind", mountpoint, mountpoint,
+        "--tmpfs", "/home",
+        "--setenv", "DBUS_SESSION_BUS_ADDRESS", dbus_address,
+        "--setenv", "KOTOHA_PORTAL_FIXTURE_PATH", str(fixture_path),
+        "--setenv", "XDG_RUNTIME_DIR", str(runtime),
+        "--setenv", "PYTHONUNBUFFERED", "1",
+        "--",
+    ]
+
+
 def run_host() -> dict[str, object]:
     dbus, _, DBusGMainLoop, _ = _dbus_modules()
     DBusGMainLoop(set_as_default=True)
@@ -446,24 +475,14 @@ def run_host() -> dict[str, object]:
         client_env = env.copy()
         client_env["DBUS_SESSION_BUS_ADDRESS"] = os.environ["DBUS_SESSION_BUS_ADDRESS"]
         client_env["KOTOHA_PORTAL_FIXTURE_PATH"] = str(fixture)
-        bwrap_prefix = [
-            "bwrap",
-            "--die-with-parent",
-            "--unshare-all",
-            "--ro-bind", "/", "/",
-            "--tmpfs", "/home",
-            "--tmpfs", "/run",
-            "--proc", "/proc",
-            "--dev", "/dev",
-            "--ro-bind", str(app_info_path), "/.flatpak-info",
-            "--ro-bind", str(Path(__file__).resolve()), "/run/portal-probe.py",
-            "--bind", mountpoint, mountpoint,
-            "--setenv", "DBUS_SESSION_BUS_ADDRESS", client_env["DBUS_SESSION_BUS_ADDRESS"],
-            "--setenv", "KOTOHA_PORTAL_FIXTURE_PATH", client_env["KOTOHA_PORTAL_FIXTURE_PATH"],
-            "--setenv", "XDG_RUNTIME_DIR", str(runtime),
-            "--setenv", "PYTHONUNBUFFERED", "1",
-            "--",
-        ]
+        bwrap_prefix = _sandbox_client_prefix(
+            app_info_path,
+            Path(__file__).resolve(),
+            mountpoint,
+            client_env["DBUS_SESSION_BUS_ADDRESS"],
+            fixture,
+            runtime,
+        )
         _run_sandbox_preflight(bwrap_prefix)
         command = [*bwrap_prefix, sys.executable, "/run/portal-probe.py", "--client"]
         try:

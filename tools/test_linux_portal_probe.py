@@ -3,6 +3,7 @@ import errno
 import subprocess
 import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from tools.linux_portal_probe import (
@@ -10,10 +11,39 @@ from tools.linux_portal_probe import (
     ProbeFailure,
     PYTHON_PREFLIGHT_MARKER,
     _run_sandbox_preflight,
+    _sandbox_client_prefix,
     _sandbox_client_failure_stage,
     _sandbox_client_started,
     _sandbox_failure_stage,
 )
+
+
+class SandboxPrefixTest(unittest.TestCase):
+    def test_binds_host_sources_before_masking_home_without_exposing_fixture(self):
+        app_info = Path("/home/runner/work/_temp/probe/flatpak-info")
+        script = Path("/home/runner/work/kotoha/kotoha/tools/linux_portal_probe.py")
+        mountpoint = "/tmp/kotoha-portal-runtime/doc"
+        fixture = Path("/home/runner/work/_temp/probe/fixture.md")
+        prefix = _sandbox_client_prefix(
+            app_info,
+            script,
+            mountpoint,
+            "unix:path=/tmp/bus",
+            fixture,
+            Path("/tmp/kotoha-portal-runtime"),
+        )
+        home_mask = next(
+            index
+            for index in range(len(prefix) - 1)
+            if prefix[index:index + 2] == ["--tmpfs", "/home"]
+        )
+        self.assertLess(prefix.index(str(app_info)), home_mask)
+        self.assertLess(prefix.index(str(script)), home_mask)
+        self.assertLess(prefix.index(mountpoint), home_mask)
+        self.assertEqual(prefix.count(str(fixture)), 1)
+        self.assertEqual(
+            prefix[prefix.index(str(fixture)) - 1], "KOTOHA_PORTAL_FIXTURE_PATH"
+        )
 
 
 class SandboxFailureStageTest(unittest.TestCase):
