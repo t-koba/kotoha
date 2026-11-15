@@ -294,9 +294,12 @@ whether URI mapping, reading, the other-app control, self-revocation, or later
 permission checks failed. No permission, post-close-access, `Info`, or `List`
 result is established. The current probe revision now forwards only an exact
 lowercase/digit/hyphen failure code bounded to 64 characters; raw child stderr,
-paths, URI, and document contents remain suppressed. That diagnostic revision
-has not yet run in CI. Linux import remains disabled pending exact runtime
-results and a supported permission lifecycle.
+paths, URI, and document contents remain suppressed. A focused three-test
+stdlib suite now checks exact marker handling, bounded allowlisted codes, and
+rejection of path-like, malformed, and out-of-window diagnostics; it is wired
+into CI and passed locally, but hosted CI for this source revision is pending.
+Linux import remains disabled pending exact runtime results and a supported
+permission lifecycle.
 
 The exact hosted Ubuntu portal probe ran on publication
 `cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463` / SHA

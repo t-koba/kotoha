@@ -107,6 +107,8 @@ jobs:
         run: flutter analyze --no-pub
       - name: Test external profile watchdog
         run: python3 -m unittest tools/test_watch_import_profile.py
+      - name: Test sanitized Linux portal failure stages
+        run: python3 -m unittest tools/test_linux_portal_probe.py
       - name: Run Flutter tests
         run: flutter test --no-pub
 
