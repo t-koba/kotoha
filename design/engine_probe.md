@@ -1694,19 +1694,54 @@ or prove provenance.
 
 The path-history response pinned to candidate revision
 `31424b7cf14604ca65a9195123da1413f31c4472` lists commit
-`10da8c463f735c7eaff904c6474e6cf38dccbe83` (2026-10-14, PR #30390) as the latest
-change to `src/unicode-data.cpp`. The PR added 3,985 generated lines and the
-normalization-only mode. The generator script contains the generic example
-`python ./scripts//gen-unicode-data.py > unicode-data.cpp`, but neither that
-comment nor the PR body/files bind an executed invocation to the committed
-output, record the `UnicodeData.txt` response/version/digest, or identify the
-Python runtime/build (`mizu_fetch/678da7ef5a13731d70652f6e87ee7919c4df1e642f5613e6bf528c643a1456ae`,
-`mizu_fetch/dc27d7c2dc75cd849df7d50ce0e4962599a89168af49c73059452efd0c3a9913`,
-`mizu_fetch/6551a668ad5e49391380bfec0cb2b652c8770f0f5d6c8d5508091c69040d8552`,
-`mizu_fetch/71609502312c0f6ba92817b5e6f754613e6c847dd7b7b7315a25a52f01895838`).
-These records do not bind the selected base tables to a particular UCD
-response, and the exact Python interpreter/build remains unidentified
-(`mizu_fetch/d2614e8e466c08dc626e8705bed0089af29750970b749d81523af8a7db027dd3`,
+`10da8c463f735c7eaff904c6474e6cf38dccbe83` (2026-10-14, PR #30390) as the
+latest change to `src/unicode-data.cpp`. The pinned PR-files response lists 12
+changed paths and 3,985 additions with zero deletions in that file; it contains
+no raw `UnicodeData.txt` or Python environment artifact. The generator diff adds
+`normalization_tables()`, which reads Python `unicodedata` and emits its version
+marker, plus `--normalization-only`, commented to avoid downloading UCD data.
+The full-generator path still fetches moving UCD `latest/ucd/UnicodeData.txt`
+and its only example is `python ./scripts//gen-unicode-data.py > unicode-data.cpp`.
+The diff identifies available input paths but not which mode generated the
+committed suffix or the exact Python runtime/build, and it does not bind the
+base tables to the historical `UnicodeData.txt` response
+(`mizu_fetch/2767fd529434e7516a2d062f10ffd6ee25c5fe2ade3f66682fc9ccd4c484d788`,
+`experiments/ef120d17eb9d4c2e81c364ae8aecac3c`).
+
+The PR changes no workflow files. At its exact head, CPU CI configures/builds
+with CMake and runs CTest; the reusable package job builds/installs with CMake;
+Server sets Python 3.11 for server tests; and Python Type-Check sets 3.11 for
+`ty check`. No inspected workflow file or root `CMakeLists.txt` mentions the
+generator, its UCD URL, or `--normalization-only`. This establishes no explicit
+CI generation/input-capture record, but cannot exclude code hidden in generic
+Build/Test commands or a contributor-local run. The CPU, Server, and type-check
+run artifact endpoints report zero retained artifacts at audit time. Neither
+these CI records nor the PR diff bind the committed output to UCD bytes or a
+Python runtime (workflow sources/scans: `mizu_fetch/0d7fe412cd7d1e4bd7aa2882eef8d0fcd85fa6af014ef737f6a186e2cb195ef3`,
+`experiments/e6676a2f572741a781a5fdadb66c2971`,
+`mizu_fetch/17ee65b8719ec089013733ef0afef166a55c4c4f7e196370d5fdbca97f7336c9`,
+`experiments/bc3033e0e30a4ad7a937cdded8a954ed`,
+`mizu_fetch/67a63ef944189db1dc922f22911bab39448e9693af36def9e8314025d0b880c9`,
+`experiments/1ace605323704993a180eef679df43ad`,
+`mizu_fetch/734ff12d8a7ffbd58bfe7a74df0bed68383da93e7e375940fc4f0cfcb9499a73`,
+`experiments/ecca4a7e63a54c998b2b69aa5d8caebb`,
+`mizu_fetch/221d3ff0be65fd0bdf75869e2a016ae2d3ea8dfc2a8c1a194c2c4153da4b9f80`,
+`experiments/00613d173e0e475e8e33e06af645cfda`; run artifacts:
+`mizu_fetch/c74612199d59f036de6a29ea62d7913de813fa6f956e1e7115cb9742fb2ce3f2`,
+`mizu_fetch/4eda87313329b30810324458edd4087f02cb916a027269eb7e1d04f2dfa47186`,
+`mizu_fetch/bc4357d34521a322502ec17b55a6969d1b48421cc0f3a80606ab64d40459e0a6`).
+
+The PR's 17 issue comments and two inline review comments supply no invocation,
+versioned UCD bytes, or Python build. An automated review reports comparison with
+unspecified “UCD reference data” and an “older local Unicode 14 database”, without
+identifying either input; this is a table-consistency claim, not provenance
+(`mizu_fetch/3fd88fa8c871576e8545fb8ced32d16bea313b2877390dbae4625f78b07b8ef0`,
+`experiments/c7e7c6b1970141d0b22ffe0d9e2b29d0`,
+`mizu_fetch/d24b737101047dcf6ec7b621805faf3e09187c5507a37bc377ffec48e902e303`,
+`experiments/e9ddd260a4b9478a8f015c43e15b5618`). Thus the selected base tables
+remain unbound to a particular historical UCD response, and the exact Python
+interpreter/build remains unidentified (prior source records:
+`mizu_fetch/d2614e8e466c08dc626e8705bed0089af29750970b749d81523af8a7db027dd3`,
 `mizu_fetch/a5c991ccac2464b13018d35ae2ff316c08ec283cf6998127965590713e408454`).
 The exact Windows probe at SHA `d931a6f329ff035e3337b105abc9577234733456`
 records the selected `src/unicode-data.cpp` hash in the source manifest
