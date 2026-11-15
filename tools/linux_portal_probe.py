@@ -31,6 +31,7 @@ DOCS_BUS = "org.freedesktop.portal.Documents"
 DOCS_PATH = "/org/freedesktop/portal/documents"
 DOCS_IFACE = "org.freedesktop.portal.Documents"
 FIXTURE = b"Kotoha portal probe fixture v1\n"
+CLIENT_STARTED_MARKER = "KOTOHA_PORTAL_PROBE_CLIENT_STARTED"
 
 
 class ProbeFailure(Exception):
@@ -66,6 +67,10 @@ def _decode_dbus_path(value: object, failure_stage: str) -> str:
     if not raw.endswith(b"\x00") or b"\x00" in raw[:-1]:
         raise ProbeFailure(failure_stage)
     return os.fsdecode(raw[:-1])
+
+
+def _sandbox_client_started(stderr: str) -> bool:
+    return CLIENT_STARTED_MARKER in stderr[-8192:]
 
 
 def _sandbox_failure_stage(stderr: str) -> str | None:
@@ -420,6 +425,8 @@ def run_host() -> dict[str, object]:
             stage = _sandbox_failure_stage(completed.stderr)
             if stage is not None:
                 raise ProbeFailure(f"sandbox-client-{stage}")
+            if not _sandbox_client_started(completed.stderr):
+                raise ProbeFailure("sandbox-client-launch-failed")
             raise ProbeFailure("sandbox-client-failed")
         try:
             client = json.loads(completed.stdout)
@@ -500,6 +507,8 @@ def main() -> int:
     parser.add_argument("--backend", action="store_true")
     parser.add_argument("--client", action="store_true")
     args = parser.parse_args()
+    if args.client:
+        print(CLIENT_STARTED_MARKER, file=sys.stderr, flush=True)
     stage = "initialization"
     try:
         if args.backend:

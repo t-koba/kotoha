@@ -286,19 +286,25 @@ SHA-256 `13244c64c2b060e7b6e4804c46f2b2c5d7e096301e12235486c245e72020a0de`).
 A follow-up exact run `43723433412`, job `132840134423`, on publication
 `0e3016390ece2c2b2cb75886de2f49da20b97762b537a9496865ecf01de006c7` / SHA
 `78d0bc90d5124dbf3413597114447179cc06ac62` installed the same Ubuntu 22.04.5
-portal packages and reached the sandbox client, but failed as
-`sandbox-client-failed` (`vcs-read/155ff041e30242a0bead61c0dea181b2`,
-`vcs-read/c0db99f147c44961b00ca3214008028a`). The host captured but discarded
-the child's already-sanitized failure stage; the log therefore does not identify
-whether URI mapping, reading, the other-app control, self-revocation, or later
-permission checks failed. No permission, post-close-access, `Info`, or `List`
-result is established. The current probe revision now forwards only an exact
+portal packages and failed as `sandbox-client-failed`
+(`vcs-read/155ff041e30242a0bead61c0dea181b2`,
+`vcs-read/c0db99f147c44961b00ca3214008028a`). Exact run `43725734097`, job
+`132847143007`, on publication `7acfc88d12cb011b1171314a30b5b2363473e7a6f02c0828b67d5992fe6a9b02`
+/ SHA `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3` installed
+`xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2 and GTK backend 1.14.0-1build1;
+the separate portal-session introspection exposed FileChooser v3 and Documents,
+but the probe again failed only as `sandbox-client-failed`
+(`vcs-read/f82a8366d3a84503b6d1f094dc51778e`). Neither run exposes an
+allowlisted client-stage result or establishes permission, post-close-access,
+`Info`, or `List` behavior. The probe forwards only an exact
 lowercase/digit/hyphen failure code bounded to 64 characters; raw child stderr,
-paths, URI, and document contents remain suppressed. A focused three-test
-stdlib suite now checks exact marker handling, bounded allowlisted codes, and
-rejection of path-like, malformed, and out-of-window diagnostics; it is wired
-into CI and passed locally, but hosted CI for this source revision is pending.
-Linux import remains disabled pending exact runtime results and a supported
+paths, URI, and document contents remain suppressed. A startup sentinel is now
+added to distinguish failure before the sandboxed Python client reaches `main`
+from an unclassified client failure. The four-test stdlib suite covers exact
+marker handling, bounded allowlisted codes, rejection of path-like,
+malformed/out-of-window diagnostics, and the bounded startup signal. It is wired
+into CI and passes locally; this sentinel has not yet run in hosted CI. Linux
+import remains disabled pending exact runtime results and a supported
 permission lifecycle.
 
 The exact hosted Ubuntu portal probe ran on publication
