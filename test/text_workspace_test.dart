@@ -195,9 +195,30 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
       expect(tester.binding.focusManager.primaryFocus, same(buttonFocus));
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+      expect(tester.binding.focusManager.primaryFocus, same(buttonFocus));
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('keeps the lifecycle key shield out of tab traversal', (
+    tester,
+  ) async {
+    try {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      await tester.pumpWidget(const KotohaApp());
+      final shield = tester.widget<Focus>(
+        find.byKey(const ValueKey('workspace-keyboard-shield')),
+      );
+
+      expect(shield.skipTraversal, isTrue);
+      expect(tester.takeException(), isNull);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

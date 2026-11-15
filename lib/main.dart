@@ -555,6 +555,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     children: [
       Focus(
         key: const ValueKey('workspace-keyboard-shield'),
+        skipTraversal: true,
         onKeyEvent: (_, _) =>
             _appResumed ? KeyEventResult.ignored : KeyEventResult.handled,
         child: AbsorbPointer(
