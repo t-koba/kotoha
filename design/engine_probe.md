@@ -2458,29 +2458,32 @@ the x64 prerequisite, link to that page, explain the restart, and stop before
 launching the dependent process. If the Kotoha runner itself cannot load
 without the runtime, the check must occur in the installer or a separate
 launcher: an app UI cannot display guidance before its own loader failure.
-The exact Release artifact
-`windows-release-import-summary/windows-release-import-summary.json` on
-publication
-`bc2b91c46c59e6aa402d10d236c8fdd87d2343d8e4051fc7f4a917ad25329e70` / SHA
-`48a430f888442ed162987ac2b349ab5a4f59161b` (run `43574939450`; import
-summary `vcs-read/ae86efca42654d17b00ba0b96fc9d151`) records x64 `kotoha.exe`
+The latest app Release capture is from run `43703481622`, publication
+`8bcf0a2f5ea4c878474efca1c3dac4550d32637ac6b7ecfd5982b2786f770221` / SHA
+`a261cce924d3214d220ae61ba3c23989c2dccd58`. Its exact artifact
+`windows-release-import-summary/windows-release-import-summary.json`
+(`vcs-read/2a9940db622942038764072dd6f80785`) binds x64 `kotoha.exe`
 (91,136 bytes; SHA-256
-`5cbaaacf08cf1cee2842b21f4eeddf6d032f6427ef9109c2bf36c44226b6cd15`) with
-17 direct imports, including `msvcp140.dll`, `vcruntime140.dll`, and
-`vcruntime140_1.dll`, and no delay imports. The successful initial-breakpoint
-provider capture (`vcs-read/a867727da13749709da2431f432515a9`) resolves all
-three VC++ providers from `windows/system32`, version `14.51.36247.0`; the
-capture reports 42 providers and is summarized in
-`vcs-read/10dc6b6fdbfb4985a04ccd8e5c7888cf`. Its signature field is a
-cache-only WinVerifyTrust observation, not redistribution or installation
-provenance. The job log (`vcs-read/1fec5d1610214c07809d2d867c3d0ba9`) identifies
-Windows Server 2025 Datacenter, not Windows 11. Runtime-present behavior on
-that host is observed; Windows 11 and runtime-absent behavior remain untested.
-The operator confirms no paid CI runner or additional host will be provided;
-standard hosted CI is the only available target
-(`operator/kotoha/a-de1f783a-r1-1794644102331`). Treat the Windows 11 and
-runtime-absent gate as unverified, not inferred from the server runner.
-This is not a selected deployment path or redistribution authorization.
+`5f51b52f8dd3c086e154606345108918f731b25daacfa753b7723b2e25a88967`) to 17
+direct imports, including `msvcp140.dll`, `vcruntime140.dll`, and
+`vcruntime140_1.dll`, with no delay imports. The paired pre-entrypoint runtime
+capture `windows-release-runtime-providers/runtime-summary.txt`
+(`vcs-read/80c6e4e401c24f87a7cb417b238a781e`) records 42 providers, six
+API-set contracts, and no redacted paths; it resolves all three VC++ providers
+from `windows/system32`, version `14.51.36247.0`. Its signature observations
+use cache-only `WinVerifyTrust`, not installation provenance or legal
+entitlement. The exact CI log
+(`vcs-read/856fb410cfa74825998e53a7b43258c1`) identifies Windows Server 2025
+Datacenter, build `10.0.26100`, and confirms the bounded initial-breakpoint
+capture. These are observations of one app-release runner with the runtime
+present, not installation provenance, Windows 11 or runtime-absent behavior,
+or redistribution authority. No runtime files were copied or approved, and this
+app capture does not establish the separate llama.cpp candidate's dependency or
+provenance. The operator confirms no paid CI runner or additional host will be
+provided; standard hosted CI is the only available target
+(`operator/kotoha/a-de1f783a-r1-1794644102331`). Keep the Windows 11 and
+runtime-absent gates unverified. This is not a selected deployment path or
+redistribution authorization.
 
 **General-desktop floor decision (not yet validated):** Windows 11 x64 on a
 currently supported Windows 11 release. Microsoft lists Windows 10 Home/Pro
