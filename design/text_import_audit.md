@@ -1,23 +1,32 @@
 # Memory-only plain-text and Markdown import
 
 Kotoha implements user-triggered import on macOS, Windows, Android and iOS.
-The latest exact mobile evidence is CI run `43711356595` on published SHA
+The hosted iOS simulator run `43711356595` on published SHA
 `a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` (publication
-`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463`). Android
-job `132803707892` passed; iOS job `132803707904` passed 4 RunnerTests and 5 UI
-tests in the hosted simulator (`vcs-read/44b7b02603fa4d36b49492be07d60fef`).
-The UI log shows `testImportChannelPresentsSystemPickerAndCancellationKeepsDraft`
-was exercised: after the unsaved-source entry and Import tap, `Cancel` was found
-and tapped, then found and tapped again after a second Import tap. This is a
-further non-reproduction of the original timeout in run `128353947337` on SHA
-`4d3256d260b32a876a4a5ff687698a48d2b0e312` (`vcs-read/0441c8bc5ea842e3b8c59b1e10090f10`);
-that failed run still lacks its failure hierarchy and `.xcresult`, so the later
-pass does not explain it. The separate macOS job `132803707896` and Linux
-portal job `132803401399` failed in run `43711356595`; these mobile passes do
-not make the aggregate run green. This evidence covers configured hosted
-simulator/emulator tests, not live provider-selected reads, physical devices or
-offline availability; the local sandbox lacks native mobile SDKs, so its Dart
-tests are not mobile runtime evidence.
+`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463`) passed
+4 RunnerTests and 5 UI tests in job `132803707904`
+(`vcs-read/44b7b02603fa4d36b49492be07d60fef`). `Cancel` was found and tapped
+twice in `testImportChannelPresentsSystemPickerAndCancellationKeepsDraft`; this
+was a non-reproduction of the original timeout in run `128353947337` on SHA
+`4d3256d260b32a876a4a5ff687698a48d2b0e312`
+(`vcs-read/0441c8bc5ea842e3b8c59b1e10090f10`), whose failure hierarchy and
+`.xcresult` remain unavailable. A later exact run `43718257468` on published SHA
+`548c92ba16fbd85c446e17059fc1fa093a87d4a0` (publication
+`204b80510c52bd54563b0c3b388c1bd768eff8b5efc0bad6f1b1fbc864e0ecb9`) passed
+Android job `132824669885` with 20 connected instrumentation tests, but iOS job
+`132824669928` failed (`vcs-read/8418ecddad54472c9dd7f94ea059baae`). The same iOS picker
+test tapped `Cancel` after two Import requests; afterward the existing
+`source-text` lookup did not resolve before the test's 2-minute execution
+allowance expired. The CI action then timed out after 15 minutes; the job log
+(`vcs-read/b5ba005dad3f4918919dcb70c3c41be9`) records no accessibility hierarchy
+contents, and the exact-SHA artifact listing (`vcs-read/5b3d693669854fc6a267ebdaf3126ad3`)
+contains the job log but no `.xcresult`. Treat the latest failure as a recurrence,
+not a pass or explanation of the original. Keep its assertions and deadline
+unchanged. The separate macOS and Linux jobs failed in both runs; these mobile
+results do not make either aggregate run green. This evidence covers configured
+hosted simulator/emulator tests, not live provider-selected reads, physical
+devices or offline availability; the local sandbox lacks native mobile SDKs, so
+its Dart tests are not mobile runtime evidence.
 
 The selected content is decoded into the source editor in memory and can then be
 edited manually; existing translation fields and the copy action remain
