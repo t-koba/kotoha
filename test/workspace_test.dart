@@ -44,4 +44,27 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('snapshots and protects the translation collection', () {
+    final supplied = <ManualTranslationDraft>[
+      const ManualTranslationDraft(targetLanguage: 'en', text: 'Hello'),
+    ];
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: 'ja',
+      sourceText: 'こんにちは',
+      translations: supplied,
+    );
+
+    supplied.add(
+      const ManualTranslationDraft(targetLanguage: 'fr', text: 'Bonjour'),
+    );
+    expect(draft.translations, hasLength(1));
+    expect(draft.translations.single.targetLanguage, 'en');
+    expect(
+      () => draft.translations.add(
+        const ManualTranslationDraft(targetLanguage: 'de', text: 'Hallo'),
+      ),
+      throwsUnsupportedError,
+    );
+  });
 }
