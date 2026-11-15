@@ -374,8 +374,9 @@ missing MD5 stays unavailable and is never synthesized. Malformed or over-budget
 output fails capture. Extracted objects and raw DWARF/line-table output are
 temporary and deleted. A DWARF MD5 is debug metadata, not a source attestation
 or evidence of build/patch identity, surviving code, licensing, rights or
-device behavior. This expanded 47-member capture has not yet completed in
-hosted CI; the earlier exact reports below cover all 26 libc++ members and only
+device behavior. The expanded 47-member capture has since completed in the
+exact later CI run summarized at the beginning. The earlier exact reports below
+remain historical: they cover all 26 libc++ members and only
 `libc++abi.a(cxa_demangle.cpp.o)`. The exact Android API 35 x86_64 probe publication
 `e4627bd337029fec04f4af39799566a7b0a7469dd68bad57d6a5c624e9469d16` / SHA
 `5752035ff2adb68a51b78c020f1d52ec7d5be1ba` additionally captured only
@@ -637,13 +638,17 @@ source files (`compiler-rt/lib/builtins/emutls.c`, `libunwind/src/`,
 headers at that immutable revision declare
 `SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`; under
 [dependency_policy.json](specs/dependency_policy.json), this is a permissive
-branch. The exact Android link-map manifest records archive-level hashes and
-selected member names, not per-member hashes. Separate bounded DWARF reports
-now hash 26 `libc++_static.a` objects and the single selected
-`libc++abi.a(cxa_demangle.cpp.o)`; the other 14 selected libc++abi objects have
-no per-member hash or DWARF capture. A member-name or DWARF-path match alone
-does not prove source-byte identity, patch application, or surviving linked
-sections.
+branch. The exact Android link-map manifest itself records archive-level hashes
+and selected member names, not per-member hashes. The later four-archive capture
+records member SHA-256s for all 47 selected objects: all 26 libc++ and 15
+libc++abi members have DWARF compile units and line tables with zero file MD5s;
+the five libunwind and one compiler-rt members have no DWARF compile units or
+line tables (exact capture logs `vcs-read/dcfad3cf41534fd483e245ce22705d19`,
+`vcs-read/82275d20cde242f98331cb2f14cabf93`,
+`vcs-read/1b23f3d952cb476b8113a87a480079e7`,
+`vcs-read/ab7c7f70259d4409a7dc8f4070251a8d`). The earlier cxa-demangler-only
+report described below remains historical. Member names and DWARF paths do not
+prove source-byte identity, patch application, or surviving linked sections.
 
 For the demangler candidate, the exact manifest lists `cxa_demangle.cpp.o` in
 `libc++abi.a` (archive SHA-256
@@ -655,11 +660,12 @@ SHA-256
 (`mizu_fetch/de3ddede7537ac4215831d91a33be537c549f63e70d6d341ab11c00e5a67743c`);
 its reviewed header declares `Apache-2.0 WITH LLVM-exception`. This is an
 upstream candidate source read, not a source-read record for the prebuilt NDK
-object. The separate exact report now records the archive-member byte digest
-and a component-relative DWARF path for this one selected object; it still does
-not compare the object with this candidate source. The other 14 libc++abi
-members remain uncaptured. The separate demangler patch changes libc++abi CMake
-files, while the map-bound manifest still lists this member in `libc++abi.a`;
+object. The earlier single-member report records this object's archive-member
+byte digest and a component-relative DWARF path, but does not compare the object
+with this candidate source. The later four-archive capture includes all 15
+libc++abi members, but neither report binds an object to source bytes or a
+patch postimage. The separate demangler patch changes libc++abi CMake files,
+while the map-bound manifest still lists this member in `libc++abi.a`;
 neither fact identifies the configured build-graph effect or proves patch
 application. Source-byte identity, surviving sections, exact notice
 applicability, and redistribution rights remain unresolved.
@@ -990,7 +996,10 @@ only. It is a suitable user-facing surface for a future reviewed notice set,
 but no NDK notice payload is packaged and the exact required subset is
 unresolved; adoption remains disabled.
 
-### Exact installed-NDK capture (partial)
+### Earlier partial installed-NDK captures (historical)
+
+These exact reports predate the later 47-member capture summarized at the
+beginning; their narrower artifact data remains useful but does not supersede it.
 
 A later exact publication `3785c8518bedd38e205423534510ea5786925117816e5d461815c0d692b4ab0c` / SHA
 `284349acc34b37f36fdb8195925834af8280a7e6` passed `Native engine probe / Android API 35 x86_64 CPU feasibility`
@@ -2094,9 +2103,10 @@ A later exact Android job `132475334683` on publication
 configuration validation before cross-build or capture: the script referenced
 an unused `ENGINE_NDK_ABI_MEMBER_MAX_BYTES` setting absent from the workflow
 (`vcs-read/b7096e9797bc47118674fb8de3c13405`). No updated four-archive,
-47-member DWARF report was produced. The obsolete ABI-specific checks are now
-removed locally; hosted recapture and source/object provenance remain pending.
-The later exact parser/capture pass is summarized at the beginning; it closes
+47-member DWARF report was produced. The obsolete ABI-specific checks were
+removed locally; at that point hosted recapture and source/object provenance
+remained pending. The later exact
+parser/capture pass summarized at the beginning has since completed and closes
 only that feasibility step, not source-byte or notice provenance.
 
 An earlier contribution artifact (`vcs-read/c017d0011315425ca607cad010b4733a`,
