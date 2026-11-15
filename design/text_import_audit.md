@@ -34,11 +34,17 @@ cancellation; that test passed in 22.777 seconds, with all five UI tests passing
 in 148.153 seconds. This is another non-reproduction and does not explain the
 previous two-minute timeout. The current source change conditionally calls
 `reveal("source-text")` only when the node is absent after cancellation
-(`d8ddc54`); it preserves the exact draft assertion and deadline and has not yet
-been exercised by an exact CI run. Hosted simulator/emulator tests do not
-establish live provider-selected reads, physical-device behavior, or offline
-availability; the local sandbox lacks native mobile SDKs, so its Dart tests are
-not mobile runtime evidence.
+(`d8ddc54`), preserving the exact draft assertion and deadline. The exact iOS
+simulator check on publication `7acfc88d12cb011b1171314a30b5b2363473e7a6f02c0828b67d5992fe6a9b02`
+/ SHA `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3`, run `43725734097`, job
+`132847565803`, passed 4 RunnerTests and all 5 accessibility UI tests
+(`vcs-read/f5b004cc0e9543e7bcba04908f9a7a14`). The picker test tapped Cancel
+after both presentations and its post-cancellation `source-text` queries
+succeeded; the log does not establish whether the conditional reveal branch ran.
+This is another non-reproduction, not an explanation for the historical timeout.
+Hosted simulator/emulator tests do not establish live provider-selected reads,
+physical-device behavior, or offline availability; the local sandbox lacks
+native mobile SDKs, so its Dart tests are not mobile runtime evidence.
 
 The selected content is decoded into the source editor in memory and can then be
 edited manually; existing translation fields and the copy action remain
