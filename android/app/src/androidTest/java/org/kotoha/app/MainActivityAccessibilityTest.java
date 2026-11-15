@@ -92,6 +92,24 @@ public final class MainActivityAccessibilityTest
                 "Copy translation 1", "Import text or Markdown", "Review model package terms");
     }
 
+    public void testInstrumentationDeleteKeyComparison() {
+        click("interface language menu", n -> named(n, "Interface language")
+                || named(n, "表示言語"));
+        click("English", n -> named(n, "English"));
+        getInstrumentation().waitForIdleSync();
+
+        String id = "source-language";
+        String label = "Source language";
+        revealField(id);
+        click(label, n -> field(n, id));
+        assertField(id, label, "");
+        setClipboardText("p");
+        controlKey(KeyEvent.KEYCODE_V);
+        assertField(id, label, "p");
+        getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+        assertField(id, label, "");
+    }
+
     public void testJapaneseLanguageFields() {
         checkLocale("日本語", "原文の言語", "原文", "訳先の言語",
                 "1件目の訳文をコピー", "テキスト・Markdownを読み込む",
