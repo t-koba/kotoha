@@ -256,26 +256,35 @@ of the CI-installed binary to the source or a Kotoha runtime result.
 The FileChooser registration path requests a persistent Documents entry.
 `RevokePermissions` is distinct from `Delete`; FileChooser does not grant
 `delete`, and the API's persistent entry is not removed by revoking app
-permissions. The exact Ubuntu 22.04 runtime probe is being corrected to observe the
-source-predicted self-revocation denial, whether access remains after the open
-handle closes, the permissions reported by `Info`, and whether the record remains
-in `List`. Run `43718257468`, job `132824396757`, on SHA
+permissions. Run `43718257468`, job `132824396757`, on SHA
 `548c92ba16fbd85c446e17059fc1fa093a87d4a0` failed at
 `documents-fuse-mount-not-established` before the sandboxed client
 (`vcs-read/f6e6831117974ef79b80036a9d00eac3`). The corrected probe decodes the
 NUL-terminated `ay` path values for `GetMountPoint` and `Info`, seeds the mount
-with a separate temporary entry before the chooser call, constrains the returned
-URI to `<doc-id>/<fixture-basename>`. It first grants and revokes `read` for a
-separate synthetic target to prove the caller's `grant-permissions` works for
-other apps, then measures self-revocation, post-close access, permissions, and
-record retention under a synthetic app ID. The selected source encodes `Info`
-paths with `g_variant_new_bytestring`
+with a separate temporary entry before the chooser call, and constrains the
+returned URI to `<doc-id>/<fixture-basename>`. It first exercises an other-app
+grant/revoke control, then measures self-revocation, post-close access,
+permissions, and record retention under a synthetic app ID. The selected source
+encodes `Info` paths with `g_variant_new_bytestring`
 (`fetch/dd6c6aece4644d24a314b6cb23cf1236828a82e5b9701950447cb209fa43e1ae`);
 upstream Documents tests likewise strip the trailing NUL from path byte arrays
 (`fetch/0bf06ce822543a485417ebda893ad7b6515b567510bfa798249f2ecac6837bd2`,
 SHA-256 `13244c64c2b060e7b6e4804c46f2b2c5d7e096301e12235486c245e72020a0de`).
-This corrected revision has not yet run in CI; Linux import remains disabled
-pending exact runtime evidence and a supported permission lifecycle.
+
+A follow-up exact run `43723433412`, job `132840134423`, on publication
+`0e3016390ece2c2b2cb75886de2f49da20b97762b537a9496865ecf01de006c7` / SHA
+`78d0bc90d5124dbf3413597114447179cc06ac62` installed the same Ubuntu 22.04.5
+portal packages and reached the sandbox client, but failed as
+`sandbox-client-failed` (`vcs-read/155ff041e30242a0bead61c0dea181b2`,
+`vcs-read/c0db99f147c44961b00ca3214008028a`). The host captured but discarded
+the child's already-sanitized failure stage; the log therefore does not identify
+whether URI mapping, reading, the other-app control, self-revocation, or later
+permission checks failed. No permission, post-close-access, `Info`, or `List`
+result is established. The current probe revision now forwards only an exact
+lowercase/digit/hyphen failure code bounded to 64 characters; raw child stderr,
+paths, URI, and document contents remain suppressed. That diagnostic revision
+has not yet run in CI. Linux import remains disabled pending exact runtime
+results and a supported permission lifecycle.
 
 The exact hosted Ubuntu portal probe ran on publication
 `cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463` / SHA
