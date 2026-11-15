@@ -43,7 +43,15 @@ the same line with the same diagnostic: `axClientTrusted=false`, enhanced UI
 status `-25211`/unavailable, zero scroll views, and missing target,
 source-language, and source-text nodes (`vcs-read/8b9d1ab4e0164d45befd066b4b4f7500`).
 This repeats the hosted query failure; it still does not reach field entry or
-the save panel and does not establish behavior on a consented user Mac.
+the save panel and does not establish behavior on a consented user Mac. A later
+exact run `43723433412`, job `132840442367`, on SHA
+`78d0bc90d5124dbf3413597114447179cc06ac62` failed at the same assertion with
+`voiceOverEnabled=true`, `axClientTrusted=false`, enhanced UI status `-25211`/
+unavailable, zero scroll views, and missing target, source-language, and
+source-text nodes while the app window was present
+(`vcs-read/3fff63ad45bf4418972dfcf736ce4ac5`). It again failed before field
+entry or the save panel, confirming only a repeated hosted accessibility-query
+failure, not user-run VoiceOver behavior.
 
 The operator confirmed that no macOS runner or session is available
 (`operator/kotoha/a-q1edb9445c51e96eeb98faaea04a8f7129714884a-1794746647`).
