@@ -2003,9 +2003,44 @@ A reviewed strict comparison parsed the complete selected 288,635-byte C++ file
 
 The pinned `src/unicode-data.cpp` records at line 7035 `Canonical normalization
 tables: Unicode 16.0.0`; its pinned generator derives that marker from Python's
-`unicodedata.unidata_version`. This identifies only the normalization tables, not
-the separately fetched `UnicodeData.txt` input: the generator fetches UCD `latest`,
-and its historical input bytes and interpreter environment remain unknown.
+`unicodedata.unidata_version`. The generator SHA-256 is
+`a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`. Its
+`unicode_data_iter` reads category field 3 and the simple lowercase/uppercase
+fields of the fetched `UnicodeData.txt`; `normalization_tables` alone uses
+`unicodedata`. The marker cannot label category/case data, and the original
+`latest` response bytes and historical interpreter remain unknown.
+
+Two independent pinned table comparisons reinforce that split. The generator at
+[tox-dev/turbohtml commit `37cf021b`](https://github.com/tox-dev/turbohtml/blob/37cf021b318bd9bc07c952e608aa407acc767c21/tools/generate_idna.py)
+pins official Unicode 16.0 `UnicodeData.txt` and `DerivedNormalizationProps.txt`
+hashes `ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f` and
+`4d4c03892dea9146d674b686e495df2d55a28d071ac474041d73518f887abddc`; its
+committed [generated header](https://github.com/tox-dev/turbohtml/blob/37cf021b318bd9bc07c952e608aa407acc767c21/src/turbohtml/_c/data/idna_table.h)
+declares Unicode 16.0. After expanding the selected immediate decompositions to
+recursive NFD, its CCC (934 rows), full decomposition (2,081) and composition
+(961) tables match that header exactly (experiments
+`experiments/12f6509ab1c54850b488bb7704ca7b30`,
+`experiments/c7532bccd9c24e51ad3f14503318a3b7`). This corroborates normalization
+table content only, not llama.cpp's actual inputs, retrieval history or notice
+applicability.
+
+A separate [hegeldev/hegel commit `666e2db4`](https://github.com/hegeldev/hegel/tree/666e2db41e00e62bef3bc0e57cc3e86447b80d51/libhegel/src/unicodedata)
+contains Unicode 17 category/case tables and deltas for 16.0 and 15.1. Applying
+those deltas and llama.cpp's category-to-flag projection exactly reproduces the
+selected 15.1 flags (2,273 runs; SHA-256
+`a22ff9b68273a078e39018738ebf47f8d009d77ede58218ea140b46495019f47`) and the
+selected lowercase map (1,433 entries; SHA-256
+`9c194d67a570656df4baba4ab72b80eafcbf3f2f4ff4594de9b908f48e6430ed`). The
+reconstructed 16.0 flags instead differ at 5,185 code points across 64 intervals,
+including U+0897, U+1C89–U+1C8A and U+105C0–U+105F3, which the comparator assigns
+but the selected table marks undefined (`experiments/2215a33895a24af2ba6f2abf88642180`,
+`experiments/7b48f3cfe78c4312b29dd8ad02d0eb21`). This supports an older category
+projection, not a historical-input claim; the comparator's older inputs have no
+byte-hash pins. Its CPython-style uppercase map is not directly comparable: it
+uses the first code point of unconditional `SpecialCasing` mappings, whereas the
+llama.cpp generator reads only simple `UnicodeData.txt` fields (selected 1,450
+entries versus comparator 1,525; `experiments/ec3004af3efe4c37acda3da45a845625`).
+That mismatch does not establish the selected uppercase source version.
 
 The legacy flags differ from Unicode 16 at 5,185 code points; each case map lacks
 27 keys and NFD lacks 20. The normalization marker therefore cannot label the whole file.
