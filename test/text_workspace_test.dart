@@ -9,6 +9,8 @@ Future<void> _verifyLazyKeyboardTraversal(
   WidgetTester tester, {
   required double textScale,
   required Size viewSize,
+  required int translationCount,
+  bool verifyPageDown = false,
 }) async {
   tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
   tester.binding.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -23,7 +25,25 @@ Future<void> _verifyLazyKeyboardTraversal(
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     await tester.pumpWidget(const KotohaApp());
     final scrollable = find.byType(Scrollable).first;
-    for (var index = 0; index < 4; index++) {
+    if (verifyPageDown) {
+      var focusedButton = false;
+      for (var tab = 0; tab < 12 && !focusedButton; tab++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        focusedButton =
+            tester.binding.focusManager.primaryFocus?.context
+                ?.findAncestorWidgetOfExactType<OutlinedButton>() !=
+            null;
+      }
+      expect(focusedButton, isTrue);
+      final position = tester.state<ScrollableState>(scrollable).position;
+      await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+      await tester.pumpAndSettle();
+      expect(position.pixels, greaterThan(0));
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+    }
+    for (var index = 1; index < translationCount; index++) {
       final addTranslation = find.text('Add translation');
       await tester.dragUntilVisible(
         addTranslation,
@@ -38,7 +58,7 @@ Future<void> _verifyLazyKeyboardTraversal(
     await tester.pumpAndSettle();
 
     final expected = <String>{
-      for (var index = 0; index < 5; index++) ...[
+      for (var index = 0; index < translationCount; index++) ...[
         'target-language-$index',
         'translation-text-$index',
       ],
@@ -72,7 +92,11 @@ Future<void> _verifyLazyKeyboardTraversal(
     }
 
     expect(reached, containsAll(expected));
-    expect(maximumMountedFields, lessThan(expected.length + 2));
+    if (translationCount > 1) {
+      expect(maximumMountedFields, lessThan(expected.length + 2));
+    } else {
+      expect(maximumMountedFields, lessThanOrEqualTo(4));
+    }
     expect(tester.takeException(), isNull);
   } finally {
     debugDefaultTargetPlatformOverride = null;
@@ -305,6 +329,7 @@ void main() {
       tester,
       textScale: 2.0,
       viewSize: const Size(320, 640),
+      translationCount: 5,
     );
   });
 
@@ -315,6 +340,19 @@ void main() {
       tester,
       textScale: 4.0,
       viewSize: const Size(420, 760),
+      translationCount: 5,
+    );
+  });
+
+  testWidgets('reaches initial fields in a short high-scale viewport', (
+    tester,
+  ) async {
+    await _verifyLazyKeyboardTraversal(
+      tester,
+      textScale: 4.0,
+      viewSize: const Size(420, 200),
+      translationCount: 1,
+      verifyPageDown: true,
     );
   });
 
