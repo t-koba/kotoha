@@ -718,17 +718,20 @@ class _TemporaryDraftNotice extends StatelessWidget {
   const _TemporaryDraftNotice();
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
-    child: Material(
-      color: Theme.of(context).colorScheme.tertiaryContainer,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Text(AppLocalizations.of(context)!.temporaryDraftNotice),
+  Widget build(BuildContext context) {
+    final notice = AppLocalizations.of(context)!.temporaryDraftNotice;
+    return Semantics(
+      label: notice,
+      container: true,
+      liveRegion: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Theme.of(context).colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(padding: const EdgeInsets.all(12), child: Text(notice)),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _TranslationFields {
