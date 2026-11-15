@@ -1772,10 +1772,15 @@ records: `mizu_fetch/7dd9b362b620e65162ef57ec09d26a673b3d3892626f91592d93bc07898
 `mizu_fetch/da80ce10ef82b7a2f00bcd20cdaa958c43dab7085ac56610896d8de47d3a7260`,
 `mizu_fetch/9d78f8d66531284b215c626f0420390d87df6e1241dffa1b45963cd35a134a45`).
 
-The PR's 17 issue comments and two inline review comments supply no invocation,
-versioned UCD bytes, or Python build. An automated review reports comparison with
-unspecified “UCD reference data” and an “older local Unicode 14 database”, without
-identifying either input; this is a table-consistency claim, not provenance
+The PR description characterizes the implementation and reports 109,825
+official/randomized normalization cases but names no generator mode, versioned UCD
+inputs, or producer runtime (`mizu_fetch/a81ee896738d948e33e9c54d6aa7c402583fa50d03a2a830012928ab6597b26e`).
+Its three review records have empty bodies (`mizu_fetch/6e2a555bd16a8267d8050f7c47478acd5f2875336cb9b5b969b9bd3eb97a355b`).
+The PR's 17 issue comments and two inline review comments likewise supply no
+invocation, versioned UCD bytes, or Python build. An automated review reports
+comparison with unspecified “UCD reference data” and an “older local Unicode 14
+database”, without identifying either input; this is a table-consistency claim,
+not provenance
 (`mizu_fetch/3fd88fa8c871576e8545fb8ced32d16bea313b2877390dbae4625f78b07b8ef0`,
 `experiments/c7e7c6b1970141d0b22ffe0d9e2b29d0`,
 `mizu_fetch/d24b737101047dcf6ec7b621805faf3e09187c5507a37bc377ffec48e902e303`,
