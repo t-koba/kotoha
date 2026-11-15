@@ -59,6 +59,14 @@ def _write_json(path: str, value: dict[str, object]) -> None:
     os.replace(temporary, path)
 
 
+# Documents encodes filesystem paths as NUL-terminated D-Bus byte strings.
+def _decode_dbus_path(value: object, failure_stage: str) -> str:
+    raw = bytes(value)
+    if not raw.endswith(b"\x00") or b"\x00" in raw[:-1]:
+        raise ProbeFailure(failure_stage)
+    return os.fsdecode(raw[:-1])
+
+
 def run_backend() -> None:
     dbus, service, DBusGMainLoop, GLib = _dbus_modules()
     DBusGMainLoop(set_as_default=True)
@@ -171,7 +179,13 @@ def run_client() -> None:
     except ValueError as exc:
         raise ProbeFailure("filechooser-result-not-under-document-mount") from exc
     parts = Path(relative).parts
-    if not parts or relative == ".." or relative.startswith("../") or len(parts) < 2:
+    if (
+        not parts
+        or relative == ".."
+        or relative.startswith("../")
+        or len(parts) != 2
+        or parts[1] != Path(fixture_path).name
+    ):
         raise ProbeFailure("filechooser-result-not-under-document-mount")
     doc_id = parts[0]
     if not doc_id or doc_id in (".", ".."):
@@ -292,10 +306,10 @@ def run_host() -> dict[str, object]:
         )
         manager.StartServiceByName(DESKTOP_BUS, 0, timeout=10)
         docs = dbus.Interface(bus.get_object(DOCS_BUS, DOCS_PATH), DOCS_IFACE)
-        mountpoint_bytes = bytes(docs.GetMountPoint(byte_arrays=True, timeout=10))
-        if not mountpoint_bytes.endswith(b"\x00") or b"\x00" in mountpoint_bytes[:-1]:
-            raise ProbeFailure("documents-mountpoint-format-invalid")
-        mountpoint = os.fsdecode(mountpoint_bytes[:-1])
+        mountpoint = _decode_dbus_path(
+            docs.GetMountPoint(byte_arrays=True, timeout=10),
+            "documents-mountpoint-format-invalid",
+        )
         if mountpoint != str(runtime / "doc") or not os.path.isdir(mountpoint):
             raise ProbeFailure("documents-mountpoint-path-invalid")
 
@@ -380,7 +394,9 @@ def run_host() -> dict[str, object]:
             raise ProbeFailure("sandbox-access-check-failed")
 
         path_bytes, app_permissions = docs.Info(client["doc_id"], timeout=10)
-        source_path = os.fsdecode(bytes(path_bytes))
+        source_path = _decode_dbus_path(
+            path_bytes, "document-source-path-format-invalid"
+        )
         if os.path.realpath(source_path) != os.path.realpath(fixture):
             raise ProbeFailure("document-source-mismatch")
         remaining = set(app_permissions.get(APP_ID, []))
