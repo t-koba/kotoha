@@ -190,9 +190,9 @@ public final class MainActivityAccessibilityTest
         }
     }
 
-    // Instrumentation.sendKeyDownUpSync does not expose the input-system injection result.
-    // Keep the native keyboard event path, but assert that Android accepted each event before
-    // diagnosing a missing editor update as a Flutter/IME/input-connection problem.
+    // UiAutomation reports injection success, not delivery or handling by the app or IME.
+    // Pair that result with exact field-value and focus assertions; do not infer a Flutter
+    // or input-connection cause from injection success alone.
     private void injectKeyDownUpAndAssertAccepted(int keyCode) {
         // ACTION_UP must reuse the original ACTION_DOWN time to form one key press.
         long downTime = SystemClock.uptimeMillis();

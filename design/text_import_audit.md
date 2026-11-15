@@ -556,7 +556,18 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   preservation and lifecycle continuity. Desktop integrity tests remain in place.
   Native privacy/RTL tests remain selected in CI. Android checks native labels,
   values and synthesized input after direction changes; Flutter widget tests own
-  complete forward/reverse traversal, including the mobile import control.
+  complete forward/reverse traversal, including the mobile import control. In exact
+  run `43725734097`, Android job `132847565744` failed
+  `MainActivityAccessibilityTest.testEnglishLanguageFields` on the first Delete
+  after the synthetic `p` paste: the expected empty value was not observed, while
+  the focused visible field still contained `p` (`vcs-read/a276e5b4d0c140fa84ddfdb3a3577a59`).
+  The diagnostic recorded FlutterView focus and a visible IME, but this does not
+  establish delivery or handling. Android specifies that
+  `UiAutomation.injectInputEvent` reports injection success
+  ([API reference](https://developer.android.com/reference/android/app/UiAutomation#injectInputEvent(android.view.InputEvent,boolean)));
+  its `true` result is not evidence that the editor processed Delete. Keep this
+  distinct from the earlier scroll-discovery failures; no physical-device result
+  is established.
 
 Source review finds no import-path writes, cache staging, URI grant persistence,
 bookmarks, selected-location history or network client. Worker reads release their
