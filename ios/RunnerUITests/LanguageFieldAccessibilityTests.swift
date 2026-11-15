@@ -78,6 +78,10 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
         return
       }
       cancel.tap()
+      // Keep verification independent of the editor's current scroll position.
+      // If XCTest has dropped the offscreen field node, reveal it before the
+      // unchanged exact draft-value assertion.
+      if !field("source-text").exists { _ = reveal("source-text") }
       assertField("source-text", label: "Source text", value: "unsaved source")
     }
   }
