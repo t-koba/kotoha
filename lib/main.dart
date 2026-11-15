@@ -81,8 +81,8 @@ class TextWorkspacePage extends StatefulWidget {
 
 class _TextWorkspacePageState extends State<TextWorkspacePage>
     with WidgetsBindingObserver {
-  final TextEditingController _sourceLanguage = TextEditingController();
-  final TextEditingController _sourceText = TextEditingController();
+  late final _sourceLanguage = _DraftController(() => _appResumed);
+  late final _sourceText = _DraftController(() => _appResumed);
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   bool _allowImePersonalizedLearning = false;
@@ -92,7 +92,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
-  final List<_TranslationFields> _translations = [_TranslationFields()];
+  late final _translations = [_TranslationFields(() => _appResumed)];
 
   @override
   void initState() {
@@ -125,7 +125,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   void _addTranslation() {
-    setState(() => _translations.add(_TranslationFields()));
+    setState(() => _translations.add(_TranslationFields(() => _appResumed)));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _addTranslationFocusNode.requestFocus();
     });
@@ -183,7 +183,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         _importNotice(AppLocalizations.of(context)!.importSourceChangedNotice);
         return;
       }
-      _sourceText.text = text;
+      _sourceText.replaceText(text);
     } on Exception {
       if (mounted) {
         _importNotice(AppLocalizations.of(context)!.importFailureNotice);
@@ -744,11 +744,32 @@ class _TemporaryDraftNotice extends StatelessWidget {
 }
 
 class _TranslationFields {
-  final TextEditingController language = TextEditingController();
-  final TextEditingController text = TextEditingController();
+  _TranslationFields(this.inputEnabled);
+
+  final bool Function() inputEnabled;
+  late final language = _DraftController(inputEnabled);
+  late final text = _DraftController(inputEnabled);
 
   void dispose() {
     language.dispose();
     text.dispose();
+  }
+}
+
+// A stale input-channel update can reach the controller before a readOnly
+// rebuild, so guard the entire editing value synchronously.
+class _DraftController extends TextEditingController {
+  _DraftController(this.inputEnabled);
+
+  final bool Function() inputEnabled;
+
+  @override
+  set value(TextEditingValue newValue) {
+    if (inputEnabled()) super.value = newValue;
+  }
+
+  // File import is a programmatic replacement, not incoming user input.
+  void replaceText(String text) {
+    super.value = TextEditingValue(text: text);
   }
 }

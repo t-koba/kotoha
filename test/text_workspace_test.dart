@@ -237,43 +237,75 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     try {
       await tester.pumpWidget(const KotohaApp());
-      final translationField = find.byKey(const ValueKey('translation-text-0'));
-      await tester.dragUntilVisible(
-        translationField,
-        find.byType(Scrollable).first,
-        const Offset(0, -400),
-      );
-      await tester.pumpAndSettle();
-      await tester.enterText(translationField, 'secret');
-      final focusedNode = tester.binding.focusManager.primaryFocus;
-      expect(focusedNode, isNotNull);
+      for (final key in ['source-text', 'translation-text-0']) {
+        final field = find.byKey(ValueKey(key));
+        await tester.ensureVisible(field);
+        await tester.pumpAndSettle();
+        await tester.enterText(field, 'secret');
+        final controller = tester.widget<TextField>(field).controller!;
+        controller.selection = const TextSelection(
+          baseOffset: 1,
+          extentOffset: 4,
+        );
+        final draft = controller.value;
+        final focusedNode = tester.binding.focusManager.primaryFocus;
+        expect(focusedNode, isNotNull);
 
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-      await tester.pump();
-      await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
-      await tester.pump();
-      expect(
-        tester.widget<TextField>(translationField).controller!.text,
-        'secret',
-      );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        // Exercise both the transition before readOnly rebuilds and the cover.
+        for (final covered in [false, true]) {
+          if (covered) await tester.pump();
+          await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+          expect(controller.value, draft, reason: '$key inactive Backspace');
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+          expect(
+            controller.value,
+            draft,
+            reason: '$key inactive caret movement',
+          );
+          tester.testTextInput.updateEditingValue(
+            const TextEditingValue(
+              text: 'replacement',
+              selection: TextSelection.collapsed(offset: 2),
+              composing: TextRange(start: 0, end: 3),
+            ),
+          );
+          expect(controller.value, draft, reason: '$key inactive IME');
+          tester.testTextInput.updateEditingValue(
+            draft.copyWith(selection: const TextSelection.collapsed(offset: 0)),
+          );
+          expect(
+            controller.value,
+            draft,
+            reason: '$key inactive IME selection',
+          );
+        }
+        await tester.pump();
+        expect(controller.value, draft);
+        expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
 
-      tester.testTextInput.enterText('replacement');
-      await tester.pump();
-      expect(
-        tester.widget<TextField>(translationField).controller!.text,
-        'secret',
-      );
-      expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
-
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-      await tester.pump();
-      tester.testTextInput.enterText('resumed');
-      await tester.pump();
-      expect(
-        tester.widget<TextField>(translationField).controller!.text,
-        'resumed',
-      );
-      expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pump();
+        expect(controller.value, draft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+        await tester.pump();
+        expect(
+          controller.text,
+          'set',
+          reason: '$key resumed selection editing',
+        );
+        tester.testTextInput.enterText('resumed');
+        await tester.pump();
+        expect(controller.text, 'resumed');
+        await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+        await tester.pump();
+        expect(controller.text, 'resume');
+        expect(tester.binding.focusManager.primaryFocus, same(focusedNode));
+      }
 
       final addTranslation = find.text('訳先を追加');
       await tester.dragUntilVisible(
