@@ -2266,6 +2266,24 @@ This history identifies the table's exact Git source revision and a normalizatio
 data version marker, not immutable full-generation inputs or exact notice
 applicability.
 
+A version-compatible Python source candidate exists, but is not producer evidence.
+The immutable CPython 3.14.0 release commit
+`ebf955df7a89ed0c7968f79faec1de49f61ed7cb` declares `UNIDATA_VERSION = "16.0.0"`
+in `Tools/unicode/makeunicodedata.py`; CPython 3.13.0 commit
+`60403a5409ff2c3f3b07dd2ca91a7a3e096839c7` declares `15.1.0`. Their pinned raw
+generator hashes are respectively
+`b48c83468d646a398278e1ea732a5c1290144daba55a846cd9fe84737ab15d4c` and
+`713d1eeebbb6f7984890cfaa61878c9ba03c6462676084536e1508d469ee8585`
+(`mizu_fetch/58aa94feb2a12f5d640257f6484b3d518d3bfa4f1143f9e3019060f3137e6ffe`,
+`mizu_fetch/54ed412eb046ef8dd5398f0e6bee7dd3a011fcdddf3d9de5addb2d9225e717cf`,
+`mizu_fetch/65f15e42ac05f66f4ef109ca9bfabcbf2a179be625b50f5a51bc26b78c4f9c29`,
+`mizu_fetch/114ccc48d7310fa87cc177f965c6e0c6036426bba41970cbac7360c81041350e`).
+CPython 3.14 is therefore compatible with the selected marker at the Unicode
+version level, while the upstream 3.13.0 release is not; neither fact identifies
+the interpreter that produced the llama.cpp tables or the binary/runtime build.
+The candidate generator scripts also do not bind the historical `unicodedata`
+implementation or the exact data files used in the selected run.
+
 Two independent pinned table comparisons reinforce that split. The generator at
 [tox-dev/turbohtml commit `37cf021b`](https://github.com/tox-dev/turbohtml/blob/37cf021b318bd9bc07c952e608aa407acc767c21/tools/generate_idna.py)
 pins official Unicode 16.0 `UnicodeData.txt` and `DerivedNormalizationProps.txt`
