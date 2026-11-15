@@ -432,14 +432,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
-            dbus-x11 fuse3 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
+            bubblewrap dbus-x11 fuse3 python3-dbus python3-gi xvfb \
+            xdg-desktop-portal xdg-desktop-portal-gtk
           cat /etc/os-release
           printf 'runner architecture: '
           uname -m
           printf 'dpkg architecture: '
           dpkg --print-architecture
           dpkg-query -W -f='${binary:Package} ${Version}\n' \
-            dbus-x11 fuse3 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
+            bubblewrap dbus-x11 fuse3 python3-dbus python3-gi xvfb \
+            xdg-desktop-portal xdg-desktop-portal-gtk
       - name: Start isolated portal and introspect its interfaces
         shell: bash
         run: |
@@ -507,3 +509,73 @@ jobs:
                 exit 1
               }
           '
+
+      - name: Probe FileChooser registration and Documents revocation in a sandbox
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          probe_root="$(mktemp -d "$RUNNER_TEMP/xdg-portal-probe.XXXXXX")"
+          runtime_dir="$(mktemp -d /tmp/kotoha-portal-runtime.XXXXXX)"
+          chmod 700 "$probe_root" "$runtime_dir"
+          mkdir -p "$probe_root/home" "$probe_root/data" "$probe_root/config"
+          export HOME="$probe_root/home"
+          export XDG_DATA_HOME="$probe_root/data"
+          export XDG_CONFIG_HOME="$probe_root/config"
+          export XDG_RUNTIME_DIR="$runtime_dir"
+          export XDG_CURRENT_DESKTOP=KOTOHA_PORTAL_TEST
+          export XDG_DATA_DIRS="$probe_root/data:/usr/local/share:/usr/share"
+          export KOTOHA_PORTAL_PROBE_ROOT="$probe_root"
+          cleanup() {
+            local status=$?
+            trap - EXIT
+            if mountpoint -q "$runtime_dir/doc"; then
+              if ! fusermount3 -u "$runtime_dir/doc" >/dev/null 2>&1; then
+                echo "Documents portal FUSE mount cleanup failed" >&2
+                status=1
+              fi
+            fi
+            if mountpoint -q "$runtime_dir/doc"; then
+              echo "Retaining mounted Documents portal runtime path" >&2
+              status=1
+            else
+              if ! rm -rf -- "$runtime_dir" "$probe_root" >/dev/null 2>&1; then
+                echo "Portal probe temporary-state cleanup failed" >&2
+                status=1
+              fi
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          portal_log="$probe_root/portal-session.log"
+          if timeout --kill-after=2s 60s dbus-run-session -- \
+              python3 tools/linux_portal_probe.py >"$portal_log" 2>&1; then
+            python3 - "$portal_log" <<'PYTHON'
+          import json
+          import sys
+
+          required = {
+              "filechooser_version", "documents_version", "test_app_id",
+              "backend_app_id_matches", "returned_uri_mapped_to_documents_mount",
+              "fixture_path_hidden_from_client", "fixture_sha256", "read_bytes",
+              "revoke_read_and_grant_permissions_succeeded",
+              "post_close_open_denied", "persistent_document_record_retained",
+              "revoked_permissions_remaining",
+          }
+          for line in open(sys.argv[1], encoding="utf-8"):
+              try:
+                  result = json.loads(line)
+              except json.JSONDecodeError:
+                  continue
+              if isinstance(result, dict) and required <= result.keys():
+                  print(json.dumps(result, sort_keys=True))
+                  break
+          else:
+              raise SystemExit("Linux portal probe produced no sanitized result")
+          PYTHON
+          else
+            status=$?
+            grep -E '^Linux portal probe failed: [a-z0-9-]+$' "$portal_log" | tail -n 1 || \
+              echo "Linux portal probe failed (details suppressed)" >&2
+            exit "$status"
+          fi
