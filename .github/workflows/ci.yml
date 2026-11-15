@@ -417,3 +417,79 @@ jobs:
             windows-release-runtime-providers/runtime-providers.json
             windows-release-runtime-providers/runtime-summary.txt
           if-no-files-found: error
+
+
+  linux-portal-runtime-probe:
+    name: Linux portal runtime probe (Ubuntu 22.04)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install portal runtime and headless session tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            dbus-x11 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
+          cat /etc/os-release
+          printf 'runner architecture: '
+          uname -m
+          printf 'dpkg architecture: '
+          dpkg --print-architecture
+          dpkg-query -W -f='${binary:Package} ${Version}\n' \
+            dbus-x11 xvfb xdg-desktop-portal xdg-desktop-portal-gtk
+      - name: Start isolated portal and introspect its interfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          export XDG_CURRENT_DESKTOP=GNOME
+          export GTK_USE_PORTAL=1
+          runtime_dir="$(mktemp -d "$RUNNER_TEMP/xdg-runtime.XXXXXX")"
+          chmod 700 "$runtime_dir"
+          export XDG_RUNTIME_DIR="$runtime_dir"
+          trap 'rm -rf "$runtime_dir"' EXIT
+          xvfb-run -a dbus-run-session -- bash -euo pipefail -c '
+            for attempt in {1..30}; do
+              if dbus-send --session --type=method_call \
+                  --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+                  org.freedesktop.DBus.StartServiceByName \
+                  string:org.freedesktop.portal.Desktop uint32:0 >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            for attempt in {1..30}; do
+              if dbus-send --session --type=method_call \
+                  --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+                  org.freedesktop.DBus.StartServiceByName \
+                  string:org.freedesktop.impl.portal.desktop.gtk uint32:0 >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            for attempt in {1..20}; do
+              if busctl --user introspect org.freedesktop.portal.Desktop \
+                  /org/freedesktop/portal/desktop \
+                  > "$RUNNER_TEMP/portal-interfaces.txt" 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            cat "$RUNNER_TEMP/portal-interfaces.txt"
+            grep -q "org.freedesktop.portal.FileChooser" \
+              "$RUNNER_TEMP/portal-interfaces.txt" || {
+                echo "FileChooser interface was not introspected on the portal" >&2
+                exit 1
+              }
+            busctl --user introspect org.freedesktop.impl.portal.desktop.gtk \
+              /org/freedesktop/portal/desktop \
+              > "$RUNNER_TEMP/gtk-backend-interfaces.txt"
+            cat "$RUNNER_TEMP/gtk-backend-interfaces.txt"
+            grep -q "org.freedesktop.impl.portal.FileChooser" \
+              "$RUNNER_TEMP/gtk-backend-interfaces.txt" || {
+                echo "FileChooser interface was not introspected on the GTK backend" >&2
+                exit 1
+              }
+          '
