@@ -1,11 +1,19 @@
 # Memory-only plain-text and Markdown import
 
 Kotoha implements user-triggered import on macOS, Windows, Android and iOS.
-Hosted CI for code SHA `a76efcb9b0f75637bae608bfb2a761d97ca02247` passed all five
-required checks, including Android Emulator import coverage and iOS Simulator
-tests/builds. This evidence covers configured tests, not live provider-selected
-reads, physical devices or offline availability; the local sandbox lacks native
-mobile SDKs, so its Dart tests are not mobile runtime evidence.
+The latest exact mobile evidence is CI run `43680441354` on published SHA
+`53809a016da85eb2394e63ffcdfafdf1003e133d` (publication
+`f462494dd6dd2306c8bb763f9a1b7703e8325ee9e84db767b1f4f658b37693ef`). Android
+job `132709964300` passed all 20 instrumentation tests on the API 35 x86_64
+emulator; iOS job `132709964132` passed 4 RunnerTests and 5 UI tests in the
+hosted simulator (`vcs-read/14f452ce42e2462f8b25a623f9f3cf92`,
+`vcs-read/7be031d92187439990ac17f14a294072`,
+`vcs-read/0b30a3f422aa44cca3ce3aea15612dd1`). The separate macOS job
+`132709964140` failed in that run; these mobile passes do not make the aggregate
+run green. This evidence
+covers configured tests, not live provider-selected reads, physical devices or
+offline availability; the local sandbox lacks native mobile SDKs, so its Dart
+tests are not mobile runtime evidence.
 
 The selected content is decoded into the source editor in memory and can then be
 edited manually; existing translation fields and the copy action remain
@@ -25,10 +33,11 @@ exercises those callbacks and checks flag state. iOS `SceneDelegate` adds and
 removes an opaque cover; `RunnerTests.testPrivacyCoverIsIdempotentAndLeavesContentAttached`
 directly invokes scene callbacks and checks the view hierarchy. These native
 tests exercise implementation state, not OS-generated app-switcher snapshots,
-screenshot suppression, physical devices, or OEM behavior. The separate
-keyboard/IME Flutter change has local widget evidence, but exact
-publication-bound Android/iOS CI for that change is still pending. No native
-OS-level privacy or screenshot-protection claim is made.
+screenshot suppression, physical devices, or OEM behavior. The exact Android/iOS
+checks on run `43680441354` passed, including the Android pause/resume test and
+iOS direct scene-callback test; the Flutter widget checks remain synthetic
+lifecycle/input coverage. Neither CI path captures an OS-generated thumbnail or
+screenshot, so no native OS-level privacy or screenshot-protection claim is made.
 
 The audited umbrella `file_selector` uses an Android cache copy and iOS
 `asCopy: true`; the app-owned mobile adapter below replaces those paths rather
