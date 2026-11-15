@@ -354,46 +354,25 @@ post-close access check, or persistent-state observation occurred. This remains
 interface-availability and cleanup evidence only, not portal behavior or
 Kotoha support. Linux import remains disabled.
 
-The later exact run `43741468020`, job `132895364912`, on publication
-`c92613c01b70908ea95729bb34c5a74d9ddbfda830112e8cb61e530628629c0a` / SHA
-`4c37e21a27f201015e382aaaeece6fd53d507369`, failed the Linux portal probe with
-only the allowlisted stage `sandbox-bwrap-setup-failed` (status
-`vcs-read/4c55c106f35741b6b33428406617a33f`, log
-`vcs-read/d73e05250c334ee8997cf19941ab5705`). No chooser/URI, revocation,
-post-close access, or persistent-state result was emitted. This is startup
-failure evidence only, not portal behavior or Kotoha support; Linux import
-remains disabled. Source review shows this stage previously conflated a bwrap
-launch error, a timeout, and a launched process returning nonzero. The probe
-now reports fixed, path-free codes for executable missing, launch error, timeout,
-and nonzero sandbox setup; captured child output remains suppressed. This
-classifies the next failure without changing chooser, permission, or persistence
-assertions. On the exact rerun for that classifier (publication
-`b054549938170000a62d72353ee859e26c362b5759973daa009b183ad0892367` / SHA
-`6cafacb85006d48ab89e43014bdf2011974d6519`, run `43743932354`, job
-`132902963751`), the stage remained `sandbox-bwrap-setup-failed`, confirming a
-launched bwrap process returned nonzero (`vcs-read/5f0e61f416a446c08f0c7d8f71eef541`,
-`vcs-read/565e79222f484bd78a6832e6e04f2b1b`). The exact log places the
-checkout under `/home`; source review shows the prefix masked `/home` before
-binding `Path(__file__).resolve()` from that checkout. The app-info source is
-also passed through a later bind, so the prefix now binds all required sources
-before masking `/home`, while
-keeping the fixture under the masked path and preserving all portal assertions.
-The exact follow-up on publication
-`dd6136cbcdf48dfa59267d178dbb0c2c94c4829ef725f4cd78f48440f57839a8` / SHA
-`594d96f497f10a797a8ce73ca0f8f5fc13df40b6` (run `43745515388`, job
-`132907827884`) still failed with `sandbox-bwrap-setup-failed` (status
-`vcs-read/6b473df365f948be99d1e1b53b59ceb7`, log
-`vcs-read/ecb8d508fa664a87b971d35c9f7c17bb`). Thus the `/home` bind ordering
-repair was insufficient; the failure still precedes the sandboxed client and all
-portal lifecycle assertions. The preflight maps recognized namespace,
-missing-source, and permission-denial stderr patterns to fixed path-free stages;
-unknown messages remain `sandbox-bwrap-setup-failed`. Because this exact run
-still returned that generic stage, the next revision adds a bounded cumulative
-`/bin/true` setup ladder only after an unclassified failure, identifying the
-first failing root/mount/bind/mask/environment group without forwarding child
-output. This is diagnostic only: no chooser, URI mapping, revocation,
-post-close access, or persistence result is claimed, and the next exact hosted
-check must establish whether setup reaches the client.
+The current exact hosted run, after the bounded cumulative bwrap setup ladder,
+was publication
+`7e4fb42830d5603e137ec74d0d8797e1bb2b2685d49d8d6d80152ecd292a3c7a` / SHA
+`b680c234a96049d0307853791b0e0a533dd7d18e` (run `43748568343`, job
+`132917211544`; status `vcs-read/33b8a25ff2014702a6a889657c5d7c98`, log
+`vcs-read/23fe8e4eec164e28a86dc283cf3e0a8e`). The ladder reports
+`sandbox-bwrap-app-info-bind-failed` after the core, `/run`, proc and dev setup
+stages passed. It identifies the app-info bind operation, not whether its source
+or target caused the failure; no child paths or raw stderr are exposed. The job
+also records bubblewrap `0.6.1-1ubuntu0.3` and still fails before the sandboxed
+client, so chooser, URI mapping, permission revocation, post-close access, and
+persistent-state behavior remain untested.
+
+The probe now supplies the synthetic `/.flatpak-info` contents through an
+inherited, rewound descriptor and bubblewrap's read-only data-bind option rather
+than binding a host temporary path onto the read-only root. This avoids relying
+on host-path visibility and tests the failing operation directly; the next exact
+Ubuntu 22.04 run must confirm the option works with the installed bubblewrap,
+then determine whether setup reaches the client. Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,

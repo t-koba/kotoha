@@ -2,6 +2,7 @@
 import errno
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -21,14 +22,14 @@ from tools.linux_portal_probe import (
 
 class SandboxPrefixTest(unittest.TestCase):
     def test_binds_host_sources_before_masking_home_without_exposing_fixture(self):
-        app_info = Path("/home/runner/work/_temp/probe/flatpak-info")
+        app_info_fd = 11
         script = Path("/home/runner/work/kotoha/kotoha/tools/linux_portal_probe.py")
         mountpoint = "/tmp/kotoha-portal-runtime/doc"
         fixture = Path("/home/runner/work/_temp/probe/fixture.md")
         dbus_address = "unix:path=/tmp/bus"
         runtime = Path("/tmp/kotoha-portal-runtime")
         prefix, stages = _sandbox_client_prefix(
-            app_info, script, mountpoint, dbus_address, fixture, runtime
+            app_info_fd, script, mountpoint, dbus_address, fixture, runtime
         )
         self.assertEqual(
             prefix,
@@ -57,8 +58,11 @@ class SandboxPrefixTest(unittest.TestCase):
             for index in range(len(prefix) - 1)
             if prefix[index:index + 2] == ["--tmpfs", "/home"]
         )
-        self.assertLess(prefix.index(str(app_info)), home_mask)
+        app_info_arg = prefix.index(str(app_info_fd))
+        self.assertEqual(prefix[app_info_arg - 1], "--ro-bind-data")
+        self.assertEqual(prefix[app_info_arg + 1], "/.flatpak-info")
         self.assertLess(prefix.index(str(script)), home_mask)
+        self.assertNotIn("/home/runner/work/_temp/probe/flatpak-info", prefix)
         self.assertLess(prefix.index(mountpoint), home_mask)
         self.assertEqual(prefix.count(str(fixture)), 1)
         self.assertEqual(
@@ -130,6 +134,7 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-bwrap-documents-bind-failed",
             "sandbox-bwrap-home-mask-failed",
             "sandbox-bwrap-environment-failed",
+            "sandbox-bwrap-data-fd-failed",
             "sandbox-bwrap-prefix-inconsistent",
             "sandbox-bwrap-timeout",
             "sandbox-bwrap-executable-missing",
@@ -173,16 +178,25 @@ class SandboxFailureStageTest(unittest.TestCase):
             ("sandbox-bwrap-core-setup-failed", ["--ro-bind", "/", "/"]),
             ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
         ]
-        with patch("tools.linux_portal_probe.subprocess.run") as run:
-            run.side_effect = [
-                subprocess.CompletedProcess([], 1, "", private),
-                subprocess.CompletedProcess([], 0, "", ""),
-                subprocess.CompletedProcess([], 1, "", private),
-            ]
-            with self.assertRaises(ProbeFailure) as caught:
-                _run_sandbox_preflight(prefix, stages)
+        with tempfile.TemporaryFile(mode="w+b") as data:
+            data.write(b"[Application]\nname=org.kotoha.portalprobe\n")
+            data.flush()
+            data.seek(4)
+            data_fd = data.fileno()
+            with patch("tools.linux_portal_probe.subprocess.run") as run:
+                run.side_effect = [
+                    subprocess.CompletedProcess([], 1, "", private),
+                    subprocess.CompletedProcess([], 0, "", ""),
+                    subprocess.CompletedProcess([], 1, "", private),
+                ]
+                with self.assertRaises(ProbeFailure) as caught:
+                    _run_sandbox_preflight(prefix, stages, (data_fd,))
+            self.assertEqual(data.tell(), 0)
         self.assertEqual(caught.exception.stage, "sandbox-bwrap-run-mask-failed")
         self.assertNotIn(private, str(caught.exception))
+        self.assertTrue(
+            all(call.kwargs["pass_fds"] == (data_fd,) for call in run.call_args_list)
+        )
         self.assertEqual(
             [call.args[0] for call in run.call_args_list],
             [
@@ -194,6 +208,13 @@ class SandboxFailureStageTest(unittest.TestCase):
                 ],
             ],
         )
+
+    def test_preflight_rejects_unseekable_metadata_fd_without_forwarding_error(self):
+        with patch("tools.linux_portal_probe.subprocess.run") as run:
+            with self.assertRaises(ProbeFailure) as caught:
+                _run_sandbox_preflight(["bwrap", "--", "prefix"], pass_fds=(-1,))
+        self.assertEqual(caught.exception.stage, "sandbox-bwrap-data-fd-failed")
+        run.assert_not_called()
 
     def test_preflight_classifies_python_failure_and_missing_marker(self):
         private = "secret stderr /tmp/private"

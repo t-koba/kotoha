@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
@@ -96,13 +97,23 @@ def _sandbox_bwrap_failure_stage(stderr: str) -> str:
     return "sandbox-bwrap-setup-failed"
 
 
-def _run_sandbox_bwrap(prefix: list[str]):
+def _rewind_sandbox_fds(pass_fds: tuple[int, ...]) -> None:
+    try:
+        for fd in pass_fds:
+            os.lseek(fd, 0, os.SEEK_SET)
+    except OSError as exc:
+        raise ProbeFailure("sandbox-bwrap-data-fd-failed") from exc
+
+
+def _run_sandbox_bwrap(prefix: list[str], pass_fds: tuple[int, ...] = ()):
+    _rewind_sandbox_fds(pass_fds)
     try:
         return subprocess.run(
             [*prefix, "/bin/true"],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
+            pass_fds=pass_fds,
             timeout=5,
             check=False,
         )
@@ -115,10 +126,12 @@ def _run_sandbox_bwrap(prefix: list[str]):
 
 
 def _run_sandbox_preflight(
-    bwrap_prefix: list[str], stages: list[tuple[str, list[str]]] | None = None
+    bwrap_prefix: list[str],
+    stages: list[tuple[str, list[str]]] | None = None,
+    pass_fds: tuple[int, ...] = (),
 ) -> None:
     """Check bwrap and Python startup without exposing child output."""
-    completed = _run_sandbox_bwrap(bwrap_prefix)
+    completed = _run_sandbox_bwrap(bwrap_prefix, pass_fds)
     if completed.returncode != 0:
         failure = _sandbox_bwrap_failure_stage(completed.stderr)
         if failure != "sandbox-bwrap-setup-failed" or stages is None:
@@ -127,7 +140,7 @@ def _run_sandbox_preflight(
         prefix = bwrap_prefix[:3]
         for stage, options in stages:
             prefix.extend(options)
-            diagnostic = _run_sandbox_bwrap([*prefix, "--"])
+            diagnostic = _run_sandbox_bwrap([*prefix, "--"], pass_fds)
             if diagnostic.returncode != 0:
                 failure = _sandbox_bwrap_failure_stage(diagnostic.stderr)
                 raise ProbeFailure(
@@ -135,6 +148,7 @@ def _run_sandbox_preflight(
                 )
         raise ProbeFailure("sandbox-bwrap-prefix-inconsistent")
 
+    _rewind_sandbox_fds(pass_fds)
     try:
         completed = subprocess.run(
             [
@@ -146,6 +160,7 @@ def _run_sandbox_preflight(
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
+            pass_fds=pass_fds,
             timeout=5,
             check=False,
         )
@@ -397,7 +412,7 @@ def _get_property(dbus, bus, name: str, interface: str) -> int:
 
 
 def _sandbox_client_prefix_stages(
-    app_info_path: Path,
+    app_info_fd: int,
     script_path: Path,
     mountpoint: str,
     dbus_address: str,
@@ -412,7 +427,7 @@ def _sandbox_client_prefix_stages(
         ("sandbox-bwrap-dev-bind-failed", ["--dev", "/dev"]),
         (
             "sandbox-bwrap-app-info-bind-failed",
-            ["--ro-bind", str(app_info_path), "/.flatpak-info"],
+            ["--ro-bind-data", str(app_info_fd), "/.flatpak-info"],
         ),
         (
             "sandbox-bwrap-client-script-bind-failed",
@@ -433,7 +448,7 @@ def _sandbox_client_prefix_stages(
 
 
 def _sandbox_client_prefix(
-    app_info_path: Path,
+    app_info_fd: int,
     script_path: Path,
     mountpoint: str,
     dbus_address: str,
@@ -441,7 +456,7 @@ def _sandbox_client_prefix(
     runtime: Path,
 ) -> tuple[list[str], list[tuple[str, list[str]]]]:
     stages = _sandbox_client_prefix_stages(
-        app_info_path, script_path, mountpoint, dbus_address, fixture_path, runtime
+        app_info_fd, script_path, mountpoint, dbus_address, fixture_path, runtime
     )
     options = [option for _, group in stages for option in group]
     return ["bwrap", "--die-with-parent", "--unshare-all", *options, "--"], stages
@@ -454,11 +469,9 @@ def run_host() -> dict[str, object]:
     data_home = Path(os.environ["XDG_DATA_HOME"])
     runtime = Path(os.environ["XDG_RUNTIME_DIR"])
     fixture = root / "fixture.md"
-    app_info_path = root / "flatpak-info"
     backend_report = str(root / "backend.json")
     backend_ready = str(root / "backend-ready.json")
     fixture.write_bytes(FIXTURE)
-    app_info_path.write_text(f"[Application]\nname={APP_ID}\n", encoding="utf-8")
     portal_dir = data_home / "xdg-desktop-portal" / "portals"
     portal_dir.mkdir(parents=True, exist_ok=True)
     (portal_dir / "kotoha-test.portal").write_text(
@@ -476,6 +489,7 @@ def run_host() -> dict[str, object]:
             "KOTOHA_PORTAL_BACKEND_READY": backend_ready,
         }
     )
+    app_info_file = None
     backend = subprocess.Popen(
         [sys.executable, str(Path(__file__).resolve()), "--backend"],
         env=env,
@@ -484,6 +498,9 @@ def run_host() -> dict[str, object]:
         stderr=subprocess.DEVNULL,
     )
     try:
+        app_info_file = tempfile.TemporaryFile(mode="w+b")
+        app_info_file.write(f"[Application]\nname={APP_ID}\n".encode("utf-8"))
+        app_info_file.flush()
         deadline = time.monotonic() + 10
         while not Path(backend_ready).is_file():
             if backend.poll() is not None or time.monotonic() >= deadline:
@@ -537,16 +554,19 @@ def run_host() -> dict[str, object]:
         client_env["DBUS_SESSION_BUS_ADDRESS"] = os.environ["DBUS_SESSION_BUS_ADDRESS"]
         client_env["KOTOHA_PORTAL_FIXTURE_PATH"] = str(fixture)
         script_path = Path(__file__).resolve()
+        app_info_fd = app_info_file.fileno()
         bwrap_prefix, bwrap_stages = _sandbox_client_prefix(
-            app_info_path,
+            app_info_fd,
             script_path,
             mountpoint,
             client_env["DBUS_SESSION_BUS_ADDRESS"],
             fixture,
             runtime,
         )
-        _run_sandbox_preflight(bwrap_prefix, bwrap_stages)
+        app_info_fds = (app_info_fd,)
+        _run_sandbox_preflight(bwrap_prefix, bwrap_stages, app_info_fds)
         command = [*bwrap_prefix, sys.executable, "/run/portal-probe.py", "--client"]
+        _rewind_sandbox_fds(app_info_fds)
         try:
             completed = subprocess.run(
                 command,
@@ -554,6 +574,7 @@ def run_host() -> dict[str, object]:
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
+                pass_fds=app_info_fds,
                 timeout=40,
                 check=False,
             )
@@ -633,6 +654,9 @@ def run_host() -> dict[str, object]:
         except subprocess.TimeoutExpired:
             backend.kill()
             backend.wait(timeout=3)
+        finally:
+            if app_info_file is not None:
+                app_info_file.close()
 
 
 def main() -> int:
