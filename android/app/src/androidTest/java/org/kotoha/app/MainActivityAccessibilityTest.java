@@ -130,9 +130,20 @@ public final class MainActivityAccessibilityTest
 
     private void checkField(String id, String label, String nextId, String nextLabel,
             String... interveningControls) {
+        String sourceStateBeforeTargetNavigation = "target-language-0".equals(id)
+                ? fieldState("source-language") : null;
         revealField(id);
         click(label, n -> field(n, id));
-        assertField(id, label, "");
+        try {
+            assertField(id, label, "");
+        } catch (AssertionFailedError failure) {
+            if (sourceStateBeforeTargetNavigation != null) {
+                failure.addSuppressed(new AssertionFailedError(
+                        "Source-language state before target navigation="
+                                + sourceStateBeforeTargetNavigation));
+            }
+            throw failure;
+        }
         // Verify that input reaches the tapped field by pasting a synthetic marker.
         // sendStringSync("p") failed to commit under the Japanese UI locale on the
         // hosted emulator even though the native field remained focused.
