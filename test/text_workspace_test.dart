@@ -593,6 +593,45 @@ void main() {
     },
   );
 
+  testWidgets(
+    'removing a middle translation keeps focus on the field that shifts in',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      for (final entry in const <(String, String)>[
+        ('translation-text-0', 'first'),
+        ('translation-text-1', 'middle'),
+        ('translation-text-2', 'last'),
+      ]) {
+        await tester.enterText(find.byKey(ValueKey(entry.$1)), entry.$2);
+      }
+
+      // Pointer removal of the middle field must not drop focus back to the
+      // enclosing scope: the following field shifts into this slot and keeps
+      // focus, with its exact text preserved.
+      await tester.tap(find.byKey(const ValueKey('remove-translation-1')));
+      await tester.pumpAndSettle();
+      final survivor = find.byKey(const ValueKey('translation-text-1'));
+      final survivorFocus = tester
+          .widget<EditableText>(
+            find.descendant(of: survivor, matching: find.byType(EditableText)),
+          )
+          .focusNode;
+      expect(survivorFocus.hasFocus, isTrue);
+      expect(tester.widget<TextField>(survivor).controller!.text, 'last');
+      expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('copies exact multilingual manual text', (tester) async {
     final calls = <MethodCall>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(

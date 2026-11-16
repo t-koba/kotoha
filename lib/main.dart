@@ -395,9 +395,20 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _removeTranslation(int index) {
     if (_translations.length == 1) return;
+    // When a following field shifts into this slot, keep keyboard focus on it
+    // so pointer removal does not drop focus back to the enclosing scope.
+    // Removing the last field keeps the existing Add-button focus behavior.
+    final following = index + 1 < _translations.length
+        ? _translations[index + 1]
+        : null;
     setState(() {
       _translations.removeAt(index).dispose();
     });
+    if (following != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) following.textFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -679,6 +690,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             _manualTextField(
               key: ValueKey('translation-text-$index'),
               controller: fields.text,
+              focusNode: fields.textFocusNode,
               label: strings.manualTranslation,
               minLines: 4,
               maxLines: 10,
@@ -719,6 +731,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     required String label,
     required int minLines,
     required int maxLines,
+    FocusNode? focusNode,
   }) => ValueListenableBuilder<TextEditingValue>(
     valueListenable: controller,
     builder: (context, value, _) => Semantics(
@@ -726,6 +739,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       child: TextField(
         key: key,
         controller: controller,
+        focusNode: focusNode,
         readOnly: !_appResumed,
         enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
         textDirection: firstStrongDirection(value.text),
@@ -767,10 +781,12 @@ class _TranslationFields {
   final bool Function() inputEnabled;
   late final language = _DraftController(inputEnabled);
   late final text = _DraftController(inputEnabled);
+  final textFocusNode = FocusNode();
 
   void dispose() {
     language.dispose();
     text.dispose();
+    textFocusNode.dispose();
   }
 }
 
