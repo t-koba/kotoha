@@ -17,10 +17,8 @@ import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.function.Predicate;
@@ -233,18 +231,18 @@ public final class MainActivityAccessibilityTest
     }
 
     private void pressDeleteKey() {
-        // On the pinned API-35 emulator, sendKeySync accepted KEYCODE_DEL but the
-        // focused Flutter editor stayed unchanged. Use one system-injected key
-        // path, assert its command status, and keep the exact editor assertion.
-        String command = "input keyevent " + KeyEvent.KEYCODE_DEL + "; echo $?";
-        try (BufferedReader output = new BufferedReader(new InputStreamReader(
-                new ParcelFileDescriptor.AutoCloseInputStream(
-                        automation.executeShellCommand(command)),
-                StandardCharsets.US_ASCII))) {
-            assertEquals("input command exit status", "0", output.readLine());
-            assertNull("input command has no additional output", output.readLine());
+        // Android 15 launches this command with Runtime.exec, not a shell, so
+        // `; echo $?` is not a status check. Drain stdout to EOF to wait for the
+        // exact key command to finish; the caller's exact-value assertion checks
+        // whether the focused editor actually received it.
+        String command = "input keyevent " + KeyEvent.KEYCODE_DEL;
+        try (InputStream output = new ParcelFileDescriptor.AutoCloseInputStream(
+                automation.executeShellCommand(command))) {
+            while (output.read() != -1) {
+                // This API exposes stdout only; it does not expose the exit status.
+            }
         } catch (IOException exception) {
-            throw new AssertionError("Could not read input command status", exception);
+            throw new AssertionError("Could not finish input command", exception);
         }
     }
 
