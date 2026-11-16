@@ -104,7 +104,7 @@ public final class MainActivityAccessibilityTest
         setClipboardText("p");
         controlKey(KeyEvent.KEYCODE_V);
         assertField(id, label, "p");
-        getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+        pressKey(KeyEvent.KEYCODE_DEL, 0);
         assertField(id, label, "");
     }
 
@@ -157,7 +157,7 @@ public final class MainActivityAccessibilityTest
                 String before = inputFocusState();
                 clearDiagnosticEvents();
                 try {
-                    getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+                    pressKey(KeyEvent.KEYCODE_DEL, 0);
                     assertField(id, label, currentValue);
                 } catch (AssertionFailedError failure) {
                     failure.addSuppressed(new AssertionFailedError(
@@ -191,7 +191,7 @@ public final class MainActivityAccessibilityTest
                 pressKey(KeyEvent.KEYCODE_TAB, 0);
             }
             controlKey(KeyEvent.KEYCODE_A);
-            getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+            pressKey(KeyEvent.KEYCODE_DEL, 0);
             getInstrumentation().sendStringSync("z");
             assertField(nextId, nextLabel, "z");
         } else {
@@ -218,11 +218,13 @@ public final class MainActivityAccessibilityTest
     }
 
     private void pressKey(int keyCode, int meta) {
-        long now = SystemClock.uptimeMillis();
+        // Keep the original downTime across the pair; sendKeyDownUpSync constructs
+        // independently timestamped events, so its key-up does not match key-down.
+        long downTime = SystemClock.uptimeMillis();
         getInstrumentation().sendKeySync(
-                new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, meta));
-        getInstrumentation().sendKeySync(
-                new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, meta));
+                new KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0, meta));
+        getInstrumentation().sendKeySync(new KeyEvent(downTime, SystemClock.uptimeMillis(),
+                KeyEvent.ACTION_UP, keyCode, 0, meta));
     }
 
     private void awaitFocused(String label) {
