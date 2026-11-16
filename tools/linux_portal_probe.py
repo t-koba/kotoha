@@ -34,6 +34,8 @@ DOCS_IFACE = "org.freedesktop.portal.Documents"
 FIXTURE = b"Kotoha portal probe fixture v1\n"
 CLIENT_STARTED_MARKER = "KOTOHA_PORTAL_PROBE_CLIENT_STARTED"
 PYTHON_PREFLIGHT_MARKER = "KOTOHA_PORTAL_PROBE_PYTHON_PREFLIGHT"
+SANDBOX_PREFLIGHT_EXECUTABLE = "/usr/bin/true"
+SANDBOX_PYTHON_EXECUTABLE = "/usr/bin/python3"
 
 
 class ProbeFailure(Exception):
@@ -121,7 +123,7 @@ def _run_sandbox_bwrap(prefix: list[str], pass_fds: tuple[int, ...] = ()):
     _rewind_sandbox_fds(pass_fds)
     try:
         return subprocess.run(
-            [*prefix, "/bin/true"],
+            [*prefix, SANDBOX_PREFLIGHT_EXECUTABLE],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
@@ -165,7 +167,7 @@ def _run_sandbox_preflight(
         completed = subprocess.run(
             [
                 *bwrap_prefix,
-                sys.executable,
+                SANDBOX_PYTHON_EXECUTABLE,
                 "-c",
                 f"print({PYTHON_PREFLIGHT_MARKER!r})",
             ],
@@ -432,14 +434,19 @@ def _sandbox_client_prefix_stages(
     runtime: Path,
 ) -> list[tuple[str, list[str]]]:
     # Build an empty private root; bwrap resolves bind sources under /oldroot
-    # and mount destinations under /newroot. Expose only runtime dependencies
-    # read-only, then add the private bus/documents paths before locking /.
+    # and mount destinations under /newroot. Keep the preflight executable and
+    # runtime in the first cumulative stage, then add private paths before the root is locked.
     return [
-        ("sandbox-bwrap-private-root-failed", ["--tmpfs", "/"]),
-        ("sandbox-bwrap-usr-bind-failed", ["--ro-bind", "/usr", "/usr"]),
-        ("sandbox-bwrap-lib-bind-failed", ["--ro-bind", "/lib", "/lib"]),
-        ("sandbox-bwrap-lib64-bind-failed", ["--ro-bind", "/lib64", "/lib64"]),
-        ("sandbox-bwrap-etc-bind-failed", ["--ro-bind", "/etc", "/etc"]),
+        (
+            "sandbox-bwrap-base-runtime-failed",
+            [
+                "--tmpfs", "/",
+                "--ro-bind", "/usr", "/usr",
+                "--ro-bind", "/lib", "/lib",
+                "--ro-bind", "/lib64", "/lib64",
+                "--ro-bind", "/etc", "/etc",
+            ],
+        ),
         ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
         ("sandbox-bwrap-tmp-mask-failed", ["--tmpfs", "/tmp"]),
         ("sandbox-bwrap-proc-bind-failed", ["--proc", "/proc"]),
@@ -586,7 +593,9 @@ def run_host() -> dict[str, object]:
         )
         app_info_fds = (app_info_fd,)
         _run_sandbox_preflight(bwrap_prefix, bwrap_stages, app_info_fds)
-        command = [*bwrap_prefix, sys.executable, "/run/portal-probe.py", "--client"]
+        command = [
+            *bwrap_prefix, SANDBOX_PYTHON_EXECUTABLE, "/run/portal-probe.py", "--client"
+        ]
         _rewind_sandbox_fds(app_info_fds)
         try:
             completed = subprocess.run(

@@ -392,13 +392,16 @@ handling at lines 1151 and 1178); the tmpfs operation creates its new-root
 destination before mounting it (lines 1327-1337). This avoids a host-root bind
 and gives `--ro-bind-data` a private target.
 
-The exact hosted run above predates this private-root sequence. The 17 focused
-probe tests pass locally and assert the private root, read-only system inputs,
-app-info target, explicit runtime/document binds, hidden fixture path, and final
-root remount; the probe's actual bwrap preflight still needs an exact Ubuntu
-22.04 CI run for this tree. No chooser request, URI/document mapping, permission
-operation, post-close access, or persistent-state observation has yet occurred.
-Linux import remains disabled.
+The sandbox preflight runs `/usr/bin/true` and `/usr/bin/python3` from the
+read-only `/usr` mount. Its first diagnostic stage groups the tmpfs root with
+`/usr`, `/lib`, `/lib64`, and `/etc`, so it does not test an executable before
+its binary and runtime are visible. The focused probe tests assert the private
+root, these read-only system inputs, app-info target, explicit runtime/document
+binds, hidden fixture path, and final root remount. The Ubuntu 22.04 portal job
+now runs a real-bwrap preflight check before the full probe, but no hosted result
+for this tree is recorded yet. No chooser request, URI/document mapping,
+permission operation, post-close access, or persistent-state observation has
+yet occurred. Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,

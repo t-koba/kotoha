@@ -1,7 +1,8 @@
 """Regression tests for the portal probe's sanitized child-stage channel."""
 import errno
+import os
+import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,8 @@ from tools.linux_portal_probe import (
     CLIENT_STARTED_MARKER,
     ProbeFailure,
     PYTHON_PREFLIGHT_MARKER,
+    SANDBOX_PREFLIGHT_EXECUTABLE,
+    SANDBOX_PYTHON_EXECUTABLE,
     _run_sandbox_preflight,
     _sandbox_bwrap_failure_stage,
     _sandbox_client_prefix,
@@ -42,11 +45,7 @@ class SandboxPrefixTest(unittest.TestCase):
         self.assertEqual(
             [stage for stage, _ in stages],
             [
-                "sandbox-bwrap-private-root-failed",
-                "sandbox-bwrap-usr-bind-failed",
-                "sandbox-bwrap-lib-bind-failed",
-                "sandbox-bwrap-lib64-bind-failed",
-                "sandbox-bwrap-etc-bind-failed",
+                "sandbox-bwrap-base-runtime-failed",
                 "sandbox-bwrap-run-mask-failed",
                 "sandbox-bwrap-tmp-mask-failed",
                 "sandbox-bwrap-proc-bind-failed",
@@ -60,13 +59,26 @@ class SandboxPrefixTest(unittest.TestCase):
                 "sandbox-bwrap-root-remount-failed",
             ],
         )
-        self.assertEqual(stages[0][1], ["--tmpfs", "/"])
-        self.assertEqual(stages[1:5], [
-            ("sandbox-bwrap-usr-bind-failed", ["--ro-bind", "/usr", "/usr"]),
-            ("sandbox-bwrap-lib-bind-failed", ["--ro-bind", "/lib", "/lib"]),
-            ("sandbox-bwrap-lib64-bind-failed", ["--ro-bind", "/lib64", "/lib64"]),
-            ("sandbox-bwrap-etc-bind-failed", ["--ro-bind", "/etc", "/etc"]),
-        ])
+        self.assertEqual(
+            stages[0],
+            (
+                "sandbox-bwrap-base-runtime-failed",
+                [
+                    "--tmpfs", "/",
+                    "--ro-bind", "/usr", "/usr",
+                    "--ro-bind", "/lib", "/lib",
+                    "--ro-bind", "/lib64", "/lib64",
+                    "--ro-bind", "/etc", "/etc",
+                ],
+            ),
+        )
+        self.assertEqual(
+            stages[1], ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"])
+        )
+        self.assertEqual(SANDBOX_PREFLIGHT_EXECUTABLE, "/usr/bin/true")
+        self.assertEqual(SANDBOX_PYTHON_EXECUTABLE, "/usr/bin/python3")
+        self.assertTrue(os.access(SANDBOX_PREFLIGHT_EXECUTABLE, os.X_OK))
+        self.assertTrue(os.access(SANDBOX_PYTHON_EXECUTABLE, os.X_OK))
         self.assertNotIn(["--bind", "/", "/"], [options for _, options in stages])
         self.assertNotIn(["--ro-bind", "/", "/"], [options for _, options in stages])
         self.assertEqual(
@@ -93,6 +105,34 @@ class SandboxPrefixTest(unittest.TestCase):
         self.assertEqual(
             prefix[prefix.index(str(fixture)) - 1], "KOTOHA_PORTAL_FIXTURE_PATH"
         )
+
+
+class RealBwrapPreflightTest(unittest.TestCase):
+    @unittest.skipUnless(
+        os.environ.get("KOTOHA_RUN_BWRAP_INTEGRATION") == "1"
+        and shutil.which("bwrap") is not None,
+        "real bwrap preflight is enabled only by the Ubuntu portal job",
+    )
+    def test_private_root_runs_bound_executables(self):
+        _, stages = _sandbox_client_prefix(
+            11,
+            Path("/tmp/portal-probe.py"),
+            "/tmp/kotoha-runtime/doc",
+            "unix:path=/tmp/kotoha-runtime/bus",
+            Path("/tmp/fixture.md"),
+            Path("/tmp/kotoha-runtime"),
+        )
+        base_runtime = stages[0][1]
+        prefix = [
+            "bwrap", "--die-with-parent", "--unshare-all",
+            *base_runtime,
+            "--tmpfs", "/run",
+            "--tmpfs", "/tmp",
+            "--proc", "/proc",
+            "--dev", "/dev",
+            "--remount-ro", "/", "--",
+        ]
+        _run_sandbox_preflight(prefix)
 
 
 class SandboxFailureStageTest(unittest.TestCase):
@@ -184,11 +224,7 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-bwrap-data-arguments-invalid",
             "sandbox-bwrap-operation-not-permitted",
             "sandbox-bwrap-permission-denied",
-            "sandbox-bwrap-private-root-failed",
-            "sandbox-bwrap-usr-bind-failed",
-            "sandbox-bwrap-lib-bind-failed",
-            "sandbox-bwrap-lib64-bind-failed",
-            "sandbox-bwrap-etc-bind-failed",
+            "sandbox-bwrap-base-runtime-failed",
             "sandbox-bwrap-run-mask-failed",
             "sandbox-bwrap-tmp-mask-failed",
             "sandbox-bwrap-proc-bind-failed",
@@ -236,13 +272,17 @@ class SandboxFailureStageTest(unittest.TestCase):
 
     def test_unknown_preflight_failure_is_localized_by_cumulative_setup_stage(self):
         private = "/home/private/unclassified"
-        prefix = [
-            "bwrap", "--die-with-parent", "--unshare-all",
-            "--tmpfs", "/", "--ro-bind", "/usr", "/usr", "--",
+        base_runtime = [
+            "--tmpfs", "/",
+            "--ro-bind", "/usr", "/usr",
+            "--ro-bind", "/lib", "/lib",
+            "--ro-bind", "/lib64", "/lib64",
+            "--ro-bind", "/etc", "/etc",
         ]
+        prefix = ["bwrap", "--die-with-parent", "--unshare-all", *base_runtime, "--"]
         stages = [
-            ("sandbox-bwrap-private-root-failed", ["--tmpfs", "/"]),
-            ("sandbox-bwrap-usr-bind-failed", ["--ro-bind", "/usr", "/usr"]),
+            ("sandbox-bwrap-base-runtime-failed", base_runtime),
+            ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
         ]
         with tempfile.TemporaryFile(mode="w+b") as data:
             data.write(b"[Application]\nname=org.kotoha.portalprobe\n")
@@ -258,7 +298,7 @@ class SandboxFailureStageTest(unittest.TestCase):
                 with self.assertRaises(ProbeFailure) as caught:
                     _run_sandbox_preflight(prefix, stages, (data_fd,))
             self.assertEqual(data.tell(), 0)
-        self.assertEqual(caught.exception.stage, "sandbox-bwrap-usr-bind-failed")
+        self.assertEqual(caught.exception.stage, "sandbox-bwrap-run-mask-failed")
         self.assertNotIn(private, str(caught.exception))
         self.assertTrue(
             all(call.kwargs["pass_fds"] == (data_fd,) for call in run.call_args_list)
@@ -266,11 +306,11 @@ class SandboxFailureStageTest(unittest.TestCase):
         self.assertEqual(
             [call.args[0] for call in run.call_args_list],
             [
-                [*prefix, "/bin/true"],
-                [*prefix[:3], "--tmpfs", "/", "--", "/bin/true"],
+                [*prefix, SANDBOX_PREFLIGHT_EXECUTABLE],
+                [*prefix[:3], *base_runtime, "--", SANDBOX_PREFLIGHT_EXECUTABLE],
                 [
-                    *prefix[:3], "--tmpfs", "/", "--ro-bind", "/usr", "/usr",
-                    "--", "/bin/true",
+                    *prefix[:3], *base_runtime, "--tmpfs", "/run", "--",
+                    SANDBOX_PREFLIGHT_EXECUTABLE,
                 ],
             ],
         )
@@ -344,9 +384,9 @@ class SandboxFailureStageTest(unittest.TestCase):
             ]
             _run_sandbox_preflight(prefix)
         commands = [entry.args[0] for entry in run.call_args_list]
-        self.assertEqual(commands[0], prefix + ["/bin/true"])
+        self.assertEqual(commands[0], prefix + [SANDBOX_PREFLIGHT_EXECUTABLE])
         self.assertEqual(commands[1][:len(prefix)], prefix)
-        self.assertEqual(commands[1][len(prefix):len(prefix) + 2], [sys.executable, "-c"])
+        self.assertEqual(commands[1][len(prefix):len(prefix) + 2], [SANDBOX_PYTHON_EXECUTABLE, "-c"])
 
     def test_client_startup_failure_stage_never_forwards_child_output(self):
         private = "python traceback at /home/private/Project"
