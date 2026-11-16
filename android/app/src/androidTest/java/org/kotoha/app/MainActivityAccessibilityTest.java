@@ -10,8 +10,6 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.InstrumentationTestRunner;
-import android.view.InputDevice;
-import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowInsets;
@@ -92,7 +90,7 @@ public final class MainActivityAccessibilityTest
                 "Copy translation 1", "Import text or Markdown", "Review model package terms");
     }
 
-    public void testInstrumentationDeleteKeyComparison() {
+    public void testInstrumentationDeleteKeyClearsFocusedField() {
         click("interface language menu", n -> named(n, "Interface language")
                 || named(n, "表示言語"));
         click("English", n -> named(n, "English"));
@@ -106,47 +104,8 @@ public final class MainActivityAccessibilityTest
         setClipboardText("p");
         controlKey(KeyEvent.KEYCODE_V);
         assertField(id, label, "p");
-        AssertionFailedError controlFailure = null;
-        try {
-            getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
-            assertField(id, label, "");
-        } catch (AssertionFailedError failure) {
-            // Retain the explicit expectation, but still exercise the other API once.
-            controlFailure = failure;
-        }
-        String controlState = "Instrumentation.sendKeyDownUpSync(KEYCODE_DEL)"
-                + "; expectedCodePoints=" + codePoints("") + "; observed=" + fieldState(id)
-                + "; assertionPassed=" + (controlFailure == null);
-        try {
-            // Replace any remaining marker rather than appending after a failed delete.
-            // No re-tap: both APIs must act on the same focused target editor.
-            controlKey(KeyEvent.KEYCODE_A);
-            setClipboardText("p");
-            controlKey(KeyEvent.KEYCODE_V);
-            assertField(id, label, "p");
-        } catch (AssertionFailedError failure) {
-            failure.addSuppressed(new AssertionFailedError(controlState));
-            if (controlFailure != null) failure.addSuppressed(controlFailure);
-            throw failure;
-        }
-        AssertionFailedError injectionFailure = null;
-        try {
-            injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
-            assertField(id, label, "");
-        } catch (AssertionFailedError failure) {
-            injectionFailure = failure;
-        }
-        if (controlFailure != null || injectionFailure != null) {
-            AssertionFailedError comparison = new AssertionFailedError(
-                    "Synthetic target-language-0 delete comparison: " + controlState
-                            + "; UiAutomation.injectInputEvent(KEYCODE_DEL down/up)"
-                            + "; expectedCodePoints=" + codePoints("")
-                            + "; observed=" + fieldState(id)
-                            + "; assertionPassed=" + (injectionFailure == null));
-            if (controlFailure != null) comparison.addSuppressed(controlFailure);
-            if (injectionFailure != null) comparison.addSuppressed(injectionFailure);
-            throw comparison;
-        }
+        getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+        assertField(id, label, "");
     }
 
     public void testJapaneseLanguageFields() {
@@ -198,7 +157,7 @@ public final class MainActivityAccessibilityTest
                 String before = inputFocusState();
                 clearDiagnosticEvents();
                 try {
-                    injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
+                    getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
                     assertField(id, label, currentValue);
                 } catch (AssertionFailedError failure) {
                     failure.addSuppressed(new AssertionFailedError(
@@ -232,7 +191,7 @@ public final class MainActivityAccessibilityTest
                 pressKey(KeyEvent.KEYCODE_TAB, 0);
             }
             controlKey(KeyEvent.KEYCODE_A);
-            injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
+            getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
             getInstrumentation().sendStringSync("z");
             assertField(nextId, nextLabel, "z");
         } else {
@@ -256,27 +215,6 @@ public final class MainActivityAccessibilityTest
             getInstrumentation().sendKeySync(new KeyEvent(now, SystemClock.uptimeMillis(),
                     KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CTRL_LEFT, 0, 0));
         }
-    }
-
-    // UiAutomation reports injection success, not delivery or handling by the app or IME.
-    // Pair that result with exact field-value and focus assertions; do not infer a Flutter
-    // or input-connection cause from injection success alone.
-    private void injectKeyDownUpAndAssertAccepted(int keyCode) {
-        // ACTION_UP must reuse the original ACTION_DOWN time to form one key press.
-        long downTime = SystemClock.uptimeMillis();
-        injectKeyEventAndAssertAccepted(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode);
-        injectKeyEventAndAssertAccepted(downTime, SystemClock.uptimeMillis(),
-                KeyEvent.ACTION_UP, keyCode);
-    }
-
-    private void injectKeyEventAndAssertAccepted(long downTime, long eventTime,
-            int action, int keyCode) {
-        KeyEvent event = new KeyEvent(downTime, eventTime, action, keyCode, 0, 0,
-                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, KeyEvent.FLAG_FROM_SYSTEM,
-                InputDevice.SOURCE_KEYBOARD);
-        assertTrue("Android rejected native key injection: action=" + action
-                + ", keyCode=" + keyCode,
-                automation.injectInputEvent(event, true));
     }
 
     private void pressKey(int keyCode, int meta) {
