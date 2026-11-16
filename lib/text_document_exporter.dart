@@ -67,12 +67,16 @@ typedef _RemovexattrNative = Int32 Function(Pointer<Utf8>, Pointer<Utf8>);
 typedef _RemovexattrDart = int Function(Pointer<Utf8>, Pointer<Utf8>);
 typedef _ErrnoNative = Pointer<Int32> Function();
 typedef _ErrnoDart = Pointer<Int32> Function();
-typedef _OpenNative = Int32 Function(Pointer<Utf8>, Int32, Uint32);
-typedef _OpenDart = int Function(Pointer<Utf8>, int, int);
-typedef _CloseNative = Int32 Function(Int32);
-typedef _CloseDart = int Function(int);
-typedef _FcopyfileNative = Int32 Function(Int32, Int32, Pointer<Void>, Uint32);
-typedef _FcopyfileDart = int Function(int, int, Pointer<Void>, int);
+typedef _StatNative = Int32 Function(Pointer<Utf8>, Pointer<_DarwinStat>);
+typedef _StatDart = int Function(Pointer<Utf8>, Pointer<_DarwinStat>);
+typedef _AclGetFileNative = Pointer<Void> Function(Pointer<Utf8>, Int32);
+typedef _AclGetFileDart = Pointer<Void> Function(Pointer<Utf8>, int);
+typedef _AclSetFileNative = Int32 Function(Pointer<Utf8>, Int32, Pointer<Void>);
+typedef _AclSetFileDart = int Function(Pointer<Utf8>, int, Pointer<Void>);
+typedef _AclDeleteFileNative = Int32 Function(Pointer<Utf8>, Int32);
+typedef _AclDeleteFileDart = int Function(Pointer<Utf8>, int);
+typedef _AclFreeNative = Int32 Function(Pointer<Void>);
+typedef _AclFreeDart = int Function(Pointer<Void>);
 typedef _ReplaceFileNative = Int32 Function(
   Pointer<Utf16>,
   Pointer<Utf16>,
@@ -131,6 +135,27 @@ typedef _SetNamedSecurityDart = int Function(
 );
 typedef _LocalFreeNative = Pointer<Void> Function(Pointer<Void>);
 typedef _LocalFreeDart = Pointer<Void> Function(Pointer<Void>);
+
+// Darwin's 64-bit struct stat prefix is shared by macOS arm64 and x86_64.
+// The tail reserves the remaining ABI bytes; only mode, uid, and gid are read.
+final class _DarwinStat extends Struct {
+  @Int32()
+  external int device;
+  @Uint16()
+  external int mode;
+  @Uint16()
+  external int linkCount;
+  @Uint64()
+  external int inode;
+  @Uint32()
+  external int uid;
+  @Uint32()
+  external int gid;
+  @Int32()
+  external int deviceType;
+  @Array(116)
+  external Array<Uint8> remaining;
+}
 
 // Linux UAPI statx has a fixed, architecture-independent 256-byte layout.
 // Only ownership and mode are requested; the remaining fields are unused.
@@ -328,53 +353,89 @@ void _preserveLinuxAccess(File destination, File stagedFile) {
 }
 
 void _preserveMacAccess(File destination, File stagedFile) {
-  // O_EVTONLY opens the existing file for metadata operations without asking
-  // for read access to its plaintext. fcopyfile applies only stat and ACL data
-  // to the empty stage; DATA and XATTR are deliberately excluded.
+  // stat and acl_get_file inspect metadata without opening file data. The ACL
+  // API requires read-security permission; if it is denied, fail before writes.
   final libc = DynamicLibrary.process();
-  final open = libc.lookupFunction<_OpenNative, _OpenDart>('open');
-  final close = libc.lookupFunction<_CloseNative, _CloseDart>('close');
-  final fcopyfile = libc.lookupFunction<_FcopyfileNative, _FcopyfileDart>(
-    'fcopyfile',
+  final stat = libc.lookupFunction<_StatNative, _StatDart>('stat');
+  final chown = libc.lookupFunction<_ChownNative, _ChownDart>('chown');
+  final chmod = libc.lookupFunction<_ChmodNative, _ChmodDart>('chmod');
+  final getAcl = libc.lookupFunction<_AclGetFileNative, _AclGetFileDart>(
+    'acl_get_file',
   );
+  final setAcl = libc.lookupFunction<_AclSetFileNative, _AclSetFileDart>(
+    'acl_set_file',
+  );
+  final deleteAcl = libc
+      .lookupFunction<_AclDeleteFileNative, _AclDeleteFileDart>(
+        'acl_delete_file_np',
+      );
+  final freeAcl = libc.lookupFunction<_AclFreeNative, _AclFreeDart>('acl_free');
   final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
   using((arena) {
     final sourcePath = destination.path.toNativeUtf8(allocator: arena);
     final stagedPath = stagedFile.path.toNativeUtf8(allocator: arena);
-    const openEventOnly = 0x8000; // O_EVTONLY
-    const openReadOnly = 0;
-    final source = open(sourcePath, openEventOnly, 0);
-    if (source < 0) {
+    final metadata = arena<_DarwinStat>();
+    if (stat(sourcePath, metadata) != 0) {
+      final error = errno().value;
       throw FileSystemException(
-        'Could not open export permissions without reading contents',
+        'Could not inspect export ownership and mode',
         destination.path,
-        OSError('open O_EVTONLY failed', errno().value),
+        OSError('stat failed', error),
       );
     }
-    try {
-      final target = open(stagedPath, openReadOnly, 0);
-      if (target < 0) {
+    if (chown(stagedPath, metadata.ref.uid, metadata.ref.gid) != 0) {
+      final error = errno().value;
+      throw FileSystemException(
+        'Could not preserve export ownership',
+        destination.path,
+        OSError('chown failed', error),
+      );
+    }
+    if (chmod(stagedPath, metadata.ref.mode & 0xfff) != 0) {
+      final error = errno().value;
+      throw FileSystemException(
+        'Could not preserve export mode',
+        destination.path,
+        OSError('chmod failed', error),
+      );
+    }
+
+    const extendedAcl = 0x100; // ACL_TYPE_EXTENDED
+    final acl = getAcl(sourcePath, extendedAcl);
+    if (acl == nullptr) {
+      final error = errno().value;
+      if (error != 2) {
         throw FileSystemException(
-          'Could not open staged export permissions',
-          stagedFile.path,
-          OSError('open staged file failed', errno().value),
+          'Could not read export access-control list',
+          destination.path,
+          OSError('acl_get_file failed', error),
         );
       }
-      try {
-        if (fcopyfile(source, target, nullptr, 0x3) != 0) {
-          // Capture errno before descriptor cleanup changes the thread-local value.
-          final error = errno().value;
+      // ENOENT denotes no extended ACL after stat confirmed the source exists.
+      // Remove ACLs inherited by the private staging file, rather than widen access.
+      if (deleteAcl(stagedPath, extendedAcl) != 0) {
+        final deleteError = errno().value;
+        if (deleteError != 2) {
           throw FileSystemException(
-            'Could not preserve export access permissions',
-            destination.path,
-            OSError('fcopyfile failed', error),
+            'Could not remove inherited staged export ACL',
+            stagedFile.path,
+            OSError('acl_delete_file_np failed', deleteError),
           );
         }
-      } finally {
-        close(target);
+      }
+      return;
+    }
+    try {
+      if (setAcl(stagedPath, extendedAcl, acl) != 0) {
+        final error = errno().value;
+        throw FileSystemException(
+          'Could not preserve export access-control list',
+          destination.path,
+          OSError('acl_set_file failed', error),
+        );
       }
     } finally {
-      close(source);
+      freeAcl(acl);
     }
   });
 }

@@ -329,9 +329,12 @@ void main() {
     final file = File('${directory.path}/translation.txt');
     file.writeAsStringSync('previous contents');
     await _command('chmod', ['+a', 'everyone deny read', file.path]);
-    Future<List<String>> acl(String path) async =>
-        (await _command('ls', ['-le', path])).split('\n').skip(1).toList();
+    Future<List<String>> acl(String path) async => (await _command('ls', [
+      '-le',
+      path,
+    ])).split('\n').skip(1).where((line) => line.trim().isNotEmpty).toList();
     final before = await acl(file.path);
+    final mode = file.statSync().mode & 0xfff;
     expect(before, isNotEmpty);
     expect(before.join(), contains('everyone deny read'));
 
@@ -339,18 +342,60 @@ void main() {
       staged,
       bytes,
     ) async {
-      // Apply the destination ACL before writing plaintext to the staged file.
+      // Preserve the data-deny ACL before plaintext reaches the stage.
       expect(await acl(staged.path), before);
+      expect(bytes, utf8.encode('Hello, 🌏'));
+      expect(
+        () => staged.readAsBytesSync(),
+        throwsA(isA<FileSystemException>()),
+      );
       await staged.writeAsBytes(bytes);
     });
 
     expect(file.existsSync(), isTrue);
-    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(file.statSync().mode & 0xfff, mode);
     expect(await acl(file.path), before);
+    // Remove the deny rule only after checking preservation, so the test can
+    // verify the exact committed bytes without bypassing the ACL in production.
+    await _command('chmod', ['-a', 'everyone deny read', file.path]);
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(await acl(file.path), isEmpty);
     expect(directory.listSync().map((entity) => entity.path).toSet(), {
       file.path,
     });
   }, skip: !Platform.isMacOS);
+
+  test(
+    'an existing macOS file without an ACL does not inherit parent ACLs',
+    () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final file = File('${directory.path}/translation.txt')
+        ..writeAsStringSync('previous contents');
+      Future<List<String>> acl(String path) async => (await _command('ls', [
+        '-le',
+        path,
+      ])).split('\n').skip(1).where((line) => line.trim().isNotEmpty).toList();
+      final before = await acl(file.path);
+      final mode = file.statSync().mode & 0xfff;
+      expect(before, isEmpty);
+      await _command('chmod', [
+        '+a',
+        'everyone allow read,file_inherit,directory_inherit',
+        directory.path,
+      ]);
+      final reference = File('${directory.path}/reference.txt')
+        ..writeAsStringSync('reference');
+      expect(await acl(reference.path), isNotEmpty);
+
+      await exportTextDocument(file.path, 'Hello, 🌏');
+
+      expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+      expect(file.statSync().mode & 0xfff, mode);
+      expect(await acl(file.path), before);
+    },
+    skip: !Platform.isMacOS,
+  );
 
   test('new macOS exports inherit selected-directory ACL defaults', () async {
     final directory = Directory.systemTemp.createTempSync('kotoha-export');
@@ -362,8 +407,10 @@ void main() {
     ]);
     final reference = File('${directory.path}/reference.txt')
       ..writeAsStringSync('reference');
-    Future<List<String>> acl(String path) async =>
-        (await _command('ls', ['-le', path])).split('\n').skip(1).toList();
+    Future<List<String>> acl(String path) async => (await _command('ls', [
+      '-le',
+      path,
+    ])).split('\n').skip(1).where((line) => line.trim().isNotEmpty).toList();
     final expectedAcl = await acl(reference.path);
     final output = File('${directory.path}/translation.txt');
 
