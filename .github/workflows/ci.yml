@@ -570,7 +570,7 @@ jobs:
           export XDG_DATA_HOME="$probe_root/data"
           export XDG_CONFIG_HOME="$probe_root/config"
           export XDG_RUNTIME_DIR="$runtime_dir"
-          export XDG_CURRENT_DESKTOP=KOTOHA_PORTAL_TEST
+          export XDG_CURRENT_DESKTOP=kotoha_portal_test
           export XDG_DATA_DIRS="$probe_root/data:/usr/local/share:/usr/share"
           export KOTOHA_PORTAL_PROBE_ROOT="$probe_root"
           cleanup() {
