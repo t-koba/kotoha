@@ -75,8 +75,18 @@ typedef _AclGetFileNative = Pointer<Void> Function(Pointer<Utf8>, Int32);
 typedef _AclGetFileDart = Pointer<Void> Function(Pointer<Utf8>, int);
 typedef _AclSetFileNative = Int32 Function(Pointer<Utf8>, Int32, Pointer<Void>);
 typedef _AclSetFileDart = int Function(Pointer<Utf8>, int, Pointer<Void>);
-typedef _AclDeleteFileNative = Int32 Function(Pointer<Utf8>, Int32);
-typedef _AclDeleteFileDart = int Function(Pointer<Utf8>, int);
+typedef _AclGetEntryNative = Int32 Function(
+  Pointer<Void>,
+  Int32,
+  Pointer<Pointer<Void>>,
+);
+typedef _AclGetEntryDart = int Function(
+  Pointer<Void>,
+  int,
+  Pointer<Pointer<Void>>,
+);
+typedef _AclDeleteEntryNative = Int32 Function(Pointer<Void>, Pointer<Void>);
+typedef _AclDeleteEntryDart = int Function(Pointer<Void>, Pointer<Void>);
 typedef _AclFreeNative = Int32 Function(Pointer<Void>);
 typedef _AclFreeDart = int Function(Pointer<Void>);
 typedef _ReplaceFileNative = Int32 Function(
@@ -360,10 +370,16 @@ void _deleteMacAclIfPresent(File file) {
   final getAcl = libc.lookupFunction<_AclGetFileNative, _AclGetFileDart>(
     'acl_get_file',
   );
-  final deleteAcl = libc
-      .lookupFunction<_AclDeleteFileNative, _AclDeleteFileDart>(
-        'acl_delete_file_np',
+  final getEntry = libc.lookupFunction<_AclGetEntryNative, _AclGetEntryDart>(
+    'acl_get_entry',
+  );
+  final deleteEntry = libc
+      .lookupFunction<_AclDeleteEntryNative, _AclDeleteEntryDart>(
+        'acl_delete_entry',
       );
+  final setAcl = libc.lookupFunction<_AclSetFileNative, _AclSetFileDart>(
+    'acl_set_file',
+  );
   final freeAcl = libc.lookupFunction<_AclFreeNative, _AclFreeDart>('acl_free');
   final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
   using((arena) {
@@ -384,13 +400,45 @@ void _deleteMacAclIfPresent(File file) {
       );
     }
     try {
-      errno().value = 0;
-      if (deleteAcl(path, extendedAcl) != 0) {
-        throw FileSystemException(
-          'Could not clear inherited staged export ACL',
-          file.path,
-          OSError('acl_delete_file_np failed', errno().value),
-        );
+      // acl_delete_file_np is not supported for every ACL filesystem object.
+      // Remove entries from the retrieved ACL and set that ACL back instead.
+      // ACL_FIRST_ENTRY is 0; Darwin reports an empty ACL as EINVAL.
+      const firstEntry = 0;
+      const noEntries = 22; // EINVAL from acl_get_entry(ACL_FIRST_ENTRY)
+      final entry = arena<Pointer<Void>>();
+      var changed = false;
+      while (true) {
+        entry.value = nullptr;
+        errno().value = 0;
+        if (getEntry(acl, firstEntry, entry) != 0) {
+          final error = errno().value;
+          if (error == noEntries) break;
+          throw FileSystemException(
+            'Could not inspect staged export ACL entries',
+            file.path,
+            OSError('acl_get_entry failed', error),
+          );
+        }
+        errno().value = 0;
+        if (entry.value == nullptr || deleteEntry(acl, entry.value) != 0) {
+          final error = errno().value;
+          throw FileSystemException(
+            'Could not clear staged export ACL entries',
+            file.path,
+            OSError('acl_delete_entry failed', error),
+          );
+        }
+        changed = true;
+      }
+      if (changed) {
+        errno().value = 0;
+        if (setAcl(path, extendedAcl, acl) != 0) {
+          throw FileSystemException(
+            'Could not clear inherited staged export ACL',
+            file.path,
+            OSError('acl_set_file failed', errno().value),
+          );
+        }
       }
     } finally {
       freeAcl(acl);

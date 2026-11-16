@@ -384,37 +384,41 @@ void main() {
     });
   }, skip: !Platform.isMacOS);
 
-  test(
-    'an existing macOS file without an ACL does not inherit parent ACLs',
-    () async {
-      final directory = Directory.systemTemp.createTempSync('kotoha-export');
-      addTearDown(() => directory.deleteSync(recursive: true));
-      final file = File('${directory.path}/translation.txt')
-        ..writeAsStringSync('previous contents');
-      Future<List<String>> acl(String path) async => (await _command('ls', [
-        '-le',
-        path,
-      ])).split('\n').skip(1).where((line) => line.trim().isNotEmpty).toList();
-      final before = await acl(file.path);
-      final mode = file.statSync().mode & 0xfff;
-      expect(before, isEmpty);
-      await _command('chmod', [
-        '+a',
-        'everyone allow read,file_inherit,directory_inherit',
-        directory.path,
-      ]);
-      final reference = File('${directory.path}/reference.txt')
-        ..writeAsStringSync('reference');
-      expect(await acl(reference.path), isNotEmpty);
+  test('an existing macOS file without an ACL does not inherit parent ACLs', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/translation.txt')
+      ..writeAsStringSync('previous contents');
+    Future<List<String>> acl(String path) async => (await _command('ls', [
+      '-le',
+      path,
+    ])).split('\n').skip(1).where((line) => line.trim().isNotEmpty).toList();
+    final before = await acl(file.path);
+    final mode = file.statSync().mode & 0xfff;
+    expect(before, isEmpty);
+    await _command('chmod', [
+      '+a',
+      'everyone allow read,file_inherit,directory_inherit',
+      directory.path,
+    ]);
+    final reference = File('${directory.path}/reference.txt')
+      ..writeAsStringSync('reference');
+    expect(await acl(reference.path), isNotEmpty);
 
-      await exportTextDocument(file.path, 'Hello, 🌏');
+    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+      staged,
+      sink,
+      bytes,
+    ) async {
+      // Inherited parent ACEs must be removed before the stage receives bytes.
+      expect(await acl(staged.path), isEmpty);
+      await sink.writeFrom(bytes);
+    });
 
-      expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
-      expect(file.statSync().mode & 0xfff, mode);
-      expect(await acl(file.path), before);
-    },
-    skip: !Platform.isMacOS,
-  );
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(file.statSync().mode & 0xfff, mode);
+    expect(await acl(file.path), before);
+  }, skip: !Platform.isMacOS);
 
   test('new macOS exports inherit selected-directory ACL defaults', () async {
     final directory = Directory.systemTemp.createTempSync('kotoha-export');
