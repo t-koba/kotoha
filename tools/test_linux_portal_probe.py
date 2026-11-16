@@ -16,39 +16,51 @@ from tools.linux_portal_probe import (
     PYTHON_PREFLIGHT_MARKER,
     SANDBOX_PREFLIGHT_EXECUTABLE,
     SANDBOX_PYTHON_EXECUTABLE,
-    TEST_DESKTOP,
     _dbus_failure_stage,
+    _portal_descriptor_dir,
+    _portal_descriptor_text,
     _run_sandbox_preflight,
     _sandbox_bwrap_failure_stage,
     _sandbox_client_failure_stage,
     _sandbox_client_prefix,
     _sandbox_client_started,
     _sandbox_failure_stage,
-    _write_portal_config,
     main,
 )
 
 
-class PortalConfigTest(unittest.TestCase):
-    def test_desktop_specific_config_selects_only_test_file_chooser(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            path = _write_portal_config(Path(temporary), TEST_DESKTOP)
-            self.assertEqual(
-                path,
-                Path(temporary)
-                / "xdg-desktop-portal"
-                / "kotoha_portal_test-portals.conf",
-            )
-            self.assertEqual(
-                path.read_text(encoding="utf-8"),
-                "[preferred]\n"
-                "org.freedesktop.impl.portal.FileChooser=kotoha-test;\n",
-            )
+class PortalDescriptorTest(unittest.TestCase):
+    def test_descriptor_matches_pinned_frontend_selection_fields(self):
+        self.assertEqual(
+            _portal_descriptor_text(),
+            "[portal]\n"
+            "DBusName=org.freedesktop.impl.portal.desktop.kotoha_test\n"
+            "Interfaces=org.freedesktop.impl.portal.FileChooser;\n"
+            "UseIn=kotoha_portal_test;\n",
+        )
 
-    def test_config_refuses_an_unexpected_desktop_name(self):
+    def test_descriptor_dir_requires_explicit_binding(self):
         with tempfile.TemporaryDirectory() as temporary:
-            with self.assertRaisesRegex(ProbeFailure, "test-desktop-identity-invalid"):
-                _write_portal_config(Path(temporary), "GNOME")
+            with patch.dict(os.environ, {}, clear=True):
+                with self.assertRaisesRegex(ProbeFailure, "desktop-portal-dir-missing"):
+                    _portal_descriptor_dir(Path(temporary))
+
+    def test_descriptor_dir_accepts_the_bound_data_home_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            data_home = Path(temporary)
+            expected = data_home / "xdg-desktop-portal" / "portals"
+            with patch.dict(
+                os.environ, {"XDG_DESKTOP_PORTAL_DIR": str(expected)}, clear=True
+            ):
+                self.assertEqual(_portal_descriptor_dir(data_home), expected)
+
+    def test_descriptor_dir_refuses_a_different_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.dict(
+                os.environ, {"XDG_DESKTOP_PORTAL_DIR": "/usr/share/other"}, clear=True
+            ):
+                with self.assertRaisesRegex(ProbeFailure, "desktop-portal-dir-mismatch"):
+                    _portal_descriptor_dir(Path(temporary))
 
 
 class SandboxPrefixTest(unittest.TestCase):

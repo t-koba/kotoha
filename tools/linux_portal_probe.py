@@ -67,21 +67,33 @@ def _write_json(path: str, value: dict[str, object]) -> None:
     os.replace(temporary, path)
 
 
-def _write_portal_config(config_home: Path, desktop: str) -> Path:
-    if desktop != TEST_DESKTOP:
-        raise ProbeFailure("test-desktop-identity-invalid")
-    directory = config_home / "xdg-desktop-portal"
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{desktop}-portals.conf"
-    path.write_text(
-        "[preferred]\n"
-        f"{BACKEND_IFACE}={BACKEND_NAME};\n",
-        encoding="utf-8",
-    )
-    return path
-
-
 # Documents encodes filesystem paths as NUL-terminated D-Bus byte strings.
+def _portal_descriptor_text() -> str:
+    """Descriptor for the test backend; the frontend reads UseIn and Interfaces."""
+    return (
+        "[portal]\n"
+        f"DBusName={BACKEND_BUS}\n"
+        f"Interfaces={BACKEND_IFACE};\n"
+        f"UseIn={TEST_DESKTOP};\n"
+    )
+
+
+def _portal_descriptor_dir(data_home: Path) -> Path:
+    """xdg-desktop-portal 1.14.4 loads .portal files only from this directory.
+
+    The pinned frontend's load_installed_portals() uses XDG_DESKTOP_PORTAL_DIR
+    (else DATADIR/xdg-desktop-portal/portals); it does not consult XDG_DATA_HOME
+    or portals.conf. Fail closed unless the directory is explicitly bound.
+    """
+    configured = os.environ.get("XDG_DESKTOP_PORTAL_DIR", "")
+    if not configured:
+        raise ProbeFailure("desktop-portal-dir-missing")
+    expected = data_home / "xdg-desktop-portal" / "portals"
+    if Path(configured) != expected:
+        raise ProbeFailure("desktop-portal-dir-mismatch")
+    return expected
+
+
 def _decode_dbus_path(value: object, failure_stage: str) -> str:
     raw = bytes(value)
     if not raw.endswith(b"\x00") or b"\x00" in raw[:-1]:
@@ -555,23 +567,16 @@ def run_host() -> dict[str, object]:
     DBusGMainLoop(set_as_default=True)
     root = Path(os.environ["KOTOHA_PORTAL_PROBE_ROOT"])
     data_home = Path(os.environ["XDG_DATA_HOME"])
-    config_home = Path(os.environ["XDG_CONFIG_HOME"])
     runtime = Path(os.environ["XDG_RUNTIME_DIR"])
-    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
     fixture = root / "fixture.md"
     backend_report = str(root / "backend.json")
     backend_ready = str(root / "backend-ready.json")
     fixture.write_bytes(FIXTURE)
-    portal_dir = data_home / "xdg-desktop-portal" / "portals"
+    portal_dir = _portal_descriptor_dir(data_home)
     portal_dir.mkdir(parents=True, exist_ok=True)
     (portal_dir / f"{BACKEND_NAME}.portal").write_text(
-        "[portal]\n"
-        f"DBusName={BACKEND_BUS}\n"
-        f"Interfaces={BACKEND_IFACE};\n"
-        f"UseIn={TEST_DESKTOP};\n",
-        encoding="utf-8",
+        _portal_descriptor_text(), encoding="utf-8"
     )
-    _write_portal_config(config_home, desktop)
     env = os.environ.copy()
     env.update(
         {

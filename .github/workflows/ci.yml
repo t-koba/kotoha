@@ -570,6 +570,9 @@ jobs:
           export XDG_DATA_HOME="$probe_root/data"
           export XDG_CONFIG_HOME="$probe_root/config"
           export XDG_RUNTIME_DIR="$runtime_dir"
+          # xdg-desktop-portal 1.14.4 loads backend .portal files only from
+          # XDG_DESKTOP_PORTAL_DIR, not XDG_DATA_HOME or a portals.conf.
+          export XDG_DESKTOP_PORTAL_DIR="$probe_root/data/xdg-desktop-portal/portals"
           export XDG_CURRENT_DESKTOP=kotoha_portal_test
           export XDG_DATA_DIRS="$probe_root/data:/usr/local/share:/usr/share"
           export KOTOHA_PORTAL_PROBE_ROOT="$probe_root"

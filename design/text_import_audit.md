@@ -436,18 +436,30 @@ No test backend FileChooser method, returned URI, permission operation,
 post-close access check, or persistence observation was established.
 
 The runtime had the corrected lowercase `XDG_CURRENT_DESKTOP=kotoha_portal_test`
-and a `kotoha-test.portal` descriptor, but no desktop-specific
-`portals.conf`. The XDG Desktop Portal documentation describes backend selection
-as configuration-based and names desktop-specific files under
-`$XDG_CONFIG_HOME/xdg-desktop-portal` (search evidence
-`search/2572269d584f98665b75d8aeedf2eae196d5e60120698e86319cbea13f83ab9d`,
-[portals.conf](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html),
-[writing a backend](https://flatpak.github.io/xdg-desktop-portal/docs/writing-a-new-backend.html)).
-The probe now writes `kotoha_portal_test-portals.conf` to select
-`kotoha-test` for the FileChooser interface; unit tests check its exact path,
-contents, and desktop identity. This source-level routing correction is in
-`b931276`; its focused suite passed 24 tests with one skipped, but the corrected
-runtime has not yet been observed in hosted CI. Linux import remains disabled.
+and a `kotoha-test.portal` descriptor under `XDG_DATA_HOME`, but the test backend
+was still not reached. The pinned Ubuntu package is `xdg-desktop-portal`
+`1.14.4-1ubuntu2~22.04.2`. Review of the exact tagged source
+`src/portal-impl.c` (fetch
+`1783795f9a8b512d50e2d56386673a773fd3fafc9156d8a1255b8ba2568c6411`, SHA-256
+`20701b5df21ac89520ee6b158071e2d74a882f8766386413dd4d91f3b776688f`) shows that
+this version selects backends in `find_portal_implementation()` by matching a
+descriptor's `UseIn` against `XDG_CURRENT_DESKTOP` and its `Interfaces` list, and
+discovers descriptors in `load_installed_portals()` from
+`XDG_DESKTOP_PORTAL_DIR` (otherwise the build-time `DATADIR/xdg-desktop-portal/portals`).
+It reads neither `XDG_DATA_HOME` nor any `portals.conf`: no such parser exists in
+the 1.14.4 frontend. A first correction (`b931276`) wrote a desktop-specific
+`portals.conf`, but that mechanism is only documented for newer releases
+(search evidence `search/2572269d584f98665b75d8aeedf2eae196d5e60120698e86319cbea13f83ab9d`
+describes current upstream); it is inert on the pinned version and was removed.
+
+The code now binds `XDG_DESKTOP_PORTAL_DIR` to the probe's `XDG_DATA_HOME`
+portal-descriptor directory and fails closed unless that variable exactly
+matches the directory where the probe writes the descriptor. Four focused tests
+assert the descriptor's exact `DBusName`/`Interfaces`/`UseIn` fields and the
+missing/mismatched/matching directory cases; the suite passed 26 tests with one
+skipped. The exact hosted runtime for this corrected binding is not yet
+recorded, so no URI mapping, revocation, post-close denial or persistence claim
+is made. Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
