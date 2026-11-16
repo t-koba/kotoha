@@ -431,12 +431,17 @@ def _sandbox_client_prefix_stages(
     fixture_path: Path,
     runtime: Path,
 ) -> list[tuple[str, list[str]]]:
-    # Bind host sources before masking /home; the CI checkout is under /home.
-    # Keep the root writable only while bwrap creates /.flatpak-info, then
-    # remount it read-only before any client command can run.
+    # Build an empty private root; bwrap resolves bind sources under /oldroot
+    # and mount destinations under /newroot. Expose only runtime dependencies
+    # read-only, then add the private bus/documents paths before locking /.
     return [
-        ("sandbox-bwrap-core-setup-failed", ["--bind", "/", "/"]),
+        ("sandbox-bwrap-private-root-failed", ["--tmpfs", "/"]),
+        ("sandbox-bwrap-usr-bind-failed", ["--ro-bind", "/usr", "/usr"]),
+        ("sandbox-bwrap-lib-bind-failed", ["--ro-bind", "/lib", "/lib"]),
+        ("sandbox-bwrap-lib64-bind-failed", ["--ro-bind", "/lib64", "/lib64"]),
+        ("sandbox-bwrap-etc-bind-failed", ["--ro-bind", "/etc", "/etc"]),
         ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
+        ("sandbox-bwrap-tmp-mask-failed", ["--tmpfs", "/tmp"]),
         ("sandbox-bwrap-proc-bind-failed", ["--proc", "/proc"]),
         ("sandbox-bwrap-dev-bind-failed", ["--dev", "/dev"]),
         (
@@ -447,6 +452,7 @@ def _sandbox_client_prefix_stages(
             "sandbox-bwrap-client-script-bind-failed",
             ["--ro-bind", str(script_path), "/run/portal-probe.py"],
         ),
+        ("sandbox-bwrap-runtime-bind-failed", ["--bind", str(runtime), str(runtime)]),
         ("sandbox-bwrap-documents-bind-failed", ["--bind", mountpoint, mountpoint]),
         ("sandbox-bwrap-home-mask-failed", ["--tmpfs", "/home"]),
         (

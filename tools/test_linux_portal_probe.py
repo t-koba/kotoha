@@ -21,12 +21,12 @@ from tools.linux_portal_probe import (
 
 
 class SandboxPrefixTest(unittest.TestCase):
-    def test_binds_host_sources_before_masking_home_without_exposing_fixture(self):
+    def test_private_root_exposes_only_client_inputs_without_fixture(self):
         app_info_fd = 11
         script = Path("/home/runner/work/kotoha/kotoha/tools/linux_portal_probe.py")
         mountpoint = "/tmp/kotoha-portal-runtime/doc"
         fixture = Path("/home/runner/work/_temp/probe/fixture.md")
-        dbus_address = "unix:path=/tmp/bus"
+        dbus_address = "unix:path=/tmp/kotoha-portal-runtime/bus"
         runtime = Path("/tmp/kotoha-portal-runtime")
         prefix, stages = _sandbox_client_prefix(
             app_info_fd, script, mountpoint, dbus_address, fixture, runtime
@@ -42,19 +42,33 @@ class SandboxPrefixTest(unittest.TestCase):
         self.assertEqual(
             [stage for stage, _ in stages],
             [
-                "sandbox-bwrap-core-setup-failed",
+                "sandbox-bwrap-private-root-failed",
+                "sandbox-bwrap-usr-bind-failed",
+                "sandbox-bwrap-lib-bind-failed",
+                "sandbox-bwrap-lib64-bind-failed",
+                "sandbox-bwrap-etc-bind-failed",
                 "sandbox-bwrap-run-mask-failed",
+                "sandbox-bwrap-tmp-mask-failed",
                 "sandbox-bwrap-proc-bind-failed",
                 "sandbox-bwrap-dev-bind-failed",
                 "sandbox-bwrap-app-info-bind-failed",
                 "sandbox-bwrap-client-script-bind-failed",
+                "sandbox-bwrap-runtime-bind-failed",
                 "sandbox-bwrap-documents-bind-failed",
                 "sandbox-bwrap-home-mask-failed",
                 "sandbox-bwrap-environment-failed",
                 "sandbox-bwrap-root-remount-failed",
             ],
         )
-        self.assertEqual(stages[0][1], ["--bind", "/", "/"])
+        self.assertEqual(stages[0][1], ["--tmpfs", "/"])
+        self.assertEqual(stages[1:5], [
+            ("sandbox-bwrap-usr-bind-failed", ["--ro-bind", "/usr", "/usr"]),
+            ("sandbox-bwrap-lib-bind-failed", ["--ro-bind", "/lib", "/lib"]),
+            ("sandbox-bwrap-lib64-bind-failed", ["--ro-bind", "/lib64", "/lib64"]),
+            ("sandbox-bwrap-etc-bind-failed", ["--ro-bind", "/etc", "/etc"]),
+        ])
+        self.assertNotIn(["--bind", "/", "/"], [options for _, options in stages])
+        self.assertNotIn(["--ro-bind", "/", "/"], [options for _, options in stages])
         self.assertEqual(
             stages[-1],
             ("sandbox-bwrap-root-remount-failed", ["--remount-ro", "/"]),
@@ -72,8 +86,9 @@ class SandboxPrefixTest(unittest.TestCase):
         self.assertLess(app_info_bind, root_remount)
         self.assertEqual(prefix[root_remount + 1], "/")
         self.assertLess(prefix.index(str(script)), home_mask)
-        self.assertNotIn("/home/runner/work/_temp/probe/flatpak-info", prefix)
+        self.assertLess(prefix.index(str(runtime)), home_mask)
         self.assertLess(prefix.index(mountpoint), home_mask)
+        self.assertNotIn("/home/runner/work/_temp/probe/flatpak-info", prefix)
         self.assertEqual(prefix.count(str(fixture)), 1)
         self.assertEqual(
             prefix[prefix.index(str(fixture)) - 1], "KOTOHA_PORTAL_FIXTURE_PATH"
@@ -169,12 +184,18 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-bwrap-data-arguments-invalid",
             "sandbox-bwrap-operation-not-permitted",
             "sandbox-bwrap-permission-denied",
-            "sandbox-bwrap-core-setup-failed",
+            "sandbox-bwrap-private-root-failed",
+            "sandbox-bwrap-usr-bind-failed",
+            "sandbox-bwrap-lib-bind-failed",
+            "sandbox-bwrap-lib64-bind-failed",
+            "sandbox-bwrap-etc-bind-failed",
             "sandbox-bwrap-run-mask-failed",
+            "sandbox-bwrap-tmp-mask-failed",
             "sandbox-bwrap-proc-bind-failed",
             "sandbox-bwrap-dev-bind-failed",
             "sandbox-bwrap-app-info-bind-failed",
             "sandbox-bwrap-client-script-bind-failed",
+            "sandbox-bwrap-runtime-bind-failed",
             "sandbox-bwrap-documents-bind-failed",
             "sandbox-bwrap-home-mask-failed",
             "sandbox-bwrap-environment-failed",
@@ -217,11 +238,11 @@ class SandboxFailureStageTest(unittest.TestCase):
         private = "/home/private/unclassified"
         prefix = [
             "bwrap", "--die-with-parent", "--unshare-all",
-            "--ro-bind", "/", "/", "--tmpfs", "/run", "--",
+            "--tmpfs", "/", "--ro-bind", "/usr", "/usr", "--",
         ]
         stages = [
-            ("sandbox-bwrap-core-setup-failed", ["--ro-bind", "/", "/"]),
-            ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
+            ("sandbox-bwrap-private-root-failed", ["--tmpfs", "/"]),
+            ("sandbox-bwrap-usr-bind-failed", ["--ro-bind", "/usr", "/usr"]),
         ]
         with tempfile.TemporaryFile(mode="w+b") as data:
             data.write(b"[Application]\nname=org.kotoha.portalprobe\n")
@@ -237,7 +258,7 @@ class SandboxFailureStageTest(unittest.TestCase):
                 with self.assertRaises(ProbeFailure) as caught:
                     _run_sandbox_preflight(prefix, stages, (data_fd,))
             self.assertEqual(data.tell(), 0)
-        self.assertEqual(caught.exception.stage, "sandbox-bwrap-run-mask-failed")
+        self.assertEqual(caught.exception.stage, "sandbox-bwrap-usr-bind-failed")
         self.assertNotIn(private, str(caught.exception))
         self.assertTrue(
             all(call.kwargs["pass_fds"] == (data_fd,) for call in run.call_args_list)
@@ -246,9 +267,9 @@ class SandboxFailureStageTest(unittest.TestCase):
             [call.args[0] for call in run.call_args_list],
             [
                 [*prefix, "/bin/true"],
-                [*prefix[:3], "--ro-bind", "/", "/", "--", "/bin/true"],
+                [*prefix[:3], "--tmpfs", "/", "--", "/bin/true"],
                 [
-                    *prefix[:3], "--ro-bind", "/", "/", "--tmpfs", "/run",
+                    *prefix[:3], "--tmpfs", "/", "--ro-bind", "/usr", "/usr",
                     "--", "/bin/true",
                 ],
             ],

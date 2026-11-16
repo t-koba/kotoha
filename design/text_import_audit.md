@@ -367,25 +367,38 @@ FileChooser request, URI/document mapping, permission operation, post-close
 access check, or persistent-state observation occurred; Linux import remains
 disabled.
 
-The failure stage is the probe's app-info data-bind to `/.flatpak-info`.
+The earlier failure stage was the app-info data-bind to `/.flatpak-info`.
 Pinned bubblewrap v0.6.1 source (`mizu_fetch/6a940d5e2307f827b933f9b2bf5b7a9f059d2e2ff682dd65c437f1949ba4deaa`,
 SHA-256 `aaa4effa46873a7c7b6e6e9e8e7cdb91153ecd2c028dbeadd043166efdb9ea0c`)
-shows that `--ro-bind-data` first calls `ensure_file(dest)` and emits
-`Can't create file at` if target creation fails (lines 1418-1426). The probe
-had already mounted `/` read-only before asking bwrap to create
-`/.flatpak-info`; this command order explains the target-creation failure.
-The hosted log intentionally exposes only the fixed stage code, not raw stderr
-or host paths. The local correction now keeps the root bind writable during
-trusted namespace setup, then uses bubblewrap's supported non-recursive
-`--remount-ro /` after the app-info and other mounts and before any client
-command. Regression tests assert that order and retain the hidden-fixture
-checks. Local verification passed: the 17 focused portal-probe tests, Python
-compile, `git diff --check`, and acceptance validation 93/93 (code digest
-`d0547d9c09daaa03f78acca91966aae61c4a0acba5bf329209ab8eb7205d98dd`). The fix
-has not yet been exercised on the exact Ubuntu runner. This setup diagnosis
-and local command-order test establish no chooser, URI mapping, permission
-revocation, post-close-access, or persistent-state behavior; Linux import stays
-disabled pending exact hosted end-to-end evidence.
+shows that `--ro-bind-data` calls `ensure_file(dest)` before mounting and fails
+if the destination cannot be created (lines 1418-1426). The original probe had
+already made host `/` read-only, so that hosted failure occurred before the
+client or any FileChooser request.
+
+A later correction kept a writable bind of host `/` during setup. That design
+was also invalid: a bind mount does not grant an unprivileged runner write
+permission to root-owned host `/`, and a sufficiently privileged invocation
+could leave `/.flatpak-info` on the host. The reviewer reproduced the permission
+boundary in a user namespace (`experiments/ffde3def9beb416fa5dc6665efd0ef44.json`,
+`experiments/332016bf103648d5a2431584ec0d741f.json`; reviewer finding
+`4586518544b44b009bd01353f0a1fd82`). The current implementation instead starts
+with a private `--tmpfs /`, binds only `/usr`, `/lib`, `/lib64`, and `/etc`
+read-only, keeps `/run`, `/tmp`, and `/home` private, and exposes only the
+probe's runtime directory and Documents mountpoint. App info and the script are
+bound inside that private root; the base root is remounted read-only before the
+client command. In bubblewrap v0.6.1, `setup_newroot()` resolves bind sources
+under `/oldroot` and destinations under `/newroot` (source and destination
+handling at lines 1151 and 1178); the tmpfs operation creates its new-root
+destination before mounting it (lines 1327-1337). This avoids a host-root bind
+and gives `--ro-bind-data` a private target.
+
+The exact hosted run above predates this private-root sequence. The 17 focused
+probe tests pass locally and assert the private root, read-only system inputs,
+app-info target, explicit runtime/document binds, hidden fixture path, and final
+root remount; the probe's actual bwrap preflight still needs an exact Ubuntu
+22.04 CI run for this tree. No chooser request, URI/document mapping, permission
+operation, post-close access, or persistent-state observation has yet occurred.
+Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
