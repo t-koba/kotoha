@@ -278,6 +278,9 @@ jobs:
         run: flutter config --enable-macos-desktop
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
+      - name: Test macOS text export permissions
+        timeout-minutes: 5
+        run: flutter test --no-pub test/text_export_test.dart --reporter expanded
       - name: Profile desktop disk read and strict decode
         if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
         timeout-minutes: 5
@@ -368,6 +371,9 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Test Windows DPAPI key preservation
         run: flutter test --no-pub test/windows_dpapi_test.dart
+      - name: Test Windows text export permissions
+        timeout-minutes: 5
+        run: flutter test --no-pub test/text_export_test.dart --reporter expanded
       - name: Profile desktop disk read and strict decode
         if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
         timeout-minutes: 5
