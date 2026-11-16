@@ -102,12 +102,30 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (lifecycle != null) {
       _appResumed = lifecycle == AppLifecycleState.resumed;
     }
+    _logAccessibilityState('init');
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final resumed = state == AppLifecycleState.resumed;
     if (_appResumed != resumed) setState(() => _appResumed = resumed);
+    _logAccessibilityState('lifecycle-${state.name}');
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    _logAccessibilityState('accessibility-features');
+  }
+
+  void _logAccessibilityState(String event) {
+    if (!kDebugMode) return;
+    final binding = WidgetsBinding.instance;
+    debugPrint(
+      'KotohaAccessibilityState event=$event '
+      'lifecycle=${binding.lifecycleState?.name ?? 'unknown'} '
+      'appResumed=$_appResumed '
+      'semanticsEnabled=${binding.platformDispatcher.semanticsEnabled}',
+    );
   }
 
   @override

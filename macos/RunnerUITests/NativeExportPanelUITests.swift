@@ -57,25 +57,34 @@ final class NativeExportPanelUITests: XCTestCase {
       + "appEnhancedUI=\(value) axTimeoutStatus=\(timeoutStatus.rawValue)"
   }
 
-  private func logAccessibilityDiagnostics(target: XCUIElement) {
+  private func logAccessibilityDiagnostics(target: XCUIElement, stage: String) {
     func describe(_ identifier: String, element: XCUIElement) -> String {
       guard element.exists else { return "\(identifier){exists=false}" }
-      return "\(identifier){exists=true,hittable=\(element.isHittable)," +
-        "frame=\(element.frame)}"
+      return "\(identifier){exists=true,type=\(element.elementType)," +
+        "hittable=\(element.isHittable),frame=\(element.frame)}"
     }
 
     let window = app.windows.firstMatch
     let windowFrame = window.exists ? "\(window.frame)" : "unavailable"
+    let rawTarget = app.descendants(matching: .any)
+      .matching(identifier: "translation-text-0").firstMatch
     let visibleFields = ["source-language", "source-text"].map { identifier in
       let element = app.descendants(matching: .any).matching(identifier: identifier).firstMatch
       return describe(identifier, element: element)
     }
-    // Deliberately omit element values: these diagnostics report only geometry
-    // and accessibility availability, never draft contents.
-    print("KotohaAccessibilityDiagnostic voiceOverEnabled=\(NSWorkspace.shared.isVoiceOverEnabled) " +
+    let interfaceLanguage = app.buttons["Interface language"]
+    // Deliberately omit element values: these diagnostics report only geometry,
+    // roles, counts, and accessibility availability, never draft contents.
+    print("KotohaAccessibilityDiagnostic stage=\(stage) " +
+          "appState=\(String(describing: app.state)) " +
+          "voiceOverEnabled=\(NSWorkspace.shared.isVoiceOverEnabled) " +
           appAccessibilityDiagnostic() + " windowFrame=\(windowFrame) " +
+          "buttons=\(app.buttons.count) textFields=\(app.textFields.count) " +
+          "textViews=\(app.textViews.count) staticTexts=\(app.staticTexts.count) " +
           "scrollViews=\(app.scrollViews.count) " +
-          describe("target", element: target) + " " +
+          describe("interface-language", element: interfaceLanguage) + " " +
+          describe("translation-text-0", element: rawTarget) + " " +
+          describe("translation-typed-query", element: target) + " " +
           visibleFields.joined(separator: " "))
   }
 
@@ -86,6 +95,7 @@ final class NativeExportPanelUITests: XCTestCase {
       "translation-text-0",
       XCUIElement.ElementType.textField.rawValue,
       XCUIElement.ElementType.textView.rawValue)).firstMatch
+    logAccessibilityDiagnostics(target: field, stage: "before-scroll")
     // The Flutter ListView is not exposed as an XCUI ScrollView on macOS.
     // Target one measured drag at the native application window: XCTest's
     // app.swipeUp() requires an application hit point that this host does not expose.
@@ -109,7 +119,7 @@ final class NativeExportPanelUITests: XCTestCase {
     }
     let fieldExists = field.waitForExistence(timeout: panelTimeout)
     if !fieldExists || !field.isHittable {
-      logAccessibilityDiagnostics(target: field)
+      logAccessibilityDiagnostics(target: field, stage: "after-window-drag-and-vo-chords")
     }
     XCTAssertTrue(
       fieldExists,
