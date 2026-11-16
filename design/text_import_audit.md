@@ -416,32 +416,38 @@ read-only `/usr` mount. Its first diagnostic stage groups the tmpfs root with
 `/usr`, `/lib`, `/lib64`, and `/etc`, so it does not test an executable before
 its binary and runtime are visible. The focused probe tests assert the private
 root, these read-only system inputs, app-info target, explicit runtime/document
-binds, hidden fixture path, and final root remount. The Ubuntu 22.04 portal job
-now runs a real-bwrap preflight check before the full probe, but no hosted result
-for this tree is recorded yet. No chooser request, URI/document mapping,
-permission operation, post-close access, or persistent-state observation has
-yet occurred. Linux import remains disabled.
+binds, hidden fixture path, and final root remount. The exact hosted result for
+the latest preflight and routed-probe attempt is recorded below; passing the
+preflight did not establish FileChooser backend routing. Linux import remains
+disabled.
 
-Exact Ubuntu portal CI run `43801419820`, job `133082453821`, on SHA
-`4e1428fbb32f53a1e64ab4bee8993aff04ee6d7c` (status
-`vcs-read/9ce033772b6941e6a99438d103d1ccf4`, log
-`vcs-read/698ddeb37e0c458b8dab5eb3731b71e4`) observed Ubuntu 22.04.5
-x86_64, bubblewrap `0.6.1-1ubuntu0.3`, Documents portal
-`1.14.4-1ubuntu2~22.04.2`, and GTK backend `1.14.0-1build1`. The 20 probe
-unit tests and portal/backend interface introspection passed, but the real
-sandboxed client failed with `sandbox-client-unexpected-dbusexception`. That
-allowlisted stage means a D-Bus exception escaped the client probe wrapper; the
-log suppresses its error name and message, so it does not identify the call or
-prove that a chooser request, URI mapping, revocation, post-close check, or
-persistent-record check occurred. The client masks `/tmp` and unshares the
-network namespace, while the old job used `dbus-run-session`'s default session
-configuration. The exact bus address was not recorded, so an unavailable D-Bus
-transport is a source-level hypothesis, not a confirmed diagnosis. The revised
-workflow creates a per-job D-Bus config with an explicit pathname socket at
-`$XDG_RUNTIME_DIR/bus`, which the sandbox already bind-mounts, while retaining
-the private `/tmp` and network namespace. Its exact hosted result is pending;
-this changes test transport setup only and does not enable Linux import or
-establish the portal permission lifecycle.
+The latest exact Ubuntu portal run was `43849647865`, job `133238607092`, on
+publication `c8886d917709f0a85b0225c0645b57d8bdad980329d08433e8f2440f791fc474`
+/ SHA `223fa9d4ac397668d2015dfe87b36023fbcc6b04` (status
+`vcs-read/0a5a7f8b38fc41949ca8fcef9248016e`, exact log
+`vcs-read/4179608fa8e9427da631f09e7325fc73`). On Ubuntu 22.04.5 x86_64 with
+bubblewrap `0.6.1-1ubuntu0.3`, Documents portal `1.14.4-1ubuntu2~22.04.2`,
+and GTK backend `1.14.0-1build1`, all 22 probe unit tests, the real-bwrap
+preflight, and GNOME-session portal/backend FileChooser introspection passed.
+In the separate custom-desktop session, the client then failed with
+`sandbox-client-openfile-unknown-method-backend-not-reached`: its `OpenFile`
+call returned unknown-method and the test backend readiness report was absent.
+No test backend FileChooser method, returned URI, permission operation,
+post-close access check, or persistence observation was established.
+
+The runtime had the corrected lowercase `XDG_CURRENT_DESKTOP=kotoha_portal_test`
+and a `kotoha-test.portal` descriptor, but no desktop-specific
+`portals.conf`. The XDG Desktop Portal documentation describes backend selection
+as configuration-based and names desktop-specific files under
+`$XDG_CONFIG_HOME/xdg-desktop-portal` (search evidence
+`search/2572269d584f98665b75d8aeedf2eae196d5e60120698e86319cbea13f83ab9d`,
+[portals.conf](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html),
+[writing a backend](https://flatpak.github.io/xdg-desktop-portal/docs/writing-a-new-backend.html)).
+The probe now writes `kotoha_portal_test-portals.conf` to select
+`kotoha-test` for the FileChooser interface; unit tests check its exact path,
+contents, and desktop identity. This source-level routing correction is in
+`b931276`; its focused suite passed 24 tests with one skipped, but the corrected
+runtime has not yet been observed in hosted CI. Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
