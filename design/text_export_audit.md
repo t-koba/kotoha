@@ -1,6 +1,6 @@
 # Native text-export overwrite audit
 
-Kotoha's desktop export asks the locked `file_selector` package for a save location, then writes only the selected translation with `File(path).writeAsBytes`. That write replaces/truncates a file at the returned path; consent therefore depends on the native save panel before it returns that path.
+Kotoha's desktop export asks the locked `file_selector` package for a save location, then exports only the selected translation as UTF-8. `lib/text_document_exporter.dart` stages the bytes in a unique sibling directory and renames the completed file over the destination. A prior production-function failure injection (`b665c739bad64eee9229b68c61d615e6`) reproduced direct-write truncation: a failed write left a 29-byte existing file reduced to a four-byte prefix. The staged write now leaves the existing path untouched until the complete stage is ready; its operation-owned directory is removed in `finally`.
 
 ## Locked package and source evidence
 
@@ -13,14 +13,24 @@ The version tags and registry metadata identify the source and pinned package ve
 - **Windows:** the pinned plugin's `ShowSaveDialog` selects `DialogMode::save`, which creates `CLSID_FileSaveDialog`. Its normal Kotoha save request does not request folder selection or multiple selection, so the plugin does not add options; when options are added, `DialogWrapper::AddOptions` obtains the current flags, ORs the requested flags, then passes them to `IFileDialog::SetOptions`. The controller forwards `GetOptions`/`SetOptions` directly. Microsoft documents the Common Item Dialog's default Save flags as including `FOS_OVERWRITEPROMPT`, and defines that option as prompting before overwriting an existing same-name file. Thus the pinned implementation retains the documented Windows Save-dialog overwrite prompt. Sources: [Microsoft Common Item Dialog](https://learn.microsoft.com/en-us/windows/win32/shell/common-file-dialog), [Microsoft `FILEOPENDIALOGOPTIONS`](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/ne-shobjidl_core-_fileopendialogoptions).
 - **macOS:** the pinned plugin creates `NSSavePanel()` and displays it through the standard sheet/modal APIs; it does not install a delegate or set an overwrite-related option. Apple's AppKit contract for `NSOpenSavePanelDelegate.panel(_:userEnteredFilename:confirmed:)` says the Save panel asks whether to replace an existing file when the chosen name already exists. The plugin does not implement that delegate or suppress the panel behavior. This establishes a source/documentation-level native overwrite-confirmation path for the locked macOS implementation. Source: [Apple AppKit delegate method](https://developer.apple.com/documentation/appkit/nsopensavepaneldelegate/panel(_:userenteredfilename:confirmed:)); retrieved JSON receipt `79a8406612cf39fda933c97184edf810de5e5d98e616e5f813fdc782384a97d7`, SHA-256 `385876c4e270ef5ffcface187665b8f810a6369061d17e31647830425d09c313`.
 
-These conclusions are about the pinned source and the documented platform APIs, not observations of a user's Windows/macOS runtime or physical device. Once the chooser returns a path, Kotoha still writes to it directly; the audit does not establish atomic replacement, protection against intervening filesystem changes, or behavior for every OS version and configuration.
+These conclusions are about the pinned source and the documented platform APIs, not observations of a user's Windows/macOS runtime or physical device. The chooser is unchanged; it is still the authority for native overwrite consent, and export does not start until it returns a path.
+
+## Failure-safe replacement
+
+The exporter encodes the selected string once as UTF-8, writes it to an exclusively created file inside a sibling staging directory, then renames that completed file to the selected path. POSIX uses `mkdtemp` to create the directory with owner-only mode (0700) atomically, before any plaintext is written; a Linux experiment confirmed that the Dart `Directory.createTemp` alternative produced mode 0755 under the current umask, so it was not used for this purpose (experiments `446a55c1ebdf4ecf8cb0aaa8c86ec68b` and `44f6606da8b74ee495d41afc6ed7c584`). Windows uses `Directory.createTemp`, inheriting the destination parent's ACL; Kotoha makes no stronger confidentiality claim for a shared destination or against code running as the same user. Staging beside the destination keeps the rename on the same filesystem. A final symlink to an existing file is resolved first so export continues to write through it rather than replacing the link; a dangling final symlink fails closed. Cleanup removes the operation's staged file and then non-recursively removes its directory in `finally`; cleanup errors propagate rather than deleting unrelated entries, and a cleanup error after rename may leave the destination with the new bytes. Cleanup removes the filesystem entry; no secure-erasure claim is made. POSIX mode bits do not protect against processes running as the same user.
+
+The regression test uses a real filesystem destination and an injected writer that writes a prefix into the real, exclusively created stage file before throwing. It checks the original bytes remain exact, cleanup leaves no stage file or directory, and on POSIX the stage directory has exactly owner-only mode 0700. Success coverage checks exact UTF-8 replacement and cleanup; another platform-conditional test checks that a selected final symlink still points to and updates its target. These checks do not inject a failure inside the final OS rename call.
+
+Dart SDK 3.13.7's macOS `File.rename` implementation calls POSIX `rename`; its Windows implementation calls `MoveFileExW` with `MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH`. The staging directory is created under the destination parent, so the stage and target are on the same volume and the Windows call does not need the cross-volume copy flag. Source inspection and the regression checks do not establish power-loss durability, failure outcomes for every filesystem/driver, overwrite behavior under concurrent external path changes, or preservation of all destination metadata (including explicit ACLs, extended attributes, hard-link identity, and modes).
 
 ## Existing test coverage and hosted accessibility limit
 
-`test/text_export_test.dart` checks exact UTF-8 output,
-selected-translation-only writing, save-dialog arguments, cancellation, and
-write-error behavior using a fake selector; it does not show native UI or
-exercise overwrite confirmation. `macos/RunnerUITests/NativeExportPanelUITests.swift`
+`test/text_export_test.dart` checks exact UTF-8 replacement, selected-
+translation-only writing, save-dialog arguments, cancellation, and an injected
+partial stage-write failure on a real filesystem; it also verifies temporary
+cleanup and final-symlink write-through. Widget coverage uses a fake selector;
+it does not show native UI or exercise overwrite confirmation.
+`macos/RunnerUITests/NativeExportPanelUITests.swift`
 is intended to verify the accessible native save panel, cancellation, and
 preservation of the in-memory translation. It does not select an existing file
 or exercise the confirm-replacement alert. There is no equivalent end-to-end
@@ -64,9 +74,9 @@ user-run VoiceOver behavior. Preserve the native test assertions and deadlines
 and OS privacy controls; do not bypass TCC or call the hosted failure a pass.
 This remains an explicit coverage gap rather than a product-behavior finding.
 
-Source/API inspection still finds no export-code change required to retain the
-documented default overwrite prompt. That does not substitute for a runtime UI
-result: do not claim end-to-end overwrite behavior was observed. A future UI
-test would need a bounded, stable way to create/select a unique existing
-temporary file and verify both cancel-preserves-bytes and confirmed-replacement
-behavior; current tests do not provide that route.
+The staged replacement does not alter save-dialog options or provide a
+second overwrite prompt. Source/API inspection supports the documented native
+prompt path, but no user interaction has been observed. A future UI test would
+need a bounded, stable way to create/select a unique existing temporary file and
+verify both cancel-preserves-bytes and confirmed-replacement behavior; current
+tests do not provide that route.

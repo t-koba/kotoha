@@ -93,15 +93,77 @@ void main() {
     await tester.enterText(field('translation-text-1'), secondTranslation);
   }
 
-  test('writes the selected text as exact UTF-8 bytes', () async {
+  test('replaces with exact UTF-8 bytes and removes staging', () async {
     final directory = Directory.systemTemp.createTempSync('kotoha-export');
     addTearDown(() => directory.deleteSync(recursive: true));
     final path = '${directory.path}${Platform.pathSeparator}translation.txt';
+    File(path).writeAsBytesSync(utf8.encode('previous contents'));
 
     await exportTextDocument(path, 'Hello, 🌏');
 
     expect(File(path).readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
   });
+
+  test(
+    'a partial staging write preserves the destination and is cleaned',
+    () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final path = '${directory.path}${Platform.pathSeparator}translation.txt';
+      final previousBytes = utf8.encode('previous destination contents');
+      File(path).writeAsBytesSync(previousBytes);
+      File? stagedFile;
+      int? stagingDirectoryMode;
+
+      await expectLater(
+        exportTextDocumentWithStagedWriter(path, 'Hello, 🌏', (
+          file,
+          bytes,
+        ) async {
+          stagedFile = file;
+          stagingDirectoryMode = (await file.parent.stat()).mode;
+          await file.writeAsBytes(bytes.sublist(0, 4));
+          throw const FileSystemException('injected staging failure');
+        }),
+        throwsA(isA<FileSystemException>()),
+      );
+
+      expect(File(path).readAsBytesSync(), previousBytes);
+      expect(stagedFile, isNotNull);
+      expect(stagedFile!.existsSync(), isFalse);
+      if (!Platform.isWindows) {
+        expect(stagingDirectoryMode, isNotNull);
+        expect(stagingDirectoryMode! & 0x1ff, 0x1c0);
+      }
+      expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
+    },
+  );
+
+  test(
+    'an existing selected symlink still writes through to its target',
+    () async {
+      if (Platform.isWindows) return;
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}target.txt',
+      );
+      final link = Link(
+        '${directory.path}${Platform.pathSeparator}selected.txt',
+      );
+      target.writeAsBytesSync(utf8.encode('old target contents'));
+      await link.create(target.path);
+
+      await exportTextDocument(link.path, 'Hello, 🌏');
+
+      expect(target.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+      expect(
+        await FileSystemEntity.type(link.path, followLinks: false),
+        FileSystemEntityType.link,
+      );
+    },
+  );
 
   for (final platform in [TargetPlatform.macOS, TargetPlatform.windows]) {
     testWidgets('$platform exports only the chosen translation', (
