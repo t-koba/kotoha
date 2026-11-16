@@ -6,13 +6,13 @@
 
 The iOS deployment target is iOS 15. No translation engine is currently adopted. The design target and current route must not be confused: see `design/kotoha_design.md` §§7.1, 11, 18 and 21.
 
-## Apple Translation candidate (iOS only)
+## Apple Translation candidate (installed-only initializer; iOS 26+)
 
-Apple's official `TranslationSession` documentation states that the API is available on iOS/iPadOS 18 and translates on-device. Apple may collect API usage and performance metrics including the app bundle ID and language pair, but not translation content. This is an iOS-specific candidate, not a cross-platform route. [Source: `mizu_fetch/db359b8259e53fa176ab79d1ef163c7c6e21f6507581d71326e34493b82450bb`; SHA-256 `254229dc21a6fda52d7d8dd91827b093cfb1f599df3a5e25e0e95e4b883082bf`]
+Apple documents the `TranslationSession` class and `LanguageAvailability` on iOS/iPadOS 18.0+, with translation performed on-device. This class-level availability does not make every initializer available on that OS. Apple may collect API usage and performance metrics including the app bundle ID and language pair, but not translation content. This is an iOS-specific candidate, not a cross-platform route. [Sources: `mizu_fetch/db359b8259e53fa176ab79d1ef163c7c6e21f6507581d71326e34493b82450bb`, SHA-256 `254229dc21a6fda52d7d8dd91827b093cfb1f599df3a5e25e0e95e4b883082bf`; `mizu_fetch/37a6ec8dfaea96307b1ff4787e064ce9c25eb3a77e3f06f9545a191873a691ca`, SHA-256 `135641e5da8dd8808d99e76f336a55d2a12b3f0c553ff0f7ac6bc31ad17b3860`]
 
-`LanguageAvailability` reports the actual status of a requested language pair dynamically; do not infer support from a static list or guess which pairs work. [Source: `mizu_fetch/631091c59978e16a93bdf07b1543b5ed2cf2532199fb79769975f46cdac5b176`; SHA-256 `c2969bb7d256956a259d1b85c3d3f44310e3c953e614860809677cc4c89f4d2b`]
+`LanguageAvailability.status(from:to:)` and its `.installed` state are available on iOS/iPadOS 18.0+ and report language-pair installation status; do not infer support from a static list or guess which pairs work. A status check does not configure a session to forbid downloads. [Sources: `mizu_fetch/e148ee2b93edbda461050f7bb0d4bef2e81164506fa148eca2f5bcba8a402b4b`, SHA-256 `f6f96d32b9df197a6c552440e53cd5ea9e79bddf793f76e9a953393ab997d380`; installed state `mizu_fetch/9a9507c236ab8525d6948fd64bccb8dd740bbf5250f1e6bd4399dae1db498965`, SHA-256 `64c08cccc2968e9996d604106efcd15f16a7ee892b960760f1181f1d4b451345`]
 
-The `TranslationSession` installed-source initializer requires languages to be installed and reports errors if they are absent. SwiftUI `.translationTask` can request that the system authorize downloads for missing languages. The API page's `canRequestDownloads` property is iOS 26+; it must not be presented as available on iOS 18. An iOS 18 slice can avoid app-triggered downloads by using the installed-source initializer. [Source: `mizu_fetch/4c78559f1a2845d10b9df299da8aef20555e21112ff05242a80723cacc47754b`; SHA-256 `b7714005f67d7479a1aee8369157f747866f674bd844c9ee635f5f45b3cbe801`]
+The direct `TranslationSession.init(installedSource:target:)` initializer is introduced in iOS/iPadOS 26.0, not iOS 18; it requires the languages to be installed and throws if they are absent. SwiftUI `.translationTask` is available earlier but can always request system-authorized downloads when assets are missing. The documented `canRequestDownloads` property is also iOS/iPadOS 26.0+, so the reviewed API material does not establish an iOS 18 session that guarantees no download request. Do not describe the iOS 26 initializer as an iOS 18 route or offer an iOS 18 installed-only route until a distinct documented mechanism is established. [Sources: installed-source initializer `mizu_fetch/37a6ec8dfaea96307b1ff4787e064ce9c25eb3a77e3f06f9545a191873a691ca`, SHA-256 `135641e5da8dd8808d99e76f336a55d2a12b3f0c553ff0f7ac6bc31ad17b3860`; `canRequestDownloads` `mizu_fetch/aebd3f29c1535b123d3e66320b19c0654154cfcd136acd5903823e2186399826`, SHA-256 `b7714005f67d7479a1aee8369157f747866f674bd844c9ee635f5f45b3cbe801`]
 
 ### Smallest candidate flow
 
@@ -23,9 +23,9 @@ The `TranslationSession` installed-source initializer requires languages to be i
 
 ### Evidence and release gates not met
 
-- Physical iOS 18+ runtime test on an actually available pair, including translation quality. No physical test device/session is currently available.
+- Physical iOS/iPadOS 26+ runtime test on an actually available pair, including translation quality. No physical test device/session is currently available; no distinct installed-only iOS 18 route is established.
 - Offline behavior, error handling and cancellation.
-- If system downloads are permitted in a future route, the system's download-consent flow and its effect must be tested; the installed-only candidate avoids app-triggered downloads.
+- For an iOS 26 installed-only route, test the no-download error behavior when assets are absent. For an earlier `.translationTask` route, test the system download-consent flow; its documented session can request downloads and is not equivalent to an installed-only initializer.
 - Disclose relevant system metrics and review the privacy policy and telemetry disclosures.
 - The public API material reviewed exposes neither model identity/version, provenance, nor model license/redistribution terms. Kotoha would not package OS assets; do not represent this as an open model or claim rights to redistribute it.
 
