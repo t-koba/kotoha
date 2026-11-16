@@ -403,6 +403,27 @@ for this tree is recorded yet. No chooser request, URI/document mapping,
 permission operation, post-close access, or persistent-state observation has
 yet occurred. Linux import remains disabled.
 
+Exact Ubuntu portal CI run `43801419820`, job `133082453821`, on SHA
+`4e1428fbb32f53a1e64ab4bee8993aff04ee6d7c` (status
+`vcs-read/9ce033772b6941e6a99438d103d1ccf4`, log
+`vcs-read/698ddeb37e0c458b8dab5eb3731b71e4`) observed Ubuntu 22.04.5
+x86_64, bubblewrap `0.6.1-1ubuntu0.3`, Documents portal
+`1.14.4-1ubuntu2~22.04.2`, and GTK backend `1.14.0-1build1`. The 20 probe
+unit tests and portal/backend interface introspection passed, but the real
+sandboxed client failed with `sandbox-client-unexpected-dbusexception`. That
+allowlisted stage means a D-Bus exception escaped the client probe wrapper; the
+log suppresses its error name and message, so it does not identify the call or
+prove that a chooser request, URI mapping, revocation, post-close check, or
+persistent-record check occurred. The client masks `/tmp` and unshares the
+network namespace, while the old job used `dbus-run-session`'s default session
+configuration. The exact bus address was not recorded, so an unavailable D-Bus
+transport is a source-level hypothesis, not a confirmed diagnosis. The revised
+workflow creates a per-job D-Bus config with an explicit pathname socket at
+`$XDG_RUNTIME_DIR/bus`, which the sandbox already bind-mounts, while retaining
+the private `/tmp` and network namespace. Its exact hosted result is pending;
+this changes test transport setup only and does not enable Linux import or
+establish the portal permission lifecycle.
+
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
 SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),

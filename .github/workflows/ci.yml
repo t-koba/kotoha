@@ -594,9 +594,34 @@ jobs:
             exit "$status"
           }
           trap cleanup EXIT
+          # The sandbox masks /tmp and unshares networking; keep the session-bus
+          # socket under the runtime directory that its bwrap prefix explicitly binds.
+          session_config="$probe_root/dbus-session.conf"
+          python3 - "$session_config" "$runtime_dir/bus" <<'PYTHON'
+          from pathlib import Path
+          import sys
+
+          source = Path("/usr/share/dbus-1/session.conf").read_text(encoding="utf-8")
+          default_listener = "<listen>unix:tmpdir=/tmp</listen>"
+          socket_path = sys.argv[2]
+          allowed = "/tmp/kotoha-portal-runtime."
+          if (
+              source.count(default_listener) != 1
+              or not socket_path.startswith(allowed)
+              or any(
+                  not (char.isascii() and (char.isalnum() or char in "/._-"))
+                  for char in socket_path
+              )
+          ):
+              raise SystemExit("Unexpected D-Bus session configuration")
+          Path(sys.argv[1]).write_text(
+              source.replace(default_listener, f"<listen>unix:path={socket_path}</listen>"),
+              encoding="utf-8",
+          )
+          PYTHON
           portal_log="$probe_root/portal-session.log"
-          if timeout --kill-after=2s 60s dbus-run-session -- \
-              python3 tools/linux_portal_probe.py >"$portal_log" 2>&1; then
+          if timeout --kill-after=2s 60s dbus-run-session \
+              --config-file="$session_config" -- python3 tools/linux_portal_probe.py >"$portal_log" 2>&1; then
             python3 - "$portal_log" <<'PYTHON'
           import json
           import sys
