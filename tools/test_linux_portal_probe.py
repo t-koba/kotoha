@@ -440,6 +440,36 @@ class SandboxFailureStageTest(unittest.TestCase):
             self.assertNotIn(private_message, stage)
             self.assertNotIn("org.example.PrivateError", stage)
 
+    def test_unknown_method_reports_only_whether_test_backend_was_reached(self):
+        stderr = (
+            f"{CLIENT_STARTED_MARKER}\n"
+            "Linux portal probe failed: filechooser-openfile-unknown-method\n"
+            "/private/provider detail must not be forwarded\n"
+        )
+        for reached, expected in (
+            (True, "sandbox-client-openfile-unknown-method-backend-reached"),
+            (False, "sandbox-client-openfile-unknown-method-backend-not-reached"),
+        ):
+            with self.subTest(reached=reached):
+                stage = _sandbox_client_failure_stage(
+                    stderr, filechooser_backend_reached=reached
+                )
+                self.assertEqual(stage, expected)
+                self.assertLessEqual(len(stage), 64)
+                self.assertNotIn("/private", stage)
+        self.assertEqual(
+            _sandbox_client_failure_stage(stderr),
+            "sandbox-client-filechooser-openfile-unknown-method",
+        )
+        self.assertEqual(
+            _sandbox_client_failure_stage(
+                f"{CLIENT_STARTED_MARKER}\n"
+                "Linux portal probe failed: filechooser-response-timeout\n",
+                filechooser_backend_reached=False,
+            ),
+            "sandbox-client-filechooser-response-timeout",
+        )
+
     def test_unexpected_client_exception_is_classified_without_message(self):
         private = "/home/runner/work/Private Project/fixture"
         stderr = io.StringIO()

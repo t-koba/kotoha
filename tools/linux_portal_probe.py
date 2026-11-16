@@ -199,11 +199,23 @@ def _sandbox_failure_stage(stderr: str) -> str | None:
     return None
 
 
-def _sandbox_client_failure_stage(stderr: str) -> str:
+def _sandbox_client_failure_stage(
+    stderr: str, *, filechooser_backend_reached: bool | None = None
+) -> str:
     stage = _sandbox_failure_stage(stderr)
     if stage is not None:
         if stage == "sandbox-client" or stage.startswith("sandbox-client-"):
             return stage
+        if (
+            stage == "filechooser-openfile-unknown-method"
+            and filechooser_backend_reached is not None
+        ):
+            route = (
+                "backend-reached"
+                if filechooser_backend_reached
+                else "backend-not-reached"
+            )
+            return f"sandbox-client-openfile-unknown-method-{route}"
         return f"sandbox-client-{stage}"
     if not _sandbox_client_started(stderr):
         return "sandbox-client-script-startup-failed"
@@ -643,7 +655,12 @@ def run_host() -> dict[str, object]:
         except subprocess.TimeoutExpired as exc:
             raise ProbeFailure("sandbox-client-timeout") from exc
         if completed.returncode != 0:
-            raise ProbeFailure(_sandbox_client_failure_stage(completed.stderr))
+            raise ProbeFailure(
+                _sandbox_client_failure_stage(
+                    completed.stderr,
+                    filechooser_backend_reached=Path(backend_report).is_file(),
+                )
+            )
         try:
             client = json.loads(completed.stdout)
         except (json.JSONDecodeError, TypeError) as exc:
