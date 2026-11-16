@@ -479,9 +479,45 @@ and `revoked_permissions_remaining`, instead of the emitted `self_revoke_succeed
 and `app_permissions_remaining`), so it rejected the result with "Linux portal
 probe produced no sanitized result" and the check failed. No sanitized field
 values were surfaced by that run. The workflow keys are now aligned and a
-regression test asserts the required set names only keys the probe emits; the
-exact rerun is not yet recorded. No URI-to-document mapping value, permission
-operation result, post-close observation or persistence field is claimed here.
+regression test asserts the required set names only keys the probe emits.
+
+The exact rerun is run `43862016131`, job `133281652744`, on publication
+`0bf71dbbb89cca6b1d95f921307201febd0257135bd9e99d9f0853ff8f02d6f4` / SHA
+`ae27293dc65dfcb390580004156118cc9f04738d` (status
+`vcs-read/aa0376855f16443ba0fadb98092dc771`, exact log
+`vcs-read/f81339bfce3f4ada9f84520ef183e052`). On Ubuntu 22.04.5 x86_64/amd64
+with `xdg-desktop-portal` `1.14.4-1ubuntu2~22.04.2`, GTK backend
+`1.14.0-1build1`, bubblewrap `0.6.1-1ubuntu0.3`, and `xvfb`
+`2:21.1.4-2ubuntu1.7~22.04.16`, the 27 focused probe unit tests passed, the
+real-bwrap preflight and GNOME-session portal/backend FileChooser introspection
+passed, `OpenFile` was exposed on both interfaces, and the earlier
+`sandbox-client-openfile-unknown-method-backend-not-reached` stage did not
+recur. The probe reached the end of its host routine, exited 0, and emitted its
+full sanitized result; the aligned workflow filter accepted it and the check
+passed.
+
+The sanitized values establish the following exact behavior, and only this.
+`backend_app_id_matches=true`,
+`returned_uri_mapped_to_documents_mount=true`,
+`fixture_path_hidden_from_client=true`, `fixture_sha256=554cf07d3809de2c10f52e085525ca27393517d8e3f9e786098117fd9d967c01`
+and `read_bytes=31` show that the returned FileChooser URI mapped to a
+Documents-portal document and the fixture was read in place without its host
+path being visible in the sandbox. `documents_version=4` and
+`filechooser_version=3` bind the API versions. Crucially, a sandboxed client
+cannot revoke its own access: `self_revoke_succeeded=false` with
+`self_revoke_error=NotAllowed`, leaving `app_permissions_remaining` as
+`["grant-permissions", "read"]`, `post_close_open_denied=false`, and
+`persistent_document_record_retained=true`. A different app with grant/revoke
+control could grant and revoke `read` (`other_app_control_succeeded=true`,
+`other_app_control_permissions_remaining=[]`), so the grant/revoke mechanism
+itself works; only same-app self-revocation is refused. The probe's internal
+assertions held: post-close denial matched the (failed) revocation result, the
+remaining permissions matched the not-revoked expectation, and the document
+record was retained. The green check means the probe measured and reported
+this behavior; it does not mean the privacy contract passed. This is runtime
+confirmation of the pinned-source prediction above that 1.14.4 rejects
+same-app revocation with `NotAllowed`. No claim is made about any other portal
+version, a Kotoha Linux host/packaging target, or physical-device behavior.
 Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
