@@ -98,16 +98,55 @@ public final class MainActivityAccessibilityTest
         click("English", n -> named(n, "English"));
         getInstrumentation().waitForIdleSync();
 
-        String id = "source-language";
-        String label = "Source language";
+        String id = "target-language-0";
+        String label = "Target language";
         revealField(id);
         click(label, n -> field(n, id));
         assertField(id, label, "");
         setClipboardText("p");
         controlKey(KeyEvent.KEYCODE_V);
         assertField(id, label, "p");
-        getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
-        assertField(id, label, "");
+        AssertionFailedError controlFailure = null;
+        try {
+            getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_DEL);
+            assertField(id, label, "");
+        } catch (AssertionFailedError failure) {
+            // Retain the explicit expectation, but still exercise the other API once.
+            controlFailure = failure;
+        }
+        String controlState = "Instrumentation.sendKeyDownUpSync(KEYCODE_DEL)"
+                + "; expectedCodePoints=" + codePoints("") + "; observed=" + fieldState(id)
+                + "; assertionPassed=" + (controlFailure == null);
+        try {
+            // Replace any remaining marker rather than appending after a failed delete.
+            // No re-tap: both APIs must act on the same focused target editor.
+            controlKey(KeyEvent.KEYCODE_A);
+            setClipboardText("p");
+            controlKey(KeyEvent.KEYCODE_V);
+            assertField(id, label, "p");
+        } catch (AssertionFailedError failure) {
+            failure.addSuppressed(new AssertionFailedError(controlState));
+            if (controlFailure != null) failure.addSuppressed(controlFailure);
+            throw failure;
+        }
+        AssertionFailedError injectionFailure = null;
+        try {
+            injectKeyDownUpAndAssertAccepted(KeyEvent.KEYCODE_DEL);
+            assertField(id, label, "");
+        } catch (AssertionFailedError failure) {
+            injectionFailure = failure;
+        }
+        if (controlFailure != null || injectionFailure != null) {
+            AssertionFailedError comparison = new AssertionFailedError(
+                    "Synthetic target-language-0 delete comparison: " + controlState
+                            + "; UiAutomation.injectInputEvent(KEYCODE_DEL down/up)"
+                            + "; expectedCodePoints=" + codePoints("")
+                            + "; observed=" + fieldState(id)
+                            + "; assertionPassed=" + (injectionFailure == null));
+            if (controlFailure != null) comparison.addSuppressed(controlFailure);
+            if (injectionFailure != null) comparison.addSuppressed(injectionFailure);
+            throw comparison;
+        }
     }
 
     public void testJapaneseLanguageFields() {
