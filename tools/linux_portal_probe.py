@@ -235,6 +235,11 @@ def _known_dbus_error_code(exc: Exception) -> str | None:
     }.get(name)
 
 
+def _dbus_failure_stage(operation: str, exc: Exception) -> str:
+    code = _known_dbus_error_code(exc)
+    return f"{operation}-{code}" if code is not None else f"{operation}-call-failed"
+
+
 def run_backend() -> None:
     dbus, service, DBusGMainLoop, GLib = _dbus_modules()
     DBusGMainLoop(set_as_default=True)
@@ -313,7 +318,7 @@ def _portal_response(dbus, GLib):
     try:
         desktop.OpenFile("", "Kotoha portal probe", options, timeout=10)
     except dbus.DBusException as exc:
-        raise ProbeFailure("filechooser-openfile-call-failed") from exc
+        raise ProbeFailure(_dbus_failure_stage("filechooser-openfile", exc)) from exc
 
     if not replies:
         timer = GLib.timeout_add_seconds(20, lambda: (loop.quit(), False)[1])

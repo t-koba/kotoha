@@ -16,6 +16,7 @@ from tools.linux_portal_probe import (
     PYTHON_PREFLIGHT_MARKER,
     SANDBOX_PREFLIGHT_EXECUTABLE,
     SANDBOX_PYTHON_EXECUTABLE,
+    _dbus_failure_stage,
     _run_sandbox_preflight,
     _sandbox_bwrap_failure_stage,
     _sandbox_client_failure_stage,
@@ -408,6 +409,36 @@ class SandboxFailureStageTest(unittest.TestCase):
             ),
             "sandbox-client-filechooser-response-timeout",
         )
+
+    def test_filechooser_dbus_error_stage_uses_only_canonical_codes(self):
+        class DBusException(Exception):
+            def __init__(self, message, error_name):
+                super().__init__(message)
+                self.error_name = error_name
+
+            def get_dbus_name(self):
+                return self.error_name
+
+        private_message = "/private/path: secret provider detail"
+        known = _dbus_failure_stage(
+            "filechooser-openfile",
+            DBusException(private_message, "org.freedesktop.DBus.Error.ServiceUnknown"),
+        )
+        unknown = _dbus_failure_stage(
+            "filechooser-openfile",
+            DBusException(private_message, "org.example.PrivateError"),
+        )
+        self.assertEqual(known, "filechooser-openfile-service-unknown")
+        self.assertEqual(unknown, "filechooser-openfile-call-failed")
+        self.assertEqual(
+            _sandbox_client_failure_stage(
+                f"{CLIENT_STARTED_MARKER}\nLinux portal probe failed: {known}\n"
+            ),
+            "sandbox-client-filechooser-openfile-service-unknown",
+        )
+        for stage in (known, unknown):
+            self.assertNotIn(private_message, stage)
+            self.assertNotIn("org.example.PrivateError", stage)
 
     def test_unexpected_client_exception_is_classified_without_message(self):
         private = "/home/runner/work/Private Project/fixture"
