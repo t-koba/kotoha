@@ -426,6 +426,44 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-client-unexpected-valueerror",
         )
 
+    def test_unexpected_dbus_exception_reports_only_known_error_code(self):
+        class DBusException(Exception):
+            def __init__(self, message, error_name):
+                super().__init__(message)
+                self.error_name = error_name
+
+            def get_dbus_name(self):
+                return self.error_name
+
+        private = "/home/runner/work/Private Project/fixture"
+        cases = (
+            (
+                "org.freedesktop.DBus.Error.AccessDenied",
+                "sandbox-client-unexpected-dbus-access-denied",
+            ),
+            (
+                "org.example.PrivateError",
+                "sandbox-client-unexpected-dbusexception",
+            ),
+        )
+        for error_name, expected in cases:
+            with self.subTest(error_name=error_name):
+                stderr = io.StringIO()
+                with (
+                    patch("tools.linux_portal_probe.sys.argv", ["probe", "--client"]),
+                    patch(
+                        "tools.linux_portal_probe.run_client",
+                        side_effect=DBusException(private, error_name),
+                    ),
+                    redirect_stderr(stderr),
+                ):
+                    self.assertEqual(main(), 1)
+
+                output = stderr.getvalue()
+                self.assertNotIn(private, output)
+                self.assertNotIn("org.example.PrivateError", output)
+                self.assertEqual(_sandbox_client_failure_stage(output), expected)
+
     def test_start_marker_survives_diagnostics_beyond_stage_tail(self):
         stderr = CLIENT_STARTED_MARKER + "\n" + "GLib warning\n" * 700
         self.assertTrue(_sandbox_client_started(stderr))

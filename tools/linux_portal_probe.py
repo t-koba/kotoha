@@ -210,6 +210,31 @@ def _sandbox_client_failure_stage(stderr: str) -> str:
     return "sandbox-client-failed"
 
 
+def _known_dbus_error_code(exc: Exception) -> str | None:
+    """Return a fixed protocol code, never provider text or an error message."""
+    get_name = getattr(exc, "get_dbus_name", None)
+    if not callable(get_name):
+        return None
+    try:
+        name = get_name()
+    except Exception:
+        return None
+    return {
+        "org.freedesktop.DBus.Error.AccessDenied": "access-denied",
+        "org.freedesktop.DBus.Error.Disconnected": "disconnected",
+        "org.freedesktop.DBus.Error.Failed": "failed",
+        "org.freedesktop.DBus.Error.InvalidArgs": "invalid-args",
+        "org.freedesktop.DBus.Error.NameHasNoOwner": "name-has-no-owner",
+        "org.freedesktop.DBus.Error.NoReply": "no-reply",
+        "org.freedesktop.DBus.Error.ServiceUnknown": "service-unknown",
+        "org.freedesktop.DBus.Error.TimedOut": "timed-out",
+        "org.freedesktop.DBus.Error.UnknownInterface": "unknown-interface",
+        "org.freedesktop.DBus.Error.UnknownMethod": "unknown-method",
+        "org.freedesktop.DBus.Error.UnknownObject": "unknown-object",
+        "org.freedesktop.portal.Error.NotAllowed": "portal-not-allowed",
+    }.get(name)
+
+
 def run_backend() -> None:
     dbus, service, DBusGMainLoop, GLib = _dbus_modules()
     DBusGMainLoop(set_as_default=True)
@@ -723,10 +748,11 @@ def main() -> int:
             or len(exception_type) > 32
         ):
             exception_type = "unknown"
-        print(
-            f"Linux portal probe failed: {stage}-unexpected-{exception_type}",
-            file=sys.stderr,
-        )
+        failure = f"{stage}-unexpected-{exception_type}"
+        error_code = _known_dbus_error_code(exc)
+        if error_code is not None:
+            failure = f"{stage}-unexpected-dbus-{error_code}"
+        print(f"Linux portal probe failed: {failure}", file=sys.stderr)
         return 1
 
 
