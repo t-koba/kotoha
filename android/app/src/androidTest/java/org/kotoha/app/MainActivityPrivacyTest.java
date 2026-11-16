@@ -4,11 +4,14 @@ import android.app.UiAutomation;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroupOverlay;
 import android.view.WindowManager;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Emulator callback/flag and in-memory screenshot coverage using synthetic content.
@@ -44,6 +47,8 @@ public final class MainActivityPrivacyTest extends ActivityInstrumentationTestCa
     }
 
     public void testSecureFlagSuppressesScreenshotUntilResume() throws Throwable {
+        assertTrue("Window screenshot probe requires Android 15 or newer",
+                Build.VERSION.SDK_INT >= 35);
         MainActivity activity = getActivity();
         UiAutomation automation = getInstrumentation().getUiAutomation();
         assertNotNull("Screenshot automation must be available", automation);
@@ -62,35 +67,33 @@ public final class MainActivityPrivacyTest extends ActivityInstrumentationTestCa
                         decor.getWidth() > 0 && decor.getHeight() > 0);
                 int left = (decor.getWidth() - size) / 2;
                 int top = (decor.getHeight() - size) / 2;
-                int[] decorLocation = new int[2];
-                decor.getLocationOnScreen(decorLocation);
                 marker.setBounds(left, top, left + size, top + size);
                 // Draw in the window's topmost view overlay, above Flutter's rendering surface.
                 overlay.add(marker);
                 markerAdded[0] = true;
                 decor.invalidate();
-                center[0] = decorLocation[0] + left + size / 2;
-                center[1] = decorLocation[1] + top + size / 2;
+                center[0] = left + size / 2;
+                center[1] = top + size / 2;
             });
-            getInstrumentation().waitForIdleSync();
-            assertMarkerScreenshot(automation, center, true);
+            awaitFrameCommit(decor);
+            assertMarkerScreenshot(automation, activity, center, true);
 
             runTestOnUiThread(() -> {
                 paused[0] = true;
                 getInstrumentation().callActivityOnPause(activity);
                 assertTrue("Pause must secure the window", isSecure(activity));
             });
-            getInstrumentation().waitForIdleSync();
+            awaitFrameCommit(decor);
             // Direct callback invocation leaves the app on screen; this is not recents UI.
-            assertMarkerScreenshot(automation, center, false);
+            assertMarkerScreenshot(automation, activity, center, false);
 
             runTestOnUiThread(() -> {
                 getInstrumentation().callActivityOnResume(activity);
                 paused[0] = false;
                 assertFalse("Resume must restore foreground capture", isSecure(activity));
             });
-            getInstrumentation().waitForIdleSync();
-            assertMarkerScreenshot(automation, center, true);
+            awaitFrameCommit(decor);
+            assertMarkerScreenshot(automation, activity, center, true);
         } finally {
             runTestOnUiThread(() -> {
                 try {
@@ -105,9 +108,20 @@ public final class MainActivityPrivacyTest extends ActivityInstrumentationTestCa
         }
     }
 
-    private void assertMarkerScreenshot(UiAutomation automation, int[] center,
-            boolean expectVisible) {
-        Bitmap screenshot = automation.takeScreenshot();
+    private void awaitFrameCommit(View decor) throws Throwable {
+        CountDownLatch committed = new CountDownLatch(1);
+        runTestOnUiThread(() -> {
+            decor.getViewTreeObserver().registerFrameCommitCallback(committed::countDown);
+            decor.invalidate();
+        });
+        assertTrue("Window frame must be submitted before screenshot capture",
+                committed.await(10, TimeUnit.SECONDS));
+    }
+
+    private void assertMarkerScreenshot(UiAutomation automation, MainActivity activity,
+            int[] center, boolean expectVisible) {
+        // Android 15 synchronously flushes SurfaceFlinger before capturing this window surface.
+        Bitmap screenshot = automation.takeScreenshot(activity.getWindow());
         assertNotNull("Screenshot capture must succeed", screenshot);
         try {
             assertTrue("Marker center must be inside the screenshot",
