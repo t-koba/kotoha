@@ -531,11 +531,16 @@ and has an empty `build_configs` map (`mizu_fetch/595aab0ee3bfc3608572e46c23eb8e
 rebuild route syncs a named manifest and supports rebuilding a particular
 toolchain (`mizu_fetch/b90aad88d722d497243b86972572f68eee92363ba3c254dd0e22e2d9b14876dc`;
 `experiments/50d7e4d44d3d43e3bbe31215031c4aa9`). This is official
-build-input/rebuild provenance. A bounded recursive field scan found no
-archive/member/hash/digest fields in `BUILD_INFO`
-(`experiments/9ca5cd1b929645f98739c7f32ab12a25`); the manifest supplies no
-archive-member-to-source map. These records contain no signed per-member build
-attestation.
+build-input/rebuild provenance. The exact r28c `clang-r530567e` Gitiles tree
+`406dd8eac79e1e3111b04e6e5ded14bc2a251763` lists `BUILD_INFO` and the source manifest but has no `logs/` entry; its
+`BUILD_INFO` has `last_logfile: null`, an empty `build_configs` map, and no
+archive/member/object/hash/compile-command fields
+(`mizu_fetch/03e9d2a2697de7b8334211fe384887966b8ead747d0df58e6529873b5ad35133`,
+`experiments/f44a907179964352b4bbc68dea02bb49`; earlier recursive scan
+`experiments/9ca5cd1b929645f98739c7f32ab12a25`). The manifest supplies no
+archive-member-to-source map, and these public records contain no per-member
+build attestation. This bounds the published tree; it does not rule out
+non-public logs or separate build records.
 
 The pinned `llvm_android` builder source declares the intended NDK libc++
 configuration. `DeviceLibcxxBuilder` includes an x86_64 NDK config
