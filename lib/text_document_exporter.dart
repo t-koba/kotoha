@@ -97,8 +97,6 @@ typedef _ReplaceFileDart = int Function(
 );
 typedef _LastErrorNative = Uint32 Function();
 typedef _LastErrorDart = int Function();
-typedef _AclDeleteNative = Int32 Function(Pointer<Utf8>, Uint32);
-typedef _AclDeleteDart = int Function(Pointer<Utf8>, int);
 typedef _GetNamedSecurityNative = Uint32 Function(
   Pointer<Utf16>,
   Uint32,
@@ -168,7 +166,7 @@ Future<void> exportTextDocumentWithStagedWriter(
   Future<void> Function(File file, List<int> bytes) writeStagedFile,
 ) => _exportTextDocument(path, text, writeStagedFile);
 
-Directory _createStagingDirectory(Directory parent, {required bool existing}) {
+Directory _createStagingDirectory(Directory parent) {
   // Called only on POSIX. All native lookups in this file are lazy and occur
   // inside their platform branch, including when imported on another OS.
   final mkdtemp = DynamicLibrary.process()
@@ -205,45 +203,10 @@ Directory _createStagingDirectory(Directory parent, {required bool existing}) {
           directory.path,
         );
       }
-      // On macOS, inherited ACL entries can grant access despite mode 0700.
-      // Existing destinations may be more private than their parent, so remove
-      // inherited ACLs from the empty staging directory before creating a file.
-      // For new files retain the selected directory's inherited defaults.
-      if (Platform.isMacOS && existing) {
-        _removeMacStagingAcl(directory);
-        if ((directory.statSync().mode & 0x1ff) != 0x1c0) {
-          throw FileSystemException(
-            'Could not secure private export staging directory',
-            directory.path,
-          );
-        }
-      }
       return directory;
     } catch (_) {
       if (directory.existsSync()) directory.deleteSync();
       rethrow;
-    }
-  });
-}
-
-void _removeMacStagingAcl(Directory directory) {
-  final libc = DynamicLibrary.process();
-  final deleteAcl = libc.lookupFunction<_AclDeleteNative, _AclDeleteDart>(
-    'acl_delete_file_np',
-  );
-  final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
-  using((arena) {
-    final result = deleteAcl(
-      directory.path.toNativeUtf8(allocator: arena),
-      0x100, // ACL_TYPE_EXTENDED
-    );
-    // ENOENT means the empty directory had no extended ACL to remove.
-    if (result != 0 && errno().value != 2) {
-      throw FileSystemException(
-        'Could not remove inherited staging ACL',
-        directory.path,
-        OSError('acl_delete_file_np failed', errno().value),
-      );
     }
   });
 }
@@ -371,9 +334,9 @@ void _preserveLinuxAccess(File destination, File stagedFile) {
 }
 
 void _preserveMacAccess(File destination, File stagedFile) {
-  // COPYFILE_ACL | COPYFILE_STAT: copies the access ACL and POSIX stat metadata,
-  // not contents or arbitrary xattrs. No fallback on a copy failure. Native
-  // macOS behavior still needs a macOS test run; Linux cannot validate it.
+  // Apply COPYFILE_STAT | COPYFILE_ACL before plaintext is written. In
+  // particular, do not include COPYFILE_DATA or COPYFILE_XATTR. No fallback on
+  // failure; Linux cannot validate native macOS behavior.
   final copyfile = DynamicLibrary.process()
       .lookupFunction<_CopyfileNative, _CopyfileDart>('copyfile');
   using((arena) {
@@ -381,7 +344,7 @@ void _preserveMacAccess(File destination, File stagedFile) {
           destination.path.toNativeUtf8(allocator: arena),
           stagedFile.path.toNativeUtf8(allocator: arena),
           nullptr,
-          0x3,
+          0x3, // COPYFILE_STAT | COPYFILE_ACL
         ) !=
         0) {
       throw FileSystemException(
@@ -427,11 +390,9 @@ Future<void> _commit(File destination, File stagedFile) async {
     if (Platform.isWindows) {
       _replaceWindowsFile(destination, stagedFile);
       return;
-    } else if (Platform.isMacOS) {
-      _preserveMacAccess(destination, stagedFile);
     } else if (Platform.isLinux) {
       _preserveLinuxAccess(destination, stagedFile);
-    } else {
+    } else if (!Platform.isMacOS) {
       throw FileSystemException(
         'Preserving export access permissions is unsupported on this platform',
         destination.path,
@@ -470,7 +431,7 @@ Future<void> _exportTextDocument(
   final existing = destinationType == FileSystemEntityType.file;
   final stagingDirectory = Platform.isWindows
       ? await destination.parent.createTemp('.kotoha-export-')
-      : _createStagingDirectory(destination.parent, existing: existing);
+      : _createStagingDirectory(destination.parent);
   final stagedFile = File(
     '${stagingDirectory.path}${Platform.pathSeparator}translation.txt',
   );
@@ -480,6 +441,8 @@ Future<void> _exportTextDocument(
     stagedFileCreated = true;
     if (Platform.isWindows && existing) {
       _preserveWindowsStagingAcl(destination, stagedFile);
+    } else if (Platform.isMacOS && existing) {
+      _preserveMacAccess(destination, stagedFile);
     }
     await writeStagedFile(stagedFile, bytes);
     await _commit(destination, stagedFile);

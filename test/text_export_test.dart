@@ -104,6 +104,17 @@ Future<String> _command(
   return (result.stdout as String).trim();
 }
 
+Future<String> _powershell(
+  String script, {
+  Map<String, String>? environment,
+}) => _command('pwsh.exe', [
+  '-NoProfile',
+  '-NonInteractive',
+  '-Command',
+  r"$ErrorActionPreference = 'Stop'; Import-Module Microsoft.PowerShell.Security -ErrorAction Stop; " +
+      script,
+], environment: environment);
+
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
   late FileSelectorPlatform original;
@@ -328,13 +339,13 @@ void main() {
       staged,
       bytes,
     ) async {
-      // The stage directory must not retain the destination parent's inherited
-      // ACL while it contains plaintext for this existing restricted file.
-      expect(await acl(staged.parent.path), isEmpty);
+      // Apply the destination ACL before writing plaintext to the staged file.
+      expect(await acl(staged.path), before);
       await staged.writeAsBytes(bytes);
     });
 
     expect(file.existsSync(), isTrue);
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(await acl(file.path), before);
     expect(directory.listSync().map((entity) => entity.path).toSet(), {
       file.path,
@@ -374,14 +385,8 @@ void main() {
         '${directory.path}${Platform.pathSeparator}translation.txt',
       );
       Future<String> dacl(File file) async {
-        final result = await _command(
-          'powershell.exe',
-          [
-            '-NoProfile',
-            '-NonInteractive',
-            '-Command',
-            r"(Get-Acl -LiteralPath $env:KOTOHA_EXPORT_PATH).GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::Access)",
-          ],
+        final result = await _powershell(
+          r"(Get-Acl -LiteralPath $env:KOTOHA_EXPORT_PATH).GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::Access)",
           environment: {'KOTOHA_EXPORT_PATH': file.path},
         );
         return result;
@@ -397,28 +402,24 @@ void main() {
     skip: !Platform.isWindows,
   );
 
-  test('replacement preserves a protected Windows DACL before staging', () async {
-    final directory = Directory.systemTemp.createTempSync('kotoha-export');
-    addTearDown(() => directory.deleteSync(recursive: true));
-    final file = File(
-      '${directory.path}${Platform.pathSeparator}translation.txt',
-    );
-    file.writeAsStringSync('previous contents');
-    Future<String> powershell(String script, {String? stagedPath}) => _command(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        r"$ErrorActionPreference = 'Stop'; $path = $env:KOTOHA_EXPORT_TEST_PATH; " +
-            script,
-      ],
-      environment: {
-        'KOTOHA_EXPORT_TEST_PATH': file.path,
-        'KOTOHA_EXPORT_STAGE_PATH': ?stagedPath,
-      },
-    );
-    await powershell(r"""
+  test(
+    'replacement preserves a protected Windows DACL before staging',
+    () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final file = File(
+        '${directory.path}${Platform.pathSeparator}translation.txt',
+      );
+      file.writeAsStringSync('previous contents');
+      Future<String> powershell(String script, {String? stagedPath}) =>
+          _powershell(
+            r"$path = $env:KOTOHA_EXPORT_TEST_PATH; " + script,
+            environment: {
+              'KOTOHA_EXPORT_TEST_PATH': file.path,
+              'KOTOHA_EXPORT_STAGE_PATH': ?stagedPath,
+            },
+          );
+      await powershell(r"""
 $acl = Get-Acl -LiteralPath $path;
 $acl.SetAccessRuleProtection($true, $false);
 $owner = [System.Security.Principal.WindowsIdentity]::GetCurrent().User;
@@ -428,32 +429,35 @@ $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
 $acl.SetAccessRule($rule);
 Set-Acl -LiteralPath $path -AclObject $acl;
 """);
-    Future<String> dacl(String path, {String? stagedPath}) => powershell(r"""
+      Future<String> dacl(String path, {String? stagedPath}) => powershell(r"""
 $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } else { $path };
 (Get-Acl -LiteralPath $aclPath).GetSecurityDescriptorSddlForm(
   [System.Security.AccessControl.AccessControlSections]::Access)
 """, stagedPath: stagedPath);
-    final before = await dacl(file.path);
-    expect(before, contains('D:P')); // protected, unlike the parent's DACL
+      final before = await dacl(file.path);
+      expect(before, contains('D:P')); // protected, unlike the parent's DACL
 
-    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
-      staged,
-      bytes,
-    ) async {
-      expect(
-        await dacl(file.path, stagedPath: staged.path),
-        before,
-        reason: 'the staged file must be protected before plaintext is written',
-      );
-      await staged.writeAsBytes(bytes);
-    });
+      await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+        staged,
+        bytes,
+      ) async {
+        expect(
+          await dacl(file.path, stagedPath: staged.path),
+          before,
+          reason:
+              'the staged file must be protected before plaintext is written',
+        );
+        await staged.writeAsBytes(bytes);
+      });
 
-    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
-    expect(await dacl(file.path), before);
-    expect(directory.listSync().map((entity) => entity.path).toSet(), {
-      file.path,
-    });
-  }, skip: !Platform.isWindows);
+      expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+      expect(await dacl(file.path), before);
+      expect(directory.listSync().map((entity) => entity.path).toSet(), {
+        file.path,
+      });
+    },
+    skip: !Platform.isWindows,
+  );
 
   test(
     'a partial staging write preserves the destination and is cleaned',
