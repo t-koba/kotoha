@@ -67,18 +67,12 @@ typedef _RemovexattrNative = Int32 Function(Pointer<Utf8>, Pointer<Utf8>);
 typedef _RemovexattrDart = int Function(Pointer<Utf8>, Pointer<Utf8>);
 typedef _ErrnoNative = Pointer<Int32> Function();
 typedef _ErrnoDart = Pointer<Int32> Function();
-typedef _CopyfileNative = Int32 Function(
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Void>,
-  Uint32,
-);
-typedef _CopyfileDart = int Function(
-  Pointer<Utf8>,
-  Pointer<Utf8>,
-  Pointer<Void>,
-  int,
-);
+typedef _OpenNative = Int32 Function(Pointer<Utf8>, Int32, Uint32);
+typedef _OpenDart = int Function(Pointer<Utf8>, int, int);
+typedef _CloseNative = Int32 Function(Int32);
+typedef _CloseDart = int Function(int);
+typedef _FcopyfileNative = Int32 Function(Int32, Int32, Pointer<Void>, Uint32);
+typedef _FcopyfileDart = int Function(int, int, Pointer<Void>, int);
 typedef _ReplaceFileNative = Int32 Function(
   Pointer<Utf16>,
   Pointer<Utf16>,
@@ -334,29 +328,53 @@ void _preserveLinuxAccess(File destination, File stagedFile) {
 }
 
 void _preserveMacAccess(File destination, File stagedFile) {
-  // Apply COPYFILE_STAT | COPYFILE_ACL before plaintext is written. In
-  // particular, do not include COPYFILE_DATA or COPYFILE_XATTR. No fallback on
-  // failure; Linux cannot validate native macOS behavior.
+  // O_EVTONLY opens the existing file for metadata operations without asking
+  // for read access to its plaintext. fcopyfile applies only stat and ACL data
+  // to the empty stage; DATA and XATTR are deliberately excluded.
   final libc = DynamicLibrary.process();
-  final copyfile = libc.lookupFunction<_CopyfileNative, _CopyfileDart>(
-    'copyfile',
+  final open = libc.lookupFunction<_OpenNative, _OpenDart>('open');
+  final close = libc.lookupFunction<_CloseNative, _CloseDart>('close');
+  final fcopyfile = libc.lookupFunction<_FcopyfileNative, _FcopyfileDart>(
+    'fcopyfile',
   );
   final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
   using((arena) {
-    final result = copyfile(
-      destination.path.toNativeUtf8(allocator: arena),
-      stagedFile.path.toNativeUtf8(allocator: arena),
-      nullptr,
-      0x3, // COPYFILE_STAT | COPYFILE_ACL
-    );
-    if (result != 0) {
-      // Preserve the native error so CI can distinguish the failing syscall
-      // from an unsupported ACL operation before choosing a correction.
+    final sourcePath = destination.path.toNativeUtf8(allocator: arena);
+    final stagedPath = stagedFile.path.toNativeUtf8(allocator: arena);
+    const openEventOnly = 0x8000; // O_EVTONLY
+    const openReadOnly = 0;
+    final source = open(sourcePath, openEventOnly, 0);
+    if (source < 0) {
       throw FileSystemException(
-        'Could not preserve export access permissions',
+        'Could not open export permissions without reading contents',
         destination.path,
-        OSError('copyfile failed', errno().value),
+        OSError('open O_EVTONLY failed', errno().value),
       );
+    }
+    try {
+      final target = open(stagedPath, openReadOnly, 0);
+      if (target < 0) {
+        throw FileSystemException(
+          'Could not open staged export permissions',
+          stagedFile.path,
+          OSError('open staged file failed', errno().value),
+        );
+      }
+      try {
+        if (fcopyfile(source, target, nullptr, 0x3) != 0) {
+          // Capture errno before descriptor cleanup changes the thread-local value.
+          final error = errno().value;
+          throw FileSystemException(
+            'Could not preserve export access permissions',
+            destination.path,
+            OSError('fcopyfile failed', error),
+          );
+        }
+      } finally {
+        close(target);
+      }
+    } finally {
+      close(source);
     }
   });
 }
