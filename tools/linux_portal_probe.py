@@ -550,7 +550,7 @@ def run_host() -> dict[str, object]:
         "[portal]\n"
         f"DBusName={BACKEND_BUS}\n"
         "Interfaces=org.freedesktop.impl.portal.FileChooser;\n"
-        "UseIn=KOTOHA_PORTAL_TEST;\n",
+        "UseIn=kotoha_portal_test;\n",
         encoding="utf-8",
     )
     env = os.environ.copy()
