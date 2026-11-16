@@ -2356,14 +2356,20 @@ lines differ: the app asset says `1991-2026`, while that pinned release notice
 says `2001-2024` and carries `SPDX-License-Identifier: Unicode-3.0`. This
 confirms shared Unicode License V3 terms but not the exact historical notice
 required for the selected engine data or a registry mapping to that component;
-no engine notice entry is added while adoption is disabled. The selected
-engine output begins only with a generated-file marker; its pinned generator
-uses the invoking Python `unicodedata` tables and, on the full path, fetches
-unversioned UCD `latest`. The exact selected source and generator were re-read
-at the pinned revision (`mizu_fetch/17c24a3de5237c3f34cbf02b56213f56c041f37824ff06b13c1b5b16b2bacc5a`,
-`mizu_fetch/952443f1763884be2be657d146b74f429fd9878161e586b39fabc6a2c171fc59`).
+no engine notice entry is added while adoption is disabled. At the pinned llama.cpp
+candidate commit `31424b7cf14604ca65a9195123da1413f31c4472`, the raw
+`src/unicode-data.cpp` bytes have SHA-256
+`5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`, matching
+the probe's complete captured-file digest (`mizu_fetch/a464806fbbd988657e9b99099bd32753f70bf0d706d43f7c14c0f50faca85a85`).
+The pinned `scripts/gen-unicode-data.py` bytes hash to
+`a3ac72675619833115058e33a03d0102205fb3b7c4e8e6d79e18ff2ec86dba55`
+(`mizu_fetch/c31c48a63c021f1d6e1ed657e92b796fe3feb2fbb7c92abf9cb6e17fc09c9826`).
+This binds the captured table to identical candidate-source bytes and identifies
+a generator at the same commit; it does not establish that those bytes were the
+historical compiler inputs or producer. The generator uses the invoking Python
+`unicodedata` tables and, on the full path, fetches unversioned UCD `latest`.
 CPython's upstream provider notice supports conservatively carrying Unicode
-License V3 for UCD-derived tables, including normalization, but it does not bind
+License V3 for UCD-derived tables, including normalization, but does not bind
 this output to the producer's Python/UCD inputs or exact historical notice and
 copyright year. No product notice change is warranted while engine adoption is
 disabled. Before adoption, bind the selected table to its producer inputs and
