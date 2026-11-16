@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:ffi' hide Size;
 import 'dart:io';
+
+import 'package:ffi/ffi.dart';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/foundation.dart';
@@ -37,6 +40,68 @@ class _Writer {
     final error = failure;
     if (error != null) throw error;
   }
+}
+
+// Linux's access-ACL xattr ABI lets this test exercise a real named-user ACL
+// without requiring the optional getfacl/setfacl command-line tools.
+List<int>? _linuxAcl(
+  FileSystemEntity entity, {
+  String name = 'system.posix_acl_access',
+  List<int>? value,
+}) {
+  final libc = DynamicLibrary.process();
+  final get = libc
+      .lookupFunction<
+        IntPtr Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Void>, UintPtr),
+        int Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Void>, int)
+      >('getxattr');
+  final set = libc
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Utf8>,
+          Pointer<Utf8>,
+          Pointer<Void>,
+          UintPtr,
+          Int32,
+        ),
+        int Function(Pointer<Utf8>, Pointer<Utf8>, Pointer<Void>, int, int)
+      >('setxattr');
+  final errno = libc
+      .lookupFunction<Pointer<Int32> Function(), Pointer<Int32> Function()>(
+        '__errno_location',
+      );
+  return using((arena) {
+    final path = entity.path.toNativeUtf8(allocator: arena);
+    final nativeName = name.toNativeUtf8(allocator: arena);
+    if (value != null) {
+      final data = arena<Uint8>(value.length);
+      data.asTypedList(value.length).setAll(0, value);
+      expect(set(path, nativeName, data.cast(), value.length, 0), 0);
+    }
+    final size = get(path, nativeName, nullptr, 0);
+    if (size < 0) {
+      expect(errno().value, 61); // ENODATA only, not unsupported operations.
+      return null;
+    }
+    expect(size, greaterThan(0));
+    final data = arena<Uint8>(size);
+    expect(get(path, nativeName, data.cast(), size), size);
+    return data.asTypedList(size).toList();
+  });
+}
+
+Future<String> _command(
+  String executable,
+  List<String> arguments, {
+  Map<String, String>? environment,
+}) async {
+  final result = await Process.run(
+    executable,
+    arguments,
+    environment: environment,
+  );
+  expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+  return (result.stdout as String).trim();
 }
 
 void main() {
@@ -105,6 +170,291 @@ void main() {
     expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
   });
 
+  test('a new export contains exact bytes and removes staging', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final path = '${directory.path}${Platform.pathSeparator}translation.txt';
+
+    await exportTextDocument(path, 'Hello, 🌏');
+
+    expect(File(path).readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
+  });
+
+  test('replacement preserves POSIX mode 0600', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/translation.txt');
+    file.writeAsStringSync('previous contents');
+    await _command('chmod', ['600', file.path]);
+    expect(file.statSync().mode & 0x1ff, 0x180);
+
+    await exportTextDocument(file.path, 'Hello, 🌏');
+
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(file.statSync().mode & 0x1ff, 0x180);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {
+      file.path,
+    });
+  }, skip: !(Platform.isLinux || Platform.isMacOS));
+
+  test('replacement preserves Linux access ACLs, not staged entries', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/translation.txt');
+    file.writeAsStringSync('previous contents');
+    // Linux POSIX ACL xattr version 2; entries are tag, permissions, uid/gid.
+    // Deny uid 65534 even though other users can read: copying mode alone
+    // would remove that protection. ACL_MASK and the owning group have no rights.
+    final acl = ByteData(44)..setUint32(0, 2, Endian.little);
+    final entries = [
+      (1, 6, 0xffffffff),
+      (2, 0, 65534),
+      (4, 0, 0xffffffff),
+      (16, 0, 0xffffffff),
+      (32, 4, 0xffffffff),
+    ];
+    for (var index = 0; index < entries.length; index++) {
+      final (tag, permissions, id) = entries[index];
+      final offset = 4 + index * 8;
+      acl.setUint16(offset, tag, Endian.little);
+      acl.setUint16(offset + 2, permissions, Endian.little);
+      acl.setUint32(offset + 4, id, Endian.little);
+    }
+    final before = _linuxAcl(file, value: acl.buffer.asUint8List());
+    expect(before, isNotNull);
+    final mode = file.statSync().mode & 0x1ff;
+
+    await exportTextDocument(file.path, 'Hello, 🌏');
+
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(file.statSync().mode & 0x1ff, mode);
+    expect(_linuxAcl(file), before);
+
+    final plain = File('${directory.path}/plain.txt')..writeAsStringSync('old');
+    await _command('chmod', ['640', plain.path]);
+    expect(_linuxAcl(plain), isNull);
+    // A staged ACL (e.g. inherited from the parent) must not grant a named
+    // user access that the destination never granted.
+    acl.setUint16(14, 4, Endian.little); // named user: read
+    acl.setUint16(30, 4, Endian.little); // mask: read
+    acl.setUint16(38, 0, Endian.little); // other: none
+    await exportTextDocumentWithStagedWriter(plain.path, 'Hello, 🌏', (
+      staged,
+      bytes,
+    ) async {
+      await staged.writeAsBytes(bytes);
+      expect(_linuxAcl(staged, value: acl.buffer.asUint8List()), isNotNull);
+    });
+    expect(plain.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(plain.statSync().mode & 0x1ff, 0x1a0);
+    expect(_linuxAcl(plain), isNull);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {
+      file.path,
+      plain.path,
+    });
+  }, skip: !Platform.isLinux);
+
+  test('new Linux exports inherit selected-directory ACL defaults', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    // Version-2 ACL: owner rw, named user 65534 read, group none, mask read,
+    // and other none. Files created directly in this directory inherit it.
+    final acl = ByteData(44)..setUint32(0, 2, Endian.little);
+    final entries = [
+      (1, 6, 0xffffffff),
+      (2, 4, 65534),
+      (4, 0, 0xffffffff),
+      (16, 4, 0xffffffff),
+      (32, 0, 0xffffffff),
+    ];
+    for (var index = 0; index < entries.length; index++) {
+      final (tag, permissions, id) = entries[index];
+      final offset = 4 + index * 8;
+      acl.setUint16(offset, tag, Endian.little);
+      acl.setUint16(offset + 2, permissions, Endian.little);
+      acl.setUint32(offset + 4, id, Endian.little);
+    }
+    final defaultAcl = acl.buffer.asUint8List();
+    _linuxAcl(directory, name: 'system.posix_acl_default', value: defaultAcl);
+    final reference = File('${directory.path}/reference.txt')
+      ..writeAsStringSync('reference');
+    final expectedAcl = _linuxAcl(reference);
+    expect(expectedAcl, isNotNull);
+    final output = File('${directory.path}/translation.txt');
+
+    await exportTextDocumentWithStagedWriter(output.path, 'Hello, 🌏', (
+      staged,
+      bytes,
+    ) async {
+      expect(staged.parent.statSync().mode & 0x1ff, 0x1c0);
+      final inherited = _linuxAcl(
+        staged.parent,
+        name: 'system.posix_acl_access',
+      );
+      expect(inherited, isNotNull);
+      expect(
+        ByteData.sublistView(Uint8List.fromList(inherited!))
+            .getUint16(30, Endian.little),
+        0,
+      );
+      await staged.writeAsBytes(bytes);
+    });
+
+    expect(output.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(output.statSync().mode & 0x1ff, reference.statSync().mode & 0x1ff);
+    expect(_linuxAcl(output), expectedAcl);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {
+      reference.path,
+      output.path,
+    });
+  }, skip: !Platform.isLinux);
+
+  // These tests exercise native OS mechanisms only on their actual platform.
+  // They are not evidence of macOS/Windows behavior when run on Linux.
+  test('replacement preserves a macOS deny-read ACL privately while staging', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/translation.txt');
+    file.writeAsStringSync('previous contents');
+    await _command('chmod', ['+a', 'everyone deny read', file.path]);
+    Future<List<String>> acl(String path) async =>
+        (await _command('ls', ['-le', path])).split('\n').skip(1).toList();
+    final before = await acl(file.path);
+    expect(before, isNotEmpty);
+    expect(before.join(), contains('everyone deny read'));
+
+    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+      staged,
+      bytes,
+    ) async {
+      // The stage directory must not retain the destination parent's inherited
+      // ACL while it contains plaintext for this existing restricted file.
+      expect(await acl(staged.parent.path), isEmpty);
+      await staged.writeAsBytes(bytes);
+    });
+
+    expect(file.existsSync(), isTrue);
+    expect(await acl(file.path), before);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {
+      file.path,
+    });
+  }, skip: !Platform.isMacOS);
+
+  test('new macOS exports inherit selected-directory ACL defaults', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    await _command('chmod', [
+      '+a',
+      'everyone allow read,file_inherit,directory_inherit',
+      directory.path,
+    ]);
+    final reference = File('${directory.path}/reference.txt')
+      ..writeAsStringSync('reference');
+    Future<List<String>> acl(String path) async =>
+        (await _command('ls', ['-le', path])).split('\n').skip(1).toList();
+    final expectedAcl = await acl(reference.path);
+    final output = File('${directory.path}/translation.txt');
+
+    await exportTextDocument(output.path, 'Hello, 🌏');
+
+    expect(output.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(await acl(output.path), expectedAcl);
+  }, skip: !Platform.isMacOS);
+
+  test(
+    'new Windows exports inherit selected-directory DACL defaults',
+    () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final reference = File(
+        '${directory.path}${Platform.pathSeparator}reference.txt',
+      )..writeAsStringSync('reference');
+      final output = File(
+        '${directory.path}${Platform.pathSeparator}translation.txt',
+      );
+      Future<String> dacl(File file) async {
+        final result = await _command(
+          'powershell.exe',
+          [
+            '-NoProfile',
+            '-NonInteractive',
+            '-Command',
+            r"(Get-Acl -LiteralPath $env:KOTOHA_EXPORT_PATH).GetSecurityDescriptorSddlForm([System.Security.AccessControl.AccessControlSections]::Access)",
+          ],
+          environment: {'KOTOHA_EXPORT_PATH': file.path},
+        );
+        return result;
+      }
+
+      final expectedDacl = await dacl(reference);
+
+      await exportTextDocument(output.path, 'Hello, 🌏');
+
+      expect(output.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+      expect(await dacl(output), expectedDacl);
+    },
+    skip: !Platform.isWindows,
+  );
+
+  test('replacement preserves a protected Windows DACL before staging', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File(
+      '${directory.path}${Platform.pathSeparator}translation.txt',
+    );
+    file.writeAsStringSync('previous contents');
+    Future<String> powershell(String script, {String? stagedPath}) => _command(
+      'powershell.exe',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        r"$ErrorActionPreference = 'Stop'; $path = $env:KOTOHA_EXPORT_TEST_PATH; " +
+            script,
+      ],
+      environment: {
+        'KOTOHA_EXPORT_TEST_PATH': file.path,
+        'KOTOHA_EXPORT_STAGE_PATH': ?stagedPath,
+      },
+    );
+    await powershell(r"""
+$acl = Get-Acl -LiteralPath $path;
+$acl.SetAccessRuleProtection($true, $false);
+$owner = [System.Security.Principal.WindowsIdentity]::GetCurrent().User;
+$rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+  $owner, [System.Security.AccessControl.FileSystemRights]::FullControl,
+  [System.Security.AccessControl.AccessControlType]::Allow);
+$acl.SetAccessRule($rule);
+Set-Acl -LiteralPath $path -AclObject $acl;
+""");
+    Future<String> dacl(String path, {String? stagedPath}) => powershell(r"""
+$aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } else { $path };
+(Get-Acl -LiteralPath $aclPath).GetSecurityDescriptorSddlForm(
+  [System.Security.AccessControl.AccessControlSections]::Access)
+""", stagedPath: stagedPath);
+    final before = await dacl(file.path);
+    expect(before, contains('D:P')); // protected, unlike the parent's DACL
+
+    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+      staged,
+      bytes,
+    ) async {
+      expect(
+        await dacl(file.path, stagedPath: staged.path),
+        before,
+        reason: 'the staged file must be protected before plaintext is written',
+      );
+      await staged.writeAsBytes(bytes);
+    });
+
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(await dacl(file.path), before);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {
+      file.path,
+    });
+  }, skip: !Platform.isWindows);
+
   test(
     'a partial staging write preserves the destination and is cleaned',
     () async {
@@ -153,11 +503,13 @@ void main() {
         '${directory.path}${Platform.pathSeparator}selected.txt',
       );
       target.writeAsBytesSync(utf8.encode('old target contents'));
+      await _command('chmod', ['600', target.path]);
       await link.create(target.path);
 
       await exportTextDocument(link.path, 'Hello, 🌏');
 
       expect(target.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+      expect(target.statSync().mode & 0x1ff, 0x180);
       expect(
         await FileSystemEntity.type(link.path, followLinks: false),
         FileSystemEntityType.link,

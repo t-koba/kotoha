@@ -7,18 +7,159 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 /// Writes one explicitly exported translation as UTF-8 to the selected path.
 ///
-/// The bytes are staged beside the destination and renamed into place only
-/// after the staging write completes, so a failed staging write cannot truncate
-/// an existing export. POSIX staging directories are created owner-only;
-/// Windows staging directories inherit the destination parent's ACL.
+/// Bytes are staged beside the destination before replacement, so a failed
+/// staging write cannot truncate an existing export. POSIX staging directories
+/// use mode 0700; inherited ACL handling is platform- and destination-specific.
+/// Existing files retain POSIX access permissions (including Linux access ACLs),
+/// macOS ACLs, or Windows DACLs. Metadata-preservation failures abort without
+/// fallback. This is not a durability or concurrency guarantee, nor a promise
+/// to preserve all file metadata.
 Future<void> exportTextDocument(String path, String text) =>
     _exportTextDocument(path, text, (file, bytes) => file.writeAsBytes(bytes));
 
 typedef _MkdtempNative = Pointer<Utf8> Function(Pointer<Utf8>);
 typedef _MkdtempDart = Pointer<Utf8> Function(Pointer<Utf8>);
+typedef _ChmodNative = Int32 Function(Pointer<Utf8>, Uint32);
+typedef _ChmodDart = int Function(Pointer<Utf8>, int);
+typedef _ChownNative = Int32 Function(Pointer<Utf8>, Uint32, Uint32);
+typedef _ChownDart = int Function(Pointer<Utf8>, int, int);
+typedef _StatxNative = Int32 Function(
+  Int32,
+  Pointer<Utf8>,
+  Int32,
+  Uint32,
+  Pointer<_LinuxStatx>,
+);
+typedef _StatxDart = int Function(
+  int,
+  Pointer<Utf8>,
+  int,
+  int,
+  Pointer<_LinuxStatx>,
+);
+typedef _GetxattrNative = IntPtr Function(
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Void>,
+  UintPtr,
+);
+typedef _GetxattrDart = int Function(
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Void>,
+  int,
+);
+typedef _SetxattrNative = Int32 Function(
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Void>,
+  UintPtr,
+  Int32,
+);
+typedef _SetxattrDart = int Function(
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Void>,
+  int,
+  int,
+);
+typedef _RemovexattrNative = Int32 Function(Pointer<Utf8>, Pointer<Utf8>);
+typedef _RemovexattrDart = int Function(Pointer<Utf8>, Pointer<Utf8>);
+typedef _ErrnoNative = Pointer<Int32> Function();
+typedef _ErrnoDart = Pointer<Int32> Function();
+typedef _CopyfileNative = Int32 Function(
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Void>,
+  Uint32,
+);
+typedef _CopyfileDart = int Function(
+  Pointer<Utf8>,
+  Pointer<Utf8>,
+  Pointer<Void>,
+  int,
+);
+typedef _ReplaceFileNative = Int32 Function(
+  Pointer<Utf16>,
+  Pointer<Utf16>,
+  Pointer<Utf16>,
+  Uint32,
+  Pointer<Void>,
+  Pointer<Void>,
+);
+typedef _ReplaceFileDart = int Function(
+  Pointer<Utf16>,
+  Pointer<Utf16>,
+  Pointer<Utf16>,
+  int,
+  Pointer<Void>,
+  Pointer<Void>,
+);
+typedef _LastErrorNative = Uint32 Function();
+typedef _LastErrorDart = int Function();
+typedef _AclDeleteNative = Int32 Function(Pointer<Utf8>, Uint32);
+typedef _AclDeleteDart = int Function(Pointer<Utf8>, int);
+typedef _GetNamedSecurityNative = Uint32 Function(
+  Pointer<Utf16>,
+  Uint32,
+  Uint32,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+);
+typedef _GetNamedSecurityDart = int Function(
+  Pointer<Utf16>,
+  int,
+  int,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+  Pointer<Pointer<Void>>,
+);
+typedef _SetNamedSecurityNative = Uint32 Function(
+  Pointer<Utf16>,
+  Uint32,
+  Uint32,
+  Pointer<Void>,
+  Pointer<Void>,
+  Pointer<Void>,
+  Pointer<Void>,
+);
+typedef _SetNamedSecurityDart = int Function(
+  Pointer<Utf16>,
+  int,
+  int,
+  Pointer<Void>,
+  Pointer<Void>,
+  Pointer<Void>,
+  Pointer<Void>,
+);
+typedef _LocalFreeNative = Pointer<Void> Function(Pointer<Void>);
+typedef _LocalFreeDart = Pointer<Void> Function(Pointer<Void>);
 
-final _mkdtemp = DynamicLibrary.process()
-    .lookupFunction<_MkdtempNative, _MkdtempDart>('mkdtemp');
+// Linux UAPI statx has a fixed, architecture-independent 256-byte layout.
+// Only ownership and mode are requested; the remaining fields are unused.
+final class _LinuxStatx extends Struct {
+  @Uint32()
+  external int mask;
+  @Uint32()
+  external int blockSize;
+  @Uint64()
+  external int attributes;
+  @Uint32()
+  external int linkCount;
+  @Uint32()
+  external int uid;
+  @Uint32()
+  external int gid;
+  @Uint16()
+  external int mode;
+  @Array(226)
+  external Array<Uint8> remaining;
+}
 
 @visibleForTesting
 Future<void> exportTextDocumentWithStagedWriter(
@@ -27,17 +168,16 @@ Future<void> exportTextDocumentWithStagedWriter(
   Future<void> Function(File file, List<int> bytes) writeStagedFile,
 ) => _exportTextDocument(path, text, writeStagedFile);
 
-Directory _createStagingDirectory(Directory parent) {
-  if (Platform.isWindows) {
-    throw StateError('Use Directory.createTemp on Windows');
-  }
-
+Directory _createStagingDirectory(Directory parent, {required bool existing}) {
+  // Called only on POSIX. All native lookups in this file are lazy and occur
+  // inside their platform branch, including when imported on another OS.
+  final mkdtemp = DynamicLibrary.process()
+      .lookupFunction<_MkdtempNative, _MkdtempDart>('mkdtemp');
   // POSIX mkdtemp creates mode 0700 atomically, before any plaintext exists.
   final template =
       '${parent.path}${Platform.pathSeparator}.kotoha-export-XXXXXX';
   return using((arena) {
-    final nativeTemplate = template.toNativeUtf8(allocator: arena);
-    final created = _mkdtemp(nativeTemplate);
+    final created = mkdtemp(template.toNativeUtf8(allocator: arena));
     if (created == nullptr) {
       throw FileSystemException(
         'Could not create private export staging directory',
@@ -45,15 +185,265 @@ Directory _createStagingDirectory(Directory parent) {
       );
     }
     final directory = Directory(created.toDartString());
-    if ((directory.statSync().mode & 0x1ff) != 0x1c0) {
-      directory.deleteSync();
+    try {
+      if (Platform.isLinux) {
+        // Linux default ACL inheritance can override mkdtemp's requested mode.
+        // Restrict the access ACL mask before any child file can hold plaintext;
+        // the directory's inherited default ACL remains for new-file policy.
+        final chmod = DynamicLibrary.process()
+            .lookupFunction<_ChmodNative, _ChmodDart>('chmod');
+        if (chmod(directory.path.toNativeUtf8(allocator: arena), 0x1c0) != 0) {
+          throw FileSystemException(
+            'Could not secure private export staging directory',
+            directory.path,
+          );
+        }
+      }
+      if ((directory.statSync().mode & 0x1ff) != 0x1c0) {
+        throw FileSystemException(
+          'Could not secure private export staging directory',
+          directory.path,
+        );
+      }
+      // On macOS, inherited ACL entries can grant access despite mode 0700.
+      // Existing destinations may be more private than their parent, so remove
+      // inherited ACLs from the empty staging directory before creating a file.
+      // For new files retain the selected directory's inherited defaults.
+      if (Platform.isMacOS && existing) {
+        _removeMacStagingAcl(directory);
+        if ((directory.statSync().mode & 0x1ff) != 0x1c0) {
+          throw FileSystemException(
+            'Could not secure private export staging directory',
+            directory.path,
+          );
+        }
+      }
+      return directory;
+    } catch (_) {
+      if (directory.existsSync()) directory.deleteSync();
+      rethrow;
+    }
+  });
+}
+
+void _removeMacStagingAcl(Directory directory) {
+  final libc = DynamicLibrary.process();
+  final deleteAcl = libc.lookupFunction<_AclDeleteNative, _AclDeleteDart>(
+    'acl_delete_file_np',
+  );
+  final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
+  using((arena) {
+    final result = deleteAcl(
+      directory.path.toNativeUtf8(allocator: arena),
+      0x100, // ACL_TYPE_EXTENDED
+    );
+    // ENOENT means the empty directory had no extended ACL to remove.
+    if (result != 0 && errno().value != 2) {
       throw FileSystemException(
-        'Could not secure private export staging directory',
+        'Could not remove inherited staging ACL',
         directory.path,
+        OSError('acl_delete_file_np failed', errno().value),
       );
     }
-    return directory;
   });
+}
+
+void _preserveWindowsStagingAcl(File destination, File stagedFile) {
+  // Copy the existing file DACL onto the empty stage before writing plaintext.
+  // Protect it from inheritance, so the selected parent cannot widen access.
+  final advapi = DynamicLibrary.open('advapi32.dll');
+  final getSecurity = advapi
+      .lookupFunction<_GetNamedSecurityNative, _GetNamedSecurityDart>(
+        'GetNamedSecurityInfoW',
+      );
+  final setSecurity = advapi
+      .lookupFunction<_SetNamedSecurityNative, _SetNamedSecurityDart>(
+        'SetNamedSecurityInfoW',
+      );
+  final localFree = DynamicLibrary.open('kernel32.dll')
+      .lookupFunction<_LocalFreeNative, _LocalFreeDart>('LocalFree');
+  using((arena) {
+    final owner = arena<Pointer<Void>>()..value = nullptr;
+    final group = arena<Pointer<Void>>()..value = nullptr;
+    final dacl = arena<Pointer<Void>>()..value = nullptr;
+    final sacl = arena<Pointer<Void>>()..value = nullptr;
+    final descriptor = arena<Pointer<Void>>()..value = nullptr;
+    const fileObject = 1; // SE_FILE_OBJECT
+    const daclInformation = 0x4; // DACL_SECURITY_INFORMATION
+    try {
+      final getResult = getSecurity(
+        destination.path.toNativeUtf16(allocator: arena),
+        fileObject,
+        daclInformation,
+        owner,
+        group,
+        dacl,
+        sacl,
+        descriptor,
+      );
+      if (getResult != 0) {
+        throw FileSystemException(
+          'Could not read export destination DACL',
+          destination.path,
+          OSError('GetNamedSecurityInfoW failed', getResult),
+        );
+      }
+      const protectedDacl = 0x80000000;
+      final setResult = setSecurity(
+        stagedFile.path.toNativeUtf16(allocator: arena),
+        fileObject,
+        daclInformation | protectedDacl,
+        nullptr,
+        nullptr,
+        dacl.value,
+        nullptr,
+      );
+      if (setResult != 0) {
+        throw FileSystemException(
+          'Could not secure staged export with destination DACL',
+          stagedFile.path,
+          OSError('SetNamedSecurityInfoW failed', setResult),
+        );
+      }
+    } finally {
+      if (descriptor.value != nullptr) localFree(descriptor.value);
+    }
+  });
+}
+
+void _preserveLinuxAccess(File destination, File stagedFile) {
+  final libc = DynamicLibrary.process();
+  final statx = libc.lookupFunction<_StatxNative, _StatxDart>('statx');
+  final chown = libc.lookupFunction<_ChownNative, _ChownDart>('chown');
+  final chmod = libc.lookupFunction<_ChmodNative, _ChmodDart>('chmod');
+  final getxattr = libc.lookupFunction<_GetxattrNative, _GetxattrDart>(
+    'getxattr',
+  );
+  final setxattr = libc.lookupFunction<_SetxattrNative, _SetxattrDart>(
+    'setxattr',
+  );
+  final removexattr = libc.lookupFunction<_RemovexattrNative, _RemovexattrDart>(
+    'removexattr',
+  );
+  final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>(
+    '__errno_location',
+  );
+  Never fail() => throw FileSystemException(
+    'Could not preserve export access permissions',
+    destination.path,
+    OSError('POSIX metadata operation failed', errno().value),
+  );
+  using((arena) {
+    final source = destination.path.toNativeUtf8(allocator: arena);
+    final target = stagedFile.path.toNativeUtf8(allocator: arena);
+    final stat = arena<_LinuxStatx>();
+    const accessMask = 0x1a; // STATX_MODE | STATX_UID | STATX_GID
+    if (statx(-100, source, 0, accessMask, stat) != 0) fail(); // AT_FDCWD
+    if (stat.ref.mask & accessMask != accessMask) {
+      throw FileSystemException(
+        'Missing export ownership/mode',
+        destination.path,
+      );
+    }
+    // Ownership determines which mode/ACL entries apply. Do not silently
+    // replace another owner's file with one owned by the exporting process.
+    if (chown(target, stat.ref.uid, stat.ref.gid) != 0) fail();
+    if (chmod(target, stat.ref.mode & 0x1ff) != 0) fail();
+
+    final name = 'system.posix_acl_access'.toNativeUtf8(allocator: arena);
+    final size = getxattr(source, name, nullptr, 0);
+    if (size < 0) {
+      // Only ENODATA establishes absence. Unsupported ACL operations fail
+      // closed too, rather than assuming there is no protection to preserve.
+      if (errno().value != 61) fail();
+      // Discard an ACL inherited by staging, rather than granting its named
+      // users access when the original file had no such ACL.
+      if (removexattr(target, name) != 0 && errno().value != 61) {
+        fail();
+      }
+    } else {
+      final acl = arena<Uint8>(size);
+      final read = getxattr(source, name, acl.cast(), size);
+      if (read < 0) fail();
+      if (setxattr(target, name, acl.cast(), read, 0) != 0) fail();
+    }
+  });
+}
+
+void _preserveMacAccess(File destination, File stagedFile) {
+  // COPYFILE_ACL | COPYFILE_STAT: copies the access ACL and POSIX stat metadata,
+  // not contents or arbitrary xattrs. No fallback on a copy failure. Native
+  // macOS behavior still needs a macOS test run; Linux cannot validate it.
+  final copyfile = DynamicLibrary.process()
+      .lookupFunction<_CopyfileNative, _CopyfileDart>('copyfile');
+  using((arena) {
+    if (copyfile(
+          destination.path.toNativeUtf8(allocator: arena),
+          stagedFile.path.toNativeUtf8(allocator: arena),
+          nullptr,
+          0x3,
+        ) !=
+        0) {
+      throw FileSystemException(
+        'Could not preserve export access permissions',
+        destination.path,
+      );
+    }
+  });
+}
+
+void _replaceWindowsFile(File destination, File stagedFile) {
+  // ReplaceFileW preserves the replaced file's DACL; MoveFileExW (File.rename)
+  // does not. Flags=0 deliberately excludes IGNORE_MERGE_ERRORS and
+  // IGNORE_ACL_ERRORS. This native behavior still needs a Windows test run.
+  final kernel32 = DynamicLibrary.open('kernel32.dll');
+  final replaceFile = kernel32
+      .lookupFunction<_ReplaceFileNative, _ReplaceFileDart>('ReplaceFileW');
+  final lastError = kernel32.lookupFunction<_LastErrorNative, _LastErrorDart>(
+    'GetLastError',
+  );
+  using((arena) {
+    if (replaceFile(
+          destination.path.toNativeUtf16(allocator: arena),
+          stagedFile.path.toNativeUtf16(allocator: arena),
+          nullptr,
+          0,
+          nullptr,
+          nullptr,
+        ) ==
+        0) {
+      throw FileSystemException(
+        'Could not replace export while preserving its DACL',
+        destination.path,
+        OSError('ReplaceFileW failed', lastError()),
+      );
+    }
+  });
+}
+
+Future<void> _commit(File destination, File stagedFile) async {
+  final type = await FileSystemEntity.type(destination.path);
+  if (type == FileSystemEntityType.file) {
+    if (Platform.isWindows) {
+      _replaceWindowsFile(destination, stagedFile);
+      return;
+    } else if (Platform.isMacOS) {
+      _preserveMacAccess(destination, stagedFile);
+    } else if (Platform.isLinux) {
+      _preserveLinuxAccess(destination, stagedFile);
+    } else {
+      throw FileSystemException(
+        'Preserving export access permissions is unsupported on this platform',
+        destination.path,
+      );
+    }
+  } else if (type != FileSystemEntityType.notFound) {
+    throw FileSystemException(
+      'Export destination is not a file',
+      destination.path,
+    );
+  }
+  await stagedFile.rename(destination.path);
 }
 
 Future<void> _exportTextDocument(
@@ -72,9 +462,15 @@ Future<void> _exportTextDocument(
   final destination = selectedType == FileSystemEntityType.link
       ? File(await selectedPath.resolveSymbolicLinks())
       : selectedPath;
+  final destinationType = await FileSystemEntity.type(destination.path);
+  if (destinationType != FileSystemEntityType.file &&
+      destinationType != FileSystemEntityType.notFound) {
+    throw FileSystemException('Export destination is not a file', path);
+  }
+  final existing = destinationType == FileSystemEntityType.file;
   final stagingDirectory = Platform.isWindows
       ? await destination.parent.createTemp('.kotoha-export-')
-      : _createStagingDirectory(destination.parent);
+      : _createStagingDirectory(destination.parent, existing: existing);
   final stagedFile = File(
     '${stagingDirectory.path}${Platform.pathSeparator}translation.txt',
   );
@@ -82,8 +478,11 @@ Future<void> _exportTextDocument(
   try {
     await stagedFile.create(exclusive: true);
     stagedFileCreated = true;
+    if (Platform.isWindows && existing) {
+      _preserveWindowsStagingAcl(destination, stagedFile);
+    }
     await writeStagedFile(stagedFile, bytes);
-    await stagedFile.rename(destination.path);
+    await _commit(destination, stagedFile);
     stagedFileCreated = false;
   } finally {
     if (stagedFileCreated && await stagedFile.exists()) {
