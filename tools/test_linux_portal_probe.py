@@ -51,7 +51,13 @@ class SandboxPrefixTest(unittest.TestCase):
                 "sandbox-bwrap-documents-bind-failed",
                 "sandbox-bwrap-home-mask-failed",
                 "sandbox-bwrap-environment-failed",
+                "sandbox-bwrap-root-remount-failed",
             ],
+        )
+        self.assertEqual(stages[0][1], ["--bind", "/", "/"])
+        self.assertEqual(
+            stages[-1],
+            ("sandbox-bwrap-root-remount-failed", ["--remount-ro", "/"]),
         )
         home_mask = next(
             index
@@ -61,6 +67,10 @@ class SandboxPrefixTest(unittest.TestCase):
         app_info_arg = prefix.index(str(app_info_fd))
         self.assertEqual(prefix[app_info_arg - 1], "--ro-bind-data")
         self.assertEqual(prefix[app_info_arg + 1], "/.flatpak-info")
+        app_info_bind = prefix.index("--ro-bind-data")
+        root_remount = prefix.index("--remount-ro")
+        self.assertLess(app_info_bind, root_remount)
+        self.assertEqual(prefix[root_remount + 1], "/")
         self.assertLess(prefix.index(str(script)), home_mask)
         self.assertNotIn("/home/runner/work/_temp/probe/flatpak-info", prefix)
         self.assertLess(prefix.index(mountpoint), home_mask)
@@ -168,6 +178,7 @@ class SandboxFailureStageTest(unittest.TestCase):
             "sandbox-bwrap-documents-bind-failed",
             "sandbox-bwrap-home-mask-failed",
             "sandbox-bwrap-environment-failed",
+            "sandbox-bwrap-root-remount-failed",
             "sandbox-bwrap-data-fd-failed",
             "sandbox-bwrap-prefix-inconsistent",
             "sandbox-bwrap-timeout",

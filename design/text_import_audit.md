@@ -354,45 +354,38 @@ post-close access check, or persistent-state observation occurred. This remains
 interface-availability and cleanup evidence only, not portal behavior or
 Kotoha support. Linux import remains disabled.
 
-The current exact hosted run, after the bounded cumulative bwrap setup ladder,
-was publication
-`7e4fb42830d5603e137ec74d0d8797e1bb2b2685d49d8d6d80152ecd292a3c7a` / SHA
-`b680c234a96049d0307853791b0e0a533dd7d18e` (run `43748568343`, job
-`132917211544`; status `vcs-read/33b8a25ff2014702a6a889657c5d7c98`, log
-`vcs-read/23fe8e4eec164e28a86dc283cf3e0a8e`). The ladder reports
-`sandbox-bwrap-app-info-bind-failed` after the core, `/run`, proc and dev setup
-stages passed. It identifies the app-info bind operation, not whether its source
-or target caused the failure; no child paths or raw stderr are exposed. The job
-also records bubblewrap `0.6.1-1ubuntu0.3` and still fails before the sandboxed
-client, so chooser, URI mapping, permission revocation, post-close access, and
-persistent-state behavior remain untested.
+The latest exact hosted Ubuntu portal probe ran on publication
+`fed2f06ccddd48bb109568d94273579c3244261e931aaa418eb2efd280379a88` / SHA
+`fc81137061efe5b017c0fd049b43fd4ac2cad740` (run `43770467485`, Linux job
+`132985012361`; status `vcs-read/b10100ddaf8249f88f53531d559fc1db`, exact log
+`vcs-read/7532c265f4ff4df8a0dd84495547c3d6`). The runner was Ubuntu 22.04.5
+x86_64/amd64 with bubblewrap `0.6.1-1ubuntu0.3`, Documents portal
+`1.14.4-1ubuntu2~22.04.2`, and GTK backend `1.14.0-1build1`. Both the desktop
+and GTK backend FileChooser interfaces introspected, but sandbox setup then
+failed at `sandbox-bwrap-bind-file-target-failed`, before the client ran. No
+FileChooser request, URI/document mapping, permission operation, post-close
+access check, or persistent-state observation occurred; Linux import remains
+disabled.
 
-Commit `284c46a` changed the synthetic `/.flatpak-info` input from a host-path
-bind to bubblewrap's read-only data-bind option, passing a rewound temporary-file
-descriptor through `pass_fds`. Its focused tests and local acceptance passed, but
-the exact descendant publication `8bc68450090b535955967cc695424aa4d5267950d519089cbcc5276f2406e56f`
-/ SHA `5f0e43922e7f39ef3542ab5ecdf15d070eec5884` (run `43766934760`, job
-`132974073161`; status `vcs-read/265c320d1def48eab96012e8d16d6fb4`, log
-`vcs-read/4f2b6f13acb5412087974378954acdd4`) still fails at
-`sandbox-bwrap-app-info-bind-failed` after core, `/run`, proc and dev setup pass.
-The runner reports Ubuntu 22.04.5 x86_64/amd64, bubblewrap
-`0.6.1-1ubuntu0.3`, Documents portal `1.14.4-1ubuntu2~22.04.2`, and GTK backend
-`1.14.0-1build1`. The probe reaches this ladder only after its Documents
-mountpoint and mount-seed checks; it still fails before the sandboxed client, so
-there was no FileChooser request, returned-URI mapping, permission revocation,
-post-close access check or persistent-state observation. Raw bwrap stderr remains
-suppressed, so the exact data-bind failure remains unknown; this recurrence
-shows the descriptor change did not resolve it.
-
-The probe now classifies known bubblewrap bind-file, descriptor-argument and
-copy/setup errors into fixed stage codes without forwarding paths or raw stderr.
-The phrase patterns match upstream bubblewrap v0.6.1 `bubblewrap.c` (`mizu_fetch/84186c7af621220970d26b3b39715e0a2801668e0d348a41e587343cb7c1bedb`,
-SHA-256 `aaa4effa46873a7c7b6b6e9e8e7cdb91153ecd2c028dbeadd043166efdb9ea0c`);
-the Ubuntu `-1ubuntu0.3` source delta is not bound. Tests cover these categories
-and ensure the sanitized codes remain within the bounded log grammar. Unknown or
-Ubuntu-specific messages still fall back to the operation stage; an exact later
-Ubuntu 22.04 run is needed to learn whether this narrows the failure. Linux
-import remains disabled.
+The failure stage is the probe's app-info data-bind to `/.flatpak-info`.
+Pinned bubblewrap v0.6.1 source (`mizu_fetch/6a940d5e2307f827b933f9b2bf5b7a9f059d2e2ff682dd65c437f1949ba4deaa`,
+SHA-256 `aaa4effa46873a7c7b6e6e9e8e7cdb91153ecd2c028dbeadd043166efdb9ea0c`)
+shows that `--ro-bind-data` first calls `ensure_file(dest)` and emits
+`Can't create file at` if target creation fails (lines 1418-1426). The probe
+had already mounted `/` read-only before asking bwrap to create
+`/.flatpak-info`; this command order explains the target-creation failure.
+The hosted log intentionally exposes only the fixed stage code, not raw stderr
+or host paths. The local correction now keeps the root bind writable during
+trusted namespace setup, then uses bubblewrap's supported non-recursive
+`--remount-ro /` after the app-info and other mounts and before any client
+command. Regression tests assert that order and retain the hidden-fixture
+checks. Local verification passed: the 17 focused portal-probe tests, Python
+compile, `git diff --check`, and acceptance validation 93/93 (code digest
+`d0547d9c09daaa03f78acca91966aae61c4a0acba5bf329209ab8eb7205d98dd`). The fix
+has not yet been exercised on the exact Ubuntu runner. This setup diagnosis
+and local command-order test establish no chooser, URI mapping, permission
+revocation, post-close-access, or persistent-state behavior; Linux import stays
+disabled pending exact hosted end-to-end evidence.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,

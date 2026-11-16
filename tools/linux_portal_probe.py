@@ -432,8 +432,10 @@ def _sandbox_client_prefix_stages(
     runtime: Path,
 ) -> list[tuple[str, list[str]]]:
     # Bind host sources before masking /home; the CI checkout is under /home.
+    # Keep the root writable only while bwrap creates /.flatpak-info, then
+    # remount it read-only before any client command can run.
     return [
-        ("sandbox-bwrap-core-setup-failed", ["--ro-bind", "/", "/"]),
+        ("sandbox-bwrap-core-setup-failed", ["--bind", "/", "/"]),
         ("sandbox-bwrap-run-mask-failed", ["--tmpfs", "/run"]),
         ("sandbox-bwrap-proc-bind-failed", ["--proc", "/proc"]),
         ("sandbox-bwrap-dev-bind-failed", ["--dev", "/dev"]),
@@ -456,6 +458,7 @@ def _sandbox_client_prefix_stages(
                 "--setenv", "PYTHONUNBUFFERED", "1",
             ],
         ),
+        ("sandbox-bwrap-root-remount-failed", ["--remount-ro", "/"]),
     ]
 
 
