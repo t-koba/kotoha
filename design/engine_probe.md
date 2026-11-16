@@ -1662,8 +1662,11 @@ The Windows x64 source-read capture on publication
 `vcs-read/1e3d1a3713d34f1cb16782f14f304d2a`). Its source manifest
 `faf08d710aacca675ffbebd3470592a9ae0efda170d6b4657fcb62fad446eb2c` binds the
 selected `ggml/src/ggml-cpu/ops.cpp` bytes to SHA-256
-`071c64257e4b625abd22e7c4670290d8477e220c8e684871b8d9c16abf867a73` and
-`src/unicode-data.cpp` to
+`071c64257e4b625abd22e7c4670290d8477e220c8e684871b8d9c16abf867a73`; the exact
+row appears on the verified first page of the retained `source-sha256.txt`
+artifact (`vcs-read/017ffd3366244d028b5a89417656cf4e`, page SHA-256
+`291fe8f06ed26403dd6e5c8cb21b4a9dffb622ba6e991d328712453e1ad232ba`). The
+manifest row for `src/unicode-data.cpp` is SHA-256
 `5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`
 (`vcs-read/2daa9fe581554b2fac543c79d5899d4a`,
 `vcs-read/6a887f95777946f682cbe4a452ff6265`). The later c938 run's verified first and final pages of
@@ -2064,7 +2067,7 @@ redistribution approval.
 
 The same-run Windows build log gives a path-level compile/link trace for two
 selected sources: `ggml/src/ggml-cpu/ops.cpp` (manifest SHA-256
-`071c64257e4b625abd22e7c4e1990290d8477e220c8e684871b8d9c16abf867a73`)
+`071c64257e4b625abd22e7c4670290d8477e220c8e684871b8d9c16abf867a73`)
 compiles to `ops.obj`, which is archived in `ggml-cpu.lib`; `src/unicode-data.cpp`
 (manifest SHA-256
 `5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`)
