@@ -25,7 +25,9 @@ from urllib.request import url2pathname
 APP_ID = "org.kotoha.portalprobe"
 CONTROL_APP_ID = "org.kotoha.portalcontrol"
 BACKEND_BUS = "org.freedesktop.impl.portal.desktop.kotoha_test"
+BACKEND_NAME = "kotoha-test"
 BACKEND_IFACE = "org.freedesktop.impl.portal.FileChooser"
+TEST_DESKTOP = "kotoha_portal_test"
 DESKTOP_BUS = "org.freedesktop.portal.Desktop"
 DESKTOP_PATH = "/org/freedesktop/portal/desktop"
 DOCS_BUS = "org.freedesktop.portal.Documents"
@@ -63,6 +65,20 @@ def _write_json(path: str, value: dict[str, object]) -> None:
         handle.flush()
         os.fsync(handle.fileno())
     os.replace(temporary, path)
+
+
+def _write_portal_config(config_home: Path, desktop: str) -> Path:
+    if desktop != TEST_DESKTOP:
+        raise ProbeFailure("test-desktop-identity-invalid")
+    directory = config_home / "xdg-desktop-portal"
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{desktop}-portals.conf"
+    path.write_text(
+        "[preferred]\n"
+        f"{BACKEND_IFACE}={BACKEND_NAME};\n",
+        encoding="utf-8",
+    )
+    return path
 
 
 # Documents encodes filesystem paths as NUL-terminated D-Bus byte strings.
@@ -539,20 +555,23 @@ def run_host() -> dict[str, object]:
     DBusGMainLoop(set_as_default=True)
     root = Path(os.environ["KOTOHA_PORTAL_PROBE_ROOT"])
     data_home = Path(os.environ["XDG_DATA_HOME"])
+    config_home = Path(os.environ["XDG_CONFIG_HOME"])
     runtime = Path(os.environ["XDG_RUNTIME_DIR"])
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
     fixture = root / "fixture.md"
     backend_report = str(root / "backend.json")
     backend_ready = str(root / "backend-ready.json")
     fixture.write_bytes(FIXTURE)
     portal_dir = data_home / "xdg-desktop-portal" / "portals"
     portal_dir.mkdir(parents=True, exist_ok=True)
-    (portal_dir / "kotoha-test.portal").write_text(
+    (portal_dir / f"{BACKEND_NAME}.portal").write_text(
         "[portal]\n"
         f"DBusName={BACKEND_BUS}\n"
-        "Interfaces=org.freedesktop.impl.portal.FileChooser;\n"
-        "UseIn=kotoha_portal_test;\n",
+        f"Interfaces={BACKEND_IFACE};\n"
+        f"UseIn={TEST_DESKTOP};\n",
         encoding="utf-8",
     )
+    _write_portal_config(config_home, desktop)
     env = os.environ.copy()
     env.update(
         {

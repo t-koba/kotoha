@@ -16,6 +16,7 @@ from tools.linux_portal_probe import (
     PYTHON_PREFLIGHT_MARKER,
     SANDBOX_PREFLIGHT_EXECUTABLE,
     SANDBOX_PYTHON_EXECUTABLE,
+    TEST_DESKTOP,
     _dbus_failure_stage,
     _run_sandbox_preflight,
     _sandbox_bwrap_failure_stage,
@@ -23,8 +24,31 @@ from tools.linux_portal_probe import (
     _sandbox_client_prefix,
     _sandbox_client_started,
     _sandbox_failure_stage,
+    _write_portal_config,
     main,
 )
+
+
+class PortalConfigTest(unittest.TestCase):
+    def test_desktop_specific_config_selects_only_test_file_chooser(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = _write_portal_config(Path(temporary), TEST_DESKTOP)
+            self.assertEqual(
+                path,
+                Path(temporary)
+                / "xdg-desktop-portal"
+                / "kotoha_portal_test-portals.conf",
+            )
+            self.assertEqual(
+                path.read_text(encoding="utf-8"),
+                "[preferred]\n"
+                "org.freedesktop.impl.portal.FileChooser=kotoha-test;\n",
+            )
+
+    def test_config_refuses_an_unexpected_desktop_name(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaisesRegex(ProbeFailure, "test-desktop-identity-invalid"):
+                _write_portal_config(Path(temporary), "GNOME")
 
 
 class SandboxPrefixTest(unittest.TestCase):
