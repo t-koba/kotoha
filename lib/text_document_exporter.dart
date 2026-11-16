@@ -337,19 +337,25 @@ void _preserveMacAccess(File destination, File stagedFile) {
   // Apply COPYFILE_STAT | COPYFILE_ACL before plaintext is written. In
   // particular, do not include COPYFILE_DATA or COPYFILE_XATTR. No fallback on
   // failure; Linux cannot validate native macOS behavior.
-  final copyfile = DynamicLibrary.process()
-      .lookupFunction<_CopyfileNative, _CopyfileDart>('copyfile');
+  final libc = DynamicLibrary.process();
+  final copyfile = libc.lookupFunction<_CopyfileNative, _CopyfileDart>(
+    'copyfile',
+  );
+  final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
   using((arena) {
-    if (copyfile(
-          destination.path.toNativeUtf8(allocator: arena),
-          stagedFile.path.toNativeUtf8(allocator: arena),
-          nullptr,
-          0x3, // COPYFILE_STAT | COPYFILE_ACL
-        ) !=
-        0) {
+    final result = copyfile(
+      destination.path.toNativeUtf8(allocator: arena),
+      stagedFile.path.toNativeUtf8(allocator: arena),
+      nullptr,
+      0x3, // COPYFILE_STAT | COPYFILE_ACL
+    );
+    if (result != 0) {
+      // Preserve the native error so CI can distinguish the failing syscall
+      // from an unsupported ACL operation before choosing a correction.
       throw FileSystemException(
         'Could not preserve export access permissions',
         destination.path,
+        OSError('copyfile failed', errno().value),
       );
     }
   });
