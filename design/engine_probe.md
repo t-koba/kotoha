@@ -2483,6 +2483,29 @@ app-integrated engine runtime. Do not transfer its x86_64 emulator, linkage, or
 license evidence to `arm64-v8a` or a shipping path; Android product ABI selection
 and that path’s runtime/dependency closure remain open adoption gates.
 
+A review of the shipping product's configured build/link inputs (current source)
+finds no engine integration to close. `android/app/build.gradle.kts` declares only
+the stock Flutter Android plugin with default `compileSdk`/`ndkVersion`/`minSdk`/
+`targetSdk`, no `externalNativeBuild`/CMake, no `abiFilters`, and no `jniLibs`;
+there are no `*.so` files anywhere under `android/`. `pubspec.yaml` has no engine
+or inference runtime dependency (only `ffi`, `win32`, `crypto`, `file_selector*`,
+`path_provider`, Flutter SDK packages). The app's only `dart:ffi` loads are OS
+libraries in `text_document_exporter.dart` and `windows_protected_key_store.dart`
+(`mkdtemp`/`chmod`/`statx`/ACL and `advapi32.dll`/`kernel32.dll`), none loading a
+llama/ggml library; the native engine build in `engine-probe.yml` is explicitly a
+standalone target “not linked to Flutter,” retained only as developer probe
+artifacts. The model path is metadata-only: `lib/model_terms_import.dart` states
+the increment “has no runtime or weight-file reader,” “acceptance never enables
+an engine,” and “No weight file is read,” and `AndroidPackageReader` in
+`lib/model_package_android.dart` reads only manifest/terms metadata under a
+temporary SAF grant. Therefore no product ABI, no app-integrated engine runtime,
+and no shipping engine link exist in the current product from which a product
+ABI/runtime closure could be established; the only configured engine ABI (x86_64)
+belongs to the separate developer-feasibility job. This is current product-scope
+evidence, not proof about any future or hypothetical shipping build. Android
+product ABI selection, app-integrated runtime closure, source provenance,
+notices, redistribution and adoption all remain disabled and unresolved.
+
 The earlier Android API 35 x86_64 probe underlying this detailed archive
 inventory is publication
 `877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
