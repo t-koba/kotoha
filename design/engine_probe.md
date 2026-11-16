@@ -2474,6 +2474,15 @@ above, not the moving URLs in comments. Relevant file SHA-256 values:
 
 ### Android selected runtime and delivery gate
 
+The configured Android probe is an API 35 x86_64 developer-feasibility target:
+`engine-probe.yml` pins `ENGINE_ABI=x86_64`, NDK `28.2.13676358`, and the matching
+x86_64 system image; `android_ci.sh` validates those settings and builds the
+standalone `llama-simple` target with `ANDROID_STL=c++_static`. This establishes
+only the probe configuration, not a product/release ABI selection or an
+app-integrated engine runtime. Do not transfer its x86_64 emulator, linkage, or
+license evidence to `arm64-v8a` or a shipping path; Android product ABI selection
+and that path’s runtime/dependency closure remain open adoption gates.
+
 The earlier Android API 35 x86_64 probe underlying this detailed archive
 inventory is publication
 `877c08b7a0817c402ed2d56448330286b37cfe1b0f5cbcbce4582c847b8309d0` / SHA
