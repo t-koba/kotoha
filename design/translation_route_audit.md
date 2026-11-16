@@ -31,6 +31,16 @@ The direct `TranslationSession.init(installedSource:target:)` initializer is int
 
 No route is evidence-complete now. Keep automatic translation and all engine adoption disabled.
 
+## Browser built-in translation API candidate (desktop only)
+
+MDN documents experimental `Translator` and `LanguageDetector` web APIs that translate text and detect language through a browser-managed internal AI model, which may differ between browsers, instead of an app-bundled engine. Creation requires a secure context and recent user activation; access is gated by the `Permissions-Policy` `translator`/`language-detector` directives; pending `create()`/`detect()`/`translate()` operations can be cancelled with an `AbortController`; and `destroy()` releases the model's resources. These are documented interface capabilities, not a Kotoha runtime observation. [Source: `mizu_fetch/2527a783438876e7678799ae50f5654b69ccec6a6a5086d629f1cd074420dfc6`, SHA-256 `6674a38b8da881a83557de69a8004a486ac2d28ff99d5b5e6a8ae3df1daada45`]
+
+MDN browser-compat data records `Translator` and each reviewed member (`availability()`, `create()`, `destroy()`, `inputQuota`, `measureInputUsage()`) as Chrome 138 and Edge 148, with `chrome_android: false`, `webview_android: "mirror"` (so Android WebView is unsupported), Firefox/Safari/Deno/Node.js `false`, status experimental, and the note that availability "may be subject to geographical restrictions." Chrome's own developer documentation states these APIs "work in Chrome on desktop" and "don't work on mobile devices." [Sources: `mizu_fetch/4fd386da4c10eeffa5d0df898ed36c4703e75cd4d3db57c6f5b599adfb7d6ba1`, SHA-256 `258db1f5486eb438701ba04b0c99045815722fda8edea4957f55245cc7bc2799`; Chrome documentation excerpt from search `sources/search-a25cb2f76d70ea3f5b6a313833f836e6a3ee4673ebb8b31629bd820871b82420`, external-untrusted]
+
+Consequence for this Android-first product: the browser-managed on-device translation API, a browser route that would avoid an app-bundled engine and model weights, is unavailable on Android Chrome and Android WebView. A browser path on the target platform would still require the separately inspected WASM/worker engine route, whose real inference, offline reload, cancellation cleanup, model consent, resource and mobile evidence remain unproven. Even that route's acceleration prerequisites are constrained on mobile: WebGPU has limited availability (Android Chrome 121+ only on Android 12+ with Qualcomm/ARM GPUs), and multithreaded WASM needs cross-origin isolation (COOP/COEP) for `SharedArrayBuffer`. [External-untrusted search excerpts: `sources/search-c3118c94f6dc815f0a42fc078a300600a87bff169460e61391712f011ba41b13`]
+
+The built-in API also exposes no documented model identity/version, provenance or redistribution terms, and depends on browser/OS-managed language-pack downloads whose consent and offline lifecycle are not established here. No browser support claim, model-rights conclusion or adoption follows. Rights, offline, consent and adoption gates stay unresolved; automatic translation and engine adoption remain disabled.
+
 ## Other engine route and decision
 
 Existing llama.cpp/NDK/model provenance, notice, and redistribution gates remain unresolved. No weights were downloaded or bundled. Do not infer model licenses, language-pair support, or device behavior without evidence.
