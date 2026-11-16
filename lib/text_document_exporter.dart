@@ -15,7 +15,9 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 /// fallback. This is not a durability or concurrency guarantee, nor a promise
 /// to preserve all file metadata.
 Future<void> exportTextDocument(String path, String text) =>
-    _exportTextDocument(path, text, (file, bytes) => file.writeAsBytes(bytes));
+    _exportTextDocument(path, text, (_, sink, bytes) async {
+      await sink.writeFrom(bytes);
+    });
 
 typedef _MkdtempNative = Pointer<Utf8> Function(Pointer<Utf8>);
 typedef _MkdtempDart = Pointer<Utf8> Function(Pointer<Utf8>);
@@ -136,8 +138,8 @@ typedef _SetNamedSecurityDart = int Function(
 typedef _LocalFreeNative = Pointer<Void> Function(Pointer<Void>);
 typedef _LocalFreeDart = Pointer<Void> Function(Pointer<Void>);
 
-// Darwin's 64-bit struct stat prefix is shared by macOS arm64 and x86_64.
-// The tail reserves the remaining ABI bytes; only mode, uid, and gid are read.
+// Darwin's 64-bit-inode struct stat prefix is shared by macOS arm64 and
+// x86_64's stat$INODE64 symbol. Only mode, uid, and gid are read.
 final class _DarwinStat extends Struct {
   @Int32()
   external int device;
@@ -182,7 +184,8 @@ final class _LinuxStatx extends Struct {
 Future<void> exportTextDocumentWithStagedWriter(
   String path,
   String text,
-  Future<void> Function(File file, List<int> bytes) writeStagedFile,
+  Future<void> Function(File file, RandomAccessFile sink, List<int> bytes)
+  writeStagedFile,
 ) => _exportTextDocument(path, text, writeStagedFile);
 
 Directory _createStagingDirectory(Directory parent) {
@@ -352,11 +355,48 @@ void _preserveLinuxAccess(File destination, File stagedFile) {
   });
 }
 
+void _prepareMacStageForWrite(File stagedFile) {
+  // Strip ACLs inherited from the selected parent before opening a writable
+  // handle. No plaintext exists yet; _preserveMacAccess installs the target
+  // file's policy on that handle's path before any bytes are written.
+  final libc = DynamicLibrary.process();
+  final deleteAcl = libc
+      .lookupFunction<_AclDeleteFileNative, _AclDeleteFileDart>(
+        'acl_delete_file_np',
+      );
+  final chmod = libc.lookupFunction<_ChmodNative, _ChmodDart>('chmod');
+  final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
+  using((arena) {
+    final path = stagedFile.path.toNativeUtf8(allocator: arena);
+    const extendedAcl = 0x100; // ACL_TYPE_EXTENDED
+    if (deleteAcl(path, extendedAcl) != 0 && errno().value != 2) {
+      throw FileSystemException(
+        'Could not clear inherited staged export ACL',
+        stagedFile.path,
+        OSError('acl_delete_file_np failed', errno().value),
+      );
+    }
+    if (chmod(path, 0x180) != 0) {
+      throw FileSystemException(
+        'Could not secure staged export for writing',
+        stagedFile.path,
+        OSError('chmod failed', errno().value),
+      );
+    }
+  });
+}
+
 void _preserveMacAccess(File destination, File stagedFile) {
   // stat and acl_get_file inspect metadata without opening file data. The ACL
   // API requires read-security permission; if it is denied, fail before writes.
   final libc = DynamicLibrary.process();
-  final stat = libc.lookupFunction<_StatNative, _StatDart>('stat');
+  final abi = Abi.current();
+  final statSymbol = switch (abi) {
+    Abi.macosX64 => r'stat$INODE64',
+    Abi.macosArm64 => 'stat',
+    _ => throw UnsupportedError('Unsupported macOS stat ABI: $abi'),
+  };
+  final stat = libc.lookupFunction<_StatNative, _StatDart>(statSymbol);
   final chown = libc.lookupFunction<_ChownNative, _ChownDart>('chown');
   final chmod = libc.lookupFunction<_ChmodNative, _ChmodDart>('chmod');
   final getAcl = libc.lookupFunction<_AclGetFileNative, _AclGetFileDart>(
@@ -495,7 +535,8 @@ Future<void> _commit(File destination, File stagedFile) async {
 Future<void> _exportTextDocument(
   String path,
   String text,
-  Future<void> Function(File file, List<int> bytes) writeStagedFile,
+  Future<void> Function(File file, RandomAccessFile sink, List<int> bytes)
+  writeStagedFile,
 ) async {
   final bytes = utf8.encode(text);
   final selectedPath = File(path);
@@ -524,12 +565,21 @@ Future<void> _exportTextDocument(
   try {
     await stagedFile.create(exclusive: true);
     stagedFileCreated = true;
-    if (Platform.isWindows && existing) {
-      _preserveWindowsStagingAcl(destination, stagedFile);
-    } else if (Platform.isMacOS && existing) {
-      _preserveMacAccess(destination, stagedFile);
+    if (Platform.isMacOS && existing) {
+      _prepareMacStageForWrite(stagedFile);
     }
-    await writeStagedFile(stagedFile, bytes);
+    final sink = await stagedFile.open(mode: FileMode.writeOnly);
+    try {
+      if (Platform.isWindows && existing) {
+        _preserveWindowsStagingAcl(destination, stagedFile);
+      } else if (Platform.isMacOS && existing) {
+        _preserveMacAccess(destination, stagedFile);
+      }
+      await writeStagedFile(stagedFile, sink, bytes);
+      await sink.flush();
+    } finally {
+      await sink.close();
+    }
     await _commit(destination, stagedFile);
     stagedFileCreated = false;
   } finally {

@@ -257,6 +257,44 @@ jobs:
             -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
 
+  macos-export-permissions:
+    name: macOS text export permissions (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    needs: [design-contracts, flutter-tests]
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+          pub-cache: true
+      - name: Enable macOS desktop target
+        run: flutter config --enable-macos-desktop
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Verify runner architecture and export permissions
+        timeout-minutes: 5
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "$EXPECTED_ARCH"
+          flutter test --no-pub test/text_export_test.dart --reporter expanded
+
   macos:
     name: macOS debug build and accessibility probe
     runs-on: macos-latest
@@ -278,9 +316,6 @@ jobs:
         run: flutter config --enable-macos-desktop
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
-      - name: Test macOS text export permissions
-        timeout-minutes: 5
-        run: flutter test --no-pub test/text_export_test.dart --reporter expanded
       - name: Profile desktop disk read and strict decode
         if: github.event_name == 'workflow_dispatch' && inputs.profile_bytes != ''
         timeout-minutes: 5

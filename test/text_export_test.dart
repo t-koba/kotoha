@@ -209,6 +209,22 @@ void main() {
     });
   }, skip: !(Platform.isLinux || Platform.isMacOS));
 
+  test('replacement supports a read-only POSIX destination', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/translation.txt')
+      ..writeAsStringSync('previous contents');
+    await _command('chmod', ['444', file.path]);
+
+    await exportTextDocument(file.path, 'Hello, 🌏');
+
+    expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
+    expect(file.statSync().mode & 0xfff, 0x124);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {
+      file.path,
+    });
+  }, skip: !(Platform.isLinux || Platform.isMacOS));
+
   test('replacement preserves Linux access ACLs, not staged entries', () async {
     final directory = Directory.systemTemp.createTempSync('kotoha-export');
     addTearDown(() => directory.deleteSync(recursive: true));
@@ -252,9 +268,10 @@ void main() {
     acl.setUint16(38, 0, Endian.little); // other: none
     await exportTextDocumentWithStagedWriter(plain.path, 'Hello, 🌏', (
       staged,
+      sink,
       bytes,
     ) async {
-      await staged.writeAsBytes(bytes);
+      await sink.writeFrom(bytes);
       expect(_linuxAcl(staged, value: acl.buffer.asUint8List()), isNotNull);
     });
     expect(plain.readAsBytesSync(), utf8.encode('Hello, 🌏'));
@@ -296,6 +313,7 @@ void main() {
 
     await exportTextDocumentWithStagedWriter(output.path, 'Hello, 🌏', (
       staged,
+      sink,
       bytes,
     ) async {
       expect(staged.parent.statSync().mode & 0x1ff, 0x1c0);
@@ -309,7 +327,7 @@ void main() {
             .getUint16(30, Endian.little),
         0,
       );
-      await staged.writeAsBytes(bytes);
+      await sink.writeFrom(bytes);
     });
 
     expect(output.readAsBytesSync(), utf8.encode('Hello, 🌏'));
@@ -340,6 +358,7 @@ void main() {
 
     await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
       staged,
+      sink,
       bytes,
     ) async {
       // Preserve the data-deny ACL before plaintext reaches the stage.
@@ -349,7 +368,7 @@ void main() {
         () => staged.readAsBytesSync(),
         throwsA(isA<FileSystemException>()),
       );
-      await staged.writeAsBytes(bytes);
+      await sink.writeFrom(bytes);
     });
 
     expect(file.existsSync(), isTrue);
@@ -486,6 +505,7 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
 
       await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
         staged,
+        sink,
         bytes,
       ) async {
         expect(
@@ -494,7 +514,7 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
           reason:
               'the staged file must be protected before plaintext is written',
         );
-        await staged.writeAsBytes(bytes);
+        await sink.writeFrom(bytes);
       });
 
       expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
@@ -520,11 +540,12 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
       await expectLater(
         exportTextDocumentWithStagedWriter(path, 'Hello, 🌏', (
           file,
+          sink,
           bytes,
         ) async {
           stagedFile = file;
           stagingDirectoryMode = (await file.parent.stat()).mode;
-          await file.writeAsBytes(bytes.sublist(0, 4));
+          await sink.writeFrom(bytes.sublist(0, 4));
           throw const FileSystemException('injected staging failure');
         }),
         throwsA(isA<FileSystemException>()),
