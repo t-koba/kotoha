@@ -456,10 +456,33 @@ The code now binds `XDG_DESKTOP_PORTAL_DIR` to the probe's `XDG_DATA_HOME`
 portal-descriptor directory and fails closed unless that variable exactly
 matches the directory where the probe writes the descriptor. Four focused tests
 assert the descriptor's exact `DBusName`/`Interfaces`/`UseIn` fields and the
-missing/mismatched/matching directory cases; the suite passed 26 tests with one
-skipped. The exact hosted runtime for this corrected binding is not yet
-recorded, so no URI mapping, revocation, post-close denial or persistence claim
-is made. Linux import remains disabled.
+missing/mismatched/matching directory cases.
+
+The exact hosted run for that corrected binding was `43859475080`, job
+`133272196668`, on publication
+`fb71c5885fdd5758913e779955b8170d29ae7b8e017c0abb925e99e2a8faa846` / SHA
+`323e750da2e07c0bb696276f4f558fd24a5ffce2` (status
+`vcs-read/31d73aec557a43089b34f196a545d2dd`, exact log
+`vcs-read/a1b5e8e2b0ca40868ce012b35bc141ff`). On Ubuntu 22.04.5 x86_64 with the
+same pinned portal/GTK/bubblewrap versions, `XDG_DESKTOP_PORTAL_DIR` and the
+lowercase `XDG_CURRENT_DESKTOP=kotoha_portal_test` were exported as intended,
+all 26 probe unit tests passed, the real-bwrap preflight and GNOME-session
+portal/backend FileChooser introspection passed, and `OpenFile` was exposed on
+both the desktop portal and the GTK implementation. In the custom-desktop
+session the earlier `sandbox-client-openfile-unknown-method-backend-not-reached`
+stage did not recur: the probe reached the end of its host routine and exited 0,
+so its internal assertions (backend reachability, fixture hash, read bound,
+grant/revoke control, self-revocation, post-close denial and retained-document
+record) did not raise. However, the workflow's sanitized-result filter required
+two key names the probe never emits (`revoke_read_and_grant_permissions_succeeded`
+and `revoked_permissions_remaining`, instead of the emitted `self_revoke_succeeded`
+and `app_permissions_remaining`), so it rejected the result with "Linux portal
+probe produced no sanitized result" and the check failed. No sanitized field
+values were surfaced by that run. The workflow keys are now aligned and a
+regression test asserts the required set names only keys the probe emits; the
+exact rerun is not yet recorded. No URI-to-document mapping value, permission
+operation result, post-close observation or persistence field is claimed here.
+Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
 a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,

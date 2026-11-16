@@ -1,7 +1,9 @@
 """Regression tests for the portal probe's sanitized child-stage channel."""
+import ast
 import errno
 import io
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -30,6 +32,38 @@ from tools.linux_portal_probe import (
 
 
 class PortalDescriptorTest(unittest.TestCase):
+    def test_workflow_required_keys_match_sanitized_host_result(self):
+        probe_path = Path(__file__).resolve().with_name("linux_portal_probe.py")
+        workflow_path = probe_path.parent.parent / ".github" / "workflows" / "ci.yml"
+        tree = ast.parse(probe_path.read_text(encoding="utf-8"))
+        run_host = next(
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "run_host"
+        )
+        result = next(
+            node.value for node in ast.walk(run_host)
+            if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict)
+        )
+        probe_keys = {
+            key.value for key in result.keys
+            if isinstance(key, ast.Constant) and isinstance(key.value, str)
+        }
+        required = re.search(
+            r"required = \{(.*?)\}", workflow_path.read_text(encoding="utf-8"), re.S
+        )
+        self.assertIsNotNone(required, "workflow required set not found")
+        workflow_keys = set(re.findall(r"['\"]([^'\"]+)['\"]", required.group(1)))
+        # The workflow uses `required <= result.keys()`, so it deliberately
+        # checks a subset of the emitted keys. The invariant is one-way: the
+        # workflow must never require a key the probe does not emit, or a fully
+        # successful probe can never produce an accepted sanitized result.
+        self.assertTrue(workflow_keys, "workflow required set is empty")
+        self.assertFalse(
+            workflow_keys - probe_keys,
+            "workflow requires keys the probe never emits: "
+            f"{sorted(workflow_keys - probe_keys)}",
+        )
+
     def test_descriptor_matches_pinned_frontend_selection_fields(self):
         self.assertEqual(
             _portal_descriptor_text(),

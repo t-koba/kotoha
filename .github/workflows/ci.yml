@@ -633,9 +633,9 @@ jobs:
               "filechooser_version", "documents_version", "test_app_id",
               "backend_app_id_matches", "returned_uri_mapped_to_documents_mount",
               "fixture_path_hidden_from_client", "fixture_sha256", "read_bytes",
-              "revoke_read_and_grant_permissions_succeeded",
+              "self_revoke_succeeded",
               "post_close_open_denied", "persistent_document_record_retained",
-              "revoked_permissions_remaining",
+              "app_permissions_remaining",
           }
           for line in open(sys.argv[1], encoding="utf-8"):
               try:
