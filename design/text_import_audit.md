@@ -56,19 +56,38 @@ While Flutter reports the app as anything other than `resumed`, the editor
 keeps draft controllers in memory but covers the workspace, absorbs pointer
 input, intercepts bubbled hardware-key events, marks text fields read-only to
 reject text-input edits, and excludes the covered workspace's semantics; the
-localized cover appears instead. Widget tests dispatch synthetic lifecycle,
-keyboard, and text-input events, checking unchanged drafts, retained focus, and
-editing after resume. Android native code sets and conditionally restores
-`FLAG_SECURE` around Activity pause/resume; `MainActivityPrivacyTest` directly
-exercises those callbacks and checks flag state. iOS `SceneDelegate` adds and
-removes an opaque cover; `RunnerTests.testPrivacyCoverIsIdempotentAndLeavesContentAttached`
-directly invokes scene callbacks and checks the view hierarchy. These native
-tests exercise implementation state, not OS-generated app-switcher snapshots,
-screenshot suppression, physical devices, or OEM behavior. The exact Android/iOS
-checks on run `43680441354` passed, including the Android pause/resume test and
-iOS direct scene-callback test; the Flutter widget checks remain synthetic
-lifecycle/input coverage. Neither CI path captures an OS-generated thumbnail or
-screenshot, so no native OS-level privacy or screenshot-protection claim is made.
+localized cover appears instead. Flutter widget tests inject lifecycle, key,
+and text-input events through the test binding and check the covered UI, draft
+and selection preservation, rejected edits, and editing after resume. They do
+not perform an operating-system background or task-switcher transition.
+
+Android `MainActivityPrivacyTest` directly invokes pause/resume and checks the
+`FLAG_SECURE` state. Its API 35 screenshot test draws a synthetic magenta marker
+in the app window overlay, captures that window with `UiAutomation`, and checks
+the marker is visible before pause, suppressed while the secure flag is set,
+and visible after resume; the bitmap is recycled without persistence or logging.
+The test invokes `onPause` while the app stays on screen, so it is a window
+screenshot probe, not an OS-generated Recents thumbnail or task-switcher view.
+iOS `RunnerTests.testPrivacyCoverIsIdempotentAndLeavesContentAttached` directly
+invokes scene callbacks and checks that an opaque cover is added/removed while
+the content remains attached; it does not background the app or capture its
+system snapshot.
+
+On published snapshot `b9325ac86272cd499cfa311da6a567e819fe7845e09517e0e35035be0b17fa3e`
+(SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa`), exact CI run `43842700807`
+passed all 22 Android API 35 emulator instrumentation tests (job `133215889643`,
+`vcs-read/e2a3816439af4c2f8a94dcd34e4a33b0`) and all 4 iOS Runner tests plus 5
+iOS Simulator UI tests (job `133215889632`, `vcs-read/d50f4fab43a843b4aaf2b092fc065c77`).
+The Flutter format, analysis, and widget-test job also passed (`vcs-read/417ec02ea10246c49783fb04620b57f8`). These results verify the named emulator,
+simulator, and widget-test interactions on that revision only. Android documents `FLAG_SECURE` as preventing secure-window content from
+appearing in screenshots and non-secure displays; Apple's QA1838 advises
+obscuring sensitive content before suspension to affect the saved app snapshot.
+These are platform API documentation and guidance, not observations of Kotoha's
+OS-generated task-switcher thumbnail. No CI path captures such a thumbnail,
+and no physical-device or OEM behavior has been observed, so those behaviors
+remain unverified. See
+`design/kotoha_design.md` [S20]–[S22] for the platform references and release
+acceptance boundary.
 
 The audited umbrella `file_selector` uses an Android cache copy and iOS
 `asCopy: true`; the app-owned mobile adapter below replaces those paths rather
