@@ -355,27 +355,59 @@ void _preserveLinuxAccess(File destination, File stagedFile) {
   });
 }
 
-void _prepareMacStageForWrite(File stagedFile) {
-  // Strip ACLs inherited from the selected parent before opening a writable
-  // handle. No plaintext exists yet; _preserveMacAccess installs the target
-  // file's policy on that handle's path before any bytes are written.
+void _deleteMacAclIfPresent(File file) {
   final libc = DynamicLibrary.process();
+  final getAcl = libc.lookupFunction<_AclGetFileNative, _AclGetFileDart>(
+    'acl_get_file',
+  );
   final deleteAcl = libc
       .lookupFunction<_AclDeleteFileNative, _AclDeleteFileDart>(
         'acl_delete_file_np',
       );
+  final freeAcl = libc.lookupFunction<_AclFreeNative, _AclFreeDart>('acl_free');
+  final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
+  using((arena) {
+    final path = file.path.toNativeUtf8(allocator: arena);
+    const extendedAcl = 0x100; // ACL_TYPE_EXTENDED
+    errno().value = 0;
+    final acl = getAcl(path, extendedAcl);
+    if (acl == nullptr) {
+      final error = errno().value;
+      if (error == 2) {
+        // ENOENT: the confirmed stage has no extended ACL.
+        return;
+      }
+      throw FileSystemException(
+        'Could not inspect staged export ACL',
+        file.path,
+        OSError('acl_get_file failed', error),
+      );
+    }
+    try {
+      errno().value = 0;
+      if (deleteAcl(path, extendedAcl) != 0) {
+        throw FileSystemException(
+          'Could not clear inherited staged export ACL',
+          file.path,
+          OSError('acl_delete_file_np failed', errno().value),
+        );
+      }
+    } finally {
+      freeAcl(acl);
+    }
+  });
+}
+
+void _prepareMacStageForWrite(File stagedFile) {
+  // Strip ACLs inherited from the selected parent before opening a writable
+  // handle. No plaintext exists yet; _preserveMacAccess installs the target
+  // file's policy on that handle's path before any bytes are written.
+  _deleteMacAclIfPresent(stagedFile);
+  final libc = DynamicLibrary.process();
   final chmod = libc.lookupFunction<_ChmodNative, _ChmodDart>('chmod');
   final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
   using((arena) {
     final path = stagedFile.path.toNativeUtf8(allocator: arena);
-    const extendedAcl = 0x100; // ACL_TYPE_EXTENDED
-    if (deleteAcl(path, extendedAcl) != 0 && errno().value != 2) {
-      throw FileSystemException(
-        'Could not clear inherited staged export ACL',
-        stagedFile.path,
-        OSError('acl_delete_file_np failed', errno().value),
-      );
-    }
     if (chmod(path, 0x180) != 0) {
       throw FileSystemException(
         'Could not secure staged export for writing',
@@ -405,10 +437,6 @@ void _preserveMacAccess(File destination, File stagedFile) {
   final setAcl = libc.lookupFunction<_AclSetFileNative, _AclSetFileDart>(
     'acl_set_file',
   );
-  final deleteAcl = libc
-      .lookupFunction<_AclDeleteFileNative, _AclDeleteFileDart>(
-        'acl_delete_file_np',
-      );
   final freeAcl = libc.lookupFunction<_AclFreeNative, _AclFreeDart>('acl_free');
   final errno = libc.lookupFunction<_ErrnoNative, _ErrnoDart>('__error');
   using((arena) {
@@ -452,17 +480,8 @@ void _preserveMacAccess(File destination, File stagedFile) {
         );
       }
       // ENOENT denotes no extended ACL after stat confirmed the source exists.
-      // Remove ACLs inherited by the private staging file, rather than widen access.
-      if (deleteAcl(stagedPath, extendedAcl) != 0) {
-        final deleteError = errno().value;
-        if (deleteError != 2) {
-          throw FileSystemException(
-            'Could not remove inherited staged export ACL',
-            stagedFile.path,
-            OSError('acl_delete_file_np failed', deleteError),
-          );
-        }
-      }
+      // Remove any ACL inherited by staging; absence is checked before deletion.
+      _deleteMacAclIfPresent(stagedFile);
       return;
     }
     try {
