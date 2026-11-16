@@ -1,10 +1,12 @@
 """Regression tests for the portal probe's sanitized child-stage channel."""
 import errno
+import io
 import os
 import shutil
 import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,10 +18,11 @@ from tools.linux_portal_probe import (
     SANDBOX_PYTHON_EXECUTABLE,
     _run_sandbox_preflight,
     _sandbox_bwrap_failure_stage,
-    _sandbox_client_prefix,
     _sandbox_client_failure_stage,
+    _sandbox_client_prefix,
     _sandbox_client_started,
     _sandbox_failure_stage,
+    main,
 )
 
 
@@ -404,6 +407,23 @@ class SandboxFailureStageTest(unittest.TestCase):
                 "Linux portal probe failed: filechooser-response-timeout\n"
             ),
             "sandbox-client-filechooser-response-timeout",
+        )
+
+    def test_unexpected_client_exception_is_classified_without_message(self):
+        private = "/home/runner/work/Private Project/fixture"
+        stderr = io.StringIO()
+        with (
+            patch("tools.linux_portal_probe.sys.argv", ["probe", "--client"]),
+            patch("tools.linux_portal_probe.run_client", side_effect=ValueError(private)),
+            redirect_stderr(stderr),
+        ):
+            self.assertEqual(main(), 1)
+
+        output = stderr.getvalue()
+        self.assertNotIn(private, output)
+        self.assertEqual(
+            _sandbox_client_failure_stage(output),
+            "sandbox-client-unexpected-valueerror",
         )
 
     def test_start_marker_survives_diagnostics_beyond_stage_tail(self):

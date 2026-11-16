@@ -202,6 +202,8 @@ def _sandbox_failure_stage(stderr: str) -> str | None:
 def _sandbox_client_failure_stage(stderr: str) -> str:
     stage = _sandbox_failure_stage(stderr)
     if stage is not None:
+        if stage == "sandbox-client" or stage.startswith("sandbox-client-"):
+            return stage
         return f"sandbox-client-{stage}"
     if not _sandbox_client_started(stderr):
         return "sandbox-client-script-startup-failed"
@@ -713,8 +715,18 @@ def main() -> int:
     except ProbeFailure as exc:
         print(f"Linux portal probe failed: {exc.stage}", file=sys.stderr)
         return 1
-    except Exception:
-        print(f"Linux portal probe failed: {stage}", file=sys.stderr)
+    except Exception as exc:
+        exception_type = type(exc).__name__.casefold()
+        if (
+            not exception_type.isascii()
+            or not exception_type.isalnum()
+            or len(exception_type) > 32
+        ):
+            exception_type = "unknown"
+        print(
+            f"Linux portal probe failed: {stage}-unexpected-{exception_type}",
+            file=sys.stderr,
+        )
         return 1
 
 
