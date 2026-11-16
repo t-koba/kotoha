@@ -7,6 +7,7 @@ import android.content.ClipboardManager;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.test.InstrumentationTestRunner;
@@ -16,6 +17,10 @@ import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.function.Predicate;
@@ -90,7 +95,7 @@ public final class MainActivityAccessibilityTest
                 "Copy translation 1", "Import text or Markdown", "Review model package terms");
     }
 
-    public void testInstrumentationDeleteKeyClearsFocusedField() {
+    public void testShellInjectedDeleteKeyClearsFocusedField() {
         click("interface language menu", n -> named(n, "Interface language")
                 || named(n, "表示言語"));
         click("English", n -> named(n, "English"));
@@ -104,7 +109,7 @@ public final class MainActivityAccessibilityTest
         setClipboardText("p");
         controlKey(KeyEvent.KEYCODE_V);
         assertField(id, label, "p");
-        pressKey(KeyEvent.KEYCODE_DEL, 0);
+        pressDeleteKey();
         assertField(id, label, "");
     }
 
@@ -157,7 +162,7 @@ public final class MainActivityAccessibilityTest
                 String before = inputFocusState();
                 clearDiagnosticEvents();
                 try {
-                    pressKey(KeyEvent.KEYCODE_DEL, 0);
+                    pressDeleteKey();
                     assertField(id, label, currentValue);
                 } catch (AssertionFailedError failure) {
                     failure.addSuppressed(new AssertionFailedError(
@@ -191,7 +196,7 @@ public final class MainActivityAccessibilityTest
                 pressKey(KeyEvent.KEYCODE_TAB, 0);
             }
             controlKey(KeyEvent.KEYCODE_A);
-            pressKey(KeyEvent.KEYCODE_DEL, 0);
+            pressDeleteKey();
             getInstrumentation().sendStringSync("z");
             assertField(nextId, nextLabel, "z");
         } else {
@@ -225,6 +230,22 @@ public final class MainActivityAccessibilityTest
                 new KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, keyCode, 0, meta));
         getInstrumentation().sendKeySync(new KeyEvent(downTime, SystemClock.uptimeMillis(),
                 KeyEvent.ACTION_UP, keyCode, 0, meta));
+    }
+
+    private void pressDeleteKey() {
+        // On the pinned API-35 emulator, sendKeySync accepted KEYCODE_DEL but the
+        // focused Flutter editor stayed unchanged. Use one system-injected key
+        // path, assert its command status, and keep the exact editor assertion.
+        String command = "input keyevent " + KeyEvent.KEYCODE_DEL + "; echo $?";
+        try (BufferedReader output = new BufferedReader(new InputStreamReader(
+                new ParcelFileDescriptor.AutoCloseInputStream(
+                        automation.executeShellCommand(command)),
+                StandardCharsets.US_ASCII))) {
+            assertEquals("input command exit status", "0", output.readLine());
+            assertNull("input command has no additional output", output.readLine());
+        } catch (IOException exception) {
+            throw new AssertionError("Could not read input command status", exception);
+        }
     }
 
     private void awaitFocused(String label) {
