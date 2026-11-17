@@ -261,4 +261,58 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         assertNull(fresh.value);
         runTestOnUiThread(freshPlugin::onDetachedFromActivity);
     }
+
+    public void testCrossPluginLateResultCannotCompleteModelSelection() throws Throwable {
+        // The embedding broadcasts every activity result to all registered listeners.
+        // A text-import tombstone must never be mistaken for the model picker's live
+        // selection, even when the stale result reaches the model plugin first.
+        ModelPackagePlugin modelPlugin = new ModelPackagePlugin();
+        CapturingActivity modelActivity = new CapturingActivity();
+        runTestOnUiThread(() -> modelPlugin.onAttachedToActivity(binding(modelActivity)));
+        Reply model = new Reply();
+        runTestOnUiThread(() -> {
+            java.nio.ByteBuffer encoded = StandardMethodCodec.INSTANCE.encodeMethodCall(
+                    new MethodCall("selectDirectory", null));
+            encoded.flip();
+            MethodCall call = StandardMethodCodec.INSTANCE.decodeMethodCall(encoded);
+            modelPlugin.onMethodCall(call, model);
+        });
+        int modelCode = modelActivity.requestCode;
+        assertTrue("Model selection code captured", modelCode >= 0);
+        assertEquals("Model selection still pending", 1L, model.done.getCount());
+
+        // Detaching a text-import request leaves an abandoned code in the shared pool.
+        TextImportPlugin detached = new TextImportPlugin();
+        CapturingActivity textActivity = new CapturingActivity();
+        runTestOnUiThread(() -> detached.onAttachedToActivity(binding(textActivity)));
+        Reply text = new Reply();
+        open(detached, text);
+        int staleCode = textActivity.requestCode;
+        assertTrue("Text import code captured", staleCode >= 0);
+        assertTrue("Abandoned code differs from the live model selection", staleCode != modelCode);
+        runTestOnUiThread(detached::onDetachedFromActivity);
+        await(text);
+        assertEquals("detached", text.error);
+
+        // Simulate the embedding broadcasting the stale result to every listener.
+        AtomicBoolean modelHandledStale = new AtomicBoolean();
+        AtomicBoolean textHandledStale = new AtomicBoolean();
+        runTestOnUiThread(() -> modelHandledStale.set(modelPlugin.onActivityResult(
+                staleCode, Activity.RESULT_OK, null)));
+        runTestOnUiThread(() -> textHandledStale.set(detached.onActivityResult(
+                staleCode, Activity.RESULT_OK, null)));
+        assertTrue("One listener consumes the tombstone",
+                modelHandledStale.get() || textHandledStale.get());
+        assertEquals("Stale result cannot complete the model selection", 1L, model.done.getCount());
+
+        // The model's own result still completes its pending selection normally.
+        AtomicBoolean modelHandledCurrent = new AtomicBoolean();
+        runTestOnUiThread(() -> modelHandledCurrent.set(modelPlugin.onActivityResult(
+                modelCode, Activity.RESULT_CANCELED, null)));
+        assertTrue(modelHandledCurrent.get());
+        await(model);
+        assertNull(model.error);
+        assertEquals(Boolean.FALSE, model.value);
+        runTestOnUiThread(modelPlugin::onDetachedFromActivity);
+    }
 }
