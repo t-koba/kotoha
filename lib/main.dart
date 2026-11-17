@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/rendering.dart'
+    show AttributedString, LocaleStringAttribute, ScrollCacheExtent, TextRange;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
+import 'content_locale.dart';
 import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
 import 'text_document_exporter.dart';
@@ -562,6 +564,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                       _manualTextField(
                         key: const ValueKey('source-text'),
                         controller: _sourceText,
+                        contentLanguage: _sourceLanguage,
                         label: strings.sourceText,
                         minLines: 5,
                         maxLines: 12,
@@ -690,6 +693,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             _manualTextField(
               key: ValueKey('translation-text-$index'),
               controller: fields.text,
+              contentLanguage: fields.language,
               focusNode: fields.textFocusNode,
               label: strings.manualTranslation,
               minLines: 4,
@@ -731,28 +735,54 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     required String label,
     required int minLines,
     required int maxLines,
+    TextEditingController? contentLanguage,
     FocusNode? focusNode,
-  }) => ValueListenableBuilder<TextEditingValue>(
-    valueListenable: controller,
-    builder: (context, value, _) => Semantics(
-      identifier: key.value,
-      child: TextField(
-        key: key,
-        controller: controller,
-        focusNode: focusNode,
-        readOnly: !_appResumed,
-        enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
-        textDirection: firstStrongDirection(value.text),
-        minLines: minLines,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          alignLabelWithHint: true,
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    ),
-  );
+  }) {
+    Widget field(Locale? locale) => ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        // Attribute the exact value the field already exposes, so native
+        // accessibility reads of the text stay byte-identical; only the voice
+        // hint changes. Empty fields are left untouched.
+        final attributedValue = locale == null || value.text.isEmpty
+            ? null
+            : AttributedString(
+                value.text,
+                attributes: [
+                  LocaleStringAttribute(
+                    range: TextRange(start: 0, end: value.text.length),
+                    locale: locale,
+                  ),
+                ],
+              );
+        return Semantics(
+          identifier: key.value,
+          attributedValue: attributedValue,
+          child: TextField(
+            key: key,
+            controller: controller,
+            focusNode: focusNode,
+            readOnly: !_appResumed,
+            enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+            textDirection: firstStrongDirection(value.text),
+            minLines: minLines,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              labelText: label,
+              alignLabelWithHint: true,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+        );
+      },
+    );
+    if (contentLanguage == null) return field(null);
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: contentLanguage,
+      builder: (context, language, _) =>
+          field(parseContentLocale(language.text)),
+    );
+  }
 }
 
 class _TemporaryDraftNotice extends StatelessWidget {
