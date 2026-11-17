@@ -41,6 +41,10 @@ void main() {
     expect(parseContentLocale('en US'), isNull);
     expect(parseContentLocale('a'), isNull);
     expect(parseContentLocale('en-US-x-private'), isNull);
+    // Mis-ordered subtags: BCP-47 requires script before region. These must
+    // not be reordered by Locale.fromSubtags into valid-looking locales.
+    expect(parseContentLocale('en-US-Hant'), isNull);
+    expect(parseContentLocale('zh-CN-Hant'), isNull);
     expect(parseContentLocale(''), isNull);
   });
 

@@ -26,7 +26,10 @@ Locale? parseContentLocale(String entry) {
   String? region;
   for (final part in parts.skip(1)) {
     if (_script.hasMatch(part)) {
-      if (script != null) return null;
+      // BCP-47 requires the script subtag before the region. A script after a
+      // region is malformed; accepting it would let Locale.fromSubtags silently
+      // reorder the entry into a valid-looking locale, so fail closed instead.
+      if (script != null || region != null) return null;
       script = part[0].toUpperCase() + part.substring(1).toLowerCase();
     } else if (_regionLetters.hasMatch(part)) {
       if (region != null) return null;
