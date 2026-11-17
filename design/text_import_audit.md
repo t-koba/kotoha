@@ -76,7 +76,10 @@ system snapshot.
 On published snapshot `b9325ac86272cd499cfa311da6a567e819fe7845e09517e0e35035be0b17fa3e`
 (SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa`), exact CI run `43842700807`
 passed all 22 Android API 35 emulator instrumentation tests (job `133215889643`,
-`vcs-read/e2a3816439af4c2f8a94dcd34e4a33b0`) and all 4 iOS Runner tests plus 5
+`vcs-read/e2a3816439af4c2f8a94dcd34e4a33b0`) on that revision only; a later run
+on byte-identical app and test source failed two Delete assertions (see the
+native regression discussion below), so this pass is not a durable closure. It
+also passed all 4 iOS Runner tests plus 5
 iOS Simulator UI tests (job `133215889632`, `vcs-read/d50f4fab43a843b4aaf2b092fc065c77`).
 The Flutter format, analysis, and widget-test job also passed (`vcs-read/417ec02ea10246c49783fb04620b57f8`). These results verify the named emulator,
 simulator, and widget-test interactions on that revision only. Android documents `FLAG_SECURE` as preventing secure-window content from
@@ -746,6 +749,34 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   its `true` result is not evidence that the editor processed Delete. Keep this
   distinct from the earlier scroll-discovery failures; no physical-device result
   is established.
+
+  Run `43842700807` on publication `b9325ac86272cd499cfa311da6a567e819fe7845e09517e0e35035be0b17fa3e` /
+  SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa` later passed all 22 Android
+  tests, but that was a non-reproduction, not a durable closure. An exact later
+  run `43862016131`, Android job `133282373054`, on publication
+  `0bf71dbbb89cca6b1d95f921307201febd0257135bd9e99d9f0853ff8f02d6f4` / SHA
+  `ae27293dc65dfcb390580004156118cc9f04738d` (status
+  `vcs-read/1a761d4154ac4abd87b00d9d92668775`, exact log
+  `vcs-read/72b6fe1cfc6e47b3879dff5dd15063a8`) again failed both
+  `testEnglishLanguageFields` (`checkField`, line 164) and
+  `testShellInjectedDeleteKeyClearsFocusedField` (line 111): after the synthetic
+  `p` paste and `input keyevent 67`, the field stayed at `textCodePoints=[U+70]`,
+  selection `1..1`, focused and visible, where empty was expected. The `lib/` and
+  `android/` sources are byte-identical between the passing and failing
+  publications (only portal-probe, workflow and design-document files differ),
+  so these are two non-deterministic outcomes of the same app and test binaries.
+  The suppressed diagnostic shows native focus remained on `FlutterView` with
+  `imeVisible=true` before and after, and `events=[]`, `lastContentChange=none`:
+  the shell command reached stdout EOF but the editor emitted no text or
+  selection event. That separates command completion from editor handling; it
+  neither establishes that the key reached the editor nor infers any
+  physical-device result. The test's own history records this same unchanged-editor
+  symptom with both instrumentation key events and the shell `input keyevent`, so
+  no cause-backed correction is established and switching mechanisms again would
+  be a blind retry. Keep every exact-value, accessibility, locale and traversal
+  assertion; add no retries or longer waits; treat neither run as a durable
+  closure. The product's exact editing and traversal behavior remains owned by the
+  Flutter widget tests on this revision.
 
 Source review finds no import-path writes, cache staging, URI grant persistence,
 bookmarks, selected-location history or network client. Worker reads release their
