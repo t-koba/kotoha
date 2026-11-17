@@ -13,6 +13,20 @@ LocaleStringAttribute _onlyLocale(SemanticsNode node) {
   return attributes.single;
 }
 
+// Count nodes in the *live* semantics tree (rootSemanticsNode), not the stale
+// debugSemantics nodes that widgets retain after ExcludeSemantics drops them.
+int _liveNodesWithLocale(String tag) => find.semantics
+    .byPredicate(
+      (node) => node.attributedValue.attributes
+          .whereType<LocaleStringAttribute>()
+          .any((a) => a.locale.toLanguageTag() == tag),
+    )
+    .evaluate()
+    .length;
+
+int _liveNodesWithValue(String value) =>
+    find.semantics.byPredicate((node) => node.value == value).evaluate().length;
+
 void main() {
   testWidgets('free-form language entries normalize conservatively', (
     tester,
@@ -94,6 +108,103 @@ void main() {
           updated.attributedValue.attributes.whereType<LocaleStringAttribute>(),
           isEmpty,
         );
+      } finally {
+        semantics.dispose();
+      }
+    },
+  );
+
+  testWidgets(
+    'paused shield hides the locale hint and resume restores the exact tag',
+    (tester) async {
+      tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      await tester.pumpWidget(const KotohaApp());
+      await tester.pumpAndSettle();
+      final semantics = tester.ensureSemantics();
+      try {
+        const sourceText = 'こんにちは';
+        const translation = 'Hello there';
+        await tester.enterText(
+          find.byKey(const ValueKey('source-language')),
+          'ja',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('source-text')),
+          sourceText,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('target-language-0')),
+          'en-US',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('translation-text-0')),
+          translation,
+        );
+        await tester.pump();
+
+        // Live tree while active: exact voice hints and byte-identical values.
+        expect(_liveNodesWithLocale('ja'), 1);
+        expect(_liveNodesWithLocale('en-US'), 1);
+        expect(
+          tester.getSemantics(find.bySemanticsIdentifier('source-text')).value,
+          sourceText,
+        );
+        expect(
+          tester
+              .getSemantics(find.bySemanticsIdentifier('translation-text-0'))
+              .value,
+          translation,
+        );
+
+        // The shield excludes semantics across the full inactive sequence.
+        for (final state in const <AppLifecycleState>[
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(state);
+          await tester.pump();
+          expect(
+            tester
+                .widget<ExcludeSemantics>(
+                  find.byKey(const ValueKey('workspace-semantics-shield')),
+                )
+                .excluding,
+            isTrue,
+          );
+          // Neither the draft text nor its voice hint reaches the live tree.
+          expect(_liveNodesWithValue(sourceText), 0);
+          expect(_liveNodesWithValue(translation), 0);
+          expect(_liveNodesWithLocale('ja'), 0);
+          expect(_liveNodesWithLocale('en-US'), 0);
+        }
+
+        // Resume restores the exact tags and byte-identical values.
+        for (final state in const <AppLifecycleState>[
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]) {
+          tester.binding.handleAppLifecycleStateChanged(state);
+          await tester.pump();
+        }
+        expect(_liveNodesWithLocale('ja'), 1);
+        expect(_liveNodesWithLocale('en-US'), 1);
+        final sourceNode = tester.getSemantics(
+          find.bySemanticsIdentifier('source-text'),
+        );
+        expect(sourceNode.value, sourceText);
+        expect(_onlyLocale(sourceNode).locale.toLanguageTag(), 'ja');
+        expect(
+          _onlyLocale(sourceNode).range,
+          TextRange(start: 0, end: sourceText.length),
+        );
+        final translationNode = tester.getSemantics(
+          find.bySemanticsIdentifier('translation-text-0'),
+        );
+        expect(translationNode.value, translation);
+        expect(_onlyLocale(translationNode).locale.toLanguageTag(), 'en-US');
       } finally {
         semantics.dispose();
       }
