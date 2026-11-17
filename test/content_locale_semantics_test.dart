@@ -214,4 +214,97 @@ void main() {
       }
     },
   );
+
+  testWidgets('IME composing text and locale hint are shielded and restored', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const KotohaApp());
+    await tester.pumpAndSettle();
+    final semantics = tester.ensureSemantics();
+    try {
+      const language = 'en-US';
+      // 'draft かな' is eight UTF-16 code units (two kana plus six ASCII).
+      const draft = 'draft かな';
+      const composingRange = TextRange(start: 0, end: 8);
+      await tester.enterText(
+        find.byKey(const ValueKey('source-language')),
+        language,
+      );
+      await tester.pump();
+      final source = find.byKey(const ValueKey('source-text'));
+      await tester.tap(source);
+      await tester.pump();
+
+      // An active IME composition is an uncommitted draft value.
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: draft,
+          selection: TextSelection.collapsed(offset: 8),
+          composing: composingRange,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // While resumed, the composing text and its exact voice hint are exposed.
+      expect(_liveNodesWithValue(draft), greaterThanOrEqualTo(1));
+      expect(_liveNodesWithLocale(language), 1);
+      final active = tester.getSemantics(
+        find.bySemanticsIdentifier('source-text'),
+      );
+      expect(active.value, draft);
+      expect(_onlyLocale(active).locale.toLanguageTag(), language);
+      expect(_onlyLocale(active).range, composingRange);
+
+      // The shield covers the whole inactive sequence, including a live IME.
+      for (final state in const <AppLifecycleState>[
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+        await tester.pump();
+        expect(
+          tester
+              .widget<ExcludeSemantics>(
+                find.byKey(const ValueKey('workspace-semantics-shield')),
+              )
+              .excluding,
+          isTrue,
+        );
+        expect(_liveNodesWithValue(draft), 0);
+        expect(_liveNodesWithLocale(language), 0);
+      }
+
+      // Resume restores the exact draft, hint and active composing region.
+      for (final state in const <AppLifecycleState>[
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+        await tester.pump();
+      }
+      expect(_liveNodesWithLocale(language), 1);
+      final restored = tester.getSemantics(
+        find.bySemanticsIdentifier('source-text'),
+      );
+      expect(restored.value, draft);
+      expect(_onlyLocale(restored).locale.toLanguageTag(), language);
+      expect(_onlyLocale(restored).range, composingRange);
+      expect(
+        tester.widget<TextField>(source).controller!.value.composing,
+        composingRange,
+      );
+      expect(find.bySemanticsIdentifier('source-text'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
 }
