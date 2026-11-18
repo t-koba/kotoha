@@ -344,22 +344,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       );
       return;
     }
-    try {
-      await Clipboard.setData(ClipboardData(text: text));
-    } on Exception {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.clipboardFailureNotice),
-        ),
-      );
-      return;
-    }
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.copiedTranslationNotice),
-      ),
+    await _copyToClipboard(
+      content: text,
+      successNotice: AppLocalizations.of(context)!.copiedTranslationNotice,
     );
   }
 
@@ -430,20 +417,32 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       ).showSnackBar(SnackBar(content: Text(strings.emptyWorkspaceCopyNotice)));
       return;
     }
+    await _copyToClipboard(
+      content: formatWorkspaceExport(draft),
+      successNotice: strings.copiedWorkspaceNotice,
+    );
+  }
+
+  // One owner for the OS clipboard write and its failure contract. Callers
+  // decide what to copy and which success notice to report.
+  Future<void> _copyToClipboard({
+    required String content,
+    required String successNotice,
+  }) async {
     try {
-      await Clipboard.setData(
-        ClipboardData(text: formatWorkspaceExport(draft)),
-      );
+      await Clipboard.setData(ClipboardData(text: content));
     } on Exception {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.clipboardFailureNotice)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.clipboardFailureNotice),
+        ),
+      );
       return;
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(strings.copiedWorkspaceNotice)));
+        .showSnackBar(SnackBar(content: Text(successNotice)));
   }
 
   // One owner for the save-location, write and notice contract shared by the
