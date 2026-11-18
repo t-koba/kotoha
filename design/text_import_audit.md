@@ -58,6 +58,13 @@ the marker is visible before pause, suppressed while the secure flag is set,
 and visible after resume; the bitmap is recycled without persistence or logging.
 The test invokes `onPause` while the app stays on screen, so it is a window
 screenshot probe, not an OS-generated Recents thumbnail or task-switcher view.
+On Android 13 (API 33) and newer, `MainActivity.onCreate` also calls
+`setRecentsScreenshotEnabled(false)`, a version-guarded declarative request that
+the system not use this activity's screenshot as its Recents representation.
+It leaves screenshots during active use enabled and does not change the
+pause/resume `FLAG_SECURE` behavior. The platform API has no public getter and
+no CI path captures the OS-generated thumbnail, so its effect on real Recents
+behavior is not observed here.
 iOS `RunnerTests.testPrivacyCoverIsIdempotentAndLeavesContentAttached` directly
 invokes scene callbacks and checks that an opaque cover is added/removed while
 the content remains attached; it does not background the app or capture its
