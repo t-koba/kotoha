@@ -19,6 +19,10 @@ class _StagingExists extends DraftFileStoreException {
 class MemoryFileBackend implements DraftFileBackend {
   final _files = <String, Uint8List>{};
   bool failNextCommit = false;
+  bool failRead = false;
+  bool failNextWriteStagingAfterCreate = false;
+  bool failNextWriteStagingGeneric = false;
+  int removeStagingCalls = 0;
 
   void seed(String name, Uint8List bytes) {
     _files[name] = Uint8List.fromList(bytes);
@@ -26,6 +30,7 @@ class MemoryFileBackend implements DraftFileBackend {
 
   @override
   Future<Uint8List?> read(String name) async {
+    if (failRead) throw StateError('synthetic read failure');
     final bytes = _files[name];
     return bytes == null ? null : Uint8List.fromList(bytes);
   }
@@ -33,7 +38,15 @@ class MemoryFileBackend implements DraftFileBackend {
   @override
   Future<void> writeStaging(String name, Uint8List bytes) async {
     if (_files.containsKey(name)) throw const _StagingExists();
+    if (failNextWriteStagingGeneric) {
+      failNextWriteStagingGeneric = false;
+      throw StateError('synthetic staging failure');
+    }
     seed(name, bytes);
+    if (failNextWriteStagingAfterCreate) {
+      failNextWriteStagingAfterCreate = false;
+      throw const DraftFileStoreException.stagingCreated();
+    }
   }
 
   @override
@@ -48,6 +61,7 @@ class MemoryFileBackend implements DraftFileBackend {
 
   @override
   Future<void> removeStaging(String name) async {
+    removeStagingCalls++;
     _files.remove(name);
   }
 }
@@ -110,5 +124,36 @@ void main() {
   test('rejects an empty envelope', () async {
     await expectLater(store.save(Uint8List(0)), fails(DraftFileFailure.stage));
     expect(await store.load(), isNull);
+  });
+
+  test('a backend read failure maps to a read failure', () async {
+    await store.save(bytesA);
+    backend.failRead = true;
+    await expectLater(store.load(), fails(DraftFileFailure.read));
+  });
+
+  test(
+    'a partial staging write cleans up and reports a stage failure',
+    () async {
+      await store.save(bytesA);
+      backend.failNextWriteStagingAfterCreate = true;
+
+      await expectLater(store.save(bytesB), fails(DraftFileFailure.stage));
+      expect(backend.removeStagingCalls, 1);
+      expect(await backend.read(staging), isNull);
+      // The committed bytes are untouched and a later save can proceed.
+      expect(await store.load(), orderedEquals(bytesA));
+      await store.save(bytesB);
+      expect(await store.load(), orderedEquals(bytesB));
+    },
+  );
+
+  test('a generic staging write failure maps to a stage failure', () async {
+    await store.save(bytesA);
+    backend.failNextWriteStagingGeneric = true;
+
+    await expectLater(store.save(bytesB), fails(DraftFileFailure.stage));
+    expect(backend.removeStagingCalls, 0);
+    expect(await store.load(), orderedEquals(bytesA));
   });
 }
