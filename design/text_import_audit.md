@@ -626,12 +626,12 @@ published packages.
   extensions, invalid bytes, or a source edit during selection/read/consent
   preserve current content. No selected path or filename is retained.
 - macOS `NSOpenPanel` returns selected URL paths; the plugin does not copy the
-  selected file. The `cross_file` IO `XFile.readAsBytes` implementation reads
-  the selected path via `dart:io File.readAsBytes`; it does not call `saveTo`
-  or write a cache file. DebugProfile and Release declare
-  `com.apple.security.files.user-selected.read-write` for the separate explicit
-  translation-export save panel; import still reads the selected input only, and
-  export writes only to the user-selected target.
+  selected file. `XFile.openRead` streams the selected path through Dart IO;
+  import stops at the size bound without calling `saveTo` or writing a cache
+  file. DebugProfile and Release declare
+  `com.apple.security.files.user-selected.read-write` for the explicit
+  translation-export save panel. Import only reads the selected input; export
+  only writes to the user-selected target.
 - Windows uses the OS `IFileOpenDialog`/COM shell API and returns the selected
   filesystem path. The plugin CMake lists no bundled third-party libraries;
   the app reads the path into memory using the same IO `XFile` implementation.
@@ -673,21 +673,22 @@ the iOS implicit engine registrar and presents through the active scene, never
 `AppDelegate.window.rootViewController`. The activity's pause/resume privacy flags
 and scene's inactive cover remain unchanged.
 
-The app-owned `org.kotoha/text_import` channel accepts `open` and returns only a
-display name and typed bytes, null on cancellation, or a generic error without
-selected locations. `text_document_picker.dart` checks the response shape and
-feeds the same `_importSource` validation, consent and edit-race handling as the
-desktop picker; language and translation controllers remain untouched. The
-mobile response is an in-memory document, not a provider URL wrapped in a Dart
-`File`/`XFile`. Desktop selection still uses its existing deferred `XFile` read.
+The app-owned `org.kotoha/text_import` channel requires a `maxBytes` argument
+for `open` and returns only a display name and typed bytes, null on cancellation,
+or a generic error without selected locations. `text_document_picker.dart`
+checks the response shape and size before passing the document to the same
+`_importSource` validation, consent and edit-race handling as the desktop picker.
+Language and translation controllers remain untouched. The mobile response is
+an in-memory document, not a provider URL wrapped in a Dart `File`/`XFile`.
+Desktop selection still defers reading the `XFile`.
 Native code must also check the name before reading unsupported content. Picker
 filters are advisory: MIME/UTI mappings differ across Markdown providers, so a
 filter must not be the only acceptance check.
 
 | Platform | Implemented read path | Resource lifetime and exclusions |
 | --- | --- | --- |
-| Android | `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE`, single selection; query `OpenableColumns.DISPLAY_NAME`, then read the granted URI with `ContentResolver.openInputStream` into memory. | Close the query cursor and input stream on success and failure. Do not call `takePersistableUriPermission`, request broad storage access, derive a real path, or create an app cache file. Keep the URI only for the active request. |
-| iOS | `UIDocumentPickerViewController(forOpeningContentTypes:asCopy: false)`, single selection; acquire security-scoped access and coordinate a read using `NSFileCoordinator`, then `Data(contentsOf:)` inside its accessor. | Balance successful `startAccessingSecurityScopedResource` with `stopAccessingSecurityScopedResource` after the read, including failures. An unsuccessful start is not by itself proof that a local URL is unreadable; the coordinated read must report its actual result. Do not create a bookmark, copy the URL to the sandbox, or retain the selected URL after completion. |
+| Android | `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE`, single selection; query `OpenableColumns.DISPLAY_NAME`, then read the granted URI with `ContentResolver.openInputStream` with a byte bound. | Close the query cursor and input stream on success and failure. Do not call `takePersistableUriPermission`, request broad storage access, derive a real path, or create an app cache file. Keep the URI only for the active request. |
+| iOS | `UIDocumentPickerViewController(forOpeningContentTypes:asCopy: false)`, single selection; acquire security-scoped access and coordinate a read using `NSFileCoordinator`, then check the file size and read with a bounded `FileHandle` inside its accessor. | Balance successful `startAccessingSecurityScopedResource` with `stopAccessingSecurityScopedResource` after the read, including failures. An unsuccessful start is not by itself proof that a local URL is unreadable; the coordinated read must report its actual result. Do not create a bookmark, copy the URL to the sandbox, or retain the selected URL after completion. |
 
 The adapters read provider bytes away from the UI thread and deliver a single terminal result
 on the platform thread. One pending picker/read per engine is sufficient; reject
@@ -795,11 +796,16 @@ Xcode/Apple SDK, so it could not run the native compilation or simulator tests
 itself. Hosted results above cover the configured test fixtures; real
 provider-selected file reads and physical-device behavior remain unverified.
 
-## Memory profile (sandbox-only, no limit selected)
+## Import size bound
 
-The current path materializes the whole selection: `readAsBytes` holds one
-`Uint8List`, strict `utf8.decode` builds one `String` into the in-memory source
-editor. There is no size guard, chunked transfer, or cache/persistence copy.
+Text and Markdown import accepts files up to 8 MiB. Oversized documents are
+rejected before UTF-8 decode with the existing import error; drafts stay intact.
+
+## Memory profile (sandbox-only)
+
+These measurements predate the import size bound. The measured path held the
+whole selection in one `Uint8List` and built one `String` with strict
+`utf8.decode`, without a cache or persistence copy.
 
 Sandbox-only Dart measurement on this Linux host (not device evidence,
 experiment `f5c51d3fa13d438db0bcc057b5dbed2b`): fresh `dart` processes reading

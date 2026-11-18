@@ -12,6 +12,7 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.StandardMethodCodec;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -55,9 +56,12 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         assertEquals(1, reply.completions.get());
     }
     private void open(TextImportPlugin plugin, Reply reply) throws Throwable {
+        open(plugin, reply, Collections.singletonMap("maxBytes", 8 * 1024 * 1024));
+    }
+    private void open(TextImportPlugin plugin, Reply reply, Object arguments) throws Throwable {
         runTestOnUiThread(() -> {
             // The channel's actual handler and StandardMethodCodec request, on its engine plugin.
-            java.nio.ByteBuffer encoded = StandardMethodCodec.INSTANCE.encodeMethodCall(new MethodCall("open", null));
+            java.nio.ByteBuffer encoded = StandardMethodCodec.INSTANCE.encodeMethodCall(new MethodCall("open", arguments));
             encoded.flip();
             MethodCall call = StandardMethodCodec.INSTANCE.decodeMethodCall(encoded);
             plugin.onMethodCall(call, reply);
@@ -131,16 +135,42 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         info.exported = true;
         provider.attachInfo(getInstrumentation().getTargetContext(), info);
         ContentResolver resolver = ContentResolver.wrap(provider);
-        Map<String, Object> value = TextImportPlugin.readDocument(resolver, uri("ok"));
+        Map<String, Object> value = TextImportPlugin.readDocument(
+                resolver, uri("ok"), ImportTestProvider.BYTES.length);
         assertEquals("sample.MaRkDoWn", value.get("name"));
         assertTrue(Arrays.equals(ImportTestProvider.BYTES, (byte[]) value.get("bytes")));
         for (String kind : new String[] {"missing", "unsupported", "stream-error", "open-error"}) {
             try { TextImportPlugin.readDocument(resolver, uri(kind)); fail(kind); }
             catch (Exception expected) { /* Each fails closed. */ }
         }
-        assertEquals(5, provider.cursorsClosed.get());
-        assertEquals(2, provider.streamsOpened.get());
-        assertEquals(2, provider.streamsClosed.get());
+        try {
+            TextImportPlugin.readDocument(resolver, uri("ok"), ImportTestProvider.BYTES.length - 1);
+            fail("A file one byte over the limit must be rejected");
+        } catch (IllegalArgumentException expected) {
+            assertEquals("Size limit", expected.getMessage());
+        }
+        assertEquals(6, provider.cursorsClosed.get());
+        assertEquals(3, provider.streamsOpened.get());
+        assertEquals(3, provider.streamsClosed.get());
+    }
+
+    public void testOpenRejectsMissingOrInvalidLimitBeforePicking() throws Throwable {
+        TextImportPlugin plugin = new TextImportPlugin();
+        CapturingActivity activity = new CapturingActivity();
+        runTestOnUiThread(() -> plugin.onAttachedToActivity(binding(activity)));
+        try {
+            for (Object arguments : new Object[] {null, "not a map", Collections.emptyMap(),
+                    Collections.singletonMap("maxBytes", "8"), Collections.singletonMap("maxBytes", 8.5),
+                    Collections.singletonMap("maxBytes", 0), Collections.singletonMap("maxBytes", 16 * 1024 * 1024 + 1)}) {
+                Reply reply = new Reply();
+                open(plugin, reply, arguments);
+                assertEquals(-1, activity.requestCode);
+                await(reply);
+                assertEquals("invalid_limit", reply.error);
+            }
+        } finally {
+            runTestOnUiThread(plugin::onDetachedFromActivity);
+        }
     }
 
     public void testActivityResultsCancelThenProviderSelection() throws Throwable {
@@ -149,12 +179,19 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
         Reply cancel = new Reply();
         try { open(plugin, cancel); await(cancel); assertNull(cancel.value); assertNull(cancel.error); }
         finally { getInstrumentation().removeMonitor(cancelled); }
-        for (String kind : new String[] {"ok", "missing", "unsupported", "open-error"}) {
-            Intent selected = new Intent().setData(uri(kind)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        for (String kind : new String[] {"ok", "oversized", "missing", "unsupported", "open-error"}) {
+            boolean oversized = "oversized".equals(kind);
+            Intent selected = new Intent().setData(uri(oversized ? "ok" : kind))
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             Instrumentation.ActivityMonitor picked = monitor(Activity.RESULT_OK, selected);
             Reply reply = new Reply();
             try {
-                open(plugin, reply); await(reply);
+                if (oversized) {
+                    open(plugin, reply, Collections.singletonMap("maxBytes", ImportTestProvider.BYTES.length - 1));
+                } else {
+                    open(plugin, reply);
+                }
+                await(reply);
                 if ("ok".equals(kind)) {
                     assertNull(reply.error);
                     Map<?, ?> document = (Map<?, ?>) reply.value;

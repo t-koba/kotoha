@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
+import 'package:kotoha/text_document_picker.dart';
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +48,7 @@ void main() {
     binding.platformDispatcher.localesTestValue = [const Locale('en')];
     binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) {
       expect(call.method, 'open');
-      expect(call.arguments, isNull);
+      expect(call.arguments, {'maxBytes': maxTextImportBytes});
       calls++;
       return reply();
     });
@@ -101,6 +102,7 @@ void main() {
       'name',
       'extension',
       'bytes',
+      'size',
       'shape',
       'UTF-8',
       'native',
@@ -114,6 +116,10 @@ void main() {
           'bytes' => {
             'name': 'sample.txt',
             'bytes': [65],
+          },
+          'size' => {
+            'name': 'sample.txt',
+            'bytes': Uint8List(maxTextImportBytes + 1),
           },
           'shape' => 'private/path',
           'UTF-8' => {

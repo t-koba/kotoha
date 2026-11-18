@@ -114,7 +114,8 @@ class RunnerTests: XCTestCase {
           if failure == "coordinate" { throw CocoaError(.fileReadUnknown) }
           accessor(selected)
         }
-        reader.load = { _ in
+        reader.fileSize = { _ in bytes.count }
+        reader.load = { _, _ in
           loads += 1
           if failure == "read" { throw CocoaError(.fileReadNoPermission) }
           return bytes
@@ -143,6 +144,46 @@ class RunnerTests: XCTestCase {
     XCTAssertThrowsError(try TextDocumentReader().read(local))
   }
 
+  func testTextImportReaderEnforcesSizeBeforeAndDuringRead() throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".txt")
+    let bytes = Data([65, 66, 67])
+    try bytes.write(to: url)
+    defer { try? FileManager.default.removeItem(at: url) }
+    var reader = TextDocumentReader()
+    let result = try reader.read(url, maxBytes: bytes.count)
+    XCTAssertEqual((result["bytes"] as? FlutterStandardTypedData)?.data, bytes)
+    let maxBytes = bytes.count - 1
+    let boundedLoad = reader.load
+    reader.load = { _, _ in
+      XCTFail("An oversized file must be rejected before loading")
+      return bytes
+    }
+    XCTAssertThrowsError(try reader.read(url, maxBytes: maxBytes))
+
+    // Simulate stale metadata, then verify a default read and a custom reply both fail.
+    reader.fileSize = { _ in maxBytes }
+    reader.load = boundedLoad
+    XCTAssertThrowsError(try reader.read(url, maxBytes: maxBytes))
+    reader.load = { _, _ in bytes }
+    XCTAssertThrowsError(try reader.read(url, maxBytes: maxBytes))
+  }
+
+  @MainActor
+  func testTextImportOpenRejectsMissingOrInvalidLimit() {
+    let plugin = TextImportPlugin()
+    let arguments: [Any?] = [nil, "not a map", [:], ["maxBytes": "8"], ["maxBytes": 8.5],
+                             ["maxBytes": true], ["maxBytes": 0], ["maxBytes": 16 * 1024 * 1024 + 1]]
+    for value in arguments {
+      var completions = 0
+      plugin.handle(FlutterMethodCall(methodName: "open", arguments: value)) { result in
+        completions += 1
+        XCTAssertEqual((result as? FlutterError)?.code, "invalid_limit")
+      }
+      XCTAssertEqual(completions, 1)
+      XCTAssertNil(plugin.picker)
+    }
+  }
+
   @MainActor
   func testTextImportImplicitRegistrationScenePickerAndDelegates() throws {
     let configured = ProcessInfo.processInfo.environment["KOTOHA_AX_TIMEOUT_SECONDS"] ?? "10"
@@ -169,7 +210,8 @@ class RunnerTests: XCTestCase {
     var reader = TextDocumentReader()
     reader.startScope = { _ in false }
     reader.coordinate = { url, accessor in accessor(url) }
-    reader.load = { _ in Data([65, 10, 66]) }
+    reader.fileSize = { _ in 3 }
+    reader.load = { _, _ in Data([65, 10, 66]) }
     plugin.reader = reader
     var simulatedPresentation: UIDocumentPickerViewController?
     var simulatedPresentationController: UIPresentationController?
@@ -191,13 +233,14 @@ class RunnerTests: XCTestCase {
     // no external Files/DocumentManager scene is launched by this unit test.
     // The XCUI regression
     // exercises the real Dart channel and system-picker cancellation as well.
-    for outcome in ["cancel", "dismiss", "selection", "read-error", "invalid"] {
+    for outcome in ["cancel", "dismiss", "selection", "oversized", "read-error", "invalid"] {
       if outcome == "read-error" {
-        plugin.reader.load = { _ in throw CocoaError(.fileReadNoPermission) }
+        plugin.reader.load = { _, _ in throw CocoaError(.fileReadNoPermission) }
       }
+      let arguments = ["maxBytes": outcome == "oversized" ? 2 : 3]
       let completed = expectation(description: outcome)
       var completions = 0
-      plugin.handle(FlutterMethodCall(methodName: "open", arguments: nil)) { value in
+      plugin.handle(FlutterMethodCall(methodName: "open", arguments: arguments)) { value in
         completions += 1
         if outcome == "cancel" || outcome == "dismiss" { XCTAssertNil(value) }
         else if outcome == "selection" {
@@ -216,7 +259,7 @@ class RunnerTests: XCTestCase {
       let presentationController = try XCTUnwrap(simulatedPresentationController)
       XCTAssertTrue(presentationController.delegate === plugin,
                     "The plugin must be installed as the actual presentation-controller delegate")
-      plugin.handle(FlutterMethodCall(methodName: "open", arguments: nil)) { value in
+      plugin.handle(FlutterMethodCall(methodName: "open", arguments: arguments)) { value in
         XCTAssertEqual((value as? FlutterError)?.code, "busy")
       }
       if outcome == "cancel" { plugin.documentPickerWasCancelled(picker) }
@@ -254,7 +297,7 @@ class RunnerTests: XCTestCase {
     detachedPlugin.pickerIsPresented = { $0 === detachedPresentation }
     detachedPlugin.dismissPicker = { _ in detachedDismissals += 1 }
     var detachCompletions = 0
-    detachedPlugin.handle(FlutterMethodCall(methodName: "open", arguments: nil)) { value in
+    detachedPlugin.handle(FlutterMethodCall(methodName: "open", arguments: ["maxBytes": 3])) { value in
       detachCompletions += 1
       XCTAssertEqual((value as? FlutterError)?.code, "detached")
     }

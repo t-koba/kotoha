@@ -13,6 +13,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 /** One-shot, read-in-place import. No paths, copies, persisted grants or recovery state. */
@@ -20,7 +21,7 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
     ActivityResultListener {
     private var channel: MethodChannel? = null
     private var binding: ActivityPluginBinding? = null
-    private class Request(val code: Int, var result: MethodChannel.Result?) {
+    private class Request(val code: Int, val maxBytes: Int, var result: MethodChannel.Result?) {
         var reading = false
     }
     private var pending: Request? = null
@@ -55,6 +56,11 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if (call.method != "open") { result.notImplemented(); return }
+        val maxBytes = try { call.argument<Int>("maxBytes") } catch (_: ClassCastException) { null }
+        if (maxBytes == null || maxBytes !in 1..MAX_READ_BYTES) {
+            result.error("invalid_limit", "Could not import this document.", null)
+            return
+        }
         if (pending != null) { result.error("busy", "Import already active.", null); return }
         val activity = binding?.activity
         if (activity == null) { result.error("detached", "No active activity.", null); return }
@@ -62,7 +68,7 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
         // release their code; detached requests remain reserved as late-result tombstones.
         val code = SharedActivityRequestCodes.pool.acquire()
         if (code == null) { result.error("unavailable", "Request codes exhausted.", null); return }
-        val request = Request(code, result)
+        val request = Request(code, maxBytes, result)
         pending = request
         try {
             activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -93,7 +99,7 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
         request.reading = true
         Thread {
             try {
-                val document = readDocument(resolver, uri)
+                val document = readDocument(resolver, uri, request.maxBytes)
                 main.post { finish(request, document) }
             } catch (_: Exception) {
                 main.post { finish(request, error = "read_failed") }
@@ -118,8 +124,14 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
     }
 
     companion object {
+        // Native ceiling also permits the opt-in direct-reader CI profile.
+        private const val MAX_READ_BYTES = 16 * 1024 * 1024
+        private const val BUFFER_BYTES = 8192
+
         @JvmStatic
-        fun readDocument(resolver: ContentResolver, uri: Uri): Map<String, Any> {
+        @JvmOverloads
+        fun readDocument(resolver: ContentResolver, uri: Uri, maxBytes: Int = MAX_READ_BYTES): Map<String, Any> {
+            require(maxBytes in 1..MAX_READ_BYTES) { "Invalid size limit" }
             val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                 ?.use { cursor ->
                     val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -129,8 +141,25 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
             require(listOf(".txt", ".md", ".markdown").any {
                 name.lowercase(Locale.ROOT).endsWith(it)
             }) { "Unsupported document" }
-            val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
-                ?: throw IllegalArgumentException("Missing stream")
+            val bytes = resolver.openInputStream(uri)?.use { stream ->
+                val output = ByteArrayOutputStream(minOf(maxBytes, BUFFER_BYTES))
+                val buffer = ByteArray(BUFFER_BYTES)
+                while (true) {
+                    val remaining = maxBytes - output.size()
+                    val count = stream.read(buffer, 0, minOf(buffer.size, remaining + 1))
+                    if (count < 0) break
+                    if (count == 0) {
+                        val byte = stream.read()
+                        if (byte < 0) break
+                        require(remaining > 0) { "Size limit" }
+                        output.write(byte)
+                    } else {
+                        require(count <= remaining) { "Size limit" }
+                        output.write(buffer, 0, count)
+                    }
+                }
+                output.toByteArray()
+            } ?: throw IllegalArgumentException("Missing stream")
             return mapOf("name" to name, "bytes" to bytes)
         }
     }

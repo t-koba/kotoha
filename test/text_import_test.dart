@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
+import 'package:kotoha/text_document_picker.dart';
 
 class _Picker extends FileSelectorPlatform {
   Future<XFile?> Function() pick = () async => null;
@@ -30,10 +31,19 @@ class _Picker extends FileSelectorPlatform {
 }
 
 class _File extends XFile {
-  _File(String name, this.read) : super('/not-stored/$name');
+  _File(String name, this.byteLength, this.read) : super('/not-stored/$name');
 
+  final int byteLength;
   final Future<Uint8List> Function() read;
   int reads = 0;
+
+  @override
+  Future<int> length() async => byteLength;
+
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) async* {
+    yield await readAsBytes();
+  }
 
   @override
   Future<Uint8List> readAsBytes() {
@@ -85,8 +95,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  _File textFile(String name, String text) =>
-      _File(name, () async => Uint8List.fromList(utf8.encode(text)));
+  _File textFile(String name, String text) {
+    final bytes = utf8.encode(text);
+    return _File(name, bytes.length, () async => bytes);
+  }
 
   importTest('cancellation keeps source without a replacement dialog', (
     tester,
@@ -129,14 +141,25 @@ void main() {
     );
   }
 
-  for (final failure in ['extension', 'UTF-8', 'read', 'picker']) {
+  for (final failure in [
+    'extension',
+    'UTF-8',
+    'read',
+    'picker',
+    'size',
+    'grew',
+  ]) {
     importTest('$failure failure is generic and preserves current source', (
       tester,
     ) async {
       final file = _File(
         failure == 'extension' ? 'private.pdf' : 'private.txt',
+        failure == 'size' ? maxTextImportBytes + 1 : 2,
         () async {
           if (failure == 'read') throw Exception('/private/path');
+          if (failure == 'size' || failure == 'grew') {
+            return Uint8List(maxTextImportBytes + 1);
+          }
           return Uint8List.fromList([0xc3, 0x28]);
         },
       );
@@ -155,7 +178,10 @@ void main() {
       );
       expect(find.textContaining('private'), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(file.reads, failure == 'extension' || failure == 'picker' ? 0 : 1);
+      expect(
+        file.reads,
+        ['extension', 'picker', 'size'].contains(failure) ? 0 : 1,
+      );
     });
   }
 
@@ -181,7 +207,8 @@ void main() {
       final bytes = Completer<Uint8List>();
       picker.pick = phase == 'picker'
           ? () => picked.future
-          : () async => _File('sample.txt', () => bytes.future);
+          : () async =>
+                _File('sample.txt', 'imported'.length, () => bytes.future);
       await open(tester, source: phase == 'confirmation' ? 'original' : '');
       await import(tester);
       expect(
