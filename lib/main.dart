@@ -31,6 +31,23 @@ void main() {
   runApp(const KotohaApp());
 }
 
+bool _sameWorkspaceDraft(TextWorkspaceDraft a, TextWorkspaceDraft b) {
+  if (a.sourceLanguage != b.sourceLanguage ||
+      a.sourceText != b.sourceText ||
+      a.translations.length != b.translations.length) {
+    return false;
+  }
+  for (var index = 0; index < a.translations.length; index++) {
+    final left = a.translations[index];
+    final right = b.translations[index];
+    if (left.targetLanguage != right.targetLanguage ||
+        left.text != right.text) {
+      return false;
+    }
+  }
+  return true;
+}
+
 class KotohaApp extends StatefulWidget {
   const KotohaApp({super.key, this.exportText = exportTextDocument});
 
@@ -371,20 +388,24 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
   }
 
+  // Every field, including empty bodies and language labels, so an edit guard
+  // never treats a language-only change as no change.
+  TextWorkspaceDraft _workspaceDraft() => TextWorkspaceDraft(
+    sourceLanguage: _sourceLanguage.text,
+    sourceText: _sourceText.text,
+    translations: [
+      for (final fields in _translations)
+        ManualTranslationDraft(
+          targetLanguage: fields.language.text,
+          text: fields.text.text,
+        ),
+    ],
+  );
+
   // Snapshot the in-memory fields once for both output routes. Null means
   // there is no text to copy or export.
   TextWorkspaceDraft? _nonEmptyWorkspaceDraft() {
-    final draft = TextWorkspaceDraft(
-      sourceLanguage: _sourceLanguage.text,
-      sourceText: _sourceText.text,
-      translations: [
-        for (final fields in _translations)
-          ManualTranslationDraft(
-            targetLanguage: fields.language.text,
-            text: fields.text.text,
-          ),
-      ],
-    );
+    final draft = _workspaceDraft();
     if (draft.sourceText.isEmpty &&
         draft.translations.every((translation) => translation.text.isEmpty)) {
       return null;
@@ -404,7 +425,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (_importing || _reviewingModel) return;
     final strings = AppLocalizations.of(context)!;
     setState(() => _importing = true);
-    final before = _nonEmptyWorkspaceDraft();
+    final before = _workspaceDraft();
     try {
       final file = await pickTextDocument();
       if (!mounted || file == null) return;
@@ -415,18 +436,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
       if (!mounted) return;
       final restored = parseWorkspaceExport(text);
-      bool changed() {
-        final now = _nonEmptyWorkspaceDraft();
-        if (now == null || before == null) return now != before;
-        return now.sourceLanguage != before.sourceLanguage ||
-            now.sourceText != before.sourceText ||
-            now.translations.length != before.translations.length ||
-            List.generate(now.translations.length, (index) {
-              final a = now.translations[index];
-              final b = before.translations[index];
-              return a.targetLanguage != b.targetLanguage || a.text != b.text;
-            }).any((changed) => changed);
-      }
+      bool changed() => !_sameWorkspaceDraft(_workspaceDraft(), before);
 
       if (changed()) {
         _importNotice(strings.importSourceChangedNotice);

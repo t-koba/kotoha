@@ -173,6 +173,54 @@ void main() {
     }
   });
 
+  testWidgets('a language-only edit after picking aborts the restore', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      await open(tester);
+      await tester.enterText(field('target-language-0'), 'en');
+      picker.pick = () async {
+        tester.widget<TextField>(field('target-language-0')).controller!.text =
+            'fr';
+        return _File(formatWorkspaceExport(restoredDraft()));
+      };
+
+      await restore(tester);
+
+      expect(
+        find.text(
+          'Source text changed during import. Your edits were kept; import again to retry.',
+        ),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'target-language-0'), 'fr');
+      expect(textOf(tester, 'source-text'), '');
+      expect(find.text('Workspace restored.'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('picker cancellation keeps the workspace without a notice', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async => null;
+      await open(tester);
+      await tester.enterText(field('source-text'), 'keep me');
+
+      await restore(tester);
+
+      expect(textOf(tester, 'source-text'), 'keep me');
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.byType(AlertDialog), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('a read failure is reported without changing drafts', (
     tester,
   ) async {
