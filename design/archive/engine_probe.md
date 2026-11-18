@@ -694,7 +694,7 @@ source files (`compiler-rt/lib/builtins/emutls.c`, `libunwind/src/`,
 `libcxx/src/` including `filesystem/`, and `libcxxabi/src/`). The fetched source
 headers at that immutable revision declare
 `SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception`; under
-[dependency_policy.json](specs/dependency_policy.json), this is a permissive
+[dependency_policy.json](../specs/dependency_policy.json), this is a permissive
 branch. The exact Android link-map manifest itself records archive-level hashes
 and selected member names, not per-member hashes. The later four-archive capture
 records member SHA-256s for all 47 selected objects: all 26 libc++ and 15
@@ -2002,7 +2002,7 @@ support claim is authorized.
 ## Selected-source and runtime audit
 
 **Not approved for product distribution.** This review applies
-[dependency_policy.json](specs/dependency_policy.json), not just root MIT.
+[dependency_policy.json](../specs/dependency_policy.json), not just root MIT.
 
 ### Exact experiment and selected inputs
 
@@ -2206,7 +2206,7 @@ Retain each full original notice alongside ggml MIT for prospective distribution
 PR #30390 head `c8ff8f205f0dd0e9cb96273fd61b106da4773e8c` has nine completed GitHub Actions runs (one skipped; run inventory `mizu_fetch/71d2b5cba94b158dc10c90c0d5960161a373446b138f59967f8c09fe79e50535`, parsed list `experiments/e5de701ac83b42efba58a78397ac091e`). All nine run-scoped artifact queries returned `total_count: 0` (common response SHA-256 `244563f989470892c537c9a4622920af0d228ee4528f7d00c64a06d6cd95856c`; the CPU-run response is `mizu_fetch/4309e6b4b0b75752f9d0c19ba93b3138e2f7316adec3e69a0cfce035aaaddbcc`). The inspected `build-cpu.yml`, reusable `build-cmake-pkg.yml`, `server.yml`, Python type-check/lint and code-style workflow definitions contain no explicit generator invocation (`mizu_fetch/b771841fb4b7386e2ec06e6a744947ed22b326f67b886f5f5c0b524e9497bb51`, `mizu_fetch/b94b3200e60b338caf2e66ea2d5c61bbf47fd75250f42ff153f084d1d815e1bc`, `mizu_fetch/71e5bacc6967d853ab0acf098d60211747e9588a76c19e9bc45b277b98e30530`, `mizu_fetch/ea3d57c88c49d4cd45aea79ccb56ea25e33d9868675145d1009257ea55c7b12b`, `mizu_fetch/ba90e0b069ff38354b1bd053d29771476e9275f24fadfe3ed06e484f36be7636`, `mizu_fetch/a0e43c077800c78b9cf0c68149686de8069b3f8fa4511ca3ceea4043a835685a`). The exact PR commit API lists three unsigned commits: `2e326a2` adds NFC normalization, followed by bot/linter cleanup and removal of `test_nfc_tokenizer`; none records generator mode, a UCD response/digest, or Python runtime (`mizu_fetch/a56a6cd2aa7d968a5112a46e9bc581eccc8f2a26730c754af590ab2f251526d2`, `experiments/1526d791b5f24797abd1d6dbeffc755e`). The public CPU-job page requires sign-in to view logs and the API log endpoint returned HTTP 403, so indirect test subprocesses are not excluded (`mizu_fetch/2125f4ac52b4e2cf05cde1de28725f1fee1135d23b34ac58461c214b04efae80`). These inspected records provide no output-bound generator invocation or raw UCD/Python input; this is absence in inspected records, not evidence that generation never occurred.
 
 **Unicode audit references and equivalence.**
-[Audit fixture manifest](fixtures/engine_unicode/fixtures.json) pins five inputs'
+[Audit fixture manifest](../fixtures/engine_unicode/fixtures.json) pins five inputs'
 immutable URLs, SHA-256 hashes and byte sizes at official `unicode-org/unicodetools`
 commit `addf0c992050b10a0bfe8647f90fcc8fdbfe71fc`, tag `final-16.0-20240912`:
 Unicode 16 data under `unicodetools/data/ucd/dev`, 15.1 under `ucd/15.1.0`,
