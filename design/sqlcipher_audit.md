@@ -1,26 +1,65 @@
 # SQLCipher candidate dependency audit
 
-**Workspace storage decision: no encrypted persistence backend is selected.**
-`TextWorkspaceDraft` has JSON model methods, but current `lib/` production code has
-no draft-serialization call site; drafts remain in memory. Explicit selected-text
-export is separate. `ProtectedKeyStore` is an opaque-key helper with no implicit
-key generation, reset, update, or recovery policy. Its only platform protector is
-Windows user-scope DPAPI, invoked for the key file; it does not encrypt workspace
-data. No Android, iOS, or macOS key-store provider is present in the current
-platform source or package selection. A platform-native encrypted-file store is
-not an implemented or audited alternative here. These pieces do not yet satisfy
-the storage adapter's encrypted-data requirement or the required key recovery,
-backup/restore, and platform behavior gates.
+**Workspace storage decision (2026-11-18): OS-provided crypto with a protected
+data key, Windows first — selected for implementation, not yet for release.**
+Durable save/reopen is a product goal. The operator asked Kotoha to choose the
+backend under [dependency_policy.json](specs/dependency_policy.json) and to produce
+the required evidence with the project's own tooling, tests and CI, rather than by
+manual vendor-archive or platform attestation. The selected direction is a native
+encrypted-file adapter: a versioned, authenticated draft envelope encrypted with an
+OS-provided AEAD (Windows CNG AES-GCM first), whose random data key is held by the
+existing Windows user-scope DPAPI `ProtectedKeyStore`. Kotoha owns the file protocol
+and key lifecycle, not the cipher primitive. The vendor-prebuilt SQLCipher binaries
+audited below remain **unselected**: their source-to-binary provenance and notice
+closure cannot be established from the published artifacts. `TextWorkspaceDraft` has
+JSON model methods, but production code has no draft-serialization call site yet;
+drafts remain in memory until the selected adapter is implemented and gated.
+Explicit selected-text export is separate. `ProtectedKeyStore` intentionally has no
+implicit key generation, reset, update or recovery policy, and no Android, iOS or
+macOS key-store provider is present yet. See [Selected storage direction](#selected-storage-direction)
+and the [Completion gate](#completion-gate).
+
+## Selected storage direction
+
+Three paths were compared against the policy's evidence rules and the requirement
+that evidence come from the project's own tooling, tests and CI:
+
+- **Vendor-prebuilt SQLCipher** (audited below): rejected for this slice. The pinned
+  source archives and commits are mutable and unsigned, the build workflow does not
+  verify their bytes, the attestation BOM is schema-invalid, and the SLSA predicates
+  do not bind the SQLCipher/OpenSSL sources. Project tooling can rehash and inspect
+  the binaries but cannot recover the missing source-to-binary and notice closure.
+- **Hand-built Dart AEAD on `crypto` 3.0.8**: rejected. `crypto` supplies hashes,
+  HMAC and PBKDF2 but no AES; a password KDF is unnecessary for a random data key,
+  and a new HMAC-CTR/AES construction would make Kotoha the owner of the primitive
+  and its nonce, side-channel and failure behavior — a burden standard KAT vectors
+  do not discharge. It also leaves the native key-store gap on other targets.
+- **OS-provided crypto and key protection** (selected): Windows CNG AES-GCM for the
+  draft envelope, the existing user-scope DPAPI `ProtectedKeyStore` for its data key.
+  The primitive is platform-provided, so its license/provenance evidence is a scoped
+  `platform_runtime_review` entry, not a bundled-dependency closure. CI can observe
+  the provider actually used after the crypto calls, verify the OS library is not
+  redistributed, and hold the adapter to reviewed terms. Android Keystore/JCA and
+  Apple Security/CommonCrypto need their own per-target evidence before those targets
+  can persist drafts.
+
+Selection is for implementation only. Production user writes remain disabled until
+the completion gate passes: exact round-trip and edit integrity, a fresh nonce per
+save, authenticated format metadata, tamper/truncation and missing-key failure
+behavior, key lifecycle and recovery, encrypted backup/restore, and supported-platform
+behavior. The first increment is a host-testable versioned envelope codec plus a
+Windows headless save-edit-reopen test using synthetic text only; native results are
+claimed only from an exact-revision CI run, never from the host probe alone.
 
 **SQLCipher status: blocked; not approved for distribution or draft persistence.**
 This is a static review of 17 vendor-prebuilt SQLCipher candidates pinned by
 `sqlite3` 3.9.0, not a claim about shipped Kotoha binaries. The current
 `pubspec.yaml` and lockfile contain no `sqlite3` dependency or SQLCipher hook
 selection. No native library was executed, no target-platform behavior was tested,
-and no user text was persisted. The host will not verify vendor archives or
-attestations. Keep drafts volatile. If Kotoha selects SQLCipher, its own pinned
-build workflow must verify inputs and retain source-to-binary, component, and
-notice evidence. The governing rules are
+and no user text was persisted. The host does not manually verify vendor archives
+or attestations; the selected direction above is evidenced by project tooling and CI.
+If Kotoha selects SQLCipher, its own pinned build workflow must verify inputs
+and retain source-to-binary, component, and notice evidence. The governing rules are
 [dependency_policy.json](specs/dependency_policy.json).
 
 ## Provider finding
@@ -327,6 +366,6 @@ workflow for the exact supported ABIs. That workflow must:
 A schema-valid upstream SBOM or cryptographically verified provenance can be
 corroborating evidence, but does not replace Kotoha's pinned inputs and exact
 source-to-binary record. The current `pubspec.yaml` selects no `sqlite3`
-dependency. Draft persistence stays disabled; any future implementation must
-also pass key recovery, encrypted backup/restore, platform behavior and data
-retention tests.
+dependency. The selected OS-provided direction is implemented behind this same gate;
+production draft-writing stays disabled until key recovery, encrypted backup/restore,
+platform behavior and data retention tests pass.
