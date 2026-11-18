@@ -123,6 +123,10 @@
   "@restoreWorkspaceTooLargeNotice": {
     "description": "作業ファイルがサイズ上限を超えたときの案内。"
   },
+  "restoreWorkspaceUnsupportedTypeNotice": "復元するには.txt、.md、.markdownファイルを選んでください。",
+  "@restoreWorkspaceUnsupportedTypeNotice": {
+    "description": "拡張子が対象外の作業ファイルを選んだときの案内。"
+  },
   "exportWorkspace": "作業内容を書き出す",
   "@exportWorkspace": {
     "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"

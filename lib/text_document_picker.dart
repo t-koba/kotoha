@@ -25,6 +25,12 @@ class TextDocumentTooLarge extends FormatException {
   const TextDocumentTooLarge() : super('Document exceeds size limit.');
 }
 
+// The OS file filter is advisory. Callers reject unsupported names themselves;
+// this type lets restore distinguish a wrong file type from a bad v2 document.
+class UnsupportedTextDocument extends FormatException {
+  const UnsupportedTextDocument() : super('Unsupported text document.');
+}
+
 Future<TextDocument?> pickTextDocument() async {
   if (defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS) {

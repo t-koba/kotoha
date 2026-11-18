@@ -22,9 +22,9 @@ class _Picker extends FileSelectorPlatform {
 }
 
 class _File extends XFile {
-  _File(this.text, {this.failure})
+  _File(this.text, {this.failure, String name = 'workspace.txt'})
     : _bytes = utf8.encode(text),
-      super('/not-stored/workspace.txt');
+      super('/not-stored/$name');
 
   final String text;
   final Uint8List _bytes;
@@ -229,6 +229,28 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
       expect(find.byType(SnackBar), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('an unsupported file type is rejected with its own notice', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async =>
+          _File(formatWorkspaceExport(restoredDraft()), name: 'workspace.pdf');
+      await open(tester);
+      await tester.enterText(field('source-text'), 'keep me');
+
+      await restore(tester);
+
+      expect(
+        find.text('Choose a .txt, .md, or .markdown file to restore.'),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'keep me');
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

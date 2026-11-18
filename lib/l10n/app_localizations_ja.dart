@@ -160,6 +160,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'このファイルは大きすぎて復元できません。小さい作業エクスポートを選んでください。';
 
   @override
+  String get restoreWorkspaceUnsupportedTypeNotice =>
+      '復元するには.txt、.md、.markdownファイルを選んでください。';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override

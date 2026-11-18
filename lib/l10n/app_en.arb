@@ -123,6 +123,10 @@
   "@restoreWorkspaceTooLargeNotice": {
     "description": "Notice shown when a workspace document exceeds the document size limit."
   },
+  "restoreWorkspaceUnsupportedTypeNotice": "Choose a .txt, .md, or .markdown file to restore.",
+  "@restoreWorkspaceUnsupportedTypeNotice": {
+    "description": "Notice shown when a selected workspace file has an unsupported extension."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

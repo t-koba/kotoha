@@ -128,6 +128,22 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
     });
 
+    mobileTest('an unsupported file type is rejected with its own notice', (
+      tester,
+    ) async {
+      reply = () async =>
+          document(formatWorkspaceExport(draft()), name: 'private.pdf');
+      await open(tester, source: 'keep me');
+
+      await restore(tester);
+
+      expect(
+        find.text('Choose a .txt, .md, or .markdown file to restore.'),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'keep me');
+    });
+
     mobileTest('an oversized document is rejected with its own notice', (
       tester,
     ) async {

@@ -189,7 +189,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       // The OS filter is advisory. Reject unsupported names before reading.
       final name = file.name.toLowerCase();
       if (!['.txt', '.md', '.markdown'].any(name.endsWith)) {
-        throw const FormatException('Unsupported text document.');
+        throw const UnsupportedTextDocument();
       }
       // Desktop reads in place; mobile returns only in-memory bytes.
       // utf8.decode is strict by default and strips a leading UTF-8 BOM.
@@ -431,7 +431,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       if (!mounted || file == null) return;
       final name = file.name.toLowerCase();
       if (!['.txt', '.md', '.markdown'].any(name.endsWith)) {
-        throw const FormatException('Unsupported text document.');
+        throw const UnsupportedTextDocument();
       }
       final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
       if (!mounted) return;
@@ -485,6 +485,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       });
       if (!mounted) return;
       _importNotice(strings.restoredWorkspaceNotice);
+    } on UnsupportedTextDocument {
+      if (mounted) _importNotice(strings.restoreWorkspaceUnsupportedTypeNotice);
     } on TextDocumentTooLarge {
       if (mounted) _importNotice(strings.restoreWorkspaceTooLargeNotice);
     } on FormatException {

@@ -368,6 +368,12 @@ abstract class AppLocalizations {
   /// **'このファイルは大きすぎて復元できません。小さい作業エクスポートを選んでください。'**
   String get restoreWorkspaceTooLargeNotice;
 
+  /// 拡張子が対象外の作業ファイルを選んだときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'復元するには.txt、.md、.markdownファイルを選んでください。'**
+  String get restoreWorkspaceUnsupportedTypeNotice;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:

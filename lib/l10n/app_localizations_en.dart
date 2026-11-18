@@ -167,6 +167,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This file is too large to restore. Choose a smaller workspace export.';
 
   @override
+  String get restoreWorkspaceUnsupportedTypeNotice =>
+      'Choose a .txt, .md, or .markdown file to restore.';
+
+  @override
   String get exportWorkspace => 'Export workspace';
 
   @override
