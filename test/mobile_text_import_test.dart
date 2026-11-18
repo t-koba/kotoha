@@ -106,6 +106,8 @@ void main() {
       'shape',
       'UTF-8',
       'native',
+      'native-type',
+      'native-size',
     ]) {
       mobileTest('$failure fails closed without leaking details', (
         tester,
@@ -126,6 +128,14 @@ void main() {
             'name': 'sample.txt',
             'bytes': Uint8List.fromList([0xc3, 0x28]),
           },
+          'native-type' => throw PlatformException(
+            code: 'unsupported_type',
+            message: 'private/path',
+          ),
+          'native-size' => throw PlatformException(
+            code: 'too_large',
+            message: 'private/path',
+          ),
           _ => throw PlatformException(
             code: 'read_failed',
             message: 'private/path',

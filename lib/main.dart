@@ -491,6 +491,13 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       if (mounted) _importNotice(strings.restoreWorkspaceTooLargeNotice);
     } on FormatException {
       if (mounted) _importNotice(strings.restoreWorkspaceUnsupportedNotice);
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      _importNotice(switch (e.code) {
+        'too_large' => strings.restoreWorkspaceTooLargeNotice,
+        'unsupported_type' => strings.restoreWorkspaceUnsupportedTypeNotice,
+        _ => strings.restoreWorkspaceFailureNotice,
+      });
     } on Exception {
       if (mounted) _importNotice(strings.restoreWorkspaceFailureNotice);
     } finally {

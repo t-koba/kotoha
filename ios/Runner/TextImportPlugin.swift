@@ -3,6 +3,20 @@ import Flutter
 import UIKit
 import UniformTypeIdentifiers
 
+// Typed adapter failures let Dart restore distinguish a wrong file type or an
+// oversized document; the channel message stays generic and path-free.
+enum TextImportFailure: Error {
+  case unsupportedType
+  case tooLarge
+
+  var channelCode: String {
+    switch self {
+    case .unsupportedType: return "unsupported_type"
+    case .tooLarge: return "too_large"
+    }
+  }
+}
+
 // Injectable system operations let tests distinguish balanced scope ownership
 // from synthetic local-file reads (which do not prove provider scope behavior).
 struct TextDocumentReader {
@@ -41,19 +55,19 @@ struct TextDocumentReader {
     // A false start can mean a local URL needs no scope. Try the real read.
     let name = url.lastPathComponent
     guard [".txt", ".md", ".markdown"].contains(where: name.lowercased().hasSuffix) else {
-      throw CocoaError(.fileReadUnsupportedScheme)
+      throw TextImportFailure.unsupportedType
     }
     var bytes: Data?
     var readError: Error?
     try coordinate(url) { readableURL in
       do {
-        guard (0...maxBytes).contains(try fileSize(readableURL)) else { throw CocoaError(.fileReadTooLarge) }
+        guard (0...maxBytes).contains(try fileSize(readableURL)) else { throw TextImportFailure.tooLarge }
         bytes = try load(readableURL, maxBytes)
       } catch { readError = error }
     }
     if let readError = readError { throw readError }
     guard let bytes = bytes else { throw CocoaError(.fileReadUnknown) }
-    guard bytes.count <= maxBytes else { throw CocoaError(.fileReadTooLarge) }
+    guard bytes.count <= maxBytes else { throw TextImportFailure.tooLarge }
     return ["name": name, "bytes": FlutterStandardTypedData(bytes: bytes)]
   }
 }
@@ -177,7 +191,15 @@ final class TextImportPlugin: NSObject, FlutterPlugin, UIDocumentPickerDelegate,
     let reader = self.reader
     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
       let value: Any
-      do { value = try reader.read(url, maxBytes: request.maxBytes) } catch { value = Self.failure("read_failed") }
+      do {
+        value = try reader.read(url, maxBytes: request.maxBytes)
+      } catch let error as TextImportFailure {
+        value = Self.failure(error.channelCode)
+      } catch let error as CocoaError where error.code == .fileReadTooLarge {
+        value = Self.failure("too_large")
+      } catch {
+        value = Self.failure("read_failed")
+      }
       DispatchQueue.main.async { [weak self] in self?.finish(request, value: value) }
     }
   }

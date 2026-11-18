@@ -16,6 +16,11 @@ import io.flutter.plugin.common.PluginRegistry.ActivityResultListener
 import java.io.ByteArrayOutputStream
 import java.util.Locale
 
+// Typed failures let the Dart restore action report a wrong file type or an
+// oversized document without changing the generic, path-free error message.
+private class UnsupportedDocumentException : IllegalArgumentException("Unsupported document")
+private class DocumentTooLargeException : IllegalArgumentException("Size limit")
+
 /** One-shot, read-in-place import. No paths, copies, persisted grants or recovery state. */
 class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandler,
     ActivityResultListener {
@@ -101,6 +106,10 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
             try {
                 val document = readDocument(resolver, uri, request.maxBytes)
                 main.post { finish(request, document) }
+            } catch (_: UnsupportedDocumentException) {
+                main.post { finish(request, error = "unsupported_type") }
+            } catch (_: DocumentTooLargeException) {
+                main.post { finish(request, error = "too_large") }
             } catch (_: Exception) {
                 main.post { finish(request, error = "read_failed") }
             }
@@ -138,9 +147,9 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
                     if (column < 0 || !cursor.moveToFirst() || cursor.isNull(column)) null
                     else cursor.getString(column)
                 } ?: throw IllegalArgumentException("Missing display name")
-            require(listOf(".txt", ".md", ".markdown").any {
+            if (!listOf(".txt", ".md", ".markdown").any {
                 name.lowercase(Locale.ROOT).endsWith(it)
-            }) { "Unsupported document" }
+            }) throw UnsupportedDocumentException()
             val bytes = resolver.openInputStream(uri)?.use { stream ->
                 val output = ByteArrayOutputStream(minOf(maxBytes, BUFFER_BYTES))
                 val buffer = ByteArray(BUFFER_BYTES)
@@ -151,10 +160,10 @@ class TextImportPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallH
                     if (count == 0) {
                         val byte = stream.read()
                         if (byte < 0) break
-                        require(remaining > 0) { "Size limit" }
+                        if (remaining <= 0) throw DocumentTooLargeException()
                         output.write(byte)
                     } else {
-                        require(count <= remaining) { "Size limit" }
+                        if (count > remaining) throw DocumentTooLargeException()
                         output.write(buffer, 0, count)
                     }
                 }

@@ -131,8 +131,10 @@ void main() {
     mobileTest('an unsupported file type is rejected with its own notice', (
       tester,
     ) async {
-      reply = () async =>
-          document(formatWorkspaceExport(draft()), name: 'private.pdf');
+      reply = () async => throw PlatformException(
+        code: 'unsupported_type',
+        message: 'private/path',
+      );
       await open(tester, source: 'keep me');
 
       await restore(tester);
@@ -147,10 +149,8 @@ void main() {
     mobileTest('an oversized document is rejected with its own notice', (
       tester,
     ) async {
-      reply = () async => {
-        'name': 'workspace.txt',
-        'bytes': Uint8List(maxTextImportBytes + 1),
-      };
+      reply = () async =>
+          throw PlatformException(code: 'too_large', message: 'private/path');
       await open(tester, source: 'keep me');
 
       await restore(tester);
