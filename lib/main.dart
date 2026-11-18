@@ -382,8 +382,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
   }
 
-  Future<void> _exportWorkspace() async {
-    final strings = AppLocalizations.of(context)!;
+  // Snapshot the in-memory fields once for both output routes. Null means
+  // there is no text to copy or export.
+  TextWorkspaceDraft? _nonEmptyWorkspaceDraft() {
     final draft = TextWorkspaceDraft(
       sourceLanguage: _sourceLanguage.text,
       sourceText: _sourceText.text,
@@ -397,6 +398,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
     if (draft.sourceText.isEmpty &&
         draft.translations.every((translation) => translation.text.isEmpty)) {
+      return null;
+    }
+    return draft;
+  }
+
+  Future<void> _exportWorkspace() async {
+    final strings = AppLocalizations.of(context)!;
+    final draft = _nonEmptyWorkspaceDraft();
+    if (draft == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(strings.emptyWorkspaceExportNotice)),
       );
@@ -409,6 +419,31 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       successNotice: strings.exportedWorkspaceNotice,
       failureNotice: strings.workspaceExportFailureNotice,
     );
+  }
+
+  Future<void> _copyWorkspace() async {
+    final strings = AppLocalizations.of(context)!;
+    final draft = _nonEmptyWorkspaceDraft();
+    if (draft == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.emptyWorkspaceCopyNotice)));
+      return;
+    }
+    try {
+      await Clipboard.setData(
+        ClipboardData(text: formatWorkspaceExport(draft)),
+      );
+    } on Exception {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.clipboardFailureNotice)));
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(strings.copiedWorkspaceNotice)));
   }
 
   // One owner for the save-location, write and notice contract shared by the
@@ -655,6 +690,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                       ),
                       const SizedBox(height: 8),
                       Text(strings.clipboardNotice),
+                      const SizedBox(height: 8),
+                      Text(strings.copyWorkspaceNotice),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('copy-workspace'),
+                          onPressed: _copyWorkspace,
+                          icon: const Icon(Icons.copy_all_outlined),
+                          label: Text(strings.copyWorkspace),
+                        ),
+                      ),
                       if (!kIsWeb &&
                           (defaultTargetPlatform == TargetPlatform.macOS ||
                               defaultTargetPlatform ==

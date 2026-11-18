@@ -71,6 +71,22 @@
   "@workspaceExportFailureNotice": {
     "description": "テキスト作業全体を選んだファイルへ書き出せなかったときの案内。"
   },
+  "copyWorkspace": "作業内容をコピー",
+  "@copyWorkspace": {
+    "description": "テキスト作業全体をOSのクリップボードにコピーする操作のラベル。"
+  },
+  "copyWorkspaceNotice": "コピーすると原文とすべての訳文がOSのクリップボードに渡されます。作業内容は一時的なままです。",
+  "@copyWorkspaceNotice": {
+    "description": "作業内容全体のコピーでOSのクリップボードを使い、作業内容自体は保存しない旨の案内。"
+  },
+  "emptyWorkspaceCopyNotice": "コピーする原文または訳文を入力してください。",
+  "@emptyWorkspaceCopyNotice": {
+    "description": "テキストがない状態で作業内容全体のコピーを求められたときの案内。"
+  },
+  "copiedWorkspaceNotice": "作業内容をコピーしました。",
+  "@copiedWorkspaceNotice": {
+    "description": "作業内容全体のコピーが完了したことを伝える案内。"
+  },
   "exportWorkspace": "作業内容を書き出す",
   "@exportWorkspace": {
     "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"

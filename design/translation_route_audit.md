@@ -2,7 +2,7 @@
 
 ## Current product state
 
-`lib/main.dart` implements a manual text workspace: users can enter text, import supported text documents, edit separate translation fields, and copy or export field contents. The UI labels translation entry as manual and explicitly says that automatic translation is not provided. This describes the current route; it does not claim that the app processes no material.
+`lib/main.dart` implements a manual text workspace: users can enter text, import supported text documents, edit separate translation fields, and copy or export individual field contents or the whole workspace. The UI labels translation entry as manual and explicitly says that automatic translation is not provided. This describes the current route; it does not claim that the app processes no material.
 
 The iOS deployment target is iOS 15. No translation engine is currently adopted. The design target and current route are distinct (`design/kotoha_design.md` §§7.1, 11, 18 and 21).
 

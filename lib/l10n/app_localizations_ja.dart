@@ -116,6 +116,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get workspaceExportFailureNotice => '作業内容を書き出せませんでした';
 
   @override
+  String get copyWorkspace => '作業内容をコピー';
+
+  @override
+  String get copyWorkspaceNotice =>
+      'コピーすると原文とすべての訳文がOSのクリップボードに渡されます。作業内容は一時的なままです。';
+
+  @override
+  String get emptyWorkspaceCopyNotice => 'コピーする原文または訳文を入力してください。';
+
+  @override
+  String get copiedWorkspaceNotice => '作業内容をコピーしました。';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override

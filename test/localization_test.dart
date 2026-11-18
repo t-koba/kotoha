@@ -498,6 +498,7 @@ void main() {
           find.byKey(const ValueKey('import-source')),
           find.byKey(const ValueKey('review-model-terms')),
           find.bySemanticsLabel(sourceText),
+          find.byKey(const ValueKey('copy-workspace')),
           find.bySemanticsLabel(targetLanguage),
           find.byTooltip(copyOne),
           find.bySemanticsLabel(translation),
@@ -542,7 +543,7 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[7],
-              'target language after RTL source text',
+              'copy workspace after RTL source text',
             );
             await pressShiftTab();
             expectFocused(
@@ -553,22 +554,33 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[8],
-              'copy action after RTL target language',
+              'target language after copy workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[7],
-              'target language after reverse tab',
+              'copy workspace after reverse tab',
             );
-          } else if (index == 9) {
+          } else if (index == 8) {
             await pressTab();
             expectFocused(
-              firstCardOrder[10],
+              firstCardOrder[9],
+              'copy action after RTL target language',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[8],
+              'target language after reverse tab',
+            );
+          } else if (index == 10) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[11],
               'Add translation after RTL translation text',
             );
             await pressShiftTab();
             expectFocused(
-              firstCardOrder[9],
+              firstCardOrder[10],
               'RTL translation text after reverse tab',
             );
           }
@@ -595,6 +607,7 @@ void main() {
           find.byKey(const ValueKey('import-source')),
           find.byKey(const ValueKey('review-model-terms')),
           find.bySemanticsLabel(sourceText),
+          find.byKey(const ValueKey('copy-workspace')),
           find.bySemanticsLabel(targetLanguage).at(0),
           find.byTooltip(copyOne),
           find.byTooltip(removeOne),

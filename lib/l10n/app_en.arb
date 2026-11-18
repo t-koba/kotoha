@@ -71,6 +71,22 @@
   "@workspaceExportFailureNotice": {
     "description": "Notice shown when writing the whole text workspace to a chosen file fails."
   },
+  "copyWorkspace": "Copy workspace",
+  "@copyWorkspace": {
+    "description": "Label for copying the whole text workspace to the OS clipboard."
+  },
+  "copyWorkspaceNotice": "Copy writes the source and all translations to the OS clipboard; the workspace stays temporary.",
+  "@copyWorkspaceNotice": {
+    "description": "Notice explaining that whole-workspace copy uses the OS clipboard and does not save the workspace."
+  },
+  "emptyWorkspaceCopyNotice": "Enter source text or a translation to copy.",
+  "@emptyWorkspaceCopyNotice": {
+    "description": "Notice shown when whole-workspace copy is requested with no text."
+  },
+  "copiedWorkspaceNotice": "Workspace copied.",
+  "@copiedWorkspaceNotice": {
+    "description": "Notice confirming a whole-workspace copy finished."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

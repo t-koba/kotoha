@@ -121,6 +121,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspaceExportFailureNotice => 'Could not export the workspace.';
 
   @override
+  String get copyWorkspace => 'Copy workspace';
+
+  @override
+  String get copyWorkspaceNotice =>
+      'Copy writes the source and all translations to the OS clipboard; the workspace stays temporary.';
+
+  @override
+  String get emptyWorkspaceCopyNotice =>
+      'Enter source text or a translation to copy.';
+
+  @override
+  String get copiedWorkspaceNotice => 'Workspace copied.';
+
+  @override
   String get exportWorkspace => 'Export workspace';
 
   @override

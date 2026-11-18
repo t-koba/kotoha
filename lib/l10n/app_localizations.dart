@@ -290,6 +290,30 @@ abstract class AppLocalizations {
   /// **'作業内容を書き出せませんでした'**
   String get workspaceExportFailureNotice;
 
+  /// テキスト作業全体をOSのクリップボードにコピーする操作のラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容をコピー'**
+  String get copyWorkspace;
+
+  /// 作業内容全体のコピーでOSのクリップボードを使い、作業内容自体は保存しない旨の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'コピーすると原文とすべての訳文がOSのクリップボードに渡されます。作業内容は一時的なままです。'**
+  String get copyWorkspaceNotice;
+
+  /// テキストがない状態で作業内容全体のコピーを求められたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'コピーする原文または訳文を入力してください。'**
+  String get emptyWorkspaceCopyNotice;
+
+  /// 作業内容全体のコピーが完了したことを伝える案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容をコピーしました。'**
+  String get copiedWorkspaceNotice;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:
