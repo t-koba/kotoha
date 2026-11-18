@@ -314,6 +314,54 @@ abstract class AppLocalizations {
   /// **'作業内容をコピーしました。'**
   String get copiedWorkspaceNotice;
 
+  /// 以前エクスポートした作業全体を復元する操作のラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を復元'**
+  String get restoreWorkspace;
+
+  /// 復元が現在の作業内容をファイルから置き換える旨の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'復元するとKotoha v2の作業ファイルを読み込み、現在の原文と訳文を置き換えます。'**
+  String get restoreWorkspaceNotice;
+
+  /// 作業内容の置き換え前に表示する確認ダイアログのタイトル。
+  ///
+  /// In ja, this message translates to:
+  /// **'現在の作業内容を置き換えますか？'**
+  String get restoreWorkspaceTitle;
+
+  /// 作業内容の置き換え確認ダイアログの本文。
+  ///
+  /// In ja, this message translates to:
+  /// **'復元するとこのセッションの原文の言語、原文、すべての訳文が置き換わります。続けますか？'**
+  String get restoreWorkspaceQuestion;
+
+  /// 作業内容の置き換えを確定するボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を置き換える'**
+  String get restoreWorkspaceReplace;
+
+  /// 作業内容の復元が完了したことを伝える案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を復元しました。'**
+  String get restoredWorkspaceNotice;
+
+  /// ファイルの読み取りや選択に失敗したときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を復元できませんでした。'**
+  String get restoreWorkspaceFailureNotice;
+
+  /// v2の作業エクスポートとして解析できないファイルの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'このファイルはKotoha v2の作業エクスポートではありません。'**
+  String get restoreWorkspaceUnsupportedNotice;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:

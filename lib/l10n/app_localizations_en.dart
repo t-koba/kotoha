@@ -135,6 +135,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copiedWorkspaceNotice => 'Workspace copied.';
 
   @override
+  String get restoreWorkspace => 'Restore workspace';
+
+  @override
+  String get restoreWorkspaceNotice =>
+      'Restore reads a Kotoha v2 workspace file and replaces the current source and translations.';
+
+  @override
+  String get restoreWorkspaceTitle => 'Replace the current workspace?';
+
+  @override
+  String get restoreWorkspaceQuestion =>
+      'Restoring replaces the source language, source text and all translations in this session. Continue?';
+
+  @override
+  String get restoreWorkspaceReplace => 'Replace workspace';
+
+  @override
+  String get restoredWorkspaceNotice => 'Workspace restored.';
+
+  @override
+  String get restoreWorkspaceFailureNotice =>
+      'Could not restore the workspace.';
+
+  @override
+  String get restoreWorkspaceUnsupportedNotice =>
+      'This file is not a Kotoha v2 workspace export.';
+
+  @override
   String get exportWorkspace => 'Export workspace';
 
   @override

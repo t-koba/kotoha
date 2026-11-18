@@ -87,6 +87,38 @@
   "@copiedWorkspaceNotice": {
     "description": "作業内容全体のコピーが完了したことを伝える案内。"
   },
+  "restoreWorkspace": "作業内容を復元",
+  "@restoreWorkspace": {
+    "description": "以前エクスポートした作業全体を復元する操作のラベル。"
+  },
+  "restoreWorkspaceNotice": "復元するとKotoha v2の作業ファイルを読み込み、現在の原文と訳文を置き換えます。",
+  "@restoreWorkspaceNotice": {
+    "description": "復元が現在の作業内容をファイルから置き換える旨の案内。"
+  },
+  "restoreWorkspaceTitle": "現在の作業内容を置き換えますか？",
+  "@restoreWorkspaceTitle": {
+    "description": "作業内容の置き換え前に表示する確認ダイアログのタイトル。"
+  },
+  "restoreWorkspaceQuestion": "復元するとこのセッションの原文の言語、原文、すべての訳文が置き換わります。続けますか？",
+  "@restoreWorkspaceQuestion": {
+    "description": "作業内容の置き換え確認ダイアログの本文。"
+  },
+  "restoreWorkspaceReplace": "作業内容を置き換える",
+  "@restoreWorkspaceReplace": {
+    "description": "作業内容の置き換えを確定するボタン。"
+  },
+  "restoredWorkspaceNotice": "作業内容を復元しました。",
+  "@restoredWorkspaceNotice": {
+    "description": "作業内容の復元が完了したことを伝える案内。"
+  },
+  "restoreWorkspaceFailureNotice": "作業内容を復元できませんでした。",
+  "@restoreWorkspaceFailureNotice": {
+    "description": "ファイルの読み取りや選択に失敗したときの案内。"
+  },
+  "restoreWorkspaceUnsupportedNotice": "このファイルはKotoha v2の作業エクスポートではありません。",
+  "@restoreWorkspaceUnsupportedNotice": {
+    "description": "v2の作業エクスポートとして解析できないファイルの案内。"
+  },
   "exportWorkspace": "作業内容を書き出す",
   "@exportWorkspace": {
     "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"

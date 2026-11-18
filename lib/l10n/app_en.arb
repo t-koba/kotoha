@@ -87,6 +87,38 @@
   "@copiedWorkspaceNotice": {
     "description": "Notice confirming a whole-workspace copy finished."
   },
+  "restoreWorkspace": "Restore workspace",
+  "@restoreWorkspace": {
+    "description": "Label for restoring a previously exported whole workspace."
+  },
+  "restoreWorkspaceNotice": "Restore reads a Kotoha v2 workspace file and replaces the current source and translations.",
+  "@restoreWorkspaceNotice": {
+    "description": "Notice explaining that restore replaces the current workspace from a file."
+  },
+  "restoreWorkspaceTitle": "Replace the current workspace?",
+  "@restoreWorkspaceTitle": {
+    "description": "Title of the confirmation dialog before replacing a workspace."
+  },
+  "restoreWorkspaceQuestion": "Restoring replaces the source language, source text and all translations in this session. Continue?",
+  "@restoreWorkspaceQuestion": {
+    "description": "Question in the workspace replacement confirmation dialog."
+  },
+  "restoreWorkspaceReplace": "Replace workspace",
+  "@restoreWorkspaceReplace": {
+    "description": "Button confirming workspace replacement."
+  },
+  "restoredWorkspaceNotice": "Workspace restored.",
+  "@restoredWorkspaceNotice": {
+    "description": "Notice confirming a workspace restore finished."
+  },
+  "restoreWorkspaceFailureNotice": "Could not restore the workspace.",
+  "@restoreWorkspaceFailureNotice": {
+    "description": "Notice shown when reading or picking the workspace file fails."
+  },
+  "restoreWorkspaceUnsupportedNotice": "This file is not a Kotoha v2 workspace export.",
+  "@restoreWorkspaceUnsupportedNotice": {
+    "description": "Notice shown when the file is not a parseable v2 workspace export."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

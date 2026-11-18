@@ -129,6 +129,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get copiedWorkspaceNotice => '作業内容をコピーしました。';
 
   @override
+  String get restoreWorkspace => '作業内容を復元';
+
+  @override
+  String get restoreWorkspaceNotice =>
+      '復元するとKotoha v2の作業ファイルを読み込み、現在の原文と訳文を置き換えます。';
+
+  @override
+  String get restoreWorkspaceTitle => '現在の作業内容を置き換えますか？';
+
+  @override
+  String get restoreWorkspaceQuestion =>
+      '復元するとこのセッションの原文の言語、原文、すべての訳文が置き換わります。続けますか？';
+
+  @override
+  String get restoreWorkspaceReplace => '作業内容を置き換える';
+
+  @override
+  String get restoredWorkspaceNotice => '作業内容を復元しました。';
+
+  @override
+  String get restoreWorkspaceFailureNotice => '作業内容を復元できませんでした。';
+
+  @override
+  String get restoreWorkspaceUnsupportedNotice =>
+      'このファイルはKotoha v2の作業エクスポートではありません。';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override

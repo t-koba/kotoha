@@ -96,7 +96,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
-  late final _translations = [_TranslationFields(() => _appResumed)];
+  late List<_TranslationFields> _translations = [
+    _TranslationFields(() => _appResumed),
+  ];
 
   @override
   void initState() {
@@ -388,6 +390,98 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       return null;
     }
     return draft;
+  }
+
+  bool _workspaceHasAnyText() =>
+      _sourceLanguage.text.isNotEmpty ||
+      _sourceText.text.isNotEmpty ||
+      _translations.any(
+        (fields) =>
+            fields.language.text.isNotEmpty || fields.text.text.isNotEmpty,
+      );
+
+  Future<void> _restoreWorkspace() async {
+    if (_importing || _reviewingModel) return;
+    final strings = AppLocalizations.of(context)!;
+    setState(() => _importing = true);
+    final before = _nonEmptyWorkspaceDraft();
+    try {
+      final file = await pickTextDocument();
+      if (!mounted || file == null) return;
+      final name = file.name.toLowerCase();
+      if (!['.txt', '.md', '.markdown'].any(name.endsWith)) {
+        throw const FormatException('Unsupported text document.');
+      }
+      final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
+      if (!mounted) return;
+      final restored = parseWorkspaceExport(text);
+      bool changed() {
+        final now = _nonEmptyWorkspaceDraft();
+        if (now == null || before == null) return now != before;
+        return now.sourceLanguage != before.sourceLanguage ||
+            now.sourceText != before.sourceText ||
+            now.translations.length != before.translations.length ||
+            List.generate(now.translations.length, (index) {
+              final a = now.translations[index];
+              final b = before.translations[index];
+              return a.targetLanguage != b.targetLanguage || a.text != b.text;
+            }).any((changed) => changed);
+      }
+
+      if (changed()) {
+        _importNotice(strings.importSourceChangedNotice);
+        return;
+      }
+      if (_workspaceHasAnyText()) {
+        final replace = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(strings.restoreWorkspaceTitle),
+            content: Text(strings.restoreWorkspaceQuestion),
+            actions: [
+              TextButton(
+                key: const ValueKey('restore-workspace-cancel'),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(strings.cancelImport),
+              ),
+              TextButton(
+                key: const ValueKey('restore-workspace-confirm'),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(strings.restoreWorkspaceReplace),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || replace != true) return;
+        if (changed()) {
+          _importNotice(strings.importSourceChangedNotice);
+          return;
+        }
+      }
+
+      final fields = [
+        for (final translation in restored.translations)
+          _TranslationFields(() => _appResumed)
+            ..language.replaceText(translation.targetLanguage)
+            ..text.replaceText(translation.text),
+      ];
+      setState(() {
+        _sourceLanguage.replaceText(restored.sourceLanguage);
+        _sourceText.replaceText(restored.sourceText);
+        for (final old in _translations) {
+          old.dispose();
+        }
+        _translations = fields;
+      });
+      if (!mounted) return;
+      _importNotice(strings.restoredWorkspaceNotice);
+    } on FormatException {
+      if (mounted) _importNotice(strings.restoreWorkspaceUnsupportedNotice);
+    } on Exception {
+      if (mounted) _importNotice(strings.restoreWorkspaceFailureNotice);
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
   }
 
   Future<void> _exportWorkspace() async {
@@ -698,6 +792,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                           onPressed: _copyWorkspace,
                           icon: const Icon(Icons.copy_all_outlined),
                           label: Text(strings.copyWorkspace),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(strings.restoreWorkspaceNotice),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('restore-workspace'),
+                          onPressed: _restoreWorkspace,
+                          icon: const Icon(Icons.restore_outlined),
+                          label: Text(strings.restoreWorkspace),
                         ),
                       ),
                       if (!kIsWeb &&

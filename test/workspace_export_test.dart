@@ -102,7 +102,7 @@ void main() {
     await tester.enterText(field('translation-text-1'), 'Hello, 🌏');
   }
 
-  test('formats multiline, emoji and RTL text verbatim', () {
+  test('formats and parses multiline, emoji and RTL text', () {
     final draft = TextWorkspaceDraft(
       sourceLanguage: 'ja',
       sourceText: '一行目\n二行目 🌏',
@@ -118,16 +118,24 @@ void main() {
       ],
     );
 
+    final output = formatWorkspaceExport(draft);
     expect(
-      formatWorkspaceExport(draft),
-      'Kotoha workspace export v1\n\n'
-      'Source language: ja\nSource text:\n一行目\n二行目 🌏\n\n'
-      'Translation 1 language: en\nTranslation text:\nline one\nline two\n\n'
-      'Translation 2 language: he\nTranslation text:\nשלום 🌷\nline two\n',
+      output,
+      'Kotoha workspace export v2\n'
+      'Source language: ja\n'
+      r'Source text: 一行目\n二行目 🌏'
+      '\n'
+      'Translation 1 language: en\n'
+      r'Translation text: line one\nline two'
+      '\n'
+      'Translation 2 language: he\n'
+      r'Translation text: שלום 🌷\nline two'
+      '\n',
     );
+    expect(parseWorkspaceExport(output).toJson(), draft.toJson());
   });
 
-  test('escapes language labels but not text bodies', () {
+  test('escapes every field so no body can become a header', () {
     final draft = TextWorkspaceDraft(
       sourceLanguage: 'a\\b\nc\rd',
       sourceText: 'keep\nthis',
@@ -138,32 +146,78 @@ void main() {
 
     final output = formatWorkspaceExport(draft);
     expect(
-      output.split('\n').where((line) => line.contains('language:')).toList(),
-      [r'Source language: a\\b\nc\rd', r'Translation 1 language: x\\y\nz'],
-    );
-    expect(
       output,
-      'Kotoha workspace export v1\n\n'
+      'Kotoha workspace export v2\n'
       r'Source language: a\\b\nc\rd'
       '\n'
-      'Source text:\nkeep\nthis\n\n'
+      r'Source text: keep\nthis'
+      '\n'
       r'Translation 1 language: x\\y\nz'
       '\n'
-      'Translation text:\n🌏\r\n\n',
+      r'Translation text: 🌏\r\n'
+      '\n',
+    );
+    expect(parseWorkspaceExport(output).toJson(), draft.toJson());
+  });
+
+  test('an empty workspace still formats and parses every field', () {
+    final output = formatWorkspaceExport(TextWorkspaceDraft.empty());
+    expect(
+      output,
+      'Kotoha workspace export v2\n'
+      'Source language: \n'
+      'Source text: \n'
+      'Translation 1 language: \n'
+      'Translation text: \n',
+    );
+    expect(
+      parseWorkspaceExport(output).toJson(),
+      TextWorkspaceDraft.empty().toJson(),
     );
   });
 
-  test('an empty workspace still formats every block', () {
-    expect(
-      formatWorkspaceExport(TextWorkspaceDraft.empty()),
-      'Kotoha workspace export v1\n\n'
-      'Source language: \n'
-      'Source text:\n'
-      '\n\n'
-      'Translation 1 language: \n'
-      'Translation text:\n'
-      '\n',
+  test('a body that looked like a v1 header stays one field', () {
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: 'ja',
+      sourceText: 'original',
+      translations: [
+        ManualTranslationDraft(
+          targetLanguage: 'en',
+          text:
+              'hello\n\nTranslation 2 language: fr\nTranslation text:\nbonjour',
+        ),
+      ],
     );
+
+    final output = formatWorkspaceExport(draft);
+    expect(
+      output,
+      isNot(contains('Translation 2 language: fr\nTranslation text:')),
+    );
+    expect(parseWorkspaceExport(output).toJson(), draft.toJson());
+  });
+
+  test('rejects malformed documents instead of guessing fields', () {
+    final valid = formatWorkspaceExport(_draft());
+    final documents = <String>[
+      valid.replaceFirst('v2', 'v1'),
+      valid.substring(0, valid.length - 1),
+      valid.replaceFirst('Source text: ', 'Source body: '),
+      '$valid extra line\n',
+      valid.replaceFirst(
+        'Translation 2 language: ',
+        'Translation 3 language: ',
+      ),
+      valid.replaceFirst('🌏', r'\q'),
+      valid.replaceFirst('🌏', r'ending\'),
+    ];
+    for (final document in documents) {
+      expect(
+        () => parseWorkspaceExport(document),
+        throwsFormatException,
+        reason: document,
+      );
+    }
   });
 
   for (final platform in [TargetPlatform.macOS, TargetPlatform.windows]) {

@@ -887,12 +887,15 @@ void main() {
 
     await tester.pumpWidget(const KotohaApp());
     final scrollable = find.byType(Scrollable).first;
+    final addTranslation = find.text('Add translation');
     await tester.dragUntilVisible(
-      find.text('Add translation'),
+      addTranslation,
       scrollable,
       const Offset(0, -400),
     );
-    await tester.tap(find.text('Add translation'));
+    await tester.ensureVisible(addTranslation);
+    await tester.pumpAndSettle();
+    await tester.tap(addTranslation);
     await tester.pumpAndSettle();
     await tester.dragUntilVisible(
       find.byKey(const ValueKey('target-language-1')),

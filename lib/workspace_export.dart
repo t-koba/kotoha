@@ -1,24 +1,99 @@
 import './workspace.dart';
 
-/// Renders the whole in-memory workspace as one portable plain-text export.
-///
-/// Language labels are escaped so each stays on a single line. Text bodies are
-/// copied verbatim, including Unicode, bidi marks and line breaks.
-String formatWorkspaceExport(TextWorkspaceDraft draft) {
-  String escapeLanguage(String language) => language
-      .replaceAll('\\', '\\\\')
-      .replaceAll('\r', '\\r')
-      .replaceAll('\n', '\\n');
+/// Header of the reversible plain-text workspace format.
+const String workspaceExportHeader = 'Kotoha workspace export v2';
 
-  final blocks = <String>[
-    'Source language: ${escapeLanguage(draft.sourceLanguage)}\n'
-        'Source text:\n'
-        '${draft.sourceText}',
-    for (var index = 0; index < draft.translations.length; index++)
-      'Translation ${index + 1} language: '
-          '${escapeLanguage(draft.translations[index].targetLanguage)}\n'
-          'Translation text:\n'
-          '${draft.translations[index].text}',
+// Every field is escaped onto one line, so no field can mimic a structural
+// line. This is what makes the format reversible: unlike v1, a verbatim text
+// body cannot split into extra fields when parsed.
+String _escape(String value) => value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('\r', '\\r')
+    .replaceAll('\n', '\\n');
+
+String _unescape(String value) {
+  final buffer = StringBuffer();
+  for (var index = 0; index < value.length; index++) {
+    final character = value[index];
+    if (character != '\\') {
+      buffer.write(character);
+      continue;
+    }
+    if (index + 1 >= value.length) {
+      throw const FormatException('Incomplete escape in workspace export.');
+    }
+    final escaped = value[++index];
+    switch (escaped) {
+      case '\\':
+        buffer.write('\\');
+      case 'r':
+        buffer.write('\r');
+      case 'n':
+        buffer.write('\n');
+      default:
+        throw const FormatException('Unknown escape in workspace export.');
+    }
+  }
+  return buffer.toString();
+}
+
+String _field(String line, String prefix) {
+  if (!line.startsWith(prefix)) {
+    throw const FormatException('Unexpected field in workspace export.');
+  }
+  return _unescape(line.substring(prefix.length));
+}
+
+/// Renders the whole in-memory workspace as one portable, reversible document.
+String formatWorkspaceExport(TextWorkspaceDraft draft) {
+  final lines = <String>[
+    workspaceExportHeader,
+    'Source language: ${_escape(draft.sourceLanguage)}',
+    'Source text: ${_escape(draft.sourceText)}',
   ];
-  return 'Kotoha workspace export v1\n\n${blocks.join('\n\n')}\n';
+  for (var index = 0; index < draft.translations.length; index++) {
+    lines
+      ..add(
+        'Translation ${index + 1} language: '
+        '${_escape(draft.translations[index].targetLanguage)}',
+      )
+      ..add('Translation text: ${_escape(draft.translations[index].text)}');
+  }
+  return '${lines.join('\n')}\n';
+}
+
+/// Parses a document produced by [formatWorkspaceExport].
+///
+/// Rejects any other version, shape or escape with a [FormatException] rather
+/// than guessing field boundaries.
+TextWorkspaceDraft parseWorkspaceExport(String text) {
+  if (!text.endsWith('\n')) {
+    throw const FormatException('Workspace export must end with a newline.');
+  }
+  final lines = text.substring(0, text.length - 1).split('\n');
+  if (lines.isEmpty || lines.first != workspaceExportHeader) {
+    throw const FormatException('Unsupported workspace export version.');
+  }
+  final pairs = lines.length - 3;
+  if (pairs < 2 || pairs.isOdd) {
+    throw const FormatException('Incomplete workspace export.');
+  }
+
+  final translations = <ManualTranslationDraft>[];
+  for (var index = 0; index < pairs ~/ 2; index++) {
+    translations.add(
+      ManualTranslationDraft(
+        targetLanguage: _field(
+          lines[3 + 2 * index],
+          'Translation ${index + 1} language: ',
+        ),
+        text: _field(lines[4 + 2 * index], 'Translation text: '),
+      ),
+    );
+  }
+  return TextWorkspaceDraft(
+    sourceLanguage: _field(lines[1], 'Source language: '),
+    sourceText: _field(lines[2], 'Source text: '),
+    translations: translations,
+  );
 }

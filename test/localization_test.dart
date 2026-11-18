@@ -499,6 +499,7 @@ void main() {
           find.byKey(const ValueKey('review-model-terms')),
           find.bySemanticsLabel(sourceText),
           find.byKey(const ValueKey('copy-workspace')),
+          find.byKey(const ValueKey('restore-workspace')),
           find.bySemanticsLabel(targetLanguage),
           find.byTooltip(copyOne),
           find.bySemanticsLabel(translation),
@@ -554,7 +555,7 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[8],
-              'target language after copy workspace',
+              'restore workspace after copy workspace',
             );
             await pressShiftTab();
             expectFocused(
@@ -565,22 +566,33 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[9],
-              'copy action after RTL target language',
+              'target language after restore workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[8],
-              'target language after reverse tab',
+              'restore workspace after reverse tab',
             );
-          } else if (index == 10) {
+          } else if (index == 9) {
             await pressTab();
             expectFocused(
-              firstCardOrder[11],
+              firstCardOrder[10],
+              'copy action after RTL target language',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[9],
+              'target language after reverse tab',
+            );
+          } else if (index == 11) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[12],
               'Add translation after RTL translation text',
             );
             await pressShiftTab();
             expectFocused(
-              firstCardOrder[10],
+              firstCardOrder[11],
               'RTL translation text after reverse tab',
             );
           }
@@ -608,6 +620,7 @@ void main() {
           find.byKey(const ValueKey('review-model-terms')),
           find.bySemanticsLabel(sourceText),
           find.byKey(const ValueKey('copy-workspace')),
+          find.byKey(const ValueKey('restore-workspace')),
           find.bySemanticsLabel(targetLanguage).at(0),
           find.byTooltip(copyOne),
           find.byTooltip(removeOne),
