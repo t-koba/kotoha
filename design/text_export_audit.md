@@ -6,6 +6,14 @@ On macOS and Windows, the translation editor requests a save location through th
 
 The real-filesystem failure-injection test forces a partial staging write, then checks that the old destination bytes remain and staging is removed. A separate success test checks the exact UTF-8 bytes and cleanup. The platform CI results below show both tests executing on macOS and Windows.
 
+## Restore boundary of the v1 format
+
+The v1 workspace export is a presentation format, not a reversible serialization. Language labels are escaped, but text bodies are copied verbatim, so a body can contain exactly the lines the format uses as block headers. A controlled reproduction (experiment `8e73a3c20fb6463ebf482443b263b78b`) produced byte-identical output from two different drafts: one translation whose text is `hello\n\nTranslation 2 language: fr\nTranslation text:\nbonjour`, and two translations (`en` / `hello`, `fr` / `bonjour`). Both serialize to exactly `Kotoha workspace export v1\n\nSource language: ja\nSource text:\noriginal\n\nTranslation 1 language: en\nTranslation text:\nhello\n\nTranslation 2 language: fr\nTranslation text:\nbonjour\n`.
+
+A header-aware parser would return the second draft for both documents, silently moving the trailing lines out of the first draft's translation body. Reformatting the parsed result cannot detect the mistake because it reproduces the input bytes exactly. No parser can therefore recover the original field boundaries for every valid v1 export, and a restore action built on this format could corrupt user text without warning. No restore action is implemented.
+
+A safe restore needs a representation that delimits bodies (a new export version with escaped or length-prefixed bodies) or the existing versioned JSON draft envelope with its own acquisition and consent path. Either is a separate decision; this assessment added no dependency, storage write, UI action or parser.
+
 ## Native overwrite consent
 
 The lock pins `file_selector_windows` 0.9.3+6 (archive SHA-256 `fbefc5fb92c6d3cbe8d284a2cd971b593bb07d2cd6da8557b81a862250b4acec`) and `file_selector_macos` 0.9.5+2 (archive SHA-256 `d785431f1910aac8a50e5c492cae912320158030a88703c67b9ef7f1f96fd7ba`). Pub metadata reports those same archive hashes. Their upstream tags resolve to Windows commit `9854cd5607da4001f2dd3cbdcd6903202d28958c` and macOS commit `f2c6798b45a7ae936feb6798fe45cb51f832dc18`; each tag's `pubspec.yaml` declares the locked version. Inspected source hashes: Windows plugin `17e0345a6c0a508986d7d2100ecd04880339b40459c46bb1c14370cbce4b2d3e`, Windows option controller `b35502bb981c2e19b201c2c0bd7202dc25d0b255ac5fef66fec4b80da63e4d4e`, and macOS Swift plugin `2ce6820e865f645c7823c82091d1df2a3a2f36662add35fd75d509b9a5bcc24d`. The locked archive bytes were not independently compared with extracted tag contents, so archive-to-tag byte identity remains unverified.
