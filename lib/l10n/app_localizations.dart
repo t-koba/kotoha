@@ -284,6 +284,30 @@ abstract class AppLocalizations {
   /// **'訳文を書き出しました'**
   String get exportedTranslationNotice;
 
+  /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を書き出す'**
+  String get exportWorkspace;
+
+  /// 作業内容全体の書き出しで一つのファイルに保存し、作業内容自体は保存しない旨の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出しでは、原文とすべての訳文を選んだ一つのファイルに保存します。作業内容は一時的なままです。'**
+  String get exportWorkspaceNotice;
+
+  /// テキストがない状態で作業内容全体の書き出しを求められたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'書き出す原文または訳文を入力してください。'**
+  String get emptyWorkspaceExportNotice;
+
+  /// 作業内容全体の書き出しが完了したことを伝える案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を書き出しました。'**
+  String get exportedWorkspaceNotice;
+
   /// No description provided for @exportFileButton.
   ///
   /// In ja, this message translates to:

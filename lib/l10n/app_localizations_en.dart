@@ -118,6 +118,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportedTranslationNotice => 'Translation exported.';
 
   @override
+  String get exportWorkspace => 'Export workspace';
+
+  @override
+  String get exportWorkspaceNotice =>
+      'Export writes the source and all translations to one file you choose; the workspace stays temporary.';
+
+  @override
+  String get emptyWorkspaceExportNotice =>
+      'Enter source text or a translation to export.';
+
+  @override
+  String get exportedWorkspaceNotice => 'Workspace exported.';
+
+  @override
   String get exportFileButton => 'Export';
 
   @override

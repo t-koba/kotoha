@@ -67,6 +67,22 @@
   "emptyTranslationExportNotice": "書き出す訳文を入力してください",
   "exportFailureNotice": "訳文を書き出せませんでした",
   "exportedTranslationNotice": "訳文を書き出しました",
+  "exportWorkspace": "作業内容を書き出す",
+  "@exportWorkspace": {
+    "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"
+  },
+  "exportWorkspaceNotice": "書き出しでは、原文とすべての訳文を選んだ一つのファイルに保存します。作業内容は一時的なままです。",
+  "@exportWorkspaceNotice": {
+    "description": "作業内容全体の書き出しで一つのファイルに保存し、作業内容自体は保存しない旨の案内。"
+  },
+  "emptyWorkspaceExportNotice": "書き出す原文または訳文を入力してください。",
+  "@emptyWorkspaceExportNotice": {
+    "description": "テキストがない状態で作業内容全体の書き出しを求められたときの案内。"
+  },
+  "exportedWorkspaceNotice": "作業内容を書き出しました。",
+  "@exportedWorkspaceNotice": {
+    "description": "作業内容全体の書き出しが完了したことを伝える案内。"
+  },
   "exportFileButton": "書き出す",
   "licenses": "ライセンス",
   "uiLanguage": "表示言語",

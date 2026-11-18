@@ -113,6 +113,19 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exportedTranslationNotice => '訳文を書き出しました';
 
   @override
+  String get exportWorkspace => '作業内容を書き出す';
+
+  @override
+  String get exportWorkspaceNotice =>
+      '書き出しでは、原文とすべての訳文を選んだ一つのファイルに保存します。作業内容は一時的なままです。';
+
+  @override
+  String get emptyWorkspaceExportNotice => '書き出す原文または訳文を入力してください。';
+
+  @override
+  String get exportedWorkspaceNotice => '作業内容を書き出しました。';
+
+  @override
   String get exportFileButton => '書き出す';
 
   @override

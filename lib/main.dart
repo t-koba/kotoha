@@ -12,6 +12,8 @@ import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
 import 'text_document_exporter.dart';
 import 'text_document_picker.dart';
+import 'workspace.dart';
+import 'workspace_export.dart';
 import 'model_terms_import.dart';
 import 'model_package_android.dart';
 
@@ -399,6 +401,53 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     ).showSnackBar(SnackBar(content: Text(strings.exportedTranslationNotice)));
   }
 
+  Future<void> _exportWorkspace() async {
+    final strings = AppLocalizations.of(context)!;
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: _sourceLanguage.text,
+      sourceText: _sourceText.text,
+      translations: [
+        for (final fields in _translations)
+          ManualTranslationDraft(
+            targetLanguage: fields.language.text,
+            text: fields.text.text,
+          ),
+      ],
+    );
+    if (draft.sourceText.isEmpty &&
+        draft.translations.every((translation) => translation.text.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.emptyWorkspaceExportNotice)),
+      );
+      return;
+    }
+
+    try {
+      final location = await FileSelectorPlatform.instance.getSaveLocation(
+        acceptedTypeGroups: const [
+          XTypeGroup(
+            extensions: ['txt'],
+            uniformTypeIdentifiers: ['public.utf8-plain-text'],
+          ),
+        ],
+        options: SaveDialogOptions(
+          suggestedName: 'workspace.txt',
+          confirmButtonText: strings.exportFileButton,
+        ),
+      );
+      if (!mounted || location == null) return;
+      await widget.exportText(location.path, formatWorkspaceExport(draft));
+    } on Exception {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(strings.exportFailureNotice)));
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(strings.exportedWorkspaceNotice)));
+  }
+
   Future<void> _removeTranslation(_TranslationFields fields) async {
     // A rendered Remove button keeps the card it was built for. A stale
     // callback (invoked twice before a rebuild) must be a no-op before any
@@ -615,6 +664,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                                   TargetPlatform.windows)) ...[
                         const SizedBox(height: 8),
                         Text(strings.exportTranslationNotice),
+                        const SizedBox(height: 8),
+                        Text(strings.exportWorkspaceNotice),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('export-workspace'),
+                            onPressed: _exportWorkspace,
+                            icon: const Icon(Icons.file_download_outlined),
+                            label: Text(strings.exportWorkspace),
+                          ),
+                        ),
                       ],
                       const SizedBox(height: 12),
                       _translationCard(0),

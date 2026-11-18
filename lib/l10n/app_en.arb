@@ -67,6 +67,22 @@
   "emptyTranslationExportNotice": "Enter a translation to export.",
   "exportFailureNotice": "Could not export the translation.",
   "exportedTranslationNotice": "Translation exported.",
+  "exportWorkspace": "Export workspace",
+  "@exportWorkspace": {
+    "description": "Label for exporting the whole text workspace to one file."
+  },
+  "exportWorkspaceNotice": "Export writes the source and all translations to one file you choose; the workspace stays temporary.",
+  "@exportWorkspaceNotice": {
+    "description": "Notice explaining that whole-workspace export writes one chosen file and does not save the workspace."
+  },
+  "emptyWorkspaceExportNotice": "Enter source text or a translation to export.",
+  "@emptyWorkspaceExportNotice": {
+    "description": "Notice shown when whole-workspace export is requested with no text."
+  },
+  "exportedWorkspaceNotice": "Workspace exported.",
+  "@exportedWorkspaceNotice": {
+    "description": "Notice confirming a whole-workspace export finished."
+  },
   "exportFileButton": "Export",
   "licenses": "Licenses",
   "uiLanguage": "Interface language",
