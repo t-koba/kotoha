@@ -118,6 +118,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportedTranslationNotice => 'Translation exported.';
 
   @override
+  String get workspaceExportFailureNotice => 'Could not export the workspace.';
+
+  @override
   String get exportWorkspace => 'Export workspace';
 
   @override

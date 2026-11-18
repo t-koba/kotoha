@@ -374,31 +374,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       return;
     }
 
-    try {
-      final location = await FileSelectorPlatform.instance.getSaveLocation(
-        acceptedTypeGroups: const [
-          XTypeGroup(
-            extensions: ['txt'],
-            uniformTypeIdentifiers: ['public.utf8-plain-text'],
-          ),
-        ],
-        options: SaveDialogOptions(
-          suggestedName: 'translation.txt',
-          confirmButtonText: strings.exportFileButton,
-        ),
-      );
-      if (!mounted || location == null) return;
-      await widget.exportText(location.path, text);
-    } on Exception {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(strings.exportFailureNotice)));
-      return;
-    }
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(strings.exportedTranslationNotice)));
+    await _exportToFile(
+      content: text,
+      suggestedName: 'translation.txt',
+      successNotice: strings.exportedTranslationNotice,
+      failureNotice: strings.exportFailureNotice,
+    );
   }
 
   Future<void> _exportWorkspace() async {
@@ -422,6 +403,22 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       return;
     }
 
+    await _exportToFile(
+      content: formatWorkspaceExport(draft),
+      suggestedName: 'workspace.txt',
+      successNotice: strings.exportedWorkspaceNotice,
+      failureNotice: strings.workspaceExportFailureNotice,
+    );
+  }
+
+  // One owner for the save-location, write and notice contract shared by the
+  // single-translation and whole-workspace exports.
+  Future<void> _exportToFile({
+    required String content,
+    required String suggestedName,
+    required String successNotice,
+    required String failureNotice,
+  }) async {
     try {
       final location = await FileSelectorPlatform.instance.getSaveLocation(
         acceptedTypeGroups: const [
@@ -431,21 +428,21 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           ),
         ],
         options: SaveDialogOptions(
-          suggestedName: 'workspace.txt',
-          confirmButtonText: strings.exportFileButton,
+          suggestedName: suggestedName,
+          confirmButtonText: AppLocalizations.of(context)!.exportFileButton,
         ),
       );
       if (!mounted || location == null) return;
-      await widget.exportText(location.path, formatWorkspaceExport(draft));
+      await widget.exportText(location.path, content);
     } on Exception {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(strings.exportFailureNotice)));
+          .showSnackBar(SnackBar(content: Text(failureNotice)));
       return;
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(strings.exportedWorkspaceNotice)));
+        .showSnackBar(SnackBar(content: Text(successNotice)));
   }
 
   Future<void> _removeTranslation(_TranslationFields fields) async {

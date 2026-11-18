@@ -67,6 +67,10 @@
   "emptyTranslationExportNotice": "書き出す訳文を入力してください",
   "exportFailureNotice": "訳文を書き出せませんでした",
   "exportedTranslationNotice": "訳文を書き出しました",
+  "workspaceExportFailureNotice": "作業内容を書き出せませんでした",
+  "@workspaceExportFailureNotice": {
+    "description": "テキスト作業全体を選んだファイルへ書き出せなかったときの案内。"
+  },
   "exportWorkspace": "作業内容を書き出す",
   "@exportWorkspace": {
     "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"

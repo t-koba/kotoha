@@ -113,6 +113,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exportedTranslationNotice => '訳文を書き出しました';
 
   @override
+  String get workspaceExportFailureNotice => '作業内容を書き出せませんでした';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override

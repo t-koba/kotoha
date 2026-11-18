@@ -67,6 +67,10 @@
   "emptyTranslationExportNotice": "Enter a translation to export.",
   "exportFailureNotice": "Could not export the translation.",
   "exportedTranslationNotice": "Translation exported.",
+  "workspaceExportFailureNotice": "Could not export the workspace.",
+  "@workspaceExportFailureNotice": {
+    "description": "Notice shown when writing the whole text workspace to a chosen file fails."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

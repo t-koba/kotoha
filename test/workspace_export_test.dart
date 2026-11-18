@@ -210,7 +210,7 @@ void main() {
       expect(selector.calls, 1);
       expect(writer.writes, isEmpty);
       expect(find.text('Workspace exported.'), findsNothing);
-      expect(find.text('Could not export the translation.'), findsNothing);
+      expect(find.text('Could not export the workspace.'), findsNothing);
       expect(
         tester.widget<TextField>(field('source-text')).controller!.text,
         '原文',
@@ -256,7 +256,7 @@ void main() {
       await tester.tap(exportButton);
       await tester.pump();
 
-      expect(find.text('Could not export the translation.'), findsOneWidget);
+      expect(find.text('Could not export the workspace.'), findsOneWidget);
       expect(writer.writes, hasLength(1));
       expect(
         tester.widget<TextField>(field('source-text')).controller!.text,

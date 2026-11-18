@@ -284,6 +284,12 @@ abstract class AppLocalizations {
   /// **'訳文を書き出しました'**
   String get exportedTranslationNotice;
 
+  /// テキスト作業全体を選んだファイルへ書き出せなかったときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'作業内容を書き出せませんでした'**
+  String get workspaceExportFailureNotice;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:
