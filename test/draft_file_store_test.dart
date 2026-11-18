@@ -22,6 +22,7 @@ class MemoryFileBackend implements DraftFileBackend {
   bool failRead = false;
   bool failNextWriteStagingAfterCreate = false;
   bool failNextWriteStagingGeneric = false;
+  bool failNextRemoveStaging = false;
   int removeStagingCalls = 0;
 
   void seed(String name, Uint8List bytes) {
@@ -62,6 +63,10 @@ class MemoryFileBackend implements DraftFileBackend {
   @override
   Future<void> removeStaging(String name) async {
     removeStagingCalls++;
+    if (failNextRemoveStaging) {
+      failNextRemoveStaging = false;
+      throw StateError('synthetic staging removal failure');
+    }
     _files.remove(name);
   }
 }
@@ -156,4 +161,43 @@ void main() {
     expect(backend.removeStagingCalls, 0);
     expect(await store.load(), orderedEquals(bytesA));
   });
+
+  test('discardPending clears a staging-only pending state', () async {
+    backend.seed(staging, bytesA);
+    await expectLater(store.load(), fails(DraftFileFailure.savePending));
+
+    await store.discardPending();
+    expect(await backend.read(staging), isNull);
+    expect(await store.load(), isNull);
+    await store.save(bytesB);
+    expect(await store.load(), orderedEquals(bytesB));
+  });
+
+  test('discardPending never touches committed bytes and is safe with no '
+      'staging', () async {
+    await store.save(bytesA);
+    await store.discardPending();
+    expect(backend.removeStagingCalls, 1);
+    expect(await store.load(), orderedEquals(bytesA));
+
+    backend.seed(staging, bytesB);
+    await store.discardPending();
+    expect(await backend.read(staging), isNull);
+    expect(await store.load(), orderedEquals(bytesA));
+  });
+
+  test(
+    'discardPending reports a backend removal failure and stays wedged',
+    () async {
+      backend.seed(staging, bytesA);
+      backend.failNextRemoveStaging = true;
+
+      await expectLater(
+        store.discardPending(),
+        fails(DraftFileFailure.discard),
+      );
+      expect(await backend.read(staging), orderedEquals(bytesA));
+      await expectLater(store.load(), fails(DraftFileFailure.savePending));
+    },
+  );
 }

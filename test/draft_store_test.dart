@@ -172,4 +172,25 @@ void main() {
   test('load before any save returns null', () async {
     expect(await build().load(), isNull);
   });
+
+  test(
+    'discardPending recovers a pending-only store for a fresh round-trip',
+    () async {
+      backend.seed('$name.pending', Uint8List.fromList([1, 2, 3]));
+      final store = build();
+      await expectLater(store.load(), throwsA(isA<DraftFileStoreException>()));
+
+      await store.discardPending();
+      expect(await build().load(), isNull);
+
+      await store.save(sample());
+      final reopened = await build().load();
+      expect(reopened!.sourceLanguage, 'ja');
+      expect(reopened.sourceText, '月がきれいです。🌙');
+      expect(reopened.translations.map((entry) => entry.text), [
+        'The moon is lovely.',
+        'La lune est belle.',
+      ]);
+    },
+  );
 }

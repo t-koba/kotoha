@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-enum DraftFileFailure { read, stage, savePending, commit }
+enum DraftFileFailure { read, stage, savePending, commit, discard }
 
 /// Deliberately excludes paths, native messages, and key or content bytes.
 class DraftFileStoreException implements Exception {
@@ -61,6 +61,18 @@ class DraftFileStore {
       throw const DraftFileStoreException(DraftFileFailure.read);
     }
     throw const DraftFileStoreException(DraftFileFailure.savePending);
+  }
+
+  /// Explicitly removes a pending staging file so a store wedged by an
+  /// interrupted save can be reopened or saved again. Never touches committed
+  /// bytes. The caller must decide the pending bytes are not worth recovering;
+  /// [load] never discards them on its own.
+  Future<void> discardPending() async {
+    try {
+      await _backend.removeStaging(_stagingName);
+    } catch (_) {
+      throw const DraftFileStoreException(DraftFileFailure.discard);
+    }
   }
 
   Future<void> save(Uint8List envelope) async {

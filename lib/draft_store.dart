@@ -28,6 +28,11 @@ class DraftStore {
     await fileStore.save(sealed);
   }
 
+  /// Explicitly clears an interrupted pending save so this store can be
+  /// reopened or saved again. Does not load, authenticate or delete committed
+  /// data; the caller decides the pending bytes are not worth recovering.
+  Future<void> discardPending() => fileStore.discardPending();
+
   /// Returns null when nothing has been saved. Authentication, file and format
   /// failures propagate to the caller as the typed exceptions of the layers.
   Future<TextWorkspaceDraft?> load() async {
