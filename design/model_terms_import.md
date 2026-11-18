@@ -16,8 +16,7 @@ rejected `content:` result is not retained or read. Synthetic instrumentation
 verifies that release/reselection stop further plugin reads and that no global
 revoke call is made; it does not exercise live DocumentsUI/provider grant
 behavior. Source: Android 15
-[`Context.java`](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-15.0.0_r1/core/java/android/content/Context.java#6830),
-retrieved as `mizu_fetch/44512bde38c85844078ab052432d660ec9584b0614bd20be94e747b7694412d1`.
+[`Context.java`](https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-15.0.0_r1/core/java/android/content/Context.java#6830).
 
 It reads the
 package-root `model_manifest.json`, then only terms files declared in the

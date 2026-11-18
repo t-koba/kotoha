@@ -1,44 +1,34 @@
 # Memory-only plain-text and Markdown import
 
 Kotoha implements user-triggered import on macOS, Windows, Android and iOS.
-The hosted iOS simulator run `43711356595` on published SHA
-`a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` (publication
-`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463`) passed
-4 RunnerTests and 5 UI tests in job `132803707904`
-(`vcs-read/44b7b02603fa4d36b49492be07d60fef`). `Cancel` was found and tapped
-twice in `testImportChannelPresentsSystemPickerAndCancellationKeepsDraft`; this
-was a non-reproduction of the original timeout in run `128353947337` on SHA
-`4d3256d260b32a876a4a5ff687698a48d2b0e312`
-(`vcs-read/0441c8bc5ea842e3b8c59b1e10090f10`), whose failure hierarchy and
-`.xcresult` remain unavailable. A later exact run `43718257468` on published SHA
-`548c92ba16fbd85c446e17059fc1fa093a87d4a0` (publication
-`204b80510c52bd54563b0c3b388c1bd768eff8b5efc0bad6f1b1fbc864e0ecb9`) passed
-Android job `132824669885` with 20 connected instrumentation tests, but iOS job
-`132824669928` failed (`vcs-read/8418ecddad54472c9dd7f94ea059baae`). The same iOS picker
-test tapped `Cancel` after two Import requests; afterward the existing
-`source-text` lookup did not resolve before the test's 2-minute execution
-allowance expired. The CI action then timed out after 15 minutes; the job log
-(`vcs-read/b5ba005dad3f4918919dcb70c3c41be9`) records no accessibility hierarchy
-contents, and the exact-SHA artifact listing (`vcs-read/5b3d693669854fc6a267ebdaf3126ad3`)
-contains the job log but no `.xcresult`. Treat this failure as a recurrence,
-not a pass or explanation of the original.
-The separate macOS and Linux jobs also failed on these aggregate runs, and both
-failed again in run `43723433412`; mobile results do not make either aggregate
-run green.
+The hosted iOS simulator check on SHA
+`a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` passed 4 RunnerTests and 5 UI tests.
+`Cancel` was found and tapped twice in
+`testImportChannelPresentsSystemPickerAndCancellationKeepsDraft`; this was a
+non-reproduction of the original timeout on SHA
+`4d3256d260b32a876a4a5ff687698a48d2b0e312`, whose failure hierarchy and `.xcresult`
+remain unavailable. On a later SHA, `548c92ba16fbd85c446e17059fc1fa093a87d4a0`,
+Android passed 20 connected instrumentation tests, but the iOS check failed.
+The same iOS picker test tapped `Cancel` after two Import requests; afterward
+the existing `source-text` lookup did not resolve before the test's 2-minute
+execution allowance expired. The CI action then timed out after 15 minutes;
+the job log records no accessibility hierarchy contents, and the exact-SHA
+artifact listing contains the job log but no `.xcresult`. This failure is a
+recurrence, not a pass or an explanation of the original. The separate macOS
+and Linux checks also failed on those aggregate runs and failed again on SHA
+`78d0bc90d5124dbf3413597114447179cc06ac62`; the mobile results do not make the
+aggregate workflows green.
 
-A subsequent exact run `43723433412`, job `132840442366`, on SHA
-`78d0bc90d5124dbf3413597114447179cc06ac62` passed all five accessibility UI
-tests (`vcs-read/cd79642718bc43e98a05ad215bb2996a`). The picker test found and
-tapped Cancel twice and the direct `source-text` lookup succeeded after each
-cancellation; that test passed in 22.777 seconds, with all five UI tests passing
-in 148.153 seconds. This is another non-reproduction and does not explain the
-previous two-minute timeout. The current source change conditionally calls
+On SHA `78d0bc90d5124dbf3413597114447179cc06ac62`, the iOS simulator check
+passed all five accessibility UI tests. The picker test found and tapped Cancel
+twice and the direct `source-text` lookup succeeded after each cancellation;
+that test passed in 22.777 seconds, with all five UI tests passing in 148.153
+seconds. This is another non-reproduction and does not explain the previous
+two-minute timeout. The current source change conditionally calls
 `reveal("source-text")` only when the node is absent after cancellation
-(`d8ddc54`), preserving the exact draft assertion and deadline. The exact iOS
-simulator check on publication `7acfc88d12cb011b1171314a30b5b2363473e7a6f02c0828b67d5992fe6a9b02`
-/ SHA `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3`, run `43725734097`, job
-`132847565803`, passed 4 RunnerTests and all 5 accessibility UI tests
-(`vcs-read/f5b004cc0e9543e7bcba04908f9a7a14`). The picker test tapped Cancel
+(`d8ddc54`), preserving the exact draft assertion and deadline. The iOS
+simulator check on SHA `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3` passed 4
+RunnerTests and all 5 accessibility UI tests. The picker test tapped Cancel
 after both presentations and its post-cancellation `source-text` queries
 succeeded; the log does not establish whether the conditional reveal branch ran.
 This is another non-reproduction, not an explanation for the historical timeout.
@@ -73,24 +63,21 @@ invokes scene callbacks and checks that an opaque cover is added/removed while
 the content remains attached; it does not background the app or capture its
 system snapshot.
 
-On published snapshot `b9325ac86272cd499cfa311da6a567e819fe7845e09517e0e35035be0b17fa3e`
-(SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa`), exact CI run `43842700807`
-passed all 22 Android API 35 emulator instrumentation tests (job `133215889643`,
-`vcs-read/e2a3816439af4c2f8a94dcd34e4a33b0`) on that revision only; a later run
-on byte-identical app and test source failed two Delete assertions (see the
-native regression discussion below), so this pass is not a durable closure. It
-also passed all 4 iOS Runner tests plus 5
-iOS Simulator UI tests (job `133215889632`, `vcs-read/d50f4fab43a843b4aaf2b092fc065c77`).
-The Flutter format, analysis, and widget-test job also passed (`vcs-read/417ec02ea10246c49783fb04620b57f8`). These results verify the named emulator,
-simulator, and widget-test interactions on that revision only. Android documents `FLAG_SECURE` as preventing secure-window content from
-appearing in screenshots and non-secure displays; Apple's QA1838 advises
-obscuring sensitive content before suspension to affect the saved app snapshot.
+On SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa`, CI passed all 22 Android
+API 35 emulator instrumentation tests; a later check on byte-identical app and
+test source failed two Delete assertions (described in the native regression
+discussion below), so this pass is not a durable closure. CI also passed all 4
+iOS Runner tests plus 5 iOS Simulator UI tests. The Flutter format, analysis,
+and widget-test check also passed. These results verify the named emulator,
+simulator, and widget-test interactions on that revision only. Android
+documents `FLAG_SECURE` as preventing secure-window content from appearing in
+screenshots and non-secure displays; Apple's QA1838 advises obscuring sensitive
+content before suspension to affect the saved app snapshot.
 These are platform API documentation and guidance, not observations of Kotoha's
 OS-generated task-switcher thumbnail. No CI path captures such a thumbnail,
 and no physical-device or OEM behavior has been observed, so those behaviors
-remain unverified. See
-`design/kotoha_design.md` [S20]–[S22] for the platform references and release
-acceptance boundary.
+remain unverified. The platform references and release acceptance boundary are
+in `design/kotoha_design.md` [S20]–[S22].
 
 The audited umbrella `file_selector` uses an Android cache copy and iOS
 `asCopy: true`; the app-owned mobile adapter below replaces those paths rather
@@ -118,10 +105,10 @@ directory when the first root arrives. It serializes node labels, hints,
 tooltips, and values. This is an initial snapshot, not a per-edit journal, but
 the inspected path neither redacts text nor offers an opt-out; if the first tree
 arrives after text is present, it can persist editor content. Kotoha has not
-verified that lifecycle ordering. Treat this as an adoption blocker until a
-reviewed change disables the file write without disabling AT-SPI semantics.
-Evidence: CMake feature gates (`fetch/0b8652a95977fcd04e28728741133ca12ebc755f046ac9cdd2f59101f146c766`) and
-exact accessibility tree source (`fetch/6cf2cfba15a4604a7773c9951b5eaa4cf2d5c5321b91b1da6a00aa316530147a`).
+verified that lifecycle ordering. This blocks adoption until a reviewed
+change disables the file write without disabling AT-SPI semantics. The
+evidence comes from the CMake feature gates and the exact accessibility tree
+source.
 
 The upstream workflow has CMake build/CTest jobs on Ubuntu 22.04 for
 `BUILD_ACCESSIBILITY=ON` and `BUILD_ACCESSKIT=ON`; the AccessKit job selects
@@ -137,18 +124,10 @@ verified full license texts/notices for the candidate build and its system
 runtime. Nor have we reproduced the build here, linked a Kotoha bundle,
 exercised text input and screen-reader actions, or established a Kotoha Linux
 CI path. No GTK-free Kotoha build or runtime support is therefore claimed.
-Source evidence: commit/tag (`fetch/9acf96562b48a053af92363964d6d60d73c514c9bd07b6a032d1f92c922d7271`),
-README (`fetch/4f73e95eb0f48e7f1d98f0fb0ed676c6bb4bc6627e7a498bf3e4b49f72847ff2`),
-architecture (`fetch/0f37147b15dc9ef0a6b37704f86a54b9e157a3d6ae415b4464a7fd8c3107c907`),
-`.flutter-version` (`fetch/c9eebb962457ca2236d8d1972376f8ba7abdce7342ef22daeba4b7cfba0a20d3`),
-`LICENSE` (`fetch/8f355051b6bbe0fa649596835abe1c1030345c2468841c6fa5df4e638c61dbcf`),
-CI workflow (`fetch/e90d1c962ac422caf1e23688da294fedea65b0468273f99a8978ca97cdc8a26b`),
-SBOM generator (`fetch/aad6b217e2daf9751a14f75ffe0aa68f11ac4fd64c4596a1756c2c8f8abfe4b7`),
-`.emb` build manifest (`fetch/d99c22e5ef246980c29530e770c27c65f35cf4c44ee26e077307203d6c6e348d`),
-and submodule list (`fetch/18ab6880a998d3fe1ac8fd9d1fa1e8f011ddf04096b6b3e6d45dc1d2e92379d2`).
-Flutter's generic embedder C API and Linux GTK `FlView` are distinct
-(`273690fb58153d725062db635bc7357e20a18da1e26cb9862181b69ebb2a1cef`,
-`aa721ddb2009177bc3f918b7b31c7288f017cf3e929376b87cc957f5b13cef4f`).
+Source evidence: commit/tag, README, architecture, `.flutter-version`,
+`LICENSE`, CI workflow, SBOM generator, `.emb` build manifest, and submodule
+list.
+Flutter's generic embedder C API and Linux GTK `FlView` are distinct.
 
 Kotoha has no Linux picker registered or exposed in the UI. `lib/main.dart`
 shows the import action only on macOS, Windows, Android, and iOS. The picker
@@ -180,12 +159,9 @@ path before any import action is exposed.
 
 The XDG portal candidate below remains unverified and is not enabled. Source
 references: Kotoha `lib/main.dart`, `lib/text_document_picker.dart`, and
-`pubspec.yaml`; candidate architecture (`fetch/0f37147b15dc9ef0a6b37704f86a54b9e157a3d6ae415b4464a7fd8c3107c907`),
-plugin ABI at exact v3.0 commit (`fetch/d7f24b683aef2ad815e1aee8a706ccb23e8d607e2f0fcef5d5c1bbb0195237e5`),
-public host plugin header (`fetch/58aa7945afabd0ee0c21d51bc2bfa1a002f18f339301998ea4679b379bed3dc7`),
-root CMake plugin dispatch (`fetch/2f3df394cd29553a3d95c3fd3cefe0098c647951b12497a733508a9373b0d2ce`),
-`cmake/options.cmake` (`fetch/67049d4213f4c819ae92a1bb80a2d4edc6ed62e9c2a09fc01cc172861209aaf3`),
-and `.emb` build manifest (`fetch/d99c22e5ef246980c29530e770c27c65f35cf4c44ee26e077307203d6c6e348d`).
+`pubspec.yaml`; candidate architecture, plugin ABI at the exact v3.0 commit,
+public host plugin header, root CMake plugin dispatch, `cmake/options.cmake`,
+and `.emb` build manifest.
 
 ### Alternative GTK-free host: Sony eLinux embedder (not adopted)
 
@@ -222,26 +198,15 @@ The companion SDK and plugin repositories, feature-resolved dependency/license
 closure, platform runtime, and compatibility with Kotoha's pinned Flutter 3.47.9
 have not been reviewed or tested. No Kotoha Linux plugin registration,
 read-in-place portal adapter, privacy or accessibility behavior, or supported
-CI path is demonstrated. Keep Linux unscaffolded; compare this candidate with
-the designed Engine + SDL/AccessKit host only after obtaining pinned artifacts,
-complete license/runtime closure, and reproducible integration evidence.
+CI path is demonstrated. Linux remains unscaffolded. A comparison with the
+designed Engine + SDL/AccessKit host requires pinned artifacts, complete
+license/runtime closure, and reproducible integration evidence.
 
-Source evidence: repository commit record (`fetch/051309ebd8c3f99d38d6d605423dc43e695f7636482658a3ca40d979a8ef6b59`),
-README (`fetch/ab8865016d89ecefb9ae9bf3f230ec947f61b2bd4fe6ff476af68b3844194736`),
-exact BSD-3-Clause license (`fetch/69ff4894b1d51fc31050194608f699095837950ab93942a945da719555958e6e`),
-support matrix (`fetch/4e8ae1865a278105efc7569776eff511581deb4582cd3376b9263f45b6148c64`),
-plugin API wiki (`fetch/7898c6750057c6da88a0bcb4c336535966a640d317009ca6c33fe797ffd46d7e`),
-CMake (`fetch/54004f08dd017d99ae937300f3dd48a8912b8cdfcba78033661dcec59e45e0db`),
-and build workflow (`fetch/ec8059f79fdfe7b09be58161b097cca16d889ee472a8c261e01f87bdcce60f9b`).
-Current upstream evidence: `master` commit API (`fetch/a1689677dba38603d5ee5afbd07c7edc03cfa278a1d9c810e8bde6d927387f08`)
-and commit feed (`fetch/031fb13267d956021e4ba2c68c3c92355abaf90f09eedcc7513a7ade1b14bd93`),
-current `master` build workflow (`fetch/271caa0a3ae7e5f22281cbdbfb0d1b2dc0e2cb1507ef68defbeb2f9c47995766`),
-PR #450 state/base/head (`fetch/a932ac3f66fdfc3c188a2aa69ed45d9aba9a3e37ecbff8c18605a146fd2f70ff`),
-proposed client-wrapper headers (`fetch/d2e8f687ec11e6c521918c4b8dd939b5bf14ae75df51d89f3084ff62d7f05118`,
-`fetch/85898143a4fec09cd6794b98a7adede56868b7c3e1fb962cf81e9e947f3332d1`),
-the Actions approval status (`search/3cdedbb06f712296b1b1a94c9f104857c00b4b500b8b483ddd80748f4a8a4c60`),
-and the exact head's check/status APIs (`fetch/8bf2eafcd09997a3bf85fc51e92c4804f2c07fd05a3d46e6216888bc2a283fc7`,
-`fetch/b3c99e05e8ba61aab821d227ed82ff12a5a5fd402db4a2a2d3ee3183aa302401`).
+Source evidence: repository commit record, README, exact BSD-3-Clause license,
+support matrix, plugin API wiki, CMake, and build workflow. Current upstream
+evidence: `master` commit API and commit feed, current `master` build workflow,
+PR #450 state/base/head, proposed client-wrapper headers, Actions approval
+status, and the exact head's check/status APIs.
 
 ## GTK-free Linux portal candidate (not adopted)
 
@@ -253,42 +218,35 @@ optional features. Its `SelectedFiles::uris()` API returns URIs, not file bytes.
 This is only evidence that a GTK-free feature selection may be possible; the
 complete resolved dependency/license closure, GTK-free build/link, and Flutter
 host bridge have not been verified. A bounded local probe found no Cargo
-executable (`experiments/c69b0215c0024aabac474640e132a9b6.json`), so no local
+executable, so no local
 feature-resolved build was possible. The full `ashpd` MIT license was inspected,
 but that does not establish the licenses of its transitive dependencies.
 
 The XDG FileChooser portal has different behavior for host and sandboxed apps.
 Its specification says selected files may be added to the Documents portal and
 that such entries remain accessible across sessions. FileChooser OpenFile
-offers no ephemeral-permission option; see XDG FileChooser search evidence
-`search-abbf315cb6271eb8b0de05cd0394af8f4ce8aaae5062a86a93bb7a9168147cf2`.
+offers no ephemeral-permission option.
 The inspected
 `xdg-desktop-portal` source at commit `e3ca5567a2dbb5b763a383bba5ff1c0437a7e851`
 sets `DOCUMENT_ADD_FLAGS_PERSISTENT` and grants `read` and
 `grant-permissions` (plus optional `write`), not `delete`, when registering a
-selected file (`fetch/85c46777ca08db4548c9cbb7f50dc4c53fd5cd5ff697d1521506292a10bb4d35`,
-SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
-`ashpd` exposes `Documents::delete` as a separate API
-(`fetch/b546771bd6472d409f2b4d2dd9636ba33baf122c68f00d0a4fd58be4d45c8a97`),
+selected file (SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
+`ashpd` exposes `Documents::delete` as a separate API,
 but the FileChooser registration path grants no `delete` permission. That
 alone does not establish that the app must retain its read access. The XDG
 Documents API specification says `RevokePermissions` is available inside the
 sandbox when the app has `grant-permissions` and describes revoking listed
-permissions for an application (`search/16eee028f3c1a576da38435f7ac5da4a3ece6f3282eadb6132ee733108aa6823`).
-`ashpd` 0.14.0 exposes the corresponding method
-(`search/8fb9e29428f55a95b0b7e0b3d2c5de46f70b44586b1b28246a4d6cb2c5b8ad06`),
+permissions for an application.
+`ashpd` 0.14.0 exposes the corresponding method,
 but the method's existence does not establish that an app can revoke its own
 grant. In upstream `xdg-desktop-portal` 1.14.4 and Ubuntu's `nmp-1.14-backport`,
 `portal_revoke_permissions` explicitly rejects a request when the caller's app
 ID equals the target app ID, returning `NotAllowed` even if the caller has
 `grant-permissions`. The source files have identical SHA-256
-`3d08cab5b8e769bdfc467964ce090116beb3602ac2078f6818fb872d4c9d61bf`
-(`fetch/dd6c6aece4644d24a314b6cb23cf1236828a82e5b9701950447cb209fa43e1ae`,
-`fetch/5e777502ae408e61829d1f328c3ba3080254926d293f2e28f12a33b48d0d62fd`).
+`3d08cab5b8e769bdfc467964ce090116beb3602ac2078f6818fb872d4c9d61bf`.
 The XDG FileChooser registration source passes the selected app ID to Documents
 and grants it `read` and `grant-permissions`
-(`fetch/1dd4826998aee0acc527e107847d52b4ebd0ec7cf021d9f66bb724026dac95ac`,
-SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
+(SHA-256 `f5f10316ae0d059c41465d0e32a70e3695d0a32f60d157b950d3b3610edaa7fb`).
 Thus this pinned source predicts that a sandboxed client cannot revoke its own
 permissions on that implementation. This is source evidence, not yet a binding
 of the CI-installed binary to the source or a Kotoha runtime result.
@@ -296,34 +254,24 @@ of the CI-installed binary to the source or a Kotoha runtime result.
 The FileChooser registration path requests a persistent Documents entry.
 `RevokePermissions` is distinct from `Delete`; FileChooser does not grant
 `delete`, and the API's persistent entry is not removed by revoking app
-permissions. Run `43718257468`, job `132824396757`, on SHA
-`548c92ba16fbd85c446e17059fc1fa093a87d4a0` failed at
-`documents-fuse-mount-not-established` before the sandboxed client
-(`vcs-read/f6e6831117974ef79b80036a9d00eac3`). The corrected probe decodes the
+permissions. On SHA `548c92ba16fbd85c446e17059fc1fa093a87d4a0`, the hosted probe
+failed at `documents-fuse-mount-not-established` before the sandboxed client ran. The corrected probe decodes the
 NUL-terminated `ay` path values for `GetMountPoint` and `Info`, seeds the mount
 with a separate temporary entry before the chooser call, and constrains the
 returned URI to `<doc-id>/<fixture-basename>`. It first exercises an other-app
 grant/revoke control, then measures self-revocation, post-close access,
 permissions, and record retention under a synthetic app ID. The selected source
-encodes `Info` paths with `g_variant_new_bytestring`
-(`fetch/dd6c6aece4644d24a314b6cb23cf1236828a82e5b9701950447cb209fa43e1ae`);
+encodes `Info` paths with `g_variant_new_bytestring`;
 upstream Documents tests likewise strip the trailing NUL from path byte arrays
-(`fetch/0bf06ce822543a485417ebda893ad7b6515b567510bfa798249f2ecac6837bd2`,
-SHA-256 `13244c64c2b060e7b6e4804c46f2b2c5d7e096301e12235486c245e72020a0de`).
+(SHA-256 `13244c64c2b060e7b6e4804c46f2b2c5d7e096301e12235486c245e72020a0de`).
 
-A follow-up exact run `43723433412`, job `132840134423`, on publication
-`0e3016390ece2c2b2cb75886de2f49da20b97762b537a9496865ecf01de006c7` / SHA
-`78d0bc90d5124dbf3413597114447179cc06ac62` installed the same Ubuntu 22.04.5
-portal packages and failed as `sandbox-client-failed`
-(`vcs-read/155ff041e30242a0bead61c0dea181b2`,
-`vcs-read/c0db99f147c44961b00ca3214008028a`). Exact run `43725734097`, job
-`132847143007`, on publication `7acfc88d12cb011b1171314a30b5b2363473e7a6f02c0828b67d5992fe6a9b02`
-/ SHA `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3` installed
+The follow-up on SHA `78d0bc90d5124dbf3413597114447179cc06ac62` installed the same
+Ubuntu 22.04.5 portal packages and failed as `sandbox-client-failed`. The probe
+on SHA `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3` installed
 `xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2 and GTK backend 1.14.0-1build1;
 the separate portal-session introspection exposed FileChooser v3 and Documents,
-but the probe again failed only as `sandbox-client-failed`
-(`vcs-read/f82a8366d3a84503b6d1f094dc51778e`). Neither run exposes an
-allowlisted client-stage result or establishes permission, post-close-access,
+but the probe again failed only as `sandbox-client-failed`. Neither run exposes
+an allowlisted client-stage result or establishes permission, post-close-access,
 `Info`, or `List` behavior. The probe forwards only an exact
 lowercase/digit/hyphen failure code bounded to 64 characters; raw child stderr,
 paths, URI, and document contents remain suppressed. A startup sentinel is now
@@ -333,11 +281,9 @@ marker handling, bounded allowlisted codes, rejection of path-like,
 malformed/out-of-window diagnostics, and startup-marker preservation after more
 than 8 KiB of client warnings. The sentinel is searched in the complete captured
 stderr, while failure-stage parsing remains limited to its bounded tail. It is
-wired into CI. Exact hosted run `43733871275`, job `132872070436`, on publication
-`7391cfceaf472162b1780796485c229c1ec94b2b21c1132b600933edd9a631b7` / SHA
-`b4dcae7037afad94b3319ae5bc2a19593f109c34` (`vcs-read/0b94103f7cfc4981bf101d382ce29174`)
-used Ubuntu 22.04.5 x86_64, `xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2, and
-GTK backend 1.14.0-1build1. The probe reported the allowlisted stage
+wired into CI. The hosted probe on SHA
+`b4dcae7037afad94b3319ae5bc2a19593f109c34` used Ubuntu 22.04.5 x86_64,
+`xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2, and GTK backend 1.14.0-1build1. The probe reported the allowlisted stage
 `sandbox-client-launch-failed`. In the probe, this stage means the subprocess
 exited nonzero without the sandboxed client's startup marker; it does not
 identify whether bubblewrap setup or interpreter/import startup failed. The
@@ -347,11 +293,8 @@ revocation, post-close access check, or persistent-state observation occurred.
 Linux import remains disabled pending a runnable client and the supported
 permission lifecycle.
 
-The exact hosted Ubuntu portal probe ran on publication
-`cb32c9a09b06b192c2c1ad00be86b5a070e78dd24e98a2adb39d6d75a4c17463` / SHA
-`a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3` (run `43711356595`, job
-`132803401399`; status `vcs-read/403c391ecd9e4ea4b17bb353b3143731`, log
-`vcs-read/840943a2da454beb9c402ed8fc7ec75f`). It observed Ubuntu 22.04.5
+The hosted Ubuntu portal probe on SHA `a079cda9db05bb5dcac9bb8e90f85dee5c23bcc3`
+observed Ubuntu 22.04.5
 x86_64/amd64, `xdg-desktop-portal` 1.14.4-1ubuntu2~22.04.2,
 `xdg-desktop-portal-gtk` 1.14.0-1build1, `dbus-x11` 1.12.20-2ubuntu4.1, and
 `xvfb` 2:21.1.4-2ubuntu1.7~22.04.16. The default portal exposed
@@ -363,11 +306,7 @@ was mounted or why `rm` returned `EISDIR`; no chooser call, returned URI,
 application/document identity mapping, revocation, post-close access, or
 persistent-state observation occurred. The workflow now detects and unmounts
 that path when it is a mountpoint before removing the private runtime directory.
-The exact rerun on publication
-`1e3108a6212c9bbfbd68e82622bb8bdeaa5749e3cfcf7c5a263da2307a71eac7` / SHA
-`a3999abe6a35e37f481f31fc79f4d7b35a9c2c10` passed in CI run `43712787300`,
-job `132807802464` (status `vcs-read/b3f1c1c8fbe442fea7536a19a58d500f`, log
-`vcs-read/d93e897763c240bdb5ef686bfea096b5`). The log again shows the default
+The rerun on SHA `a3999abe6a35e37f481f31fc79f4d7b35a9c2c10` passed in CI. The log again shows the default
 FileChooser v3 and GTK backend FileChooser interfaces; the successful job also
 shows that its mount-aware EXIT cleanup completed. The recorded output does not
 say whether `doc` was mounted or actually needed unmounting. No chooser request,
@@ -376,11 +315,8 @@ post-close access check, or persistent-state observation occurred. This remains
 interface-availability and cleanup evidence only, not portal behavior or
 Kotoha support. Linux import remains disabled.
 
-The latest exact hosted Ubuntu portal probe ran on publication
-`fed2f06ccddd48bb109568d94273579c3244261e931aaa418eb2efd280379a88` / SHA
-`fc81137061efe5b017c0fd049b43fd4ac2cad740` (run `43770467485`, Linux job
-`132985012361`; status `vcs-read/b10100ddaf8249f88f53531d559fc1db`, exact log
-`vcs-read/7532c265f4ff4df8a0dd84495547c3d6`). The runner was Ubuntu 22.04.5
+The hosted Ubuntu portal probe on SHA `fc81137061efe5b017c0fd049b43fd4ac2cad740`
+ran on Ubuntu 22.04.5
 x86_64/amd64 with bubblewrap `0.6.1-1ubuntu0.3`, Documents portal
 `1.14.4-1ubuntu2~22.04.2`, and GTK backend `1.14.0-1build1`. Both the desktop
 and GTK backend FileChooser interfaces introspected, but sandbox setup then
@@ -390,8 +326,7 @@ access check, or persistent-state observation occurred; Linux import remains
 disabled.
 
 The earlier failure stage was the app-info data-bind to `/.flatpak-info`.
-Pinned bubblewrap v0.6.1 source (`mizu_fetch/6a940d5e2307f827b933f9b2bf5b7a9f059d2e2ff682dd65c437f1949ba4deaa`,
-SHA-256 `aaa4effa46873a7c7b6e6e9e8e7cdb91153ecd2c028dbeadd043166efdb9ea0c`)
+Pinned bubblewrap v0.6.1 source (SHA-256 `aaa4effa46873a7c7b6e6e9e8e7cdb91153ecd2c028dbeadd043166efdb9ea0c`)
 shows that `--ro-bind-data` calls `ensure_file(dest)` before mounting and fails
 if the destination cannot be created (lines 1418-1426). The original probe had
 already made host `/` read-only, so that hosted failure occurred before the
@@ -400,11 +335,9 @@ client or any FileChooser request.
 A later correction kept a writable bind of host `/` during setup. That design
 was also invalid: a bind mount does not grant an unprivileged runner write
 permission to root-owned host `/`, and a sufficiently privileged invocation
-could leave `/.flatpak-info` on the host. The reviewer reproduced the permission
-boundary in a user namespace (`experiments/ffde3def9beb416fa5dc6665efd0ef44.json`,
-`experiments/332016bf103648d5a2431584ec0d741f.json`; reviewer finding
-`4586518544b44b009bd01353f0a1fd82`). The current implementation instead starts
-with a private `--tmpfs /`, binds only `/usr`, `/lib`, `/lib64`, and `/etc`
+could leave `/.flatpak-info` on the host. The permission boundary was
+reproduced in a user namespace. The current implementation instead starts with
+a private `--tmpfs /`, binds only `/usr`, `/lib`, `/lib64`, and `/etc`
 read-only, keeps `/run`, `/tmp`, and `/home` private, and exposes only the
 probe's runtime directory and Documents mountpoint. App info and the script are
 bound inside that private root; the base root is remounted read-only before the
@@ -424,14 +357,11 @@ the latest preflight and routed-probe attempt is recorded below; passing the
 preflight did not establish FileChooser backend routing. Linux import remains
 disabled.
 
-The latest exact Ubuntu portal run was `43849647865`, job `133238607092`, on
-publication `c8886d917709f0a85b0225c0645b57d8bdad980329d08433e8f2440f791fc474`
-/ SHA `223fa9d4ac397668d2015dfe87b36023fbcc6b04` (status
-`vcs-read/0a5a7f8b38fc41949ca8fcef9248016e`, exact log
-`vcs-read/4179608fa8e9427da631f09e7325fc73`). On Ubuntu 22.04.5 x86_64 with
-bubblewrap `0.6.1-1ubuntu0.3`, Documents portal `1.14.4-1ubuntu2~22.04.2`,
-and GTK backend `1.14.0-1build1`, all 22 probe unit tests, the real-bwrap
-preflight, and GNOME-session portal/backend FileChooser introspection passed.
+The Ubuntu portal probe on SHA `223fa9d4ac397668d2015dfe87b36023fbcc6b04` ran on
+Ubuntu 22.04.5 x86_64 with bubblewrap `0.6.1-1ubuntu0.3`, Documents portal
+`1.14.4-1ubuntu2~22.04.2`, and GTK backend `1.14.0-1build1`. All 22 probe unit
+tests, the real-bwrap preflight, and GNOME-session portal/backend FileChooser
+introspection passed.
 In the separate custom-desktop session, the client then failed with
 `sandbox-client-openfile-unknown-method-backend-not-reached`: its `OpenFile`
 call returned unknown-method and the test backend readiness report was absent.
@@ -442,8 +372,7 @@ The runtime had the corrected lowercase `XDG_CURRENT_DESKTOP=kotoha_portal_test`
 and a `kotoha-test.portal` descriptor under `XDG_DATA_HOME`, but the test backend
 was still not reached. The pinned Ubuntu package is `xdg-desktop-portal`
 `1.14.4-1ubuntu2~22.04.2`. Review of the exact tagged source
-`src/portal-impl.c` (fetch
-`1783795f9a8b512d50e2d56386673a773fd3fafc9156d8a1255b8ba2568c6411`, SHA-256
+`src/portal-impl.c` (SHA-256
 `20701b5df21ac89520ee6b158071e2d74a882f8766386413dd4d91f3b776688f`) shows that
 this version selects backends in `find_portal_implementation()` by matching a
 descriptor's `UseIn` against `XDG_CURRENT_DESKTOP` and its `Interfaces` list, and
@@ -451,9 +380,8 @@ discovers descriptors in `load_installed_portals()` from
 `XDG_DESKTOP_PORTAL_DIR` (otherwise the build-time `DATADIR/xdg-desktop-portal/portals`).
 It reads neither `XDG_DATA_HOME` nor any `portals.conf`: no such parser exists in
 the 1.14.4 frontend. A first correction (`b931276`) wrote a desktop-specific
-`portals.conf`, but that mechanism is only documented for newer releases
-(search evidence `search/2572269d584f98665b75d8aeedf2eae196d5e60120698e86319cbea13f83ab9d`
-describes current upstream); it is inert on the pinned version and was removed.
+`portals.conf`, but the current upstream material documents that mechanism
+only for newer releases. It is inert on the pinned version and was removed.
 
 The code now binds `XDG_DESKTOP_PORTAL_DIR` to the probe's `XDG_DATA_HOME`
 portal-descriptor directory and fails closed unless that variable exactly
@@ -461,12 +389,8 @@ matches the directory where the probe writes the descriptor. Four focused tests
 assert the descriptor's exact `DBusName`/`Interfaces`/`UseIn` fields and the
 missing/mismatched/matching directory cases.
 
-The exact hosted run for that corrected binding was `43859475080`, job
-`133272196668`, on publication
-`fb71c5885fdd5758913e779955b8170d29ae7b8e017c0abb925e99e2a8faa846` / SHA
-`323e750da2e07c0bb696276f4f558fd24a5ffce2` (status
-`vcs-read/31d73aec557a43089b34f196a545d2dd`, exact log
-`vcs-read/a1b5e8e2b0ca40868ce012b35bc141ff`). On Ubuntu 22.04.5 x86_64 with the
+The hosted probe with that corrected binding ran on SHA
+`323e750da2e07c0bb696276f4f558fd24a5ffce2`. On Ubuntu 22.04.5 x86_64 with the
 same pinned portal/GTK/bubblewrap versions, `XDG_DESKTOP_PORTAL_DIR` and the
 lowercase `XDG_CURRENT_DESKTOP=kotoha_portal_test` were exported as intended,
 all 26 probe unit tests passed, the real-bwrap preflight and GNOME-session
@@ -484,12 +408,8 @@ probe produced no sanitized result" and the check failed. No sanitized field
 values were surfaced by that run. The workflow keys are now aligned and a
 regression test asserts the required set names only keys the probe emits.
 
-The exact rerun is run `43862016131`, job `133281652744`, on publication
-`0bf71dbbb89cca6b1d95f921307201febd0257135bd9e99d9f0853ff8f02d6f4` / SHA
-`ae27293dc65dfcb390580004156118cc9f04738d` (status
-`vcs-read/aa0376855f16443ba0fadb98092dc771`, exact log
-`vcs-read/f81339bfce3f4ada9f84520ef183e052`). On Ubuntu 22.04.5 x86_64/amd64
-with `xdg-desktop-portal` `1.14.4-1ubuntu2~22.04.2`, GTK backend
+The rerun was on SHA `ae27293dc65dfcb390580004156118cc9f04738d`. On Ubuntu
+22.04.5 x86_64/amd64 with `xdg-desktop-portal` `1.14.4-1ubuntu2~22.04.2`, GTK backend
 `1.14.0-1build1`, bubblewrap `0.6.1-1ubuntu0.3`, and `xvfb`
 `2:21.1.4-2ubuntu1.7~22.04.16`, the 27 focused probe unit tests passed, the
 real-bwrap preflight and GNOME-session portal/backend FileChooser introspection
@@ -524,23 +444,19 @@ version, a Kotoha Linux host/packaging target, or physical-device behavior.
 Linux import remains disabled.
 
 For a host app, the portal source returns the original URI without registering
-a Documents entry (`fetch/fe26d14e6343f3a082b87a702d4660e52bac909f01a47aee86a2cc827760b711`,
-SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),
+a Documents entry (SHA-256 `a2e3a1251dfbc22dedffce3e3d5112ae0f28004615893410cc3f658a6539c5ca`),
 but Kotoha has no Linux host or packaging target to validate that mode.
 
-Linux import remains unsupported. Reconsider only after an explicit product
-Linux target adopts a pinned GTK-free host, its complete feature-resolved
-license/runtime closure and reproducible Kotoha build/link/CI path are verified,
-and a supported import adapter demonstrates its data-flow and permission
-lifecycle end to end. The `ivi-homescreen` source and upstream build recipe are
-candidates for that assessment, not approval or evidence of Kotoha support.
-Evidence for the candidate client manifest/license is in fetch receipts
-`21e23ad1cc93bca164f2c1d05eb31ba282f4fe6d348a54c0725ed20a7d79947e` and
-`7c3d54f818e5e021d4dee59d8897a4e6e4d4c91aeda61ed40bdf066fd8359b13`
-(SHA-256 `ae26bc7b1bc91fb8648f6a298decbb1a77090a56c9d04e2c23b8365e5f54acb5`);
-the
-`SelectedFiles::uris()` API is documented in search receipt
-`38caafccf3bfe978ddeff875b3c0553feaa417c95f8b8ef83ebb2102bfb2ae93`.
+Linux import remains unsupported. Reconsideration requires an explicit product
+Linux target that adopts a pinned GTK-free host, verification of its complete
+feature-resolved license/runtime closure and reproducible Kotoha build/link/CI
+path, and a supported import adapter that demonstrates its data flow and
+permission lifecycle end to end. The `ivi-homescreen` source and upstream build
+recipe are candidates for that assessment, not approval or evidence of Kotoha
+support.
+The candidate client manifest and license were inspected (license SHA-256
+`ae26bc7b1bc91fb8648f6a298decbb1a77090a56c9d04e2c23b8365e5f54acb5`);
+the `SelectedFiles::uris()` behavior comes from its API documentation.
 
 ## Selected desktop packages and exact resolution
 
@@ -658,9 +574,8 @@ permissive dependency closure. The umbrella `file_selector` is not added:
 - Linux `file_selector_linux` 0.9.4+1 links GTK, incompatible with the
   designed GTK-free Linux Flutter host.
 
-The umbrella candidate was resolved separately (not adopted); its materialized
-resolution is receipt `79146132bfd34463a71264fdecd19c01` and locked offline
-resolution evidence `4b8953fcc80e42adb20c2fc3e00ba755`. Its archive hashes and
+The umbrella candidate was resolved separately and not adopted. Its locked
+resolution was materialized and checked offline. Its archive hashes and
 source-file hashes are recorded in the following provenance table. The mobile
 adapter reads the granted document handle directly into memory; it is separate
 from encrypted save/reopen or SQLCipher.
@@ -687,17 +602,18 @@ filter must not be the only acceptance check.
 
 | Platform | Implemented read path | Resource lifetime and exclusions |
 | --- | --- | --- |
-| Android | `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE`, single selection; query `OpenableColumns.DISPLAY_NAME`, then read the granted URI with `ContentResolver.openInputStream` with a byte bound. | Close the query cursor and input stream on success and failure. Do not call `takePersistableUriPermission`, request broad storage access, derive a real path, or create an app cache file. Keep the URI only for the active request. |
-| iOS | `UIDocumentPickerViewController(forOpeningContentTypes:asCopy: false)`, single selection; acquire security-scoped access and coordinate a read using `NSFileCoordinator`, then check the file size and read with a bounded `FileHandle` inside its accessor. | Balance successful `startAccessingSecurityScopedResource` with `stopAccessingSecurityScopedResource` after the read, including failures. An unsuccessful start is not by itself proof that a local URL is unreadable; the coordinated read must report its actual result. Do not create a bookmark, copy the URL to the sandbox, or retain the selected URL after completion. |
+| Android | `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE`, single selection. The adapter queries `OpenableColumns.DISPLAY_NAME`, then reads the granted URI with `ContentResolver.openInputStream` with a byte bound. | The query cursor and input stream close on success and failure. The adapter does not call `takePersistableUriPermission`, request broad storage access, derive a real path, or create an app cache file. The URI is held only for the active request. |
+| iOS | `UIDocumentPickerViewController(forOpeningContentTypes:asCopy: false)`, single selection. The adapter acquires security-scoped access and coordinates a read using `NSFileCoordinator`, then checks the file size and reads with a bounded `FileHandle` inside its accessor. | Successful `startAccessingSecurityScopedResource` calls are balanced by `stopAccessingSecurityScopedResource` after the read, including on failure. An unsuccessful start is not by itself proof that a local URL is unreadable; the coordinated read must report its actual result. The adapter does not create a bookmark, copy the URL to the sandbox, or retain the selected URL after completion. |
 
 The adapters read provider bytes away from the UI thread and deliver a single terminal result
-on the platform thread. One pending picker/read per engine is sufficient; reject
-a concurrent request rather than overwriting its completion. Release pending
-callbacks and picker delegates on completion, cancellation, read failure and
+on the platform thread. Each engine allows one pending picker/read and rejects
+a concurrent request rather than overwriting its completion. Pending callbacks
+and picker delegates are released on completion, cancellation, read failure and
 engine/activity detach. A late result after detach must not reach a new request;
-retain only its in-memory request-code tombstone until that result is consumed.
-Activity/process recreation does not restore a draft or import: fail or discard
-the interrupted request, never persist a callback, URI, bytes or text for recovery.
+only its in-memory request-code tombstone remains until that result is consumed.
+Activity/process recreation does not restore a draft or import: the interrupted
+request fails or is discarded. No callback, URI, bytes or text is persisted
+for recovery.
 No retry loop, timer, history, background import service or persistence layer is
 needed for this one-shot operation.
 
@@ -738,33 +654,28 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   preservation and lifecycle continuity. Desktop integrity tests remain in place.
   Native privacy/RTL tests remain selected in CI. Android checks native labels,
   values and synthesized input after direction changes; Flutter widget tests own
-  complete forward/reverse traversal, including the mobile import control. In exact
-  run `43725734097`, Android job `132847565744` failed
+  complete forward/reverse traversal, including the mobile import control. On SHA
+  `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3`, the Android check failed
   `MainActivityAccessibilityTest.testEnglishLanguageFields` on the first Delete
   after the synthetic `p` paste: the expected empty value was not observed, while
-  the focused visible field still contained `p` (`vcs-read/a276e5b4d0c140fa84ddfdb3a3577a59`).
+  the focused visible field still contained `p`.
   The diagnostic recorded FlutterView focus and a visible IME, but this does not
   establish delivery or handling. Android specifies that
   `UiAutomation.injectInputEvent` reports injection success
   ([API reference](https://developer.android.com/reference/android/app/UiAutomation#injectInputEvent(android.view.InputEvent,boolean)));
-  its `true` result is not evidence that the editor processed Delete. Keep this
-  distinct from the earlier scroll-discovery failures; no physical-device result
-  is established.
+  its `true` result is not evidence that the editor processed Delete. This
+  failure is distinct from the earlier scroll-discovery failures and does not
+  establish any physical-device result.
 
-  Run `43842700807` on publication `b9325ac86272cd499cfa311da6a567e819fe7845e09517e0e35035be0b17fa3e` /
-  SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa` later passed all 22 Android
-  tests, but that was a non-reproduction, not a durable closure. An exact later
-  run `43862016131`, Android job `133282373054`, on publication
-  `0bf71dbbb89cca6b1d95f921307201febd0257135bd9e99d9f0853ff8f02d6f4` / SHA
-  `ae27293dc65dfcb390580004156118cc9f04738d` (status
-  `vcs-read/1a761d4154ac4abd87b00d9d92668775`, exact log
-  `vcs-read/72b6fe1cfc6e47b3879dff5dd15063a8`) again failed both
+  On SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa`, the Android check later passed
+  all 22 tests, but that was a non-reproduction, not a durable closure. On
+  SHA `ae27293dc65dfcb390580004156118cc9f04738d`, the Android check again failed both
   `testEnglishLanguageFields` (`checkField`, line 164) and
   `testShellInjectedDeleteKeyClearsFocusedField` (line 111): after the synthetic
   `p` paste and `input keyevent 67`, the field stayed at `textCodePoints=[U+70]`,
   selection `1..1`, focused and visible, where empty was expected. The `lib/` and
   `android/` sources are byte-identical between the passing and failing
-  publications (only portal-probe, workflow and design-document files differ),
+  revisions (only portal-probe, workflow and design-document files differ),
   so these are two non-deterministic outcomes of the same app and test binaries.
   The suppressed diagnostic shows native focus remained on `FlutterView` with
   `imeVisible=true` before and after, and `events=[]`, `lastContentChange=none`:
@@ -774,9 +685,9 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   physical-device result. The test's own history records this same unchanged-editor
   symptom with both instrumentation key events and the shell `input keyevent`, so
   no cause-backed correction is established and switching mechanisms again would
-  be a blind retry. Keep every exact-value, accessibility, locale and traversal
-  assertion; add no retries or longer waits; treat neither run as a durable
-  closure. The product's exact editing and traversal behavior remains owned by the
+  be a blind retry. Any correction must preserve every exact-value,
+  accessibility, locale and traversal assertion without adding retries or
+  longer waits. Neither run is a durable closure. The product's exact editing and traversal behavior remains owned by the
   Flutter widget tests on this revision.
 
 Source review finds no import-path writes, cache staging, URI grant persistence,
@@ -807,8 +718,7 @@ These measurements predate the import size bound. The measured path held the
 whole selection in one `Uint8List` and built one `String` with strict
 `utf8.decode`, without a cache or persistence copy.
 
-Sandbox-only Dart measurement on this Linux host (not device evidence,
-experiment `f5c51d3fa13d438db0bcc057b5dbed2b`): fresh `dart` processes reading
+Sandbox-only Dart measurement on this Linux host (not device evidence): fresh `dart` processes reading
 synthetic multilingual UTF-8 files via `File.readAsBytes` plus
 `utf8.decode(allowMalformed: false)` observed `VmHWM` increases of about
 5,444 kB for a 2,097,160-byte file and about 17,372 kB for a 16,777,228-byte
@@ -828,16 +738,14 @@ units). The 16 MiB widget case did not complete; `flutter test` reported no
 tests and exited 79 after 26 seconds, so its cause is unconfirmed. These are
 Linux debug test-process peaks, not target-device memory results; framework and
 text-layout costs are included, and native/provider/MethodChannel copies are
-excluded (commands `73fa355f39614b37874f57bccb53d084` and
-`43f3c85869f3474b81b0a5c870702801`). They show the full widget path can greatly
+excluded. They show the full widget path can greatly
 exceed the decode-only measurement, but are not a basis for a shipping limit.
 
 A matched controller-assignment control used the same widget-test harness,
 text payloads, and `TextField`, but bypassed `FileSelectorPlatform` and directly
 decoded then assigned the same source text. `VmHWM` rose by 74,148 kB for the
 65,065-byte import versus 68,216 kB for direct assignment, and by 288,064 kB
-for the 261,261-byte import versus 282,100 kB for direct assignment (command
-`21ca1a919b2e486787914cc0d76275ca`). The similar peaks suggest the Linux debug
+for the 261,261-byte import versus 282,100 kB for direct assignment. The similar peaks suggest the Linux debug
 widget/editor path, not picker/reader overhead, dominates these small local
 profiles. This does not predict release or mobile behavior, nor justify a size
 limit; native target measurements are still required.
@@ -861,8 +769,8 @@ Windows run desktop decode profiles, and `profile_editor=true` adds the macOS
 editor stage. The 16 MiB ceiling is a profiling-fixture bound, not an
 application import limit. The editor trial rejects 16 MiB because the earlier
 sandbox widget run did not complete and the sampled RSS watchdog is not a hard
-allocation limit. Dispatch a fresh run for each size so peaks do not carry
-across sizes. These are debug test profiles, not release/device benchmarks.
+allocation limit. Each size requires a fresh run so peaks do not carry across
+sizes. These are debug test profiles, not release/device benchmarks.
 
 - Android `TextImportTest.testOptInNativeReadMemoryProfile` calls production
   `readDocument` through `ContentResolver` and a pipe-backed test-APK provider.
@@ -914,23 +822,21 @@ python3 tools/watch_import_profile.py --seconds 45 --rss-mib 1536 --poll-seconds
 ```
 
 Local harness validation only: the exact 65,536-byte fixture completed both
-decode and editor stages with 64,832 code units on Linux (commands
-`232346d9c81941dd929e7c75c8e6cb85` and
-`7b4a74c060944c9fbc49e47569fbeccf`). These debug runs validate fixture sizing
+decode and editor stages with 64,832 code units on Linux. These debug runs validate fixture sizing
 and stage execution, not supported-platform memory behavior. Editor/decode
 smoke, wall-time clipping, SIGTERM child termination and fixture cleanup, RSS
-stop behavior, design validation (93/93), and all four watchdog tests passed
-(`df4421713bce4466b30c0bb5f052ee21`). A 768 MiB group budget stopped startup
-before measurement (`dfdf508b3eb542b4a1e53d4ab107f856`), demonstrating that the
+stop behavior, design validation (93/93), and all four watchdog tests passed. A 768 MiB group budget stopped startup
+before measurement, demonstrating that the
 budget includes compilation, not only editor memory.
 
 All stage peaks are process-wide and may include startup, fixture preparation,
 framework work and unrelated allocations. Zero peak delta does not mean zero
-allocation. Do not add/subtract separate stage peaks to infer bridge copies.
+allocation. Adding or subtracting separate stage peaks cannot establish
+bridge copies.
 Native stages stop before MethodChannel serialization. Native-to-Dart transfer,
 provider failures under pressure, picker/provider allocations, physical devices
-and release-mode editors remain unmeasured. Keep the memory work item open until
-hosted observations cover the needed path. No size cap, chunked import
+and release-mode editors remain unmeasured. The memory evidence remains
+incomplete until hosted observations cover the needed path. No size cap, chunked import
 implementation, cache copy or draft persistence is introduced by this harness.
 
 Failure behavior is fail-closed: strict decoding throws `FormatException` on
@@ -938,14 +844,14 @@ malformed input, the UI shows only a generic notice and preserves source,
 language and translation state (covered by existing desktop/mobile widget
 tests). Large-file out-of-memory behavior on constrained targets is unmeasured.
 
-No limit or incremental transfer is selected. Any future guard must be
-configuration with hosted-profile evidence, preserve drafts on error, and keep
-read-in-place access with no persistence or cache copy.
+The profiling work did not select an import limit or incremental transfer. A
+future guard must be configuration with hosted-profile evidence, preserve
+drafts on error, and keep read-in-place access with no persistence or cache copy.
 
-The smallest hosted measurement still needed, per supported profile
-(macOS/Windows and Android Emulator/iOS Simulator CI), is: import synthetic
-2 MiB and 16 MiB UTF-8 `.txt`/`.md` files through the exact shipped picker
-path, record native peak plus Dart peak and success/failure with draft
+The smallest hosted measurement still needed for each supported profile
+(macOS/Windows and Android Emulator/iOS Simulator CI) uses synthetic 2 MiB and
+16 MiB UTF-8 `.txt`/`.md` files through the exact shipped picker path. It
+records native and Dart peaks, import success or failure, and draft
 preservation. No product telemetry is added for this one-shot check.
 
 ## Hosted validation and remaining claims
@@ -982,8 +888,6 @@ The inspected files and SHA-256 values (relative to their package roots) were:
 | iOS `ios/file_selector_ios/Sources/file_selector_ios/FileSelectorPlugin.swift` | `269087f6f93693954fbf9f903b761d1dd6a8dc6e6acfee6a2f970052eaedf54e` |
 | Linux `linux/CMakeLists.txt` | `2117e1a092ba2823b3143fdd38733af6a1e006dfa7105a4bfae9d990ac483420` |
 
-The prior source inspection records are `daf2ae0ebd9545b186081878dafc3e6d`,
-`70a3ea08a6fc4ab183b7fa49ff4003f7`, and `5669a26cae494729a1a06e3dade9cc14`.
 The desktop-source file hashes above come from exact package tags; the package
 archive SHA-256 values in the selected-dependency table bind the implemented
 versions.

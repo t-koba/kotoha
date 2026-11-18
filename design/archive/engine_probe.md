@@ -1,5 +1,10 @@
 # Native-engine feasibility probe
 
+> **ARCHIVED:** This is a historical experiment log, not a current product
+> design document. Its inline fetch, VCS, and experiment receipts are internal
+> record IDs that outside readers cannot verify. The current product design and
+> release gates supersede this log; engine adoption remains disabled.
+
 This is **developer tooling only**, not product inference or distribution
 approval. The recorded cross-platform native-engine probe publication is
 `7af8a0d2b7137ed1744cf91ecc2590c8311e30bd8610b3eae392e426956ff9ca` / SHA
