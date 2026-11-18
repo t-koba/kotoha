@@ -41,6 +41,9 @@ void main() {
     expect(parseContentLocale('en US'), isNull);
     expect(parseContentLocale('a'), isNull);
     expect(parseContentLocale('en-US-x-private'), isNull);
+    // Reject non-ASCII letters even if lowercasing would turn them into ASCII.
+    expect(parseContentLocale('\u212Ao'), isNull);
+    expect(parseContentLocale('\u0130a'), isNull);
     // Mis-ordered subtags: BCP-47 requires script before region. These must
     // not be reordered by Locale.fromSubtags into valid-looking locales.
     expect(parseContentLocale('en-US-Hant'), isNull);

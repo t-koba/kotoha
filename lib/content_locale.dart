@@ -15,12 +15,13 @@ Locale? parseContentLocale(String entry) {
   final parts = tag.split('-');
   if (parts.isEmpty || parts.length > 3) return null;
 
-  final language = parts.first.toLowerCase();
-  if (!_asciiLetters.hasMatch(language) ||
-      language.length < 2 ||
-      language.length > 3) {
+  final primary = parts.first;
+  if (!_asciiLetters.hasMatch(primary) ||
+      primary.length < 2 ||
+      primary.length > 3) {
     return null;
   }
+  final language = primary.toLowerCase();
 
   String? script;
   String? region;
