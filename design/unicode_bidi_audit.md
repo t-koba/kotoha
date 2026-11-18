@@ -18,7 +18,7 @@ A bounded comparison of the exact Unicode 17 source with the prior Unicode 18
 projection found 112 changed scalars: 17 R/AL-to-other, 92 L-to-other, and
 3 other-to-L transitions. This showed a real version-dependent first-strong
 classification difference, so the generated projection now tracks the pinned
-engine data version (comparison evidence `ef6706f5971547509de9e65db89f1276`).
+engine data version.
 
 ## Dependency-policy evidence
 
@@ -35,11 +35,9 @@ for this data and its generated Dart representation only.
 | `notices` | Source copyright © 2025 Unicode, Inc.; full current Unicode License V3 notice in [`assets/licenses/Unicode-3.0.txt`](../assets/licenses/Unicode-3.0.txt), bundled and exposed as **Unicode Bidi Data** via the existing app license action |
 | `distribution_scope` | All Kotoha platforms shipping the generated Dart data; required notice accompanies both the source tree and app assets; no native linkage, platform service or external runtime acquisition |
 
-License source: <https://unicode.org/license.txt>, exact source receipt
-`30c8613584b2a80b16f93bfce4c0a85a393a1ba590928db630bb304d589e2d68`.
-The byte-exact bundled UTF-8 notice has SHA-256
-`e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`, matching
-the upstream receipt. The classification is based on the full Unicode License
+License source: <https://unicode.org/license.txt>. The byte-exact bundled UTF-8
+notice has SHA-256 `e7a93b009565cfce55919a381437ac4db883e9da2126fa28b91d12732bc53d96`.
+The classification is based on the full Unicode License
 V3 text, not on the SPDX identifier alone.
 
 ## Reproduction and direction scope
@@ -57,10 +55,10 @@ commented `@missing` rules in order before explicit records, projects classes
 (default L; R/AL=1, B=2, LRI/RLI/FSI=3, PDI=4, other=5), coalesces non-L runs,
 and verifies the normalized digest. Digest serialization is one interval per
 line: six-digit uppercase hexadecimal start and end, then decimal class,
-separated by single spaces, with final LF. The exact UCD 17 source receipt
-`9b6aa632cb15ca22ff90ddd8230a1ad3e61b1c1d3065f2f84ea1f41348f16255` was checked
-by the read-only repository generator (`2c30af24dea044d4a34eb67aed475894`),
-which verified the source hash and byte-for-byte Dart output. The raw UCD file
+separated by single spaces, with final LF. The pinned UCD 17 source (SHA-256
+`4867b4b7f0731ed1bfcd34cc6251211ff1542541fce0734b6fbda139ee80b3a4`, see the table
+above) was checked with the repository generator `tools/generate_unicode_bidi.py`,
+which verifies the source hash and byte-for-byte Dart output. The raw UCD file
 is not included in the app or repository; regeneration requires a local copy of
 the pinned source and the documented hash check. The normalized projection is
 10,112 bytes across 632 intervals; the generated Dart source is 16,439 bytes.

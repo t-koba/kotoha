@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 
 const _mobileImport = MethodChannel('org.kotoha/text_import');
 
-// 8 MiB is generous for text/Markdown translation and below the 16 MiB size
-// at which the CI editor profile does not complete.
+// Bound raw import I/O so oversized input is rejected before decode and the
+// draft stays intact. This is not a measured editor-safe size: the full widget
+// path can use far more memory than the decoded bytes, and the 16 MiB profile
+// failure cause is unconfirmed (see design/text_import_audit.md).
 const maxTextImportBytes = 8 * 1024 * 1024;
 
 class TextDocument {

@@ -661,12 +661,12 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   preservation and lifecycle continuity. Desktop integrity tests remain in place.
   Native privacy/RTL tests remain selected in CI. Android checks native labels,
   values and synthesized input after direction changes; Flutter widget tests own
-  complete forward/reverse traversal, including the mobile import control. On SHA
-  `8f6ea2aba0b2e4a7fc0d4cd4bf8ddc5f747acee3`, the Android check failed
-  `MainActivityAccessibilityTest.testEnglishLanguageFields` on the first Delete
-  after the synthetic `p` paste: the expected empty value was not observed, while
-  the focused visible field still contained `p`.
-  The diagnostic recorded FlutterView focus and a visible IME, but this does not
+  complete forward/reverse traversal, including the mobile import control.
+  Hosted Android accessibility runs have shown a non-deterministic Delete result
+  after a synthetic `p` paste. In a failing run,
+  `MainActivityAccessibilityTest.testEnglishLanguageFields` did not observe the
+  expected empty value: the focused, visible field still contained `p`. The
+  diagnostic recorded FlutterView focus and a visible IME, but this does not
   establish delivery or handling. Android specifies that
   `UiAutomation.injectInputEvent` reports injection success
   ([API reference](https://developer.android.com/reference/android/app/UiAutomation#injectInputEvent(android.view.InputEvent,boolean)));
@@ -674,16 +674,14 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   failure is distinct from the earlier scroll-discovery failures and does not
   establish any physical-device result.
 
-  On SHA `e681faf32f1fd8b2ed9c98c59adcb6977b65ccfa`, the Android check later passed
-  all 22 tests, but that was a non-reproduction, not a durable closure. On
-  SHA `ae27293dc65dfcb390580004156118cc9f04738d`, the Android check again failed both
-  `testEnglishLanguageFields` (`checkField`, line 164) and
-  `testShellInjectedDeleteKeyClearsFocusedField` (line 111): after the synthetic
-  `p` paste and `input keyevent 67`, the field stayed at `textCodePoints=[U+70]`,
-  selection `1..1`, focused and visible, where empty was expected. The `lib/` and
-  `android/` sources are byte-identical between the passing and failing
-  revisions (only portal-probe, workflow and design-document files differ),
-  so these are two non-deterministic outcomes of the same app and test binaries.
+  Another run passed all 22 checks, but that was a non-reproduction, not a
+  durable closure. A later run again failed both `testEnglishLanguageFields`
+  (`checkField`, line 164) and `testShellInjectedDeleteKeyClearsFocusedField`
+  (line 111): after the synthetic `p` paste and `input keyevent 67`, the field
+  stayed at `textCodePoints=[U+70]`, selection `1..1`, focused and visible,
+  where empty was expected. App sources were byte-identical across the passing
+  and failing runs, so these are non-deterministic outcomes of the same app and
+  test binaries.
   The suppressed diagnostic shows native focus remained on `FlutterView` with
   `imeVisible=true` before and after, and `events=[]`, `lastContentChange=none`:
   the shell command reached stdout EOF but the editor emitted no text or
@@ -718,6 +716,14 @@ provider-selected file reads and physical-device behavior remain unverified.
 
 Text and Markdown import accepts files up to 8 MiB. Oversized documents are
 rejected before UTF-8 decode with the existing import error; drafts stay intact.
+This is a raw input I/O bound only, not a measured editor-safe envelope: the full
+widget path assigns decoded text to one `TextField`, and the widget-profile peaks
+below show process memory far exceeding decoded-file size while the 16 MiB cause
+remains unconfirmed. No supported-device memory budget or comparable edit/import
+measurement was taken, so this bound does not establish that a file under 8 MiB
+edits without excessive memory or stall; bounding that work at its cause, or an
+evidence-based editing limit with a clear refusal and intact draft, remains an
+open decision gated on such measurements.
 
 ## Memory profile (sandbox-only)
 
