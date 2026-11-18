@@ -574,6 +574,10 @@ void main() {
       }
       await tester.tap(find.byKey(const ValueKey('remove-translation-1')));
       await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('remove-translation-confirm')),
+      );
+      await tester.pumpAndSettle();
 
       expect(
         tester
@@ -619,6 +623,10 @@ void main() {
       // focus, with its exact text preserved.
       await tester.tap(find.byKey(const ValueKey('remove-translation-1')));
       await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('remove-translation-confirm')),
+      );
+      await tester.pumpAndSettle();
       final survivor = find.byKey(const ValueKey('translation-text-1'));
       final survivorFocus = tester
           .widget<EditableText>(
@@ -628,6 +636,41 @@ void main() {
       expect(survivorFocus.hasFocus, isTrue);
       expect(tester.widget<TextField>(survivor).controller!.text, 'last');
       expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'canceling removal of a nonempty translation keeps it and its focus',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      final language = find.byKey(const ValueKey('target-language-1'));
+      final translation = find.byKey(const ValueKey('translation-text-1'));
+      const languageTag = 'ja-JP';
+      const text = '日本語と English\nالعربية';
+      await tester.enterText(language, languageTag);
+      await tester.enterText(translation, text);
+      await tester.tap(find.byKey(const ValueKey('remove-translation-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('remove-translation-cancel')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('remove-translation-1')),
+        findsOneWidget,
+      );
+      expect(tester.widget<TextField>(language).controller!.text, languageTag);
+      final translationField = tester.widget<TextField>(translation);
+      expect(translationField.controller!.text, text);
+      expect(translationField.focusNode!.hasFocus, isTrue);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

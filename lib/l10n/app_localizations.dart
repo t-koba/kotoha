@@ -218,6 +218,30 @@ abstract class AppLocalizations {
   /// **'{number}件目の訳先を削除'**
   String removeTranslationNumber(int number);
 
+  /// 入力済みの訳文を削除する確認ダイアログのタイトル。
+  ///
+  /// In ja, this message translates to:
+  /// **'訳文を削除しますか？'**
+  String get removeTranslationTitle;
+
+  /// 訳文を破棄すると元に戻せないことを伝える警告。
+  ///
+  /// In ja, this message translates to:
+  /// **'この訳文の言語とテキストは破棄されます。元に戻せません。'**
+  String get removeTranslationQuestion;
+
+  /// 訳文の削除を確定するボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'削除'**
+  String get removeTranslationConfirm;
+
+  /// 訳文を削除せずに保持するボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'保持する'**
+  String get removeTranslationCancel;
+
   /// No description provided for @manualTranslation.
   ///
   /// In ja, this message translates to:

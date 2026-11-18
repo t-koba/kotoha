@@ -44,6 +44,22 @@
       }
     }
   },
+  "removeTranslationTitle": "訳文を削除しますか？",
+  "@removeTranslationTitle": {
+    "description": "入力済みの訳文を削除する確認ダイアログのタイトル。"
+  },
+  "removeTranslationQuestion": "この訳文の言語とテキストは破棄されます。元に戻せません。",
+  "@removeTranslationQuestion": {
+    "description": "訳文を破棄すると元に戻せないことを伝える警告。"
+  },
+  "removeTranslationConfirm": "削除",
+  "@removeTranslationConfirm": {
+    "description": "訳文の削除を確定するボタン。"
+  },
+  "removeTranslationCancel": "保持する",
+  "@removeTranslationCancel": {
+    "description": "訳文を削除せずに保持するボタン。"
+  },
   "manualTranslation": "手入力した訳文",
   "emptyTranslationNotice": "コピーする訳文を入力してください",
   "clipboardFailureNotice": "クリップボードにコピーできませんでした",

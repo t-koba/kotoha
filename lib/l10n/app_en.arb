@@ -44,6 +44,22 @@
       }
     }
   },
+  "removeTranslationTitle": "Remove translation?",
+  "@removeTranslationTitle": {
+    "description": "Title of the nonempty translation removal dialog."
+  },
+  "removeTranslationQuestion": "The language and text in this translation will be discarded. This cannot be undone.",
+  "@removeTranslationQuestion": {
+    "description": "Warning that discarding the translation cannot be undone."
+  },
+  "removeTranslationConfirm": "Remove",
+  "@removeTranslationConfirm": {
+    "description": "Button to confirm discarding the translation."
+  },
+  "removeTranslationCancel": "Keep",
+  "@removeTranslationCancel": {
+    "description": "Button to keep the translation."
+  },
   "manualTranslation": "Manual translation",
   "emptyTranslationNotice": "Enter a translation to copy.",
   "clipboardFailureNotice": "Could not copy to the clipboard.",

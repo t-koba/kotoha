@@ -84,6 +84,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get removeTranslationTitle => 'Remove translation?';
+
+  @override
+  String get removeTranslationQuestion =>
+      'The language and text in this translation will be discarded. This cannot be undone.';
+
+  @override
+  String get removeTranslationConfirm => 'Remove';
+
+  @override
+  String get removeTranslationCancel => 'Keep';
+
+  @override
   String get manualTranslation => 'Manual translation';
 
   @override

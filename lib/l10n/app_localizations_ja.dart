@@ -80,6 +80,18 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get removeTranslationTitle => '訳文を削除しますか？';
+
+  @override
+  String get removeTranslationQuestion => 'この訳文の言語とテキストは破棄されます。元に戻せません。';
+
+  @override
+  String get removeTranslationConfirm => '削除';
+
+  @override
+  String get removeTranslationCancel => '保持する';
+
+  @override
   String get manualTranslation => '手入力した訳文';
 
   @override

@@ -395,17 +395,42 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     ).showSnackBar(SnackBar(content: Text(strings.exportedTranslationNotice)));
   }
 
-  void _removeTranslation(int index) {
+  Future<void> _removeTranslation(int index) async {
     if (_translations.length == 1) return;
+    final fields = _translations[index];
+    if (fields.language.text.isNotEmpty || fields.text.text.isNotEmpty) {
+      final strings = AppLocalizations.of(context)!;
+      final remove = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(strings.removeTranslationTitle),
+          content: Text(strings.removeTranslationQuestion),
+          actions: [
+            TextButton(
+              key: const ValueKey('remove-translation-cancel'),
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(strings.removeTranslationCancel),
+            ),
+            TextButton(
+              key: const ValueKey('remove-translation-confirm'),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(strings.removeTranslationConfirm),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || remove != true) return;
+    }
+
+    final currentIndex = _translations.indexOf(fields);
+    if (currentIndex < 0 || _translations.length == 1) return;
     // When a following field shifts into this slot, keep keyboard focus on it
     // so pointer removal does not drop focus back to the enclosing scope.
     // Removing the last field keeps the existing Add-button focus behavior.
-    final following = index + 1 < _translations.length
-        ? _translations[index + 1]
+    final following = currentIndex + 1 < _translations.length
+        ? _translations[currentIndex + 1]
         : null;
-    setState(() {
-      _translations.removeAt(index).dispose();
-    });
+    setState(() => _translations.removeAt(currentIndex).dispose());
     if (following != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) following.textFocusNode.requestFocus();
