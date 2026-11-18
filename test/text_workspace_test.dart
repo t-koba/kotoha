@@ -553,6 +553,38 @@ void main() {
   });
 
   testWidgets(
+    'repeated activation of one rendered Remove callback is harmless',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('translation-text-2')), findsOneWidget);
+
+      // Invoke the same rendered callback twice with no rebuild in between.
+      // The first removal shrinks the list; a stale index would make the
+      // second invocation throw RangeError before any controller is read.
+      final button = tester.widget<IconButton>(
+        find.byKey(const ValueKey('remove-translation-2')),
+      );
+      final onPressed = button.onPressed!;
+      onPressed();
+      onPressed();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+      expect(find.byKey(const ValueKey('translation-text-1')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'removing a middle target keeps the surviving translations aligned',
     (tester) async {
       tester.view.physicalSize = const Size(1000, 2400);

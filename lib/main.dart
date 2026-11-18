@@ -395,9 +395,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     ).showSnackBar(SnackBar(content: Text(strings.exportedTranslationNotice)));
   }
 
-  Future<void> _removeTranslation(int index) async {
-    if (_translations.length == 1) return;
-    final fields = _translations[index];
+  Future<void> _removeTranslation(_TranslationFields fields) async {
+    // A rendered Remove button keeps the card it was built for. A stale
+    // callback (invoked twice before a rebuild) must be a no-op before any
+    // controller is read, not an index into a list that has since shrunk.
+    if (_translations.length == 1 || !_translations.contains(fields)) return;
     if (fields.language.text.isNotEmpty || fields.text.text.isNotEmpty) {
       final strings = AppLocalizations.of(context)!;
       final remove = await showDialog<bool>(
@@ -433,7 +435,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() => _translations.removeAt(currentIndex).dispose());
     if (following != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) following.textFocusNode.requestFocus();
+        if (mounted && _translations.contains(following)) {
+          following.textFocusNode.requestFocus();
+        }
       });
     }
   }
@@ -709,7 +713,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                   IconButton(
                     key: ValueKey('remove-translation-$index'),
                     tooltip: strings.removeTranslationNumber(index + 1),
-                    onPressed: () => _removeTranslation(index),
+                    onPressed: () => _removeTranslation(fields),
                     icon: const Icon(Icons.delete_outline),
                   ),
               ],
