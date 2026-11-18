@@ -156,6 +156,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'このファイルはKotoha v2の作業エクスポートではありません。';
 
   @override
+  String get restoreWorkspaceTooLargeNotice =>
+      'このファイルは大きすぎて復元できません。小さい作業エクスポートを選んでください。';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override

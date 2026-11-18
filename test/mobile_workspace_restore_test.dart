@@ -128,6 +128,26 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
     });
 
+    mobileTest('an oversized document is rejected with its own notice', (
+      tester,
+    ) async {
+      reply = () async => {
+        'name': 'workspace.txt',
+        'bytes': Uint8List(maxTextImportBytes + 1),
+      };
+      await open(tester, source: 'keep me');
+
+      await restore(tester);
+
+      expect(
+        find.text(
+          'This file is too large to restore. Choose a smaller workspace export.',
+        ),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'keep me');
+    });
+
     mobileTest('a native failure keeps drafts without leaking details', (
       tester,
     ) async {

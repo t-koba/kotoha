@@ -485,6 +485,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       });
       if (!mounted) return;
       _importNotice(strings.restoredWorkspaceNotice);
+    } on TextDocumentTooLarge {
+      if (mounted) _importNotice(strings.restoreWorkspaceTooLargeNotice);
     } on FormatException {
       if (mounted) _importNotice(strings.restoreWorkspaceUnsupportedNotice);
     } on Exception {

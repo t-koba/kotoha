@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
+import 'package:kotoha/text_document_picker.dart';
 import 'package:kotoha/workspace.dart';
 import 'package:kotoha/workspace_export.dart';
 
@@ -36,6 +37,18 @@ class _File extends XFile {
   Stream<Uint8List> openRead([int? start, int? end]) async* {
     if (failure != null) throw failure!;
     yield _bytes;
+  }
+}
+
+class _LargeFile extends XFile {
+  _LargeFile() : super('/not-stored/workspace.txt');
+
+  @override
+  Future<int> length() async => maxTextImportBytes + 1;
+
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) async* {
+    throw StateError('An oversized document must be rejected before reading.');
   }
 }
 
@@ -216,6 +229,29 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
       expect(find.byType(SnackBar), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('an oversized document is rejected with its own notice', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async => _LargeFile();
+      await open(tester);
+      await tester.enterText(field('source-text'), 'keep me');
+
+      await restore(tester);
+
+      expect(
+        find.text(
+          'This file is too large to restore. Choose a smaller workspace export.',
+        ),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'keep me');
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

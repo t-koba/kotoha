@@ -119,6 +119,10 @@
   "@restoreWorkspaceUnsupportedNotice": {
     "description": "Notice shown when the file is not a parseable v2 workspace export."
   },
+  "restoreWorkspaceTooLargeNotice": "This file is too large to restore. Choose a smaller workspace export.",
+  "@restoreWorkspaceTooLargeNotice": {
+    "description": "Notice shown when a workspace document exceeds the document size limit."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

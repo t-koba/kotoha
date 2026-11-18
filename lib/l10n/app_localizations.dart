@@ -362,6 +362,12 @@ abstract class AppLocalizations {
   /// **'このファイルはKotoha v2の作業エクスポートではありません。'**
   String get restoreWorkspaceUnsupportedNotice;
 
+  /// 作業ファイルがサイズ上限を超えたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'このファイルは大きすぎて復元できません。小さい作業エクスポートを選んでください。'**
+  String get restoreWorkspaceTooLargeNotice;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:

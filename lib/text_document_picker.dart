@@ -19,6 +19,12 @@ class TextDocument {
   final Future<Uint8List> Function() readAsBytes;
 }
 
+// A size refusal is not a malformed document. Subclassing FormatException
+// keeps existing import callers fail-closed while restore reports it distinctly.
+class TextDocumentTooLarge extends FormatException {
+  const TextDocumentTooLarge() : super('Document exceeds size limit.');
+}
+
 Future<TextDocument?> pickTextDocument() async {
   if (defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS) {
@@ -34,7 +40,7 @@ Future<TextDocument?> pickTextDocument() async {
     }
     final bytes = reply['bytes'] as Uint8List;
     if (bytes.length > maxTextImportBytes) {
-      throw const FormatException('Document exceeds size limit.');
+      throw const TextDocumentTooLarge();
     }
     return TextDocument(reply['name'] as String, () async => bytes);
   }
@@ -51,14 +57,14 @@ Future<TextDocument?> pickTextDocument() async {
   );
   if (file == null) return null;
   if (await file.length() > maxTextImportBytes) {
-    throw const FormatException('Document exceeds size limit.');
+    throw const TextDocumentTooLarge();
   }
   return TextDocument(file.name, () async {
     // The file may grow between the length check and the deferred read.
     final bytes = BytesBuilder(copy: false);
     await for (final chunk in file.openRead()) {
       if (chunk.length > maxTextImportBytes - bytes.length) {
-        throw const FormatException('Document exceeds size limit.');
+        throw const TextDocumentTooLarge();
       }
       bytes.add(chunk);
     }

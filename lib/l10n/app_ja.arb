@@ -119,6 +119,10 @@
   "@restoreWorkspaceUnsupportedNotice": {
     "description": "v2の作業エクスポートとして解析できないファイルの案内。"
   },
+  "restoreWorkspaceTooLargeNotice": "このファイルは大きすぎて復元できません。小さい作業エクスポートを選んでください。",
+  "@restoreWorkspaceTooLargeNotice": {
+    "description": "作業ファイルがサイズ上限を超えたときの案内。"
+  },
   "exportWorkspace": "作業内容を書き出す",
   "@exportWorkspace": {
     "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"
