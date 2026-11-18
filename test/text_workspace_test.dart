@@ -584,6 +584,39 @@ void main() {
     },
   );
 
+  testWidgets('copying through a callback made stale by removal is harmless', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const KotohaApp());
+
+    await tester.tap(find.text('訳先を追加'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('訳先を追加'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('translation-text-2')), findsOneWidget);
+
+    // Remove card 2, then invoke the copy callback captured from the card
+    // before that removal. With an index-based callback this indexes a list
+    // that has shrunk and throws RangeError; it must be a no-op instead.
+    final copy2 = tester
+        .widget<IconButton>(find.byKey(const ValueKey('copy-translation-2')))
+        .onPressed!;
+    final remove2 = tester
+        .widget<IconButton>(find.byKey(const ValueKey('remove-translation-2')))
+        .onPressed!;
+    remove2();
+    copy2();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('translation-text-2')), findsNothing);
+    expect(find.byKey(const ValueKey('translation-text-1')), findsOneWidget);
+  });
+
   testWidgets(
     'removing a middle target keeps the surviving translations aligned',
     (tester) async {

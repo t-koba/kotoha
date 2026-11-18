@@ -329,8 +329,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
 
-  Future<void> _copyTranslation(int index) async {
-    final text = _translations[index].text.text;
+  Future<void> _copyTranslation(_TranslationFields fields) async {
+    // The rendered button keeps its card; a callback made stale by a removal
+    // must no-op before reading a controller at an index that no longer exists.
+    if (!_translations.contains(fields)) return;
+    final text = fields.text.text;
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -358,9 +361,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
   }
 
-  Future<void> _exportTranslation(int index) async {
+  Future<void> _exportTranslation(_TranslationFields fields) async {
+    if (!_translations.contains(fields)) return;
     final strings = AppLocalizations.of(context)!;
-    final text = _translations[index].text.text;
+    final text = fields.text.text;
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(strings.emptyTranslationExportNotice)),
@@ -697,7 +701,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                 IconButton(
                   key: ValueKey('copy-translation-$index'),
                   tooltip: strings.copyTranslationNumber(index + 1),
-                  onPressed: () => _copyTranslation(index),
+                  onPressed: () => _copyTranslation(fields),
                   icon: const Icon(Icons.content_copy),
                 ),
                 if (!kIsWeb &&
@@ -706,7 +710,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                   IconButton(
                     key: ValueKey('export-translation-$index'),
                     tooltip: strings.exportTranslationNumber(index + 1),
-                    onPressed: () => _exportTranslation(index),
+                    onPressed: () => _exportTranslation(fields),
                     icon: const Icon(Icons.file_download_outlined),
                   ),
                 if (_translations.length > 1)
