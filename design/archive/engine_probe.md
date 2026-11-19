@@ -1071,6 +1071,7 @@ headers) remain prospective source/branch findings, not a member-to-notice
 mapping. Unknown classifications fail closed, and adoption stays disabled
 until exact selected-member identity, complete term evidence, pinned notice
 text and a user-accessible delivery plan are recorded.
+For the six retained selected-source classifications in the Terms, provenance and notices table, `notices` is also unsatisfied: `lib/main.dart`, `pubspec.yaml` and `test/licenses_test.dart` register and test only `Unicode Bidi Data` and `crypto`, with no engine notice payload mapped to any component.
 
 **Single-component field check — generated Unicode data.** For the candidate
 `src/unicode-data.cpp` (SHA-256
