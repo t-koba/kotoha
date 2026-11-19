@@ -62,10 +62,12 @@ Future<TextDocument?> pickTextDocument() async {
     ],
   );
   if (file == null) return null;
-  if (await file.length() > maxTextImportBytes) {
-    throw const TextDocumentTooLarge();
-  }
   return TextDocument(file.name, () async {
+    // The name is validated by the caller before this closure runs. Checking
+    // the size here keeps an unsupported file from being reported as too large.
+    if (await file.length() > maxTextImportBytes) {
+      throw const TextDocumentTooLarge();
+    }
     // The file may grow between the length check and the deferred read.
     final bytes = BytesBuilder(copy: false);
     await for (final chunk in file.openRead()) {

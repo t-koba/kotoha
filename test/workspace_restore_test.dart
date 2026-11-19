@@ -66,6 +66,27 @@ class _LargeFile extends XFile {
   }
 }
 
+class _UnsupportedLargeFile extends XFile {
+  _UnsupportedLargeFile() : super('/not-stored/workspace.pdf');
+
+  bool lengthCalled = false;
+  bool readCalled = false;
+
+  @override
+  Future<int> length() async {
+    lengthCalled = true;
+    return maxTextImportBytes + 1;
+  }
+
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) async* {
+    readCalled = true;
+    throw StateError(
+      'An unsupported document must be rejected before reading.',
+    );
+  }
+}
+
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
   late FileSelectorPlatform original;
@@ -478,6 +499,31 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets(
+    'an unsupported file type is reported before any size preflight',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        final file = _UnsupportedLargeFile();
+        picker.pick = () async => file;
+        await open(tester);
+        await tester.enterText(field('source-text'), 'keep me');
+
+        await restore(tester);
+
+        expect(
+          find.text('Choose a .txt, .md, or .markdown file to restore.'),
+          findsOneWidget,
+        );
+        expect(textOf(tester, 'source-text'), 'keep me');
+        expect(file.lengthCalled, isFalse);
+        expect(file.readCalled, isFalse);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
 
   testWidgets('uses the Japanese unsupported-document notice', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
