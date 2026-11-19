@@ -197,7 +197,12 @@ public final class TextImportTest extends ActivityInstrumentationTestCase2<MainA
                     Map<?, ?> document = (Map<?, ?>) reply.value;
                     assertEquals("sample.MaRkDoWn", document.get("name"));
                     assertTrue(Arrays.equals(ImportTestProvider.BYTES, (byte[]) document.get("bytes")));
-                } else { assertEquals("read_failed", reply.error); }
+                } else {
+                    // Oversized and wrong-type documents surface typed picker errors.
+                    String expected = "oversized".equals(kind) ? "too_large"
+                            : "unsupported".equals(kind) ? "unsupported_type" : "read_failed";
+                    assertEquals(expected, reply.error);
+                }
             } finally { getInstrumentation().removeMonitor(picked); }
         }
     }
