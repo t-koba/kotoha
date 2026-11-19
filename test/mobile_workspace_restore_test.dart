@@ -261,6 +261,40 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
     });
 
+    mobileTest('uses the Japanese unsupported-type notice', (tester) async {
+      binding.platformDispatcher.localesTestValue = const [Locale('ja')];
+      reply = () async => throw PlatformException(
+        code: 'unsupported_type',
+        message: 'private/path',
+      );
+      await open(tester, source: '残す原文');
+
+      await restore(tester);
+
+      expect(
+        find.text('復元するには.txt、.md、.markdownファイルを選んでください。'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('private'), findsNothing);
+      expect(textOf(tester, 'source-text'), '残す原文');
+    });
+
+    mobileTest('uses the Japanese too-large notice', (tester) async {
+      binding.platformDispatcher.localesTestValue = const [Locale('ja')];
+      reply = () async =>
+          throw PlatformException(code: 'too_large', message: 'private/path');
+      await open(tester, source: '残す原文');
+
+      await restore(tester);
+
+      expect(
+        find.text('このファイルは大きすぎて復元できません。小さい作業エクスポートを選んでください。'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('private'), findsNothing);
+      expect(textOf(tester, 'source-text'), '残す原文');
+    });
+
     mobileTest('restores a v2 document with a UTF-8 BOM', (tester) async {
       reply = () async => bytes(
         Uint8List.fromList([
