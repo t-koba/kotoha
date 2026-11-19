@@ -92,6 +92,12 @@ Two reports delivered by a search role on 2026-11-18T18:07–18:09Z update the e
 
 Neither report closes a gate. Rights, adoption, bundling, engine, quality and distribution stay closed; no dependency, weight, pinned build or engine enablement follows from recording them.
 
+## Android 16 KB page-size gate for future native dependencies (external-untrusted, no adoption)
+
+A search role reported that Android 15 (API 35) supports 16 KB memory pages and that Google Play requires 16 KB support for apps with native libraries targeting API 35+, citing a primary Android Developers guide (fetch receipt prefix `ab2dd08f`, search receipts `aad0a1db` / `48eb1bcc`). The reported enforcement date differs between the current guide (2027-02-01) and an earlier Android blog (2025-11-01), so it must be re-checked at adoption time. The guide directs inspecting ELF LOAD-segment alignment (`>=0x4000`) in packaged `.so` files and testing on a 16 KB device; unaligned libraries can fail to install or load. A third-party article reports that Flutter >=3.38 defaults to NDK r28 (first NDK aligning native code for 16 KB by default) with AGP >=8.5.1 and build tools >=35.0.0; the CI pins Flutter 3.47.9, but the project's API 35 emulator's page size is not documented, so that CI run alone is not 16 KB evidence. A `fllama_cpp` changelog reportedly states its Android ggml CPU libraries are 16 KB-aligned; no equivalent public statement was found for the other candidate plugins (an access gap, not proof of misalignment).
+
+No AAB, `.so`, emulator or device run was inspected locally; these are external-untrusted claims. The gate for any future engine, OCR or storage native is a release-like AAB-to-per-ABI APK check with `readelf -l` plus a 16 KB Android 15 emulator run of the real model-load path, recorded for the chosen library. No dependency, library or model is adopted, downloaded or bundled by recording this gate.
+
 ## Other engine route and decision
 
 Existing llama.cpp/NDK/model provenance, notice, and redistribution gates remain unresolved. No weights were downloaded or bundled. Model licenses, language-pair support, and device behavior remain unestablished without evidence.
