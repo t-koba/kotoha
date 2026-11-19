@@ -218,6 +218,10 @@
   "@documentOutline": {
     "description": "Heading for the outline of blocks parsed from the source text."
   },
+  "documentOutlineTruncated": "The outline covers only the beginning of the source. The full text remains editable.",
+  "@documentOutlineTruncated": {
+    "description": "Notice shown when the outline omits source text past its bounded prefix or entry limit."
+  },
   "documentOutlineEmpty": "No blocks in the source text yet.",
   "@documentOutlineEmpty": {
     "description": "Empty state shown when the source text has no outline blocks."

@@ -590,6 +590,12 @@ abstract class AppLocalizations {
   /// **'原文の構成'**
   String get documentOutline;
 
+  /// 構成が解析対象の先頭または表示件数の上限を超えた原文の一部を省略したときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'構成は原文の先頭のみを表示します。全文は引き続き編集できます。'**
+  String get documentOutlineTruncated;
+
   /// 原文に表示できるブロックがないときの案内。
   ///
   /// In ja, this message translates to:

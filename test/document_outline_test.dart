@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/document_blocks.dart';
+import 'package:kotoha/document_outline.dart';
 import 'package:kotoha/main.dart';
 
 const _source = '''
@@ -67,6 +68,12 @@ Future<TextEditingController> _pumpApp(
   await tester.pumpAndSettle();
   return tester.widget<TextField>(field).controller!;
 }
+
+String _longSource(String firstHeading) =>
+    '## $firstHeading\n${'## Repeated line\n' * (maxOutlineSourceLength ~/ 16)}';
+
+const _truncatedNoticeEn =
+    'The outline covers only the beginning of the source. The full text remains editable.';
 
 bool _focusesSource(WidgetTester tester) {
   final editable = find.descendant(
@@ -263,4 +270,103 @@ void main() {
       },
     );
   }
+
+  for (final (locale, notice) in [
+    (const Locale('en'), _truncatedNoticeEn),
+    (const Locale('ja'), '構成は原文の先頭のみを表示します。全文は引き続き編集できます。'),
+  ]) {
+    _platformTest(
+      'source past the outline prefix is disclosed and bounded for $locale',
+      TargetPlatform.macOS,
+      (tester) async {
+        final source = _longSource('Beginning');
+        expect(source.length, greaterThan(maxOutlineSourceLength));
+        final controller = await _pumpApp(
+          tester,
+          locale: locale,
+          source: source,
+        );
+        expect(find.text(notice), findsOneWidget);
+        expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+        expect(
+          find.byKey(ValueKey('document-block-${maxVisibleOutlineBlocks - 1}')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(ValueKey('document-block-$maxVisibleOutlineBlocks')),
+          findsNothing,
+        );
+
+        final expected = parseDocumentBlocks(
+          source.substring(0, maxOutlineSourceLength),
+        ).first;
+        final entry = find.byKey(const ValueKey('document-block-0'));
+        await tester.ensureVisible(entry);
+        await tester.pumpAndSettle();
+        await tester.tap(entry);
+        await tester.pumpAndSettle();
+        expect(
+          controller.selection,
+          TextSelection(baseOffset: expected.start, extentOffset: expected.end),
+        );
+        expect(controller.text, source);
+      },
+    );
+  }
+
+  _platformTest(
+    'a prefix with too many blocks is disclosed and bounded',
+    TargetPlatform.macOS,
+    (tester) async {
+      final source = List<String>.generate(
+        maxVisibleOutlineBlocks + 20,
+        (index) => '## Heading $index',
+      ).join('\n');
+      expect(source.length, lessThan(maxOutlineSourceLength));
+      await _pumpApp(tester, locale: const Locale('en'), source: source);
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      final last = find.byKey(
+        ValueKey('document-block-${maxVisibleOutlineBlocks - 1}'),
+      );
+      expect(last, findsOneWidget);
+      expect(
+        (tester.widget<ListTile>(last).title! as Text).data,
+        'Heading ${maxVisibleOutlineBlocks - 1}',
+      );
+      expect(
+        find.byKey(ValueKey('document-block-$maxVisibleOutlineBlocks')),
+        findsNothing,
+      );
+    },
+  );
+
+  _platformTest(
+    'editing a large source refreshes the bounded prefix',
+    TargetPlatform.macOS,
+    (tester) async {
+      await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: _longSource('BeforeEdit'),
+      );
+      expect(find.text('BeforeEdit'), findsOneWidget);
+
+      final field = find.byKey(const ValueKey('source-text'));
+      await tester.enterText(field, _longSource('AfterEdit'));
+      await tester.pumpAndSettle();
+
+      final controller = tester.widget<TextField>(field).controller!;
+      expect(controller.text.startsWith('## AfterEdit'), isTrue);
+      expect(controller.text.length, greaterThan(maxOutlineSourceLength));
+      expect(find.text('BeforeEdit'), findsNothing);
+      expect(find.text('AfterEdit'), findsOneWidget);
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+      expect(
+        find.byKey(ValueKey('document-block-$maxVisibleOutlineBlocks')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

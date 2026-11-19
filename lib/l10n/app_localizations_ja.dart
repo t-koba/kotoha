@@ -288,6 +288,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get documentOutline => '原文の構成';
 
   @override
+  String get documentOutlineTruncated => '構成は原文の先頭のみを表示します。全文は引き続き編集できます。';
+
+  @override
   String get documentOutlineEmpty => '原文にはまだブロックがありません。';
 
   @override

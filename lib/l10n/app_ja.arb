@@ -218,6 +218,10 @@
   "@documentOutline": {
     "description": "原文から解析したブロック一覧の見出し。"
   },
+  "documentOutlineTruncated": "構成は原文の先頭のみを表示します。全文は引き続き編集できます。",
+  "@documentOutlineTruncated": {
+    "description": "構成が解析対象の先頭または表示件数の上限を超えた原文の一部を省略したときの案内。"
+  },
   "documentOutlineEmpty": "原文にはまだブロックがありません。",
   "@documentOutlineEmpty": {
     "description": "原文に表示できるブロックがないときの案内。"

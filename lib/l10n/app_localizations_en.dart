@@ -298,6 +298,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get documentOutline => 'Document outline';
 
   @override
+  String get documentOutlineTruncated =>
+      'The outline covers only the beginning of the source. The full text remains editable.';
+
+  @override
   String get documentOutlineEmpty => 'No blocks in the source text yet.';
 
   @override
