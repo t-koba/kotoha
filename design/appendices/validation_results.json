@@ -1,6 +1,6 @@
 {
-  "checks": 98,
-  "passed": 98,
+  "checks": 99,
+  "passed": 99,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -479,6 +479,11 @@
     },
     {
       "name": "Locale parity rejects metadata drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Locale parity rejects generated drift",
       "status": "pass",
       "case": "incompatible"
     },
