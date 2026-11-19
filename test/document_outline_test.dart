@@ -485,6 +485,28 @@ void main() {
   }
 
   _platformTest(
+    'search normalizes query whitespace like outline labels',
+    TargetPlatform.macOS,
+    (tester) async {
+      await _pumpApp(tester, locale: const Locale('en'), source: _source);
+      final search = find.byKey(const ValueKey('document-outline-search'));
+
+      // U+3000 ideographic space (the standard Japanese separator, common in
+      // IME and copy-paste input) and repeated ASCII spaces are collapsed in
+      // outline labels, so the query must be normalized the same way.
+      for (final query in ['FIRST\u3000paragraph', 'FIRST   paragraph']) {
+        await tester.enterText(search, query);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('document-block-1')),
+          findsOneWidget,
+          reason: 'query ${query.codeUnits} should match the normalized label',
+        );
+      }
+    },
+  );
+
+  _platformTest(
     'a filtered match selects its exact source range',
     TargetPlatform.macOS,
     (tester) async {

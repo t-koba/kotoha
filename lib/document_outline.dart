@@ -19,9 +19,15 @@ const int maxOutlineLookaheadLength = 4 * 1024;
 int outlineParseEnd(int sourceLength) =>
     min(sourceLength, maxOutlineSourceLength + maxOutlineLookaheadLength);
 
+/// Collapses Unicode whitespace runs (including ideographic spaces and NBSP)
+/// to one ASCII space and trims the ends, so display labels and typed queries
+/// are compared in the same form.
+String _normalizeOutlineWhitespace(String text) =>
+    text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
 /// The normalized label shared by outline display and search matching.
 String _outlineLabel(DocumentBlock block) =>
-    block.text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    _normalizeOutlineWhitespace(block.text);
 
 class _OutlineData {
   _OutlineData({
@@ -156,7 +162,8 @@ class _DocumentOutlineState extends State<DocumentOutline> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
     final data = _data;
-    final query = _searchController.text.trim().toLowerCase();
+    final query = _normalizeOutlineWhitespace(_searchController.text)
+        .toLowerCase();
     final hasQuery = query.isNotEmpty;
     final hasFilter = hasQuery || _reviewOnly;
     final limit = hasFilter
