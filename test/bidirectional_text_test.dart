@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
 import 'package:kotoha/first_strong_direction.dart';
+import 'package:kotoha/unicode_bidi_data.dart';
 
 void main() {
   test('UAX #9 P2/P3 scans scalars and ignores non-strong types', () {
@@ -32,6 +33,34 @@ void main() {
     };
     for (final entry in cases.entries) {
       expect(firstStrongDirection(entry.key), entry.value, reason: entry.key);
+    }
+  });
+
+  test('ASCII direction shortcut matches the generated bidi table', () {
+    int tableClass(int scalar) {
+      var low = 0;
+      var high = unicodeBidiClassRanges.length ~/ 3;
+      while (low < high) {
+        final middle = (low + high) ~/ 2;
+        final offset = middle * 3;
+        if (scalar < unicodeBidiClassRanges[offset]) {
+          high = middle;
+        } else if (scalar > unicodeBidiClassRanges[offset + 1]) {
+          low = middle + 1;
+        } else {
+          return unicodeBidiClassRanges[offset + 2];
+        }
+      }
+      return 0;
+    }
+
+    for (var code = 0; code < 0x80; code++) {
+      final actual = firstStrongDirection('${String.fromCharCode(code)}\u05D0');
+      final expected = switch (tableClass(code)) {
+        0 || 2 => TextDirection.ltr,
+        _ => TextDirection.rtl,
+      };
+      expect(actual, expected, reason: 'U+${code.toRadixString(16)}');
     }
   });
 

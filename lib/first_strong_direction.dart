@@ -23,6 +23,20 @@ TextDirection firstStrongDirection(String text) {
 }
 
 int _bidiClass(int scalar) {
+  // ASCII classes are fixed by Unicode and match the generated table. Keeping
+  // them here avoids a binary search for each neutral character in a long run.
+  if (scalar < 0x80) {
+    if ((scalar >= 0x41 && scalar <= 0x5A) ||
+        (scalar >= 0x61 && scalar <= 0x7A)) {
+      return 0;
+    }
+    if (scalar == 0x0A ||
+        scalar == 0x0D ||
+        (scalar >= 0x1C && scalar <= 0x1E)) {
+      return 2;
+    }
+    return 5;
+  }
   var low = 0;
   var high = unicodeBidiClassRanges.length ~/ 3;
   while (low < high) {
