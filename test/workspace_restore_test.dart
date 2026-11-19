@@ -373,6 +373,44 @@ void main() {
     }
   });
 
+  testWidgets('uses the Japanese unsupported-document notice', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    binding.platformDispatcher.localesTestValue = const [Locale('ja')];
+    try {
+      picker.pick = () async => _File('wrong header');
+      await open(tester);
+
+      await restore(tester);
+
+      expect(find.text('このファイルはKotoha v2の作業エクスポートではありません。'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('uses the Japanese confirmation and success strings', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    binding.platformDispatcher.localesTestValue = const [Locale('ja')];
+    try {
+      picker.pick = () async => _File(formatWorkspaceExport(restoredDraft()));
+      await open(tester);
+      await tester.enterText(field('source-text'), '残す原文');
+
+      await restore(tester);
+
+      expect(find.text('現在の作業内容を置き換えますか？'), findsOneWidget);
+      await tester.tap(field('restore-workspace-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('作業内容を復元しました。'), findsOneWidget);
+      expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('a read failure is reported without changing drafts', (
     tester,
   ) async {
