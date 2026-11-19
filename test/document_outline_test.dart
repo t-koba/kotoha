@@ -664,4 +664,32 @@ void main() {
       );
     },
   );
+
+  _platformTest(
+    'a clipped block at the prefix cutoff is not offered as an exact range',
+    TargetPlatform.macOS,
+    (tester) async {
+      final source = '## Complete\n${'x' * maxOutlineSourceLength}😀 trailing';
+      expect(source.length, greaterThan(maxOutlineSourceLength));
+      final controller = await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: source,
+      );
+
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-1')), findsNothing);
+
+      final expected = parseDocumentBlocks('## Complete').single;
+      final entry = find.byKey(const ValueKey('document-block-0'));
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+      expect(
+        controller.selection,
+        TextSelection(baseOffset: expected.start, extentOffset: expected.end),
+      );
+      expect(controller.text, source);
+    },
+  );
 }
