@@ -371,34 +371,51 @@ void main() {
     }
   });
 
-  testWidgets('a language-only edit after picking aborts the restore', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
-    try {
-      await open(tester);
-      await tester.enterText(field('target-language-0'), 'en');
-      picker.pick = () async {
-        tester.widget<TextField>(field('target-language-0')).controller!.text =
-            'fr';
-        return _File(formatWorkspaceExport(restoredDraft()));
-      };
+  for (final edit in {
+    'source-language': 'edited-language',
+    'source-text': 'edited source',
+    'target-language-0': 'edited-target',
+    'translation-text-0': 'edited translation',
+  }.entries) {
+    testWidgets('an edit to ${edit.key} after picking aborts the restore', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await open(tester);
+        await tester.enterText(field('source-language'), 'old-language');
+        await tester.enterText(field('source-text'), 'old source');
+        await tester.enterText(field('target-language-0'), 'old-target');
+        await tester.enterText(field('translation-text-0'), 'old translation');
+        picker.pick = () async {
+          tester.widget<TextField>(field(edit.key)).controller!.text =
+              edit.value;
+          return _File(formatWorkspaceExport(restoredDraft()));
+        };
 
-      await restore(tester);
+        await restore(tester);
 
-      expect(
-        find.text(
-          'Source text changed during import. Your edits were kept; import again to retry.',
-        ),
-        findsOneWidget,
-      );
-      expect(textOf(tester, 'target-language-0'), 'fr');
-      expect(textOf(tester, 'source-text'), '');
-      expect(find.text('Workspace restored.'), findsNothing);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
+        expect(
+          find.text(
+            'Source text changed during import. Your edits were kept; import again to retry.',
+          ),
+          findsOneWidget,
+        );
+        expect(textOf(tester, edit.key), edit.value);
+        expect(
+          textOf(tester, 'source-text'),
+          edit.key == 'source-text' ? edit.value : 'old source',
+        );
+        expect(find.text('Workspace restored.'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('restore-workspace-confirm')),
+          findsNothing,
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  }
 
   testWidgets('picker cancellation keeps the workspace without a notice', (
     tester,
