@@ -203,6 +203,36 @@ void main() {
     }
   });
 
+  testWidgets('an edit during confirmation aborts replacement', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async => _File(formatWorkspaceExport(restoredDraft()));
+      await open(tester);
+      await tester.enterText(field('source-text'), 'old source');
+      await tester.enterText(field('target-language-0'), 'old target');
+
+      await restore(tester);
+      tester.widget<TextField>(field('source-text')).controller!.text =
+          'edited during confirmation';
+      await tester.tap(field('restore-workspace-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Source text changed during import. Your edits were kept; import again to retry.',
+        ),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'edited during confirmation');
+      expect(textOf(tester, 'target-language-0'), 'old target');
+      expect(find.text('Workspace restored.'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('restoring an empty export clears every stale field', (
     tester,
   ) async {
