@@ -398,6 +398,12 @@ abstract class AppLocalizations {
   /// **'作業内容を書き出しました。'**
   String get exportedWorkspaceNotice;
 
+  /// 作業内容全体の書き出しが復元可能なサイズを超える場合の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'この作業内容は復元できるサイズを超えて書き出されます。文字を減らしてから書き出してください。'**
+  String get workspaceExportTooLargeNotice;
+
   /// No description provided for @exportFileButton.
   ///
   /// In ja, this message translates to:

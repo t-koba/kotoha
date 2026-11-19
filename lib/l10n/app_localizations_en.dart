@@ -185,6 +185,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportedWorkspaceNotice => 'Workspace exported.';
 
   @override
+  String get workspaceExportTooLargeNotice =>
+      'This workspace export would be too large to restore. Shorten the text and export again.';
+
+  @override
   String get exportFileButton => 'Export';
 
   @override

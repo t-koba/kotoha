@@ -515,8 +515,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       return;
     }
 
+    final content = formatWorkspaceExport(draft);
+    // Restore applies the same bounded reader to every document it accepts.
+    // Refuse a workspace before writing a file that could not be restored.
+    if (utf8.encode(content).length > maxTextImportBytes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.workspaceExportTooLargeNotice)),
+      );
+      return;
+    }
     await _exportToFile(
-      content: formatWorkspaceExport(draft),
+      content: content,
       suggestedName: 'workspace.txt',
       successNotice: strings.exportedWorkspaceNotice,
       failureNotice: strings.workspaceExportFailureNotice,

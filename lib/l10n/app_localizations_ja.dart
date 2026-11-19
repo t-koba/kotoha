@@ -177,6 +177,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exportedWorkspaceNotice => '作業内容を書き出しました。';
 
   @override
+  String get workspaceExportTooLargeNotice =>
+      'この作業内容は復元できるサイズを超えて書き出されます。文字を減らしてから書き出してください。';
+
+  @override
   String get exportFileButton => '書き出す';
 
   @override

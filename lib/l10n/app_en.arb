@@ -143,6 +143,10 @@
   "@exportedWorkspaceNotice": {
     "description": "Notice confirming a whole-workspace export finished."
   },
+  "workspaceExportTooLargeNotice": "This workspace export would be too large to restore. Shorten the text and export again.",
+  "@workspaceExportTooLargeNotice": {
+    "description": "Notice shown when a whole-workspace export would exceed the restore size limit."
+  },
   "exportFileButton": "Export",
   "licenses": "Licenses",
   "uiLanguage": "Interface language",

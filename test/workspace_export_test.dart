@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
+import 'package:kotoha/text_document_picker.dart';
 import 'package:kotoha/workspace.dart';
 import 'package:kotoha/workspace_export.dart';
 
@@ -350,6 +351,32 @@ void main() {
         tester.widget<TextField>(field('translation-text-1')).controller!.text,
         'Hello, 🌏',
       );
+    });
+  });
+
+  testWidgets('an export too large to restore is refused before writing', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final writer = _Writer();
+      selector.result = FileSaveLocation('/user/chosen/workspace.txt');
+      await pumpWorkspace(tester, writer);
+      tester.widget<TextField>(field('source-text')).controller!.text =
+          '\\' * (maxTextImportBytes ~/ 2 + 1);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      expect(
+        find.text(
+          'This workspace export would be too large to restore. Shorten the text and export again.',
+        ),
+        findsOneWidget,
+      );
+      expect(selector.calls, 0);
+      expect(writer.writes, isEmpty);
     });
   });
 
