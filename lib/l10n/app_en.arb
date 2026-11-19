@@ -143,9 +143,21 @@
   "@exportedWorkspaceNotice": {
     "description": "Notice confirming a whole-workspace export finished."
   },
-  "workspaceExportTooLargeNotice": "This workspace export would be too large to restore. Shorten the text and export again.",
-  "@workspaceExportTooLargeNotice": {
-    "description": "Notice shown when a whole-workspace export would exceed the restore size limit."
+  "workspaceExportTooLargeTitle": "Save a non-restorable export?",
+  "@workspaceExportTooLargeTitle": {
+    "description": "Title of the warning before saving a workspace export larger than Restore accepts."
+  },
+  "workspaceExportTooLargeQuestion": "This workspace is larger than Kotoha can restore. The file can still be saved as UTF-8 text, but Restore will reject it. Continue?",
+  "@workspaceExportTooLargeQuestion": {
+    "description": "Disclosure shown before saving an over-limit workspace export."
+  },
+  "workspaceExportTooLargeContinue": "Save anyway",
+  "@workspaceExportTooLargeContinue": {
+    "description": "Button confirming save of a non-restorable workspace text file."
+  },
+  "exportedWorkspaceTooLargeNotice": "Saved as text, but too large for Kotoha to restore.",
+  "@exportedWorkspaceTooLargeNotice": {
+    "description": "Notice shown after saving an over-limit workspace text file."
   },
   "exportFileButton": "Export",
   "licenses": "Licenses",

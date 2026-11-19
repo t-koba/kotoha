@@ -177,8 +177,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exportedWorkspaceNotice => '作業内容を書き出しました。';
 
   @override
-  String get workspaceExportTooLargeNotice =>
-      'この作業内容は復元できるサイズを超えて書き出されます。文字を減らしてから書き出してください。';
+  String get workspaceExportTooLargeTitle => '復元できないファイルを保存しますか？';
+
+  @override
+  String get workspaceExportTooLargeQuestion =>
+      'この作業内容はKotohaで復元できるサイズを超えています。UTF-8テキストとしては保存できますが、復元では読み込めません。続けますか？';
+
+  @override
+  String get workspaceExportTooLargeContinue => 'それでも保存';
+
+  @override
+  String get exportedWorkspaceTooLargeNotice =>
+      'テキストとして保存しましたが、Kotohaでは復元できません。';
 
   @override
   String get exportFileButton => '書き出す';

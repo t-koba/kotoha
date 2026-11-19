@@ -398,11 +398,29 @@ abstract class AppLocalizations {
   /// **'作業内容を書き出しました。'**
   String get exportedWorkspaceNotice;
 
-  /// 作業内容全体の書き出しが復元可能なサイズを超える場合の案内。
+  /// 復元可能なサイズを超える作業エクスポートを保存する前の警告タイトル。
   ///
   /// In ja, this message translates to:
-  /// **'この作業内容は復元できるサイズを超えて書き出されます。文字を減らしてから書き出してください。'**
-  String get workspaceExportTooLargeNotice;
+  /// **'復元できないファイルを保存しますか？'**
+  String get workspaceExportTooLargeTitle;
+
+  /// サイズ超過の作業エクスポートを保存する前の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'この作業内容はKotohaで復元できるサイズを超えています。UTF-8テキストとしては保存できますが、復元では読み込めません。続けますか？'**
+  String get workspaceExportTooLargeQuestion;
+
+  /// 復元できない作業テキストの保存を確定するボタン。
+  ///
+  /// In ja, this message translates to:
+  /// **'それでも保存'**
+  String get workspaceExportTooLargeContinue;
+
+  /// サイズ超過の作業テキストを保存した後の案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'テキストとして保存しましたが、Kotohaでは復元できません。'**
+  String get exportedWorkspaceTooLargeNotice;
 
   /// No description provided for @exportFileButton.
   ///

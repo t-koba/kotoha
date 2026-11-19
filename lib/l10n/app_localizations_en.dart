@@ -185,8 +185,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportedWorkspaceNotice => 'Workspace exported.';
 
   @override
-  String get workspaceExportTooLargeNotice =>
-      'This workspace export would be too large to restore. Shorten the text and export again.';
+  String get workspaceExportTooLargeTitle => 'Save a non-restorable export?';
+
+  @override
+  String get workspaceExportTooLargeQuestion =>
+      'This workspace is larger than Kotoha can restore. The file can still be saved as UTF-8 text, but Restore will reject it. Continue?';
+
+  @override
+  String get workspaceExportTooLargeContinue => 'Save anyway';
+
+  @override
+  String get exportedWorkspaceTooLargeNotice =>
+      'Saved as text, but too large for Kotoha to restore.';
 
   @override
   String get exportFileButton => 'Export';

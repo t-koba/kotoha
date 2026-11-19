@@ -354,29 +354,84 @@ void main() {
     });
   });
 
-  testWidgets('an export too large to restore is refused before writing', (
+  Future<void> fillOversizedWorkspace(
+    WidgetTester tester,
+    _Writer writer,
+  ) async {
+    await pumpWorkspace(tester, writer);
+    tester.widget<TextField>(field('source-text')).controller!.text =
+        '\\' * (maxTextImportBytes ~/ 2 + 1);
+  }
+
+  testWidgets('an over-limit export warns before saving and can be canceled', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final writer = _Writer();
+      await fillOversizedWorkspace(tester, writer);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save a non-restorable export?'), findsOneWidget);
+      expect(find.textContaining('Restore will reject it'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(selector.calls, 0);
+      expect(writer.writes, isEmpty);
+    });
+  });
+
+  testWidgets('an over-limit export can be saved with a distinct notice', (
     tester,
   ) async {
     await withPlatform(TargetPlatform.windows, () async {
       final writer = _Writer();
       selector.result = FileSaveLocation('/user/chosen/workspace.txt');
-      await pumpWorkspace(tester, writer);
-      tester.widget<TextField>(field('source-text')).controller!.text =
-          '\\' * (maxTextImportBytes ~/ 2 + 1);
+      await fillOversizedWorkspace(tester, writer);
 
       final exportButton = field('export-workspace');
       await tester.ensureVisible(exportButton);
       await tester.tap(exportButton);
-      await tester.pump();
+      await tester.pumpAndSettle();
+      await tester.tap(field('workspace-export-too-large-confirm'));
+      await tester.pumpAndSettle();
 
+      expect(selector.calls, 1);
+      expect(writer.writes, hasLength(1));
       expect(
-        find.text(
-          'This workspace export would be too large to restore. Shorten the text and export again.',
-        ),
+        writer.writes.single.$2,
+        startsWith('Kotoha workspace export v2\n'),
+      );
+      expect(
+        find.text('Saved as text, but too large for Kotoha to restore.'),
         findsOneWidget,
       );
-      expect(selector.calls, 0);
-      expect(writer.writes, isEmpty);
+    });
+  });
+
+  testWidgets('uses the Japanese over-limit export disclosure', (tester) async {
+    binding.platformDispatcher.localesTestValue = const [Locale('ja')];
+    await withPlatform(TargetPlatform.windows, () async {
+      final writer = _Writer();
+      selector.result = FileSaveLocation('/user/chosen/workspace.txt');
+      await fillOversizedWorkspace(tester, writer);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('復元できないファイルを保存しますか？'), findsOneWidget);
+      expect(find.textContaining('復元では読み込めません'), findsOneWidget);
+      await tester.tap(field('workspace-export-too-large-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('テキストとして保存しましたが、Kotohaでは復元できません。'), findsOneWidget);
+      expect(writer.writes, hasLength(1));
     });
   });
 

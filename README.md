@@ -22,8 +22,9 @@ text document containing the source language, source text and every translation;
 the earlier v1 format is no longer produced or restorable. These platforms use
 their native save panels, which retain the documented confirmation before
 replacing an existing file; hosted CI builds the adapters but does not automate
-that confirmation UI. A workspace whose UTF-8 v2 bytes would exceed Restore's
-8 MiB limit is refused before the save panel opens. Mobile builds have no export action.
+that confirmation UI. A workspace whose UTF-8 v2 bytes exceed Restore's 8 MiB
+limit is disclosed before saving; the file can still be saved as text, but a
+distinct success notice says Kotoha cannot restore it. Mobile builds have no export action.
 
 On every platform, a v2 workspace export can be restored through the same
 explicit text-document picker (`.txt`, `.md` or `.markdown`). If the current

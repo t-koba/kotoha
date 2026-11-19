@@ -143,9 +143,21 @@
   "@exportedWorkspaceNotice": {
     "description": "作業内容全体の書き出しが完了したことを伝える案内。"
   },
-  "workspaceExportTooLargeNotice": "この作業内容は復元できるサイズを超えて書き出されます。文字を減らしてから書き出してください。",
-  "@workspaceExportTooLargeNotice": {
-    "description": "作業内容全体の書き出しが復元可能なサイズを超える場合の案内。"
+  "workspaceExportTooLargeTitle": "復元できないファイルを保存しますか？",
+  "@workspaceExportTooLargeTitle": {
+    "description": "復元可能なサイズを超える作業エクスポートを保存する前の警告タイトル。"
+  },
+  "workspaceExportTooLargeQuestion": "この作業内容はKotohaで復元できるサイズを超えています。UTF-8テキストとしては保存できますが、復元では読み込めません。続けますか？",
+  "@workspaceExportTooLargeQuestion": {
+    "description": "サイズ超過の作業エクスポートを保存する前の案内。"
+  },
+  "workspaceExportTooLargeContinue": "それでも保存",
+  "@workspaceExportTooLargeContinue": {
+    "description": "復元できない作業テキストの保存を確定するボタン。"
+  },
+  "exportedWorkspaceTooLargeNotice": "テキストとして保存しましたが、Kotohaでは復元できません。",
+  "@exportedWorkspaceTooLargeNotice": {
+    "description": "サイズ超過の作業テキストを保存した後の案内。"
   },
   "exportFileButton": "書き出す",
   "licenses": "ライセンス",

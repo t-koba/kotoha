@@ -517,17 +517,36 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
     final content = formatWorkspaceExport(draft);
     // Restore applies the same bounded reader to every document it accepts.
-    // Refuse a workspace before writing a file that could not be restored.
-    if (utf8.encode(content).length > maxTextImportBytes) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.workspaceExportTooLargeNotice)),
+    // Disclose an over-limit export before saving, but keep the user's text
+    // savable as a plain UTF-8 file and report it as non-restorable.
+    final tooLarge = utf8.encode(content).length > maxTextImportBytes;
+    if (tooLarge) {
+      final saveAnyway = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(strings.workspaceExportTooLargeTitle),
+          content: Text(strings.workspaceExportTooLargeQuestion),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(strings.cancelImport),
+            ),
+            TextButton(
+              key: const ValueKey('workspace-export-too-large-confirm'),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(strings.workspaceExportTooLargeContinue),
+            ),
+          ],
+        ),
       );
-      return;
+      if (!mounted || saveAnyway != true) return;
     }
     await _exportToFile(
       content: content,
       suggestedName: 'workspace.txt',
-      successNotice: strings.exportedWorkspaceNotice,
+      successNotice: tooLarge
+          ? strings.exportedWorkspaceTooLargeNotice
+          : strings.exportedWorkspaceNotice,
       failureNotice: strings.workspaceExportFailureNotice,
     );
   }
