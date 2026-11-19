@@ -133,6 +133,33 @@ void main() {
       expectRestored(tester);
     });
 
+    mobileTest('restoring an empty export clears every stale field', (
+      tester,
+    ) async {
+      reply = () async =>
+          document(formatWorkspaceExport(TextWorkspaceDraft.empty()));
+      await open(tester, source: 'stale source');
+      await populate(tester);
+      final addTranslation = find.text('Add translation');
+      await tester.ensureVisible(addTranslation);
+      await tester.tap(addTranslation);
+      await tester.pumpAndSettle();
+      await tester.enterText(field('target-language-1'), 'fr');
+      await tester.enterText(field('translation-text-1'), 'second');
+
+      await restore(tester);
+      await tester.tap(field('restore-workspace-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(textOf(tester, 'source-language'), isEmpty);
+      expect(textOf(tester, 'source-text'), isEmpty);
+      expect(textOf(tester, 'target-language-0'), isEmpty);
+      expect(textOf(tester, 'translation-text-0'), isEmpty);
+      expect(find.byKey(const ValueKey('target-language-1')), findsNothing);
+      expect(find.byKey(const ValueKey('translation-text-1')), findsNothing);
+      expect(find.text('Workspace restored.'), findsOneWidget);
+    });
+
     mobileTest('canceling confirmation keeps a populated workspace', (
       tester,
     ) async {
