@@ -311,4 +311,18 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get documentOutlineEntriesTruncated =>
       '構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。';
+
+  @override
+  String get documentFormatSupport => 'テキスト形式の対応範囲';
+
+  @override
+  String get documentFormatSupportHandled => 'ローカルで認識: 見出し、段落、リスト項目、コードブロック。';
+
+  @override
+  String get documentFormatSupportPreserved =>
+      '原文のテキストとブロックの正確な範囲は編集可能なまま維持し、出力はプレーンテキストです。';
+
+  @override
+  String get documentFormatSupportReview =>
+      'インライン装飾、数字、リンク、プレースホルダーは変換しません。手動で確認してください。';
 }

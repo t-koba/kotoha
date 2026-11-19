@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 import 'content_locale.dart';
+import 'document_format_support.dart';
 import 'document_outline.dart';
 import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
@@ -835,6 +836,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                         enableIMEPersonalizedLearning:
                             _allowImePersonalizedLearning,
                       ),
+                      const DocumentFormatSupport(),
                       const SizedBox(height: 24),
                       Text(
                         strings.translations,

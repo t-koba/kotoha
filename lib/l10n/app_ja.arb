@@ -249,5 +249,21 @@
   "documentOutlineEntriesTruncated": "構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。",
   "@documentOutlineEntriesTruncated": {
     "description": "解析範囲は全文だが構成の項目が表示件数の上限を超えたときの案内。"
+  },
+  "documentFormatSupport": "テキスト形式の対応範囲",
+  "@documentFormatSupport": {
+    "description": "ローカルのテキスト形式に関する対応範囲の見出し。"
+  },
+  "documentFormatSupportHandled": "ローカルで認識: 見出し、段落、リスト項目、コードブロック。",
+  "@documentFormatSupportHandled": {
+    "description": "ローカルのテキストリーダーが認識するブロックの種類。"
+  },
+  "documentFormatSupportPreserved": "原文のテキストとブロックの正確な範囲は編集可能なまま維持し、出力はプレーンテキストです。",
+  "@documentFormatSupportPreserved": {
+    "description": "ローカルのテキストリーダーが保持するものと出力形式。"
+  },
+  "documentFormatSupportReview": "インライン装飾、数字、リンク、プレースホルダーは変換しません。手動で確認してください。",
+  "@documentFormatSupportReview": {
+    "description": "ローカルのテキストリーダーが変換しないため利用者が確認する項目。"
   }
 }

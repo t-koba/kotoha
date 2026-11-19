@@ -637,6 +637,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。'**
   String get documentOutlineEntriesTruncated;
+
+  /// ローカルのテキスト形式に関する対応範囲の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'テキスト形式の対応範囲'**
+  String get documentFormatSupport;
+
+  /// ローカルのテキストリーダーが認識するブロックの種類。
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカルで認識: 見出し、段落、リスト項目、コードブロック。'**
+  String get documentFormatSupportHandled;
+
+  /// ローカルのテキストリーダーが保持するものと出力形式。
+  ///
+  /// In ja, this message translates to:
+  /// **'原文のテキストとブロックの正確な範囲は編集可能なまま維持し、出力はプレーンテキストです。'**
+  String get documentFormatSupportPreserved;
+
+  /// ローカルのテキストリーダーが変換しないため利用者が確認する項目。
+  ///
+  /// In ja, this message translates to:
+  /// **'インライン装飾、数字、リンク、プレースホルダーは変換しません。手動で確認してください。'**
+  String get documentFormatSupportReview;
 }
 
 class _AppLocalizationsDelegate

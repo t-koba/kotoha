@@ -249,5 +249,21 @@
   "documentOutlineEntriesTruncated": "Only the first 200 outline entries are shown. The full text remains editable.",
   "@documentOutlineEntriesTruncated": {
     "description": "Notice shown when the parsed prefix is complete but has more blocks than the visible limit."
+  },
+  "documentFormatSupport": "TXT / Markdown support",
+  "@documentFormatSupport": {
+    "description": "Heading for the local text-format capability note."
+  },
+  "documentFormatSupportHandled": "Recognized locally: headings, paragraphs, list items and fenced code.",
+  "@documentFormatSupportHandled": {
+    "description": "The block kinds understood by the local text reader."
+  },
+  "documentFormatSupportPreserved": "The flat source text and exact block ranges stay canonical and editable; output is plain text.",
+  "@documentFormatSupportPreserved": {
+    "description": "What the local text reader preserves and how it outputs."
+  },
+  "documentFormatSupportReview": "Inline formatting, numbers, links and placeholders are not converted; check them manually.",
+  "@documentFormatSupportReview": {
+    "description": "What a user must review because the local reader does not convert it."
   }
 }

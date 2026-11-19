@@ -324,4 +324,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get documentOutlineEntriesTruncated =>
       'Only the first 200 outline entries are shown. The full text remains editable.';
+
+  @override
+  String get documentFormatSupport => 'TXT / Markdown support';
+
+  @override
+  String get documentFormatSupportHandled =>
+      'Recognized locally: headings, paragraphs, list items and fenced code.';
+
+  @override
+  String get documentFormatSupportPreserved =>
+      'The flat source text and exact block ranges stay canonical and editable; output is plain text.';
+
+  @override
+  String get documentFormatSupportReview =>
+      'Inline formatting, numbers, links and placeholders are not converted; check them manually.';
 }

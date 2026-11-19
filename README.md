@@ -23,7 +23,9 @@ text and neither translates nor renders rich formatting. To keep editing
 responsive, the outline parses only a bounded prefix (128 × 1024 UTF-16 code
 units) and shows at most 200 blocks or matches; a notice appears when that bound
 hides any content. The full text stays editable, and export and restore still
-operate on it unchanged.
+operate on it unchanged. A short capability note beside the outline states which
+blocks are recognized, that the flat source and its exact ranges remain canonical,
+and that inline formatting, numbers, links and placeholders need manual review.
 
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the
