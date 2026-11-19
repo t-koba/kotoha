@@ -116,6 +116,66 @@ void main() {
       );
     }
 
+    for (final edit in {
+      'source-language': 'edited-language',
+      'source-text': 'edited source',
+      'target-language-0': 'edited-target',
+      'translation-text-0': 'edited translation',
+    }.entries) {
+      mobileTest('an edit to ${edit.key} after picking aborts restore', (
+        tester,
+      ) async {
+        reply = () async {
+          tester.widget<TextField>(field(edit.key)).controller!.text =
+              edit.value;
+          return document(formatWorkspaceExport(draft()));
+        };
+        await open(tester, source: 'current source');
+        await populate(tester);
+
+        await restore(tester);
+
+        expect(
+          find.text(
+            'Source text changed during import. Your edits were kept; import again to retry.',
+          ),
+          findsOneWidget,
+        );
+        expect(textOf(tester, edit.key), edit.value);
+        expect(
+          textOf(tester, 'source-text'),
+          edit.key == 'source-text' ? edit.value : 'current source',
+        );
+        expect(find.text('Workspace restored.'), findsNothing);
+        expect(
+          find.byKey(const ValueKey('restore-workspace-confirm')),
+          findsNothing,
+        );
+      });
+    }
+
+    mobileTest('an edit while confirming aborts replacement', (tester) async {
+      reply = () async => document(formatWorkspaceExport(draft()));
+      await open(tester, source: 'current source');
+      await populate(tester);
+
+      await restore(tester);
+      tester.widget<TextField>(field('source-text')).controller!.text =
+          'edited during confirmation';
+      await tester.tap(field('restore-workspace-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Source text changed during import. Your edits were kept; import again to retry.',
+        ),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'edited during confirmation');
+      expect(textOf(tester, 'target-language-0'), 'current-target');
+      expect(find.text('Workspace restored.'), findsNothing);
+    });
+
     mobileTest('confirmation replaces a populated workspace', (tester) async {
       reply = () async => document(formatWorkspaceExport(draft()));
       await open(tester, source: 'current source');
