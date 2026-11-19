@@ -832,6 +832,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                       DocumentOutline(
                         controller: _sourceText,
                         sourceFocusNode: _sourceTextFocusNode,
+                        enableIMEPersonalizedLearning:
+                            _allowImePersonalizedLearning,
                       ),
                       const SizedBox(height: 24),
                       Text(

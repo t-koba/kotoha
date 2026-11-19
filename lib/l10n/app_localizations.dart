@@ -607,6 +607,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'（空のブロック）'**
   String get documentOutlineUntitled;
+
+  /// 原文の構成をローカルで絞り込む入力欄のラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'構成を検索'**
+  String get documentOutlineSearch;
+
+  /// 原文の構成をローカルで絞り込む入力欄のヒント。
+  ///
+  /// In ja, this message translates to:
+  /// **'構成の項目を絞り込む'**
+  String get documentOutlineSearchHint;
+
+  /// 空でない検索語に一致する構成の項目がないときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'検索に一致する構成の項目はありません。'**
+  String get documentOutlineNoMatches;
+
+  /// 検索に一致する構成の項目が表示件数の上限を超えたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'一致する構成の項目は最初の200件のみ表示します。'**
+  String get documentOutlineMatchesTruncated;
 }
 
 class _AppLocalizationsDelegate

@@ -92,10 +92,12 @@ Future<void> _verifyLazyKeyboardTraversal(
     }
 
     expect(reached, containsAll(expected));
+    // Source language and source text plus the outline search are always
+    // mounted; only the translation cards should grow with translationCount.
     if (translationCount > 1) {
-      expect(maximumMountedFields, lessThan(expected.length + 2));
+      expect(maximumMountedFields, lessThan(expected.length + 3));
     } else {
-      expect(maximumMountedFields, lessThanOrEqualTo(4));
+      expect(maximumMountedFields, lessThanOrEqualTo(5));
     }
     expect(tester.takeException(), isNull);
   } finally {

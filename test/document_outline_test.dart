@@ -75,6 +75,11 @@ String _longSource(String firstHeading) =>
 const _truncatedNoticeEn =
     'The outline covers only the beginning of the source. The full text remains editable.';
 
+const _noMatchesEn = 'No outline entries match this search.';
+const _noMatchesJa = '検索に一致する構成の項目はありません。';
+const _matchCapEn = 'Only the first 200 matching outline entries are shown.';
+const _matchCapJa = '一致する構成の項目は最初の200件のみ表示します。';
+
 bool _focusesSource(WidgetTester tester) {
   final editable = find.descendant(
     of: find.byKey(const ValueKey('source-text')),
@@ -325,6 +330,7 @@ void main() {
       expect(source.length, lessThan(maxOutlineSourceLength));
       await _pumpApp(tester, locale: const Locale('en'), source: source);
       expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.text(_matchCapEn), findsNothing);
       final last = find.byKey(
         ValueKey('document-block-${maxVisibleOutlineBlocks - 1}'),
       );
@@ -404,6 +410,258 @@ void main() {
         isNot(same(before)),
       );
       expect(controller.text, '## Updated\nBody');
+    },
+  );
+
+  for (final (platform, locale, searchLabel) in [
+    (TargetPlatform.macOS, const Locale('en'), 'Search outline'),
+    (TargetPlatform.android, const Locale('ja'), '構成を検索'),
+  ]) {
+    _platformTest(
+      'search filters cached outline labels on $platform',
+      platform,
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await _pumpApp(tester, locale: locale, source: _source);
+          final search = find.byKey(const ValueKey('document-outline-search'));
+          expect(search, findsOneWidget);
+          expect(
+            find.bySemanticsIdentifier('document-outline-search'),
+            findsOneWidget,
+          );
+          expect(find.bySemanticsLabel(searchLabel), findsOneWidget);
+          for (var index = 0; index < 7; index++) {
+            expect(
+              find.byKey(ValueKey('document-block-$index')),
+              findsOneWidget,
+            );
+          }
+
+          await tester.enterText(search, 'FIRST paragraph');
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(const ValueKey('document-block-1')),
+            findsOneWidget,
+          );
+          expect(
+            (tester
+                        .widget<ListTile>(
+                          find.byKey(const ValueKey('document-block-1')),
+                        )
+                        .title!
+                    as Text)
+                .data,
+            'First paragraph continues here',
+          );
+          for (final index in [0, 2, 3, 4, 5, 6]) {
+            expect(
+              find.byKey(ValueKey('document-block-$index')),
+              findsNothing,
+              reason: 'block $index should be filtered out',
+            );
+          }
+
+          await tester.enterText(search, '   ');
+          await tester.pumpAndSettle();
+          for (var index = 0; index < 7; index++) {
+            expect(
+              find.byKey(ValueKey('document-block-$index')),
+              findsOneWidget,
+              reason: 'whitespace-only query is no filter',
+            );
+          }
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+  }
+
+  _platformTest(
+    'a filtered match selects its exact source range',
+    TargetPlatform.macOS,
+    (tester) async {
+      final controller = await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: _source,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('document-outline-search')),
+        'beta',
+      );
+      await tester.pumpAndSettle();
+      final entry = find.byKey(const ValueKey('document-block-3'));
+      expect(entry, findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-2')), findsNothing);
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+
+      final expected = parseDocumentBlocks(_source)[3];
+      expect(
+        controller.selection,
+        TextSelection(baseOffset: expected.start, extentOffset: expected.end),
+      );
+      expect(controller.text, _source);
+      expect(_focusesSource(tester), isTrue);
+    },
+  );
+
+  for (final (locale, noMatches) in [
+    (const Locale('en'), _noMatchesEn),
+    (const Locale('ja'), _noMatchesJa),
+  ]) {
+    _platformTest(
+      'a query with no matches shows the localized notice for $locale',
+      TargetPlatform.macOS,
+      (tester) async {
+        await _pumpApp(tester, locale: locale, source: _source);
+        final search = find.byKey(const ValueKey('document-outline-search'));
+        await tester.enterText(search, 'no-such-heading');
+        await tester.pumpAndSettle();
+        expect(find.text(noMatches), findsOneWidget);
+        expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+
+        await tester.enterText(find.byKey(const ValueKey('source-text')), '');
+        await tester.pumpAndSettle();
+        expect(find.text(noMatches), findsOneWidget);
+        expect(
+          find.text(
+            locale.languageCode == 'ja'
+                ? '原文にはまだブロックがありません。'
+                : 'No blocks in the source text yet.',
+          ),
+          findsNothing,
+        );
+      },
+    );
+  }
+
+  for (final (locale, matchCap) in [
+    (const Locale('en'), _matchCapEn),
+    (const Locale('ja'), _matchCapJa),
+  ]) {
+    _platformTest(
+      'a query above the entry cap shows the localized notice for $locale',
+      TargetPlatform.macOS,
+      (tester) async {
+        final source = List<String>.generate(
+          maxVisibleOutlineBlocks + 20,
+          (index) => '## Heading $index',
+        ).join('\n');
+        await _pumpApp(tester, locale: locale, source: source);
+        expect(
+          find.text(
+            locale.languageCode == 'ja'
+                ? '構成は原文の先頭のみを表示します。全文は引き続き編集できます。'
+                : _truncatedNoticeEn,
+          ),
+          findsOneWidget,
+        );
+
+        await tester.enterText(
+          find.byKey(const ValueKey('document-outline-search')),
+          'heading',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(matchCap), findsOneWidget);
+        expect(
+          find.text(
+            locale.languageCode == 'ja'
+                ? '構成は原文の先頭のみを表示します。全文は引き続き編集できます。'
+                : _truncatedNoticeEn,
+          ),
+          findsNothing,
+        );
+        expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+        expect(
+          find.byKey(ValueKey('document-block-${maxVisibleOutlineBlocks - 1}')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(ValueKey('document-block-$maxVisibleOutlineBlocks')),
+          findsNothing,
+        );
+      },
+    );
+  }
+
+  _platformTest(
+    'editing the source refreshes filtered outline results',
+    TargetPlatform.macOS,
+    (tester) async {
+      await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: '## Before\nOld body',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('document-outline-search')),
+        'Before',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+      expect(
+        (tester
+                    .widget<ListTile>(
+                      find.byKey(const ValueKey('document-block-0')),
+                    )
+                    .title!
+                as Text)
+            .data,
+        'Before',
+      );
+
+      await tester.enterText(
+        find.byKey(const ValueKey('source-text')),
+        '## After\nNew body',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(_noMatchesEn), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('document-outline-search')),
+        'After',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+      expect(
+        (tester
+                    .widget<ListTile>(
+                      find.byKey(const ValueKey('document-block-0')),
+                    )
+                    .title!
+                as Text)
+            .data,
+        'After',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  _platformTest(
+    'outline search follows the Android IME privacy setting',
+    TargetPlatform.android,
+    (tester) async {
+      await _pumpApp(tester, locale: const Locale('en'), source: '## Heading');
+      final search = find.byKey(const ValueKey('document-outline-search'));
+      expect(
+        tester.widget<TextField>(search).enableIMEPersonalizedLearning,
+        isFalse,
+      );
+
+      final toggle = find.byKey(
+        const ValueKey('android-ime-personalized-learning'),
+      );
+      await tester.ensureVisible(toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(search).enableIMEPersonalizedLearning,
+        isTrue,
+      );
     },
   );
 }

@@ -16,12 +16,14 @@ Import replaces only source text after consent; translations remain manual and
 all drafts stay in memory. Kotoha does not stage a cache copy, persist document
 grants, or add a network client, but the OS/provider may download or stage a file.
 Typed or imported source text also gets a local outline of headings,
-paragraphs, list items and fenced code blocks. Choosing an entry selects that
-block in the source editor; the outline is derived from the current text and
-neither translates nor renders rich formatting. To keep editing responsive, the
-outline parses only a bounded prefix (128 × 1024 UTF-16 code units) and shows at
-most 200 blocks; a notice appears when that bound hides any content. The full text
-stays editable, and export and restore still operate on it unchanged.
+paragraphs, list items and fenced code blocks. A local search filters the
+outlined entries as you type, without changing the source. Choosing an entry
+selects that block in the source editor; the outline is derived from the current
+text and neither translates nor renders rich formatting. To keep editing
+responsive, the outline parses only a bounded prefix (128 × 1024 UTF-16 code
+units) and shows at most 200 blocks or matches; a notice appears when that bound
+hides any content. The full text stays editable, and export and restore still
+operate on it unchanged.
 
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the

@@ -306,4 +306,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get documentOutlineUntitled => '(empty block)';
+
+  @override
+  String get documentOutlineSearch => 'Search outline';
+
+  @override
+  String get documentOutlineSearchHint => 'Filter outline entries';
+
+  @override
+  String get documentOutlineNoMatches =>
+      'No outline entries match this search.';
+
+  @override
+  String get documentOutlineMatchesTruncated =>
+      'Only the first 200 matching outline entries are shown.';
 }

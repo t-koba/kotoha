@@ -498,6 +498,7 @@ void main() {
           find.byKey(const ValueKey('import-source')),
           find.byKey(const ValueKey('review-model-terms')),
           find.bySemanticsLabel(sourceText),
+          find.byKey(const ValueKey('document-outline-search')),
           find.byKey(const ValueKey('document-block-0')),
           find.byKey(const ValueKey('copy-workspace')),
           find.byKey(const ValueKey('restore-workspace')),
@@ -545,7 +546,7 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[7],
-              'outline entry after RTL source text',
+              'outline search after RTL source text',
             );
             await pressShiftTab();
             expectFocused(
@@ -556,52 +557,63 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[8],
-              'copy workspace after outline entry',
+              'outline entry after outline search',
             );
             await pressShiftTab();
-            expectFocused(firstCardOrder[7], 'outline entry after reverse tab');
+            expectFocused(
+              firstCardOrder[7],
+              'outline search after reverse tab',
+            );
           } else if (index == 8) {
             await pressTab();
             expectFocused(
               firstCardOrder[9],
-              'restore workspace after copy workspace',
+              'copy workspace after outline entry',
             );
             await pressShiftTab();
-            expectFocused(
-              firstCardOrder[8],
-              'copy workspace after reverse tab',
-            );
+            expectFocused(firstCardOrder[8], 'outline entry after reverse tab');
           } else if (index == 9) {
             await pressTab();
             expectFocused(
               firstCardOrder[10],
-              'target language after restore workspace',
+              'restore workspace after copy workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[9],
-              'restore workspace after reverse tab',
+              'copy workspace after reverse tab',
             );
           } else if (index == 10) {
             await pressTab();
             expectFocused(
               firstCardOrder[11],
-              'copy action after RTL target language',
+              'target language after restore workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[10],
-              'target language after reverse tab',
+              'restore workspace after reverse tab',
             );
-          } else if (index == 12) {
+          } else if (index == 11) {
             await pressTab();
             expectFocused(
-              firstCardOrder[13],
+              firstCardOrder[12],
+              'copy action after RTL target language',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[11],
+              'target language after reverse tab',
+            );
+          } else if (index == 13) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[14],
               'Add translation after RTL translation text',
             );
             await pressShiftTab();
             expectFocused(
-              firstCardOrder[12],
+              firstCardOrder[13],
               'RTL translation text after reverse tab',
             );
           }
@@ -628,6 +640,7 @@ void main() {
           find.byKey(const ValueKey('import-source')),
           find.byKey(const ValueKey('review-model-terms')),
           find.bySemanticsLabel(sourceText),
+          find.byKey(const ValueKey('document-outline-search')),
           find.byKey(const ValueKey('document-block-0')),
           find.byKey(const ValueKey('copy-workspace')),
           find.byKey(const ValueKey('restore-workspace')),
@@ -688,13 +701,24 @@ void main() {
     await tester.tap(find.text('訳先を追加'));
     await tester.pumpAndSettle();
     const values = ['ja-JP', '原文 👋', 'en-GB', 'Hello\nこんにちは', 'fr', 'Bonjour'];
-    final controllers = tester
-        .widgetList<TextField>(find.byType(TextField))
-        .map((field) => field.controller!)
-        .toList();
+    const fieldKeys = [
+      'source-language',
+      'source-text',
+      'target-language-0',
+      'translation-text-0',
+      'target-language-1',
+      'translation-text-1',
+    ];
+    final controllers = [
+      for (final key in fieldKeys)
+        tester.widget<TextField>(find.byKey(ValueKey(key))).controller!,
+    ];
     expect(controllers, hasLength(values.length));
     for (var index = 0; index < values.length; index++) {
-      await tester.enterText(find.byType(TextField).at(index), values[index]);
+      await tester.enterText(
+        find.byKey(ValueKey(fieldKeys[index])),
+        values[index],
+      );
     }
 
     for (final (choice, title) in [
@@ -711,12 +735,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(title), findsOneWidget);
-      expect(
-        tester
-            .widgetList<TextField>(find.byType(TextField))
-            .map((field) => field.controller),
-        orderedEquals(controllers),
-      );
+      expect([
+        for (final key in fieldKeys)
+          tester.widget<TextField>(find.byKey(ValueKey(key))).controller,
+      ], orderedEquals(controllers));
       expect(
         controllers.map((controller) => controller.text),
         orderedEquals(values),

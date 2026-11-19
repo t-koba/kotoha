@@ -229,5 +229,21 @@
   "documentOutlineUntitled": "（空のブロック）",
   "@documentOutlineUntitled": {
     "description": "解析した文字列が空のブロックに付ける代替ラベル。"
+  },
+  "documentOutlineSearch": "構成を検索",
+  "@documentOutlineSearch": {
+    "description": "原文の構成をローカルで絞り込む入力欄のラベル。"
+  },
+  "documentOutlineSearchHint": "構成の項目を絞り込む",
+  "@documentOutlineSearchHint": {
+    "description": "原文の構成をローカルで絞り込む入力欄のヒント。"
+  },
+  "documentOutlineNoMatches": "検索に一致する構成の項目はありません。",
+  "@documentOutlineNoMatches": {
+    "description": "空でない検索語に一致する構成の項目がないときの案内。"
+  },
+  "documentOutlineMatchesTruncated": "一致する構成の項目は最初の200件のみ表示します。",
+  "@documentOutlineMatchesTruncated": {
+    "description": "検索に一致する構成の項目が表示件数の上限を超えたときの案内。"
   }
 }

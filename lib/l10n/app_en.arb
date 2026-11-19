@@ -229,5 +229,21 @@
   "documentOutlineUntitled": "(empty block)",
   "@documentOutlineUntitled": {
     "description": "Fallback label for a source block whose parsed text is blank."
+  },
+  "documentOutlineSearch": "Search outline",
+  "@documentOutlineSearch": {
+    "description": "Label for the local field that filters the document outline."
+  },
+  "documentOutlineSearchHint": "Filter outline entries",
+  "@documentOutlineSearchHint": {
+    "description": "Hint for the field that filters the document outline locally."
+  },
+  "documentOutlineNoMatches": "No outline entries match this search.",
+  "@documentOutlineNoMatches": {
+    "description": "Notice shown when a nonempty outline search matches no cached blocks."
+  },
+  "documentOutlineMatchesTruncated": "Only the first 200 matching outline entries are shown.",
+  "@documentOutlineMatchesTruncated": {
+    "description": "Notice shown when a search matches more outline entries than the visible limit."
   }
 }

@@ -295,4 +295,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get documentOutlineUntitled => '（空のブロック）';
+
+  @override
+  String get documentOutlineSearch => '構成を検索';
+
+  @override
+  String get documentOutlineSearchHint => '構成の項目を絞り込む';
+
+  @override
+  String get documentOutlineNoMatches => '検索に一致する構成の項目はありません。';
+
+  @override
+  String get documentOutlineMatchesTruncated => '一致する構成の項目は最初の200件のみ表示します。';
 }
