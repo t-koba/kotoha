@@ -23,16 +23,25 @@ int outlineParseEnd(int sourceLength) =>
 String _outlineLabel(DocumentBlock block) =>
     block.text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
+/// Per-block view data derived once from the source and reused by search,
+/// review filtering and display.
+typedef _OutlineItem = ({
+  DocumentBlock block,
+  String label,
+  String searchLabel,
+  Set<DocumentReviewFlag> flags,
+});
+
 class _OutlineData {
   const _OutlineData({
     required this.text,
-    required this.blocks,
+    required this.items,
     required this.prefixTruncated,
     required this.blocksTruncated,
   });
 
   final String text;
-  final List<DocumentBlock> blocks;
+  final List<_OutlineItem> items;
   final bool prefixTruncated;
   final bool blocksTruncated;
 }
@@ -55,11 +64,22 @@ _OutlineData _parseOutline(String text) {
       return block.end <= boundary;
     }).toList();
   }
+  final items = blocks
+      .map((block) {
+        final label = _outlineLabel(block);
+        return (
+          block: block,
+          label: label,
+          searchLabel: label.toLowerCase(),
+          flags: detectDocumentReviewFlags(block.text),
+        );
+      })
+      .toList(growable: false);
   return _OutlineData(
     text: text,
-    blocks: blocks,
+    items: items,
     prefixTruncated: prefixTruncated,
-    blocksTruncated: blocks.length > maxVisibleOutlineBlocks,
+    blocksTruncated: items.length > maxVisibleOutlineBlocks,
   );
 }
 
@@ -135,16 +155,12 @@ class _DocumentOutlineState extends State<DocumentOutline> {
     final data = _data;
     final query = _searchController.text.trim().toLowerCase();
     final hasQuery = query.isNotEmpty;
-    final matches = <(int, DocumentBlock)>[];
-    for (var index = 0; index < data.blocks.length; index++) {
-      final block = data.blocks[index];
-      if (hasQuery && !_outlineLabel(block).toLowerCase().contains(query)) {
-        continue;
-      }
-      if (_reviewOnly && detectDocumentReviewFlags(block.text).isEmpty) {
-        continue;
-      }
-      matches.add((index, block));
+    final matches = <(int, _OutlineItem)>[];
+    for (var index = 0; index < data.items.length; index++) {
+      final item = data.items[index];
+      if (hasQuery && !item.searchLabel.contains(query)) continue;
+      if (_reviewOnly && item.flags.isEmpty) continue;
+      matches.add((index, item));
     }
     final matchesTruncated =
         (hasQuery || _reviewOnly) && matches.length > maxVisibleOutlineBlocks;
@@ -217,9 +233,11 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: min(matches.length, maxVisibleOutlineBlocks),
             itemBuilder: (context, index) {
-              final (originalIndex, block) = matches[index];
+              final (originalIndex, item) = matches[index];
               return _OutlineEntry(
-                block: block,
+                block: item.block,
+                label: item.label,
+                flags: item.flags,
                 index: originalIndex,
                 controller: widget.controller,
                 sourceFocusNode: widget.sourceFocusNode,
@@ -236,6 +254,8 @@ class _DocumentOutlineState extends State<DocumentOutline> {
 class _OutlineEntry extends StatelessWidget {
   const _OutlineEntry({
     required this.block,
+    required this.label,
+    required this.flags,
     required this.index,
     required this.controller,
     required this.sourceFocusNode,
@@ -244,6 +264,8 @@ class _OutlineEntry extends StatelessWidget {
   });
 
   final DocumentBlock block;
+  final String label;
+  final Set<DocumentReviewFlag> flags;
   final int index;
   final TextEditingController controller;
   final FocusNode sourceFocusNode;
@@ -253,8 +275,6 @@ class _OutlineEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final identifier = 'document-block-$index';
-    final label = _outlineLabel(block);
-    final flags = detectDocumentReviewFlags(block.text);
     final review = flags.isEmpty
         ? null
         : '${strings.documentReviewLabel} ${flags.map((flag) => switch (flag) {
