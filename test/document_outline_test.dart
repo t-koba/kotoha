@@ -661,6 +661,30 @@ void main() {
   );
 
   _platformTest(
+    'outline search editing direction follows the query text',
+    TargetPlatform.macOS,
+    (tester) async {
+      await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: '## العربية: English\n',
+      );
+      final search = find.byKey(const ValueKey('document-outline-search'));
+      expect(tester.widget<TextField>(search).textDirection, TextDirection.ltr);
+
+      await tester.enterText(search, 'العربية:');
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(search).textDirection, TextDirection.rtl);
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+
+      await tester.enterText(search, 'English');
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(search).textDirection, TextDirection.ltr);
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+    },
+  );
+
+  _platformTest(
     'outline search follows the Android IME privacy setting',
     TargetPlatform.android,
     (tester) async {

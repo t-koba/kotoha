@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'document_blocks.dart';
 import 'document_review_flags.dart';
+import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
 
 /// Longest source prefix parsed for an outline, in UTF-16 code units.
@@ -219,6 +220,7 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             child: TextField(
               key: const ValueKey('document-outline-search'),
               controller: _searchController,
+              textDirection: firstStrongDirection(_searchController.text),
               enableIMEPersonalizedLearning:
                   widget.enableIMEPersonalizedLearning,
               decoration: InputDecoration(
