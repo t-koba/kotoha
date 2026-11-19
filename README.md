@@ -21,7 +21,8 @@ outlined entries as you type, without changing the source. Choosing an entry
 selects that block in the source editor; the outline is derived from the current
 text and neither translates nor renders rich formatting. To keep editing
 responsive, the outline parses only a bounded prefix (128 × 1024 UTF-16 code
-units) and shows at most 200 blocks or matches; a notice appears when that bound
+units) plus a 4 KiB lookahead for boundary checks, and shows at most 200 blocks
+or matches; a notice appears when that bound
 hides any content. The full text stays editable, and export and restore still
 operate on it unchanged. A short capability note beside the outline states which
 blocks are recognized, that the flat source and its exact ranges remain canonical,

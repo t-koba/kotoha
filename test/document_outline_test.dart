@@ -826,4 +826,29 @@ void main() {
       },
     );
   }
+
+  test('the outline parse end stays bounded for a long single line', () {
+    expect(
+      outlineParseEnd(1024 * 1024),
+      maxOutlineSourceLength + maxOutlineLookaheadLength,
+    );
+    expect(outlineParseEnd(64), 64);
+    expect(
+      maxOutlineSourceLength + maxOutlineLookaheadLength,
+      lessThan(1024 * 1024),
+    );
+  });
+
+  _platformTest(
+    'a paragraph whose terminator is exactly at the cutoff is not offered',
+    TargetPlatform.macOS,
+    (tester) async {
+      final source = "${'x' * maxOutlineSourceLength}\ncontinued\n";
+      expect(source.codeUnitAt(maxOutlineSourceLength), 0x0A);
+      await _pumpApp(tester, locale: const Locale('en'), source: source);
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.text('No blocks in the source text yet.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+    },
+  );
 }

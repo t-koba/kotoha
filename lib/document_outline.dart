@@ -12,6 +12,13 @@ const int maxOutlineSourceLength = 128 * 1024;
 /// Most outline entries built for one source value.
 const int maxVisibleOutlineBlocks = 200;
 
+/// Extra source inspected only to decide whether a boundary block continues.
+const int maxOutlineLookaheadLength = 4 * 1024;
+
+/// Largest source prefix the outline may parse for [sourceLength] code units.
+int outlineParseEnd(int sourceLength) =>
+    min(sourceLength, maxOutlineSourceLength + maxOutlineLookaheadLength);
+
 /// The normalized label shared by outline display and search matching.
 String _outlineLabel(DocumentBlock block) =>
     block.text.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -30,25 +37,11 @@ class _OutlineData {
   final bool blocksTruncated;
 }
 
-/// Includes the first line terminator at or after [boundary] so a block that
-/// crosses the disclosed prefix can be recognized as continuing.
-int _lookaheadEnd(String text, int boundary) {
-  if (boundary >= text.length) return text.length;
-  for (var i = boundary; i < text.length; i++) {
-    final unit = text.codeUnitAt(i);
-    if (unit == 0x0A) return i + 1;
-    if (unit == 0x0D && i + 1 < text.length && text.codeUnitAt(i + 1) == 0x0A) {
-      return i + 2;
-    }
-  }
-  return text.length;
-}
-
 _OutlineData _parseOutline(String text) {
   final boundary = min(text.length, maxOutlineSourceLength);
   final prefixTruncated = boundary < text.length;
   var blocks = parseDocumentBlocks(
-    text.substring(0, _lookaheadEnd(text, boundary)),
+    text.substring(0, outlineParseEnd(text.length)),
   );
   if (prefixTruncated) {
     // A block is only offered when its whole range is established inside the
