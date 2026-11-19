@@ -23,27 +23,41 @@ int outlineParseEnd(int sourceLength) =>
 String _outlineLabel(DocumentBlock block) =>
     block.text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
-/// Per-block view data derived once from the source and reused by search,
-/// review filtering and display.
-typedef _OutlineItem = ({
-  DocumentBlock block,
-  String label,
-  String searchLabel,
-  Set<DocumentReviewFlag> flags,
-});
-
 class _OutlineData {
-  const _OutlineData({
+  _OutlineData({
     required this.text,
-    required this.items,
+    required this.blocks,
     required this.prefixTruncated,
     required this.blocksTruncated,
-  });
+  }) : _labels = List<String?>.filled(blocks.length, null, growable: false),
+       _searchLabels = List<String?>.filled(
+         blocks.length,
+         null,
+         growable: false,
+       ),
+       _flags = List<Set<DocumentReviewFlag>?>.filled(
+         blocks.length,
+         null,
+         growable: false,
+       );
 
   final String text;
-  final List<_OutlineItem> items;
+  final List<DocumentBlock> blocks;
   final bool prefixTruncated;
   final bool blocksTruncated;
+  final List<String?> _labels;
+  final List<String?> _searchLabels;
+  final List<Set<DocumentReviewFlag>?> _flags;
+
+  /// Derived view data is computed on first use and reused until the source
+  /// changes, so source typing never pays for blocks the view does not need.
+  String labelAt(int index) => _labels[index] ??= _outlineLabel(blocks[index]);
+
+  String searchLabelAt(int index) =>
+      _searchLabels[index] ??= labelAt(index).toLowerCase();
+
+  Set<DocumentReviewFlag> flagsAt(int index) =>
+      _flags[index] ??= detectDocumentReviewFlags(blocks[index].text);
 }
 
 _OutlineData _parseOutline(String text) {
@@ -64,22 +78,11 @@ _OutlineData _parseOutline(String text) {
       return block.end <= boundary;
     }).toList();
   }
-  final items = blocks
-      .map((block) {
-        final label = _outlineLabel(block);
-        return (
-          block: block,
-          label: label,
-          searchLabel: label.toLowerCase(),
-          flags: detectDocumentReviewFlags(block.text),
-        );
-      })
-      .toList(growable: false);
   return _OutlineData(
     text: text,
-    items: items,
+    blocks: blocks,
     prefixTruncated: prefixTruncated,
-    blocksTruncated: items.length > maxVisibleOutlineBlocks,
+    blocksTruncated: blocks.length > maxVisibleOutlineBlocks,
   );
 }
 
@@ -155,12 +158,16 @@ class _DocumentOutlineState extends State<DocumentOutline> {
     final data = _data;
     final query = _searchController.text.trim().toLowerCase();
     final hasQuery = query.isNotEmpty;
-    final matches = <(int, _OutlineItem)>[];
-    for (var index = 0; index < data.items.length; index++) {
-      final item = data.items[index];
-      if (hasQuery && !item.searchLabel.contains(query)) continue;
-      if (_reviewOnly && item.flags.isEmpty) continue;
-      matches.add((index, item));
+    final hasFilter = hasQuery || _reviewOnly;
+    final limit = hasFilter
+        ? data.blocks.length
+        : min(data.blocks.length, maxVisibleOutlineBlocks);
+    final matches = <(int, DocumentBlock)>[];
+    for (var index = 0; index < limit; index++) {
+      final block = data.blocks[index];
+      if (hasQuery && !data.searchLabelAt(index).contains(query)) continue;
+      if (_reviewOnly && data.flagsAt(index).isEmpty) continue;
+      matches.add((index, block));
     }
     final matchesTruncated =
         (hasQuery || _reviewOnly) && matches.length > maxVisibleOutlineBlocks;
@@ -233,11 +240,11 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: min(matches.length, maxVisibleOutlineBlocks),
             itemBuilder: (context, index) {
-              final (originalIndex, item) = matches[index];
+              final (originalIndex, block) = matches[index];
               return _OutlineEntry(
-                block: item.block,
-                label: item.label,
-                flags: item.flags,
+                block: block,
+                label: data.labelAt(originalIndex),
+                flags: data.flagsAt(originalIndex),
                 index: originalIndex,
                 controller: widget.controller,
                 sourceFocusNode: widget.sourceFocusNode,

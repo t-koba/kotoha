@@ -80,6 +80,8 @@ const _entryCapJa = '構成の項目は最初の200件のみ表示します。�
 
 const _noMatchesEn = 'No outline entries match this search.';
 const _noMatchesJa = '検索に一致する構成の項目はありません。';
+const _entriesTruncatedEn =
+    'Only the first 200 outline entries are shown. The full text remains editable.';
 const _matchCapEn = 'Only the first 200 matching outline entries are shown.';
 const _matchCapJa = '一致する構成の項目は最初の200件のみ表示します。';
 
@@ -849,6 +851,21 @@ void main() {
       expect(find.text(_truncatedNoticeEn), findsOneWidget);
       expect(find.text('No blocks in the source text yet.'), findsOneWidget);
       expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+    },
+  );
+
+  _platformTest(
+    'a block-dense source renders only the first 200 entries',
+    TargetPlatform.macOS,
+    (tester) async {
+      final source = List<String>.filled(32768, '- x').join('\n');
+      expect(source.length, lessThan(maxOutlineSourceLength));
+      await _pumpApp(tester, locale: const Locale('en'), source: source);
+      expect(find.text(_truncatedNoticeEn), findsNothing);
+      expect(find.text(_entriesTruncatedEn), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-199')), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-200')), findsNothing);
     },
   );
 }
