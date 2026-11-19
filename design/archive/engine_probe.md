@@ -1053,6 +1053,25 @@ only. It is a suitable user-facing surface for a future reviewed notice set,
 but no NDK notice payload is packaged and the exact required subset is
 unresolved; adoption remains disabled.
 
+**Dependency-policy cross-check (2026-11-19).** The exact manifest
+`android-api35-x86_64-engine-probe/build/engine-probe-android/ndk-terms/manifest.json`
+was read in full on `mizu` SHA `5752035ff2adb68a51b78c020f1d52ec7d5be1ba`
+(`vcs-read/3c11c69bdbe14f379b2139130f173182`, whole-file SHA-256
+`6a92040adc41f19068e0e621c0e0b17ff00f6d55d77423312cb7edc61740bff8`, 2,735 bytes).
+It contains ten records with only `path`, `bytes`, `sha256` and `role`, plus
+target/bounds and a `capture_scope` that explicitly excludes legal
+classification and selected-member mapping. The dependency policy requires
+`license_expression`, `selected_terms`, `term_classifications`, `source`,
+`content_digest`, `notices` and `distribution_scope` for a component. This
+manifest supplies at most `source` and `content_digest` for the captured files;
+the other five fields are absent for all ten records, so none can be entered
+into an allowlist from this artifact. The broader classifications in this
+archive (root MIT, YaRN, ggllm, Z-algorithm, Arm MIT and candidate NDK SPDX
+headers) remain prospective source/branch findings, not a member-to-notice
+mapping. Unknown classifications fail closed, and adoption stays disabled
+until exact selected-member identity, complete term evidence, pinned notice
+text and a user-accessible delivery plan are recorded.
+
 ### Earlier partial installed-NDK captures (historical)
 
 These exact reports predate the later 47-member capture summarized at the
