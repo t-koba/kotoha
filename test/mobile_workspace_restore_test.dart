@@ -219,7 +219,15 @@ void main() {
     mobileTest('malformed UTF-8 bytes keep drafts without leaking details', (
       tester,
     ) async {
-      reply = () async => bytes(Uint8List.fromList([0x4b, 0xff, 0x0a]));
+      final valid = formatWorkspaceExport(draft());
+      final at = valid.indexOf('bonjour');
+      expect(at, greaterThan(0));
+      final invalid = Uint8List.fromList([
+        ...utf8.encode(valid.substring(0, at)),
+        0xff,
+        ...utf8.encode(valid.substring(at + 'bonjour'.length)),
+      ]);
+      reply = () async => bytes(invalid);
       await open(tester, source: 'existing source');
 
       await restore(tester);

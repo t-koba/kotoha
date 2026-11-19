@@ -208,9 +208,18 @@ void main() {
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
-      picker.pick = () async =>
-          _BytesFile(Uint8List.fromList([0x4b, 0xff, 0x0a]));
+      final valid = formatWorkspaceExport(restoredDraft());
+      final at = valid.indexOf('bonjour');
+      expect(at, greaterThan(0));
+      final invalid = Uint8List.fromList([
+        ...utf8.encode(valid.substring(0, at)),
+        0xff,
+        ...utf8.encode(valid.substring(at + 'bonjour'.length)),
+      ]);
+      picker.pick = () async => _BytesFile(invalid);
       await open(tester);
+      await tester.enterText(field('source-language'), 'current-language');
+      await tester.enterText(field('source-text'), 'current source');
 
       await restore(tester);
 
@@ -218,8 +227,8 @@ void main() {
         find.text('This file is not a Kotoha v2 workspace export.'),
         findsOneWidget,
       );
-      expect(textOf(tester, 'source-language'), '');
-      expect(textOf(tester, 'source-text'), '');
+      expect(textOf(tester, 'source-language'), 'current-language');
+      expect(textOf(tester, 'source-text'), 'current source');
       expect(find.text('Workspace restored.'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
