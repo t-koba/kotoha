@@ -339,4 +339,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get documentFormatSupportReview =>
       'Inline formatting, numbers, links and placeholders are not converted; check them manually.';
+
+  @override
+  String get documentReviewLabel => 'Review:';
+
+  @override
+  String get documentReviewNumber => 'number';
+
+  @override
+  String get documentReviewLink => 'link';
+
+  @override
+  String get documentReviewPlaceholder => 'placeholder';
 }

@@ -265,5 +265,21 @@
   "documentFormatSupportReview": "Inline formatting, numbers, links and placeholders are not converted; check them manually.",
   "@documentFormatSupportReview": {
     "description": "What a user must review because the local reader does not convert it."
+  },
+  "documentReviewLabel": "Review:",
+  "@documentReviewLabel": {
+    "description": "Prefix for local review hints on an outline entry."
+  },
+  "documentReviewNumber": "number",
+  "@documentReviewNumber": {
+    "description": "Review hint for source text containing digits."
+  },
+  "documentReviewLink": "link",
+  "@documentReviewLink": {
+    "description": "Review hint for source text containing a web or email link."
+  },
+  "documentReviewPlaceholder": "placeholder",
+  "@documentReviewPlaceholder": {
+    "description": "Review hint for source text containing a placeholder."
   }
 }

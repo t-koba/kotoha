@@ -745,4 +745,29 @@ void main() {
       expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
     },
   );
+
+  for (final (locale, hint) in [
+    (const Locale('en'), 'Review: number, link, placeholder'),
+    (const Locale('ja'), '確認: 数字, リンク, プレースホルダー'),
+  ]) {
+    _platformTest(
+      'review hints appear only on flagged outline entries for $locale',
+      TargetPlatform.macOS,
+      (tester) async {
+        final source =
+            '## Version 2 {name} https://example.com\n'
+            '## Plain heading';
+        await _pumpApp(tester, locale: locale, source: source);
+        expect(find.text(hint), findsOneWidget);
+        expect(
+          find.textContaining(locale.languageCode == 'ja' ? '確認:' : 'Review:'),
+          findsOneWidget,
+        );
+        final plain = tester.widget<ListTile>(
+          find.byKey(const ValueKey('document-block-1')),
+        );
+        expect(plain.subtitle, isNull);
+      },
+    );
+  }
 }

@@ -26,6 +26,8 @@ hides any content. The full text stays editable, and export and restore still
 operate on it unchanged. A short capability note beside the outline states which
 blocks are recognized, that the flat source and its exact ranges remain canonical,
 and that inline formatting, numbers, links and placeholders need manual review.
+Outline entries carrying digits, web/email links or brace/percent placeholders
+get a local “Review” hint; it is only a navigation aid and never rewrites text.
 
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the

@@ -325,4 +325,16 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get documentFormatSupportReview =>
       'インライン装飾、数字、リンク、プレースホルダーは変換しません。手動で確認してください。';
+
+  @override
+  String get documentReviewLabel => '確認:';
+
+  @override
+  String get documentReviewNumber => '数字';
+
+  @override
+  String get documentReviewLink => 'リンク';
+
+  @override
+  String get documentReviewPlaceholder => 'プレースホルダー';
 }

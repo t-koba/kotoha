@@ -265,5 +265,21 @@
   "documentFormatSupportReview": "インライン装飾、数字、リンク、プレースホルダーは変換しません。手動で確認してください。",
   "@documentFormatSupportReview": {
     "description": "ローカルのテキストリーダーが変換しないため利用者が確認する項目。"
+  },
+  "documentReviewLabel": "確認:",
+  "@documentReviewLabel": {
+    "description": "構成の項目に表示するローカルの確認案内接頭辞。"
+  },
+  "documentReviewNumber": "数字",
+  "@documentReviewNumber": {
+    "description": "数字を含む原文に対する確認案内。"
+  },
+  "documentReviewLink": "リンク",
+  "@documentReviewLink": {
+    "description": "ウェブまたはメールのリンクを含む原文に対する確認案内。"
+  },
+  "documentReviewPlaceholder": "プレースホルダー",
+  "@documentReviewPlaceholder": {
+    "description": "プレースホルダーを含む原文に対する確認案内。"
   }
 }

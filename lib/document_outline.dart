@@ -3,6 +3,7 @@ import 'dart:math' show min;
 import 'package:flutter/material.dart';
 
 import 'document_blocks.dart';
+import 'document_review_flags.dart';
 import 'l10n/app_localizations.dart';
 
 /// Longest source prefix parsed for an outline, in UTF-16 code units.
@@ -215,6 +216,7 @@ class _DocumentOutlineState extends State<DocumentOutline> {
                 controller: widget.controller,
                 sourceFocusNode: widget.sourceFocusNode,
                 emptyLabel: strings.documentOutlineUntitled,
+                strings: strings,
               );
             },
           ),
@@ -230,6 +232,7 @@ class _OutlineEntry extends StatelessWidget {
     required this.controller,
     required this.sourceFocusNode,
     required this.emptyLabel,
+    required this.strings,
   });
 
   final DocumentBlock block;
@@ -237,11 +240,20 @@ class _OutlineEntry extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode sourceFocusNode;
   final String emptyLabel;
+  final AppLocalizations strings;
 
   @override
   Widget build(BuildContext context) {
     final identifier = 'document-block-$index';
     final label = _outlineLabel(block);
+    final flags = detectDocumentReviewFlags(block.text);
+    final review = flags.isEmpty
+        ? null
+        : '${strings.documentReviewLabel} ${flags.map((flag) => switch (flag) {
+            DocumentReviewFlag.number => strings.documentReviewNumber,
+            DocumentReviewFlag.link => strings.documentReviewLink,
+            DocumentReviewFlag.placeholder => strings.documentReviewPlaceholder,
+          }).join(', ')}';
     return Semantics(
       identifier: identifier,
       child: ListTile(
@@ -254,6 +266,9 @@ class _OutlineEntry extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        subtitle: review == null
+            ? null
+            : Text(review, style: Theme.of(context).textTheme.labelSmall),
         onTap: () {
           controller.selection = TextSelection(
             baseOffset: block.start,

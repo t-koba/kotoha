@@ -661,6 +661,30 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'インライン装飾、数字、リンク、プレースホルダーは変換しません。手動で確認してください。'**
   String get documentFormatSupportReview;
+
+  /// 構成の項目に表示するローカルの確認案内接頭辞。
+  ///
+  /// In ja, this message translates to:
+  /// **'確認:'**
+  String get documentReviewLabel;
+
+  /// 数字を含む原文に対する確認案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'数字'**
+  String get documentReviewNumber;
+
+  /// ウェブまたはメールのリンクを含む原文に対する確認案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'リンク'**
+  String get documentReviewLink;
+
+  /// プレースホルダーを含む原文に対する確認案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'プレースホルダー'**
+  String get documentReviewPlaceholder;
 }
 
 class _AppLocalizationsDelegate
