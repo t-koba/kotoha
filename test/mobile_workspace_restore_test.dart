@@ -18,6 +18,9 @@ void main() {
   Map<String, Object> document(String text, {String name = 'workspace.txt'}) =>
       {'name': name, 'bytes': Uint8List.fromList(utf8.encode(text))};
 
+  Map<String, Object> bytes(Uint8List data, {String name = 'workspace.txt'}) =>
+      {'name': name, 'bytes': data};
+
   Finder field(String key) => find.byKey(ValueKey(key));
 
   String textOf(WidgetTester tester, String key) =>
@@ -211,6 +214,22 @@ void main() {
         findsOneWidget,
       );
       expect(textOf(tester, 'source-text'), 'keep me');
+    });
+
+    mobileTest('malformed UTF-8 bytes keep drafts without leaking details', (
+      tester,
+    ) async {
+      reply = () async => bytes(Uint8List.fromList([0x4b, 0xff, 0x0a]));
+      await open(tester, source: 'existing source');
+
+      await restore(tester);
+
+      expect(
+        find.text('This file is not a Kotoha v2 workspace export.'),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-text'), 'existing source');
+      expect(find.text('Workspace restored.'), findsNothing);
     });
 
     mobileTest('a native failure keeps drafts without leaking details', (

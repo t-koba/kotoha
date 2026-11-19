@@ -40,6 +40,20 @@ class _File extends XFile {
   }
 }
 
+class _BytesFile extends XFile {
+  _BytesFile(this._bytes) : super('/not-stored/workspace.txt');
+
+  final Uint8List _bytes;
+
+  @override
+  Future<int> length() async => _bytes.length;
+
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) async* {
+    yield _bytes;
+  }
+}
+
 class _LargeFile extends XFile {
   _LargeFile() : super('/not-stored/workspace.txt');
 
@@ -184,6 +198,29 @@ void main() {
 
       expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
       expect(find.text('Workspace restored.'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('malformed UTF-8 bytes are rejected without changing drafts', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async =>
+          _BytesFile(Uint8List.fromList([0x4b, 0xff, 0x0a]));
+      await open(tester);
+
+      await restore(tester);
+
+      expect(
+        find.text('This file is not a Kotoha v2 workspace export.'),
+        findsOneWidget,
+      );
+      expect(textOf(tester, 'source-language'), '');
+      expect(textOf(tester, 'source-text'), '');
+      expect(find.text('Workspace restored.'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
