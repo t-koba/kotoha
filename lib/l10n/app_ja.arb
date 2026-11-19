@@ -245,5 +245,9 @@
   "documentOutlineMatchesTruncated": "一致する構成の項目は最初の200件のみ表示します。",
   "@documentOutlineMatchesTruncated": {
     "description": "検索に一致する構成の項目が表示件数の上限を超えたときの案内。"
+  },
+  "documentOutlineEntriesTruncated": "構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。",
+  "@documentOutlineEntriesTruncated": {
+    "description": "解析範囲は全文だが構成の項目が表示件数の上限を超えたときの案内。"
   }
 }

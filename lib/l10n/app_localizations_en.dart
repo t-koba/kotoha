@@ -320,4 +320,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get documentOutlineMatchesTruncated =>
       'Only the first 200 matching outline entries are shown.';
+
+  @override
+  String get documentOutlineEntriesTruncated =>
+      'Only the first 200 outline entries are shown. The full text remains editable.';
 }

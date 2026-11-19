@@ -171,10 +171,15 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             ),
           ),
         ),
-        if (data.prefixTruncated || (!hasQuery && data.blocksTruncated))
+        if (data.prefixTruncated)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(strings.documentOutlineTruncated),
+          ),
+        if (!hasQuery && data.blocksTruncated)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(strings.documentOutlineEntriesTruncated),
           ),
         if (matchesTruncated)
           Padding(

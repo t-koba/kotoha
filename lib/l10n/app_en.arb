@@ -245,5 +245,9 @@
   "documentOutlineMatchesTruncated": "Only the first 200 matching outline entries are shown.",
   "@documentOutlineMatchesTruncated": {
     "description": "Notice shown when a search matches more outline entries than the visible limit."
+  },
+  "documentOutlineEntriesTruncated": "Only the first 200 outline entries are shown. The full text remains editable.",
+  "@documentOutlineEntriesTruncated": {
+    "description": "Notice shown when the parsed prefix is complete but has more blocks than the visible limit."
   }
 }

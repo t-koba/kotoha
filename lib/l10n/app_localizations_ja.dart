@@ -307,4 +307,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get documentOutlineMatchesTruncated => '一致する構成の項目は最初の200件のみ表示します。';
+
+  @override
+  String get documentOutlineEntriesTruncated =>
+      '構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。';
 }

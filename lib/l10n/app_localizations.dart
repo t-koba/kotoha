@@ -631,6 +631,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'一致する構成の項目は最初の200件のみ表示します。'**
   String get documentOutlineMatchesTruncated;
+
+  /// 解析範囲は全文だが構成の項目が表示件数の上限を超えたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。'**
+  String get documentOutlineEntriesTruncated;
 }
 
 class _AppLocalizationsDelegate

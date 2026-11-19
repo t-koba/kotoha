@@ -74,6 +74,9 @@ String _longSource(String firstHeading) =>
 
 const _truncatedNoticeEn =
     'The outline covers only the beginning of the source. The full text remains editable.';
+const _entryCapEn =
+    'Only the first 200 outline entries are shown. The full text remains editable.';
+const _entryCapJa = '構成の項目は最初の200件のみ表示します。全文は引き続き編集できます。';
 
 const _noMatchesEn = 'No outline entries match this search.';
 const _noMatchesJa = '検索に一致する構成の項目はありません。';
@@ -329,7 +332,8 @@ void main() {
       ).join('\n');
       expect(source.length, lessThan(maxOutlineSourceLength));
       await _pumpApp(tester, locale: const Locale('en'), source: source);
-      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.text(_truncatedNoticeEn), findsNothing);
+      expect(find.text(_entryCapEn), findsOneWidget);
       expect(find.text(_matchCapEn), findsNothing);
       final last = find.byKey(
         ValueKey('document-block-${maxVisibleOutlineBlocks - 1}'),
@@ -552,13 +556,10 @@ void main() {
         ).join('\n');
         await _pumpApp(tester, locale: locale, source: source);
         expect(
-          find.text(
-            locale.languageCode == 'ja'
-                ? '構成は原文の先頭のみを表示します。全文は引き続き編集できます。'
-                : _truncatedNoticeEn,
-          ),
+          find.text(locale.languageCode == 'ja' ? _entryCapJa : _entryCapEn),
           findsOneWidget,
         );
+        expect(find.text(_truncatedNoticeEn), findsNothing);
 
         await tester.enterText(
           find.byKey(const ValueKey('document-outline-search')),
@@ -566,14 +567,8 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text(matchCap), findsOneWidget);
-        expect(
-          find.text(
-            locale.languageCode == 'ja'
-                ? '構成は原文の先頭のみを表示します。全文は引き続き編集できます。'
-                : _truncatedNoticeEn,
-          ),
-          findsNothing,
-        );
+        expect(find.text(_entryCapEn), findsNothing);
+        expect(find.text(_entryCapJa), findsNothing);
         expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
         expect(
           find.byKey(ValueKey('document-block-${maxVisibleOutlineBlocks - 1}')),
