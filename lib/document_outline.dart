@@ -334,6 +334,9 @@ class _OutlineEntry extends StatelessWidget {
           label.isEmpty ? emptyLabel : label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          textDirection: firstStrongDirection(
+            label.isEmpty ? emptyLabel : label,
+          ),
         ),
         subtitle: review == null
             ? null

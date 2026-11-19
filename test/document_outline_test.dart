@@ -685,6 +685,29 @@ void main() {
   );
 
   _platformTest(
+    'outline entry labels follow their own strong direction',
+    TargetPlatform.macOS,
+    (tester) async {
+      await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: '## العربية: مرحبا\n## English heading\n',
+      );
+      Text titleAt(int index) =>
+          tester
+                  .widget<ListTile>(
+                    find.byKey(ValueKey('document-block-$index')),
+                  )
+                  .title!
+              as Text;
+      expect(titleAt(0).data, 'العربية: مرحبا');
+      expect(titleAt(0).textDirection, TextDirection.rtl);
+      expect(titleAt(1).data, 'English heading');
+      expect(titleAt(1).textDirection, TextDirection.ltr);
+    },
+  );
+
+  _platformTest(
     'outline search follows the Android IME privacy setting',
     TargetPlatform.android,
     (tester) async {
