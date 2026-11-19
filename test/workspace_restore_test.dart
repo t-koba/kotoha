@@ -203,9 +203,7 @@ void main() {
     }
   });
 
-  testWidgets('an edit during confirmation aborts replacement', (
-    tester,
-  ) async {
+  testWidgets('an edit during confirmation aborts replacement', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
       picker.pick = () async => _File(formatWorkspaceExport(restoredDraft()));
