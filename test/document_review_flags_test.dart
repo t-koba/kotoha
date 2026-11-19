@@ -14,6 +14,17 @@ void main() {
       ]);
     });
 
+    test('flags decimal digits from non-ASCII scripts too', () {
+      expect(detectDocumentReviewFlags('バージョン２'), {DocumentReviewFlag.number});
+      expect(detectDocumentReviewFlags('النسخة ٣'), {
+        DocumentReviewFlag.number,
+      });
+      expect(detectDocumentReviewFlags('１２３ and ٤٥٦'), {
+        DocumentReviewFlag.number,
+      });
+      expect(detectDocumentReviewFlags('no digits here'), isEmpty);
+    });
+
     test('leaves ordinary text unflagged', () {
       expect(detectDocumentReviewFlags('plain words only'), isEmpty);
     });
