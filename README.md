@@ -15,11 +15,23 @@ an explicit system picker on macOS/Windows and the Android/iOS adapters.
 Import replaces only source text after consent; translations remain manual and
 all drafts stay in memory. Kotoha does not stage a cache copy, persist document
 grants, or add a network client, but the OS/provider may download or stage a file.
-On macOS and Windows, each translation can also be explicitly exported as UTF-8
-text to a user-selected `.txt` file; this writes only that translation, not the
-workspace or other drafts. These platforms use their native save panels, which
-retain the documented confirmation before replacing an existing file; hosted CI
-builds the adapters but does not automate that confirmation UI.
+On macOS and Windows, each translation can be explicitly exported as UTF-8 text
+to a user-selected `.txt` file; that writes only that translation, not the
+workspace. The same platforms can export the whole workspace as a reversible v2
+text document containing the source language, source text and every translation;
+the earlier v1 format is no longer produced or restorable. These platforms use
+their native save panels, which retain the documented confirmation before
+replacing an existing file; hosted CI builds the adapters but does not automate
+that confirmation UI. Mobile builds have no export action.
+
+On every platform, a v2 workspace export can be restored through the same
+explicit text-document picker (`.txt`, `.md` or `.markdown`). If the current
+workspace holds any text, a confirmation precedes replacement of all fields.
+Cancellation is silent; an edit made after picking, a wrong file type, an
+oversized document, a malformed document and a read failure all leave the drafts
+intact, with distinct notices where the cause is known. Exports use LF line
+endings, and the parser also accepts CRLF files re-saved by a Windows text editor while still
+rejecting other malformed content. Restore changes only in-memory session state.
 Hosted Android Emulator and iOS Simulator CI now validates the native builds and
 configured import adapter tests, including picker-cancellation/error preservation.
 It does not establish reads from live file providers or behavior on physical devices
