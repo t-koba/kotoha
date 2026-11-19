@@ -375,6 +375,20 @@ void main() {
       expect(find.text('Workspace restored.'), findsOneWidget);
     });
 
+    mobileTest('restores a BOM-prefixed CRLF export verbatim', (tester) async {
+      final crlf = utf8.encode(
+        formatWorkspaceExport(draft()).replaceAll('\n', '\r\n'),
+      );
+      reply = () async =>
+          bytes(Uint8List.fromList([0xef, 0xbb, 0xbf, ...crlf]));
+      await open(tester);
+
+      await restore(tester);
+
+      expectRestored(tester);
+      expect(calls, 1);
+    });
+
     mobileTest('malformed UTF-8 bytes keep drafts without leaking details', (
       tester,
     ) async {
