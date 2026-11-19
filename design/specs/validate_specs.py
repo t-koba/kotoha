@@ -368,6 +368,22 @@ def validate_apple_bundle_metadata() -> None:
         require(locales <= regions and "Base" in regions, f"{platform} project locales")
 
 
+
+def validate_html_acceptance_mirror() -> None:
+    """Keep the HTML viewing mirror of the acceptance matrix in sync."""
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    acceptance = (ROOT / "appendices/acceptance_matrix.md").read_text(encoding="utf-8")
+    for line in acceptance.splitlines():
+        if not line.startswith("| "):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if not cells or not (
+            re.fullmatch(r"F\d{2}", cells[0]) or cells[0] == "モバイルのタスク切替"
+        ):
+            continue
+        for cell in cells:
+            require(cell in html, f"HTML mirror missing {cells[0]}: {cell}")
+
 def main() -> int:
     for name, schema in SCHEMAS.items():
         check(f"Schema: {name}", lambda schema=schema: Draft202012Validator.check_schema(schema))
@@ -464,6 +480,7 @@ def main() -> int:
     ids=lambda text: set(re.findall(r"\bF\d{2}\b",text))
     expected={f"F{i:02}" for i in range(1,39)}
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
+    check("HTML acceptance mirror", validate_html_acceptance_mirror)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
     check("Apple bundle metadata", validate_apple_bundle_metadata)
     report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}

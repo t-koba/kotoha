@@ -1,6 +1,6 @@
 {
-  "checks": 93,
-  "passed": 93,
+  "checks": 94,
+  "passed": 94,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -454,6 +454,11 @@
     },
     {
       "name": "Feature traceability",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "HTML acceptance mirror",
       "status": "pass",
       "case": "compatible"
     },
