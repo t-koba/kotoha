@@ -390,8 +390,13 @@ def validate_locale_parity() -> None:
     l10n = ROOT.parent / "lib" / "l10n"
     english = json.loads((l10n / "app_en.arb").read_text(encoding="utf-8"))
     japanese = json.loads((l10n / "app_ja.arb").read_text(encoding="utf-8"))
-    keys = lambda data: {key for key in data if not key.startswith("@@")}
+    keys = lambda data: {key for key in data if not key.startswith("@")}
     require(keys(english) == keys(japanese), "locale message keys")
+    for name in ("app_localizations.dart", "app_localizations_en.dart", "app_localizations_ja.dart"):
+        source = (l10n / name).read_text(encoding="utf-8")
+        declared = set(re.findall(r"\bString get (\w+)\b", source))
+        declared |= set(re.findall(r"\bString (\w+)\(", source))
+        require(keys(english) <= declared, f"generated locale messages: {name}")
     for key in keys(english):
         english_placeholders = (
             set(english[key].get("placeholders", {}))
