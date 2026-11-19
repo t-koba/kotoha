@@ -511,6 +511,23 @@ void main() {
   );
 
   _platformTest(
+    'outline search folds Greek final sigma',
+    TargetPlatform.macOS,
+    (tester) async {
+      await _pumpApp(tester, locale: const Locale('en'), source: '## λόγος\n');
+      final search = find.byKey(const ValueKey('document-outline-search'));
+      expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+      await tester.enterText(search, 'λόγο\u03c3');
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('document-block-0')),
+        findsOneWidget,
+        reason: 'a regular sigma query should match a final sigma label',
+      );
+    },
+  );
+
+  _platformTest(
     'a filtered match selects its exact source range',
     TargetPlatform.macOS,
     (tester) async {

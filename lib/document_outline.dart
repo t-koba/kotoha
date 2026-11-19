@@ -33,6 +33,12 @@ String _normalizeOutlineWhitespace(String text) =>
 String _outlineLabel(DocumentBlock block) =>
     _normalizeOutlineWhitespace(block.text);
 
+/// Case-folds a label or query for matching. Dart's lowercase leaves the
+/// Greek final sigma (U+03C2) distinct from the regular sigma (U+03C3), even
+/// though Unicode case folding maps both to U+03C3.
+String _caseFold(String text) =>
+    text.toLowerCase().replaceAll('\u03c2', '\u03c3');
+
 class _OutlineData {
   _OutlineData({
     required this.text,
@@ -64,7 +70,7 @@ class _OutlineData {
   String labelAt(int index) => _labels[index] ??= _outlineLabel(blocks[index]);
 
   String searchLabelAt(int index) =>
-      _searchLabels[index] ??= labelAt(index).toLowerCase();
+      _searchLabels[index] ??= _caseFold(labelAt(index));
 
   Set<DocumentReviewFlag> flagsAt(int index) =>
       _flags[index] ??= detectDocumentReviewFlags(blocks[index].text);
@@ -191,8 +197,9 @@ class _DocumentOutlineState extends State<DocumentOutline> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
     final data = _data;
-    final query = _normalizeOutlineWhitespace(_searchController.text)
-        .toLowerCase();
+    final query = _caseFold(
+      _normalizeOutlineWhitespace(_searchController.text),
+    );
     final hasQuery = query.isNotEmpty;
     final hasFilter = hasQuery || _reviewOnly;
     final limit = hasFilter
