@@ -29,31 +29,37 @@ class _OutlineData {
   final bool blocksTruncated;
 }
 
-/// Ends the scan at a line boundary inside [budget], never mid-character or
-/// mid-line. A boundary is either immediately before a line terminator or
-/// immediately after one.
-int _boundedScanEnd(String text, int budget) {
-  if (text.length <= budget) return text.length;
-  for (var i = budget; i > 0; i--) {
-    final at = text.codeUnitAt(i);
-    final before = text.codeUnitAt(i - 1);
-    if (at == 0x0A && before != 0x0D) return i;
-    if (at == 0x0D && i + 1 < text.length && text.codeUnitAt(i + 1) == 0x0A) {
-      return i;
+/// Includes the first line terminator at or after [boundary] so a block that
+/// crosses the disclosed prefix can be recognized as continuing.
+int _lookaheadEnd(String text, int boundary) {
+  if (boundary >= text.length) return text.length;
+  for (var i = boundary; i < text.length; i++) {
+    final unit = text.codeUnitAt(i);
+    if (unit == 0x0A) return i + 1;
+    if (unit == 0x0D && i + 1 < text.length && text.codeUnitAt(i + 1) == 0x0A) {
+      return i + 2;
     }
-    if (before == 0x0A) return i;
   }
-  return 0;
+  return text.length;
 }
 
 _OutlineData _parseOutline(String text) {
-  final scanEnd = _boundedScanEnd(text, maxOutlineSourceLength);
-  final prefixTruncated = scanEnd < text.length;
-  var blocks = parseDocumentBlocks(text.substring(0, scanEnd));
-  // At an artificial EOF the parser cannot know that a paragraph or code
-  // fence continues. Never offer that last block as an exact selection.
-  if (prefixTruncated && blocks.isNotEmpty && blocks.last.end == scanEnd) {
-    blocks = blocks.sublist(0, blocks.length - 1);
+  final boundary = min(text.length, maxOutlineSourceLength);
+  final prefixTruncated = boundary < text.length;
+  var blocks = parseDocumentBlocks(
+    text.substring(0, _lookaheadEnd(text, boundary)),
+  );
+  if (prefixTruncated) {
+    // A block is only offered when its whole range is established inside the
+    // disclosed prefix. An unclosed fence can end exactly at the boundary, so
+    // its closing marker must be strictly inside it.
+    blocks = blocks.where((block) {
+      if (block.start >= boundary) return false;
+      if (block.kind == DocumentBlockKind.codeBlock) {
+        return block.end < boundary;
+      }
+      return block.end <= boundary;
+    }).toList();
   }
   return _OutlineData(
     text: text,

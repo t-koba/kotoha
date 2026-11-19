@@ -687,4 +687,62 @@ void main() {
       expect(controller.text, source);
     },
   );
+
+  _platformTest(
+    'a paragraph continuing after a line terminator at the cutoff is not offered',
+    TargetPlatform.macOS,
+    (tester) async {
+      final source = "${'x' * (maxOutlineSourceLength - 1)}\ncontinued\n";
+      expect(source.codeUnitAt(maxOutlineSourceLength - 1), 0x0A);
+      await _pumpApp(tester, locale: const Locale('en'), source: source);
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.text('No blocks in the source text yet.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+    },
+  );
+
+  _platformTest(
+    'a complete heading ending at the cutoff is still offered',
+    TargetPlatform.macOS,
+    (tester) async {
+      const label = '## Target heading';
+      final heading = label + 'z' * (maxOutlineSourceLength - label.length);
+      expect(heading.length, maxOutlineSourceLength);
+      final source = '$heading\nafter\n';
+      final controller = await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: source,
+      );
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      final entry = find.byKey(const ValueKey('document-block-0'));
+      expect(entry, findsOneWidget);
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+      expect(
+        controller.selection,
+        const TextSelection(
+          baseOffset: 0,
+          extentOffset: maxOutlineSourceLength,
+        ),
+      );
+      expect(find.byKey(const ValueKey('document-block-1')), findsNothing);
+    },
+  );
+
+  _platformTest(
+    'an open fence crossing a line terminator at the cutoff is not offered',
+    TargetPlatform.macOS,
+    (tester) async {
+      const opening = '```\n';
+      final source =
+          '$opening${'x' * (maxOutlineSourceLength - opening.length - 1)}'
+          '\ncode line\n```\n';
+      expect(source.codeUnitAt(maxOutlineSourceLength - 1), 0x0A);
+      await _pumpApp(tester, locale: const Locale('en'), source: source);
+      expect(find.text(_truncatedNoticeEn), findsOneWidget);
+      expect(find.text('No blocks in the source text yet.'), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+    },
+  );
 }
