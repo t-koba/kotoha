@@ -197,6 +197,32 @@ void main() {
     expect(parseWorkspaceExport(output).toJson(), draft.toJson());
   });
 
+  test('accepts CRLF-normalized exports without changing field content', () {
+    final draft = _draft();
+    final output = formatWorkspaceExport(draft).replaceAll('\n', '\r\n');
+
+    expect(output, contains('\r\n'));
+    expect(output.replaceAll('\r\n', ''), isNot(contains('\n')));
+    expect(parseWorkspaceExport(output).toJson(), draft.toJson());
+  });
+
+  test('rejects malformed CRLF documents instead of guessing fields', () {
+    final crlf = formatWorkspaceExport(_draft()).replaceAll('\n', '\r\n');
+    final documents = <String>[
+      crlf.replaceFirst('Source text: ', 'Source text: raw\r'),
+      crlf.replaceAll('\r\n', '\r'),
+      crlf.replaceFirst('🌏', r'\q'),
+      crlf.substring(0, crlf.length - 2),
+    ];
+    for (final document in documents) {
+      expect(
+        () => parseWorkspaceExport(document),
+        throwsFormatException,
+        reason: document,
+      );
+    }
+  });
+
   test('rejects malformed documents instead of guessing fields', () {
     final valid = formatWorkspaceExport(_draft());
     final documents = <String>[

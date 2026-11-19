@@ -108,7 +108,6 @@ void main() {
 
       await restore(tester);
 
-      expect(picker.pick is Function, isTrue);
       expect(textOf(tester, 'source-language'), 'ja');
       expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
       expect(textOf(tester, 'target-language-0'), 'en');
@@ -117,6 +116,31 @@ void main() {
         'Translation 2 language: fr\nTranslation text:\nnot a header',
       );
       expect(textOf(tester, 'target-language-1'), 'fr');
+      expect(textOf(tester, 'translation-text-1'), 'bonjour');
+      expect(find.text('Workspace restored.'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('restores a v2 document saved with CRLF line endings', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async => _File(
+        formatWorkspaceExport(restoredDraft()).replaceAll('\n', '\r\n'),
+      );
+      await open(tester);
+
+      await restore(tester);
+
+      expect(textOf(tester, 'source-language'), 'ja');
+      expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
+      expect(
+        textOf(tester, 'translation-text-0'),
+        'Translation 2 language: fr\nTranslation text:\nnot a header',
+      );
       expect(textOf(tester, 'translation-text-1'), 'bonjour');
       expect(find.text('Workspace restored.'), findsOneWidget);
     } finally {
