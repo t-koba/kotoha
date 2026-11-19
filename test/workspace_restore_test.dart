@@ -262,6 +262,32 @@ void main() {
     }
   });
 
+  testWidgets('restores a BOM-prefixed CRLF export verbatim', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final crlf = utf8.encode(
+        formatWorkspaceExport(restoredDraft()).replaceAll('\n', '\r\n'),
+      );
+      picker.pick = () async =>
+          _BytesFile(Uint8List.fromList([0xef, 0xbb, 0xbf, ...crlf]));
+      await open(tester);
+
+      await restore(tester);
+
+      expect(textOf(tester, 'source-language'), 'ja');
+      expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
+      expect(
+        textOf(tester, 'translation-text-0'),
+        'Translation 2 language: fr\nTranslation text:\nnot a header',
+      );
+      expect(textOf(tester, 'target-language-1'), 'fr');
+      expect(textOf(tester, 'translation-text-1'), 'bonjour');
+      expect(find.text('Workspace restored.'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('malformed UTF-8 bytes are rejected without changing drafts', (
     tester,
   ) async {
