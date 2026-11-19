@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 import 'content_locale.dart';
+import 'document_outline.dart';
 import 'first_strong_direction.dart';
 import 'l10n/app_localizations.dart';
 import 'text_document_exporter.dart';
@@ -105,6 +106,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   late final _sourceLanguage = _DraftController(() => _appResumed);
   late final _sourceText = _DraftController(() => _appResumed);
   final FocusNode _addTranslationFocusNode = FocusNode();
+  final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
@@ -158,6 +160,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _sourceLanguage.dispose();
     _sourceText.dispose();
     _addTranslationFocusNode.dispose();
+    _sourceTextFocusNode.dispose();
     _imePersonalizedLearningFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
@@ -822,8 +825,13 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                         controller: _sourceText,
                         contentLanguage: _sourceLanguage,
                         label: strings.sourceText,
+                        focusNode: _sourceTextFocusNode,
                         minLines: 5,
                         maxLines: 12,
+                      ),
+                      DocumentOutline(
+                        controller: _sourceText,
+                        sourceFocusNode: _sourceTextFocusNode,
                       ),
                       const SizedBox(height: 24),
                       Text(

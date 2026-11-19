@@ -293,4 +293,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get modelSessionActive =>
       'Session acceptance recorded (digests only). No model is installed and runtime is not enabled.';
+
+  @override
+  String get documentOutline => 'Document outline';
+
+  @override
+  String get documentOutlineEmpty => 'No blocks in the source text yet.';
+
+  @override
+  String get documentOutlineUntitled => '(empty block)';
 }

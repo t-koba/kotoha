@@ -583,6 +583,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。'**
   String get modelSessionActive;
+
+  /// 原文から解析したブロック一覧の見出し。
+  ///
+  /// In ja, this message translates to:
+  /// **'原文の構成'**
+  String get documentOutline;
+
+  /// 原文に表示できるブロックがないときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'原文にはまだブロックがありません。'**
+  String get documentOutlineEmpty;
+
+  /// 解析した文字列が空のブロックに付ける代替ラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'（空のブロック）'**
+  String get documentOutlineUntitled;
 }
 
 class _AppLocalizationsDelegate

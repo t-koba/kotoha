@@ -15,6 +15,11 @@ an explicit system picker on macOS/Windows and the Android/iOS adapters.
 Import replaces only source text after consent; translations remain manual and
 all drafts stay in memory. Kotoha does not stage a cache copy, persist document
 grants, or add a network client, but the OS/provider may download or stage a file.
+Typed or imported source text also gets a local outline of headings,
+paragraphs, list items and fenced code blocks. Choosing an entry selects that
+block in the source editor; the outline is derived from the current text and
+neither translates nor renders rich formatting.
+
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the
 workspace. The same platforms can export the whole workspace as a reversible v2

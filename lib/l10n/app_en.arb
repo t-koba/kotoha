@@ -213,5 +213,17 @@
         "type": "int"
       }
     }
+  },
+  "documentOutline": "Document outline",
+  "@documentOutline": {
+    "description": "Heading for the outline of blocks parsed from the source text."
+  },
+  "documentOutlineEmpty": "No blocks in the source text yet.",
+  "@documentOutlineEmpty": {
+    "description": "Empty state shown when the source text has no outline blocks."
+  },
+  "documentOutlineUntitled": "(empty block)",
+  "@documentOutlineUntitled": {
+    "description": "Fallback label for a source block whose parsed text is blank."
   }
 }

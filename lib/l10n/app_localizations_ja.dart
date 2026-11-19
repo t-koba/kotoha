@@ -283,4 +283,13 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get modelSessionActive =>
       'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。';
+
+  @override
+  String get documentOutline => '原文の構成';
+
+  @override
+  String get documentOutlineEmpty => '原文にはまだブロックがありません。';
+
+  @override
+  String get documentOutlineUntitled => '（空のブロック）';
 }

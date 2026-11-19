@@ -213,5 +213,17 @@
         "type": "int"
       }
     }
+  },
+  "documentOutline": "原文の構成",
+  "@documentOutline": {
+    "description": "原文から解析したブロック一覧の見出し。"
+  },
+  "documentOutlineEmpty": "原文にはまだブロックがありません。",
+  "@documentOutlineEmpty": {
+    "description": "原文に表示できるブロックがないときの案内。"
+  },
+  "documentOutlineUntitled": "（空のブロック）",
+  "@documentOutlineUntitled": {
+    "description": "解析した文字列が空のブロックに付ける代替ラベル。"
   }
 }
