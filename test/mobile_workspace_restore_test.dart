@@ -198,6 +198,24 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
     });
 
+    mobileTest('a valid export named .pdf is rejected before parsing', (
+      tester,
+    ) async {
+      reply = () async =>
+          document(formatWorkspaceExport(draft()), name: 'workspace.PDF');
+      await open(tester, source: 'keep me');
+
+      await restore(tester);
+
+      expect(
+        find.text('Choose a .txt, .md, or .markdown file to restore.'),
+        findsOneWidget,
+      );
+      expect(find.text('Workspace restored.'), findsNothing);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(textOf(tester, 'source-text'), 'keep me');
+    });
+
     mobileTest('an oversized document is rejected with its own notice', (
       tester,
     ) async {
