@@ -369,4 +369,41 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  _platformTest(
+    'selection changes do not rebuild outline entries',
+    TargetPlatform.macOS,
+    (tester) async {
+      const source = '## Heading\nBody';
+      final controller = await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: source,
+      );
+      final entry = find.byKey(const ValueKey('document-block-0'));
+      final before = tester.widget<ListTile>(entry).title! as Text;
+      expect(before.data, 'Heading');
+
+      controller.selection = const TextSelection.collapsed(offset: 0);
+      await tester.pump();
+      expect(
+        tester.widget<ListTile>(entry).title! as Text,
+        same(before),
+        reason: 'a selection-only notification must not rebuild the outline',
+      );
+
+      await tester.enterText(
+        find.byKey(const ValueKey('source-text')),
+        '## Updated\nBody',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Updated'), findsOneWidget);
+      expect(find.text('Heading'), findsNothing);
+      expect(
+        tester.widget<ListTile>(entry).title! as Text,
+        isNot(same(before)),
+      );
+      expect(controller.text, '## Updated\nBody');
+    },
+  );
 }
