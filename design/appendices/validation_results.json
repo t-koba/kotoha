@@ -1,6 +1,6 @@
 {
-  "checks": 95,
-  "passed": 95,
+  "checks": 98,
+  "passed": 98,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -466,6 +466,21 @@
       "name": "Locale parity",
       "status": "pass",
       "case": "compatible"
+    },
+    {
+      "name": "Locale parity rejects token drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Locale parity rejects declaration drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Locale parity rejects metadata drift",
+      "status": "pass",
+      "case": "incompatible"
     },
     {
       "name": "Contract identifiers",

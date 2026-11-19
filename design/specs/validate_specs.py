@@ -385,33 +385,71 @@ def validate_html_acceptance_mirror() -> None:
             require(cell in html, f"HTML mirror missing {cells[0]}: {cell}")
 
 
+def locale_parity(english: dict[str, Any], japanese: dict[str, Any], generated: set[str]) -> None:
+    """Compare message tokens, metadata and declared placeholders across locales."""
+    messages = lambda data: {key for key in data if not key.startswith("@")}
+    metadata = lambda data: {
+        key for key in data if key.startswith("@") and not key.startswith("@@")
+    }
+    tokens = lambda value: set(re.findall(r"\{\s*(\w+)", value))
+    require(messages(english) == messages(japanese), "locale message keys")
+    require(metadata(english) == metadata(japanese), "locale metadata keys")
+    require(messages(english) <= generated, "generated locale messages")
+    for key in messages(english):
+        english_tokens = tokens(english[key]) if isinstance(english[key], str) else set()
+        japanese_tokens = tokens(japanese[key]) if isinstance(japanese[key], str) else set()
+        english_declared = english.get("@" + key, {}).get("placeholders", {})
+        japanese_declared = japanese.get("@" + key, {}).get("placeholders", {})
+        require(
+            english_tokens == japanese_tokens == set(english_declared),
+            f"locale message placeholders: {key}",
+        )
+        require(
+            set(english_declared) == set(japanese_declared),
+            f"locale declared placeholders: {key}",
+        )
+        for name, spec in english_declared.items():
+            require(
+                spec.get("type") == japanese_declared[name].get("type"),
+                f"locale placeholder types: {key}.{name}",
+            )
+
+
+def locale_generated_messages() -> set[str]:
+    l10n = ROOT.parent / "lib" / "l10n"
+    generated = set()
+    for name in ("app_localizations.dart", "app_localizations_en.dart", "app_localizations_ja.dart"):
+        source = (l10n / name).read_text(encoding="utf-8")
+        generated |= set(re.findall(r"\bString get (\w+)\b", source))
+        generated |= set(re.findall(r"\bString (\w+)\(", source))
+    return generated
+
+
 def validate_locale_parity() -> None:
-    """Keep English and Japanese message keys and placeholders in lockstep."""
     l10n = ROOT.parent / "lib" / "l10n"
     english = json.loads((l10n / "app_en.arb").read_text(encoding="utf-8"))
     japanese = json.loads((l10n / "app_ja.arb").read_text(encoding="utf-8"))
-    keys = lambda data: {key for key in data if not key.startswith("@")}
-    require(keys(english) == keys(japanese), "locale message keys")
-    for name in ("app_localizations.dart", "app_localizations_en.dart", "app_localizations_ja.dart"):
-        source = (l10n / name).read_text(encoding="utf-8")
-        declared = set(re.findall(r"\bString get (\w+)\b", source))
-        declared |= set(re.findall(r"\bString (\w+)\(", source))
-        require(keys(english) <= declared, f"generated locale messages: {name}")
-    for key in keys(english):
-        english_placeholders = (
-            set(english[key].get("placeholders", {}))
-            if isinstance(english[key], dict)
-            else set()
+    locale_parity(english, japanese, locale_generated_messages())
+
+
+def locale_parity_drift(case: str) -> None:
+    """Reject synthetic locale drift so the parity gate cannot go silent."""
+    l10n = ROOT.parent / "lib" / "l10n"
+    english = json.loads((l10n / "app_en.arb").read_text(encoding="utf-8"))
+    japanese = json.loads((l10n / "app_ja.arb").read_text(encoding="utf-8"))
+    if case == "token":
+        japanese["copyTranslationNumber"] = japanese["copyTranslationNumber"].replace(
+            "{number}", ""
         )
-        japanese_placeholders = (
-            set(japanese[key].get("placeholders", {}))
-            if isinstance(japanese[key], dict)
-            else set()
-        )
-        require(
-            english_placeholders == japanese_placeholders,
-            f"locale placeholders: {key}",
-        )
+    elif case == "declaration":
+        placeholders = japanese["@copyTranslationNumber"]["placeholders"]
+        placeholders["index"] = placeholders.pop("number")
+    elif case == "metadata":
+        del japanese["@copyTranslationNumber"]
+    else:
+        raise ValueError(f"unknown drift case: {case}")
+    locale_parity(english, japanese, locale_generated_messages())
+
 
 def main() -> int:
     for name, schema in SCHEMAS.items():
@@ -511,6 +549,9 @@ def main() -> int:
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
     check("HTML acceptance mirror", validate_html_acceptance_mirror)
     check("Locale parity", validate_locale_parity)
+    check("Locale parity rejects token drift", lambda case="token": locale_parity_drift(case), True)
+    check("Locale parity rejects declaration drift", lambda case="declaration": locale_parity_drift(case), True)
+    check("Locale parity rejects metadata drift", lambda case="metadata": locale_parity_drift(case), True)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
     check("Apple bundle metadata", validate_apple_bundle_metadata)
     report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}
