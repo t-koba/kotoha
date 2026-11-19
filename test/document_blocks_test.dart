@@ -179,6 +179,29 @@ void main() {
     },
   );
 
+  test('a leading BOM is ignored for fence, list and heading markers', () {
+    final source = '\uFEFF```\ncode\n```\n\uFEFF- one\n\uFEFF## Title';
+    final blocks = parseDocumentBlocks(source);
+    expect(blocks.map((block) => block.kind).toList(), [
+      DocumentBlockKind.codeBlock,
+      DocumentBlockKind.listItem,
+      DocumentBlockKind.heading,
+    ]);
+    expect(blocks[0].text, 'code');
+    expect(
+      source.substring(blocks[0].start, blocks[0].end),
+      '\uFEFF```\ncode\n```',
+    );
+    expect(blocks[1].text, 'one');
+    expect(source.substring(blocks[1].start, blocks[1].end), '\uFEFF- one');
+    expect(blocks[2].text, 'Title');
+    expect(source.substring(blocks[2].start, blocks[2].end), '\uFEFF## Title');
+
+    final indented = parseDocumentBlocks('\uFEFF  ```\ncode\n  ```');
+    expect(indented.single.kind, DocumentBlockKind.codeBlock);
+    expect(indented.single.text, 'code');
+  });
+
   test('mixed document ranges reconstruct exactly and never overlap', () {
     final source = <String>[
       '# Title',

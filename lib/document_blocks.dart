@@ -34,10 +34,10 @@ class DocumentBlock {
 /// Parses [source] into non-overlapping, source-ordered [DocumentBlock]s.
 ///
 /// LF and CRLF are line terminators; a lone CR stays in the line's content.
-/// Blank lines are skipped. Headings start at the beginning of a line (a
-/// leading U+FEFF is ignored for recognition but kept in the range), list
-/// items may be indented, and fenced code swallows any marker-looking lines
-/// until its closing fence or the end of the input.
+/// Blank lines are skipped. A leading U+FEFF is ignored when recognizing any
+/// marker but kept in the range. Headings start at the beginning of a line,
+/// list items may be indented, and fenced code swallows any marker-looking
+/// lines until its closing fence or the end of the input.
 List<DocumentBlock> parseDocumentBlocks(String source) {
   final probe = source.startsWith('\uFEFF') ? source.substring(1) : source;
   if (probe.trim().isEmpty) return const <DocumentBlock>[];
@@ -170,8 +170,14 @@ List<_Line> _splitLines(String source) {
   return lines;
 }
 
+/// Returns the index just past a leading U+FEFF, or zero. The BOM is an
+/// encoding mark: it is ignored for marker recognition but stays in the
+/// block's exact source range.
+int _skipBom(String line) =>
+    line.isNotEmpty && line.codeUnitAt(0) == 0xFEFF ? 1 : 0;
+
 int _skipIndent(String line) {
-  var i = 0;
+  var i = _skipBom(line);
   while (i < line.length &&
       (line.codeUnitAt(i) == 0x20 || line.codeUnitAt(i) == 0x09)) {
     i++;
@@ -189,8 +195,7 @@ class _Heading {
 }
 
 _Heading? _heading(String line) {
-  var i = 0;
-  if (i < line.length && line.codeUnitAt(i) == 0xFEFF) i++;
+  var i = _skipBom(line);
   var hashes = 0;
   while (i < line.length && line.codeUnitAt(i) == 0x23) {
     hashes++;
