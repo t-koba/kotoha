@@ -216,6 +216,26 @@ void main() {
       expect(textOf(tester, 'source-text'), 'keep me');
     });
 
+    mobileTest('restores a v2 document with a UTF-8 BOM', (tester) async {
+      reply = () async => bytes(
+        Uint8List.fromList([
+          0xef,
+          0xbb,
+          0xbf,
+          ...utf8.encode(formatWorkspaceExport(draft())),
+        ]),
+      );
+      await open(tester);
+
+      await restore(tester);
+
+      expect(textOf(tester, 'source-language'), 'ja');
+      expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
+      expect(textOf(tester, 'target-language-1'), 'fr');
+      expect(textOf(tester, 'translation-text-1'), 'bonjour');
+      expect(find.text('Workspace restored.'), findsOneWidget);
+    });
+
     mobileTest('malformed UTF-8 bytes keep drafts without leaking details', (
       tester,
     ) async {

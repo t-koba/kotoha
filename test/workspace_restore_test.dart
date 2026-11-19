@@ -203,6 +203,30 @@ void main() {
     }
   });
 
+  testWidgets('restores a v2 document with a UTF-8 BOM', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final bytes = Uint8List.fromList([
+        0xef,
+        0xbb,
+        0xbf,
+        ...utf8.encode(formatWorkspaceExport(restoredDraft())),
+      ]);
+      picker.pick = () async => _BytesFile(bytes);
+      await open(tester);
+
+      await restore(tester);
+
+      expect(textOf(tester, 'source-language'), 'ja');
+      expect(textOf(tester, 'source-text'), '第一行\nsecond 🌏');
+      expect(textOf(tester, 'target-language-1'), 'fr');
+      expect(textOf(tester, 'translation-text-1'), 'bonjour');
+      expect(find.text('Workspace restored.'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('malformed UTF-8 bytes are rejected without changing drafts', (
     tester,
   ) async {
