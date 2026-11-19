@@ -492,9 +492,13 @@ void main() {
       final search = find.byKey(const ValueKey('document-outline-search'));
 
       // U+3000 ideographic space (the standard Japanese separator, common in
-      // IME and copy-paste input) and repeated ASCII spaces are collapsed in
-      // outline labels, so the query must be normalized the same way.
-      for (final query in ['FIRST\u3000paragraph', 'FIRST   paragraph']) {
+      // IME and copy-paste input), U+0085 next line and repeated ASCII spaces
+      // are collapsed in outline labels, so queries normalize the same way.
+      for (final query in [
+        'FIRST\u3000paragraph',
+        'FIRST   paragraph',
+        'FIRST\u0085paragraph',
+      ]) {
         await tester.enterText(search, query);
         await tester.pumpAndSettle();
         expect(

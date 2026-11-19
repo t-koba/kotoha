@@ -23,8 +23,11 @@ int outlineParseEnd(int sourceLength) =>
 /// Collapses Unicode whitespace runs (including ideographic spaces and NBSP)
 /// to one ASCII space and trims the ends, so display labels and typed queries
 /// are compared in the same form.
+// Dart's RegExp uses ECMAScript \s, which omits U+0085 (next line) even
+// though Unicode classifies it as whitespace. Include it so labels and
+// queries collapse the same set of whitespace characters.
 String _normalizeOutlineWhitespace(String text) =>
-    text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    text.replaceAll(RegExp(r'[\s\u0085]+'), ' ').trim();
 
 /// The normalized label shared by outline display and search matching.
 String _outlineLabel(DocumentBlock block) =>
