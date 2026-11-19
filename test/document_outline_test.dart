@@ -863,6 +863,66 @@ void main() {
     );
   });
 
+  group('parseOutlineBlocks exact range at the clipped window edge', () {
+    const head = 'Paragraph start\n';
+    final fill =
+        maxOutlineSourceLength + maxOutlineLookaheadLength - head.length;
+
+    test('omits a paragraph ended by a partial blank lookahead line', () {
+      final source = '$head${' ' * fill}continued';
+      expect(source.length, greaterThan(maxOutlineSourceLength));
+      final full = parseDocumentBlocks(source);
+      expect(full, hasLength(1));
+      expect(full.first.start, 0);
+      expect(
+        full.first.end,
+        source.length,
+        reason: 'all of it is one paragraph',
+      );
+
+      expect(
+        parseOutlineBlocks(source),
+        isEmpty,
+        reason:
+            'the partial blank tail is not a known separator, so the '
+            'paragraph end cannot be established exactly',
+      );
+    });
+
+    test('keeps the exact range when the blank separator is complete', () {
+      final source = '$head${' ' * (fill - 100)}\ncontinued';
+      expect(source.codeUnitAt(16 + fill - 100), 0x0A);
+      final offered = parseOutlineBlocks(source);
+      expect(offered, hasLength(1));
+      expect(offered.first.start, 0);
+      expect(offered.first.end, head.length - 1);
+    });
+
+    test(
+      'keeps a heading whose own range is exact before a partial blank tail',
+      () {
+        const heading = '## Heading\n';
+        final source = '$heading${' ' * (fill + 5)}continued';
+        final offered = parseOutlineBlocks(source);
+        expect(offered, hasLength(1));
+        expect(offered.first.kind, DocumentBlockKind.heading);
+        expect(offered.first.start, 0);
+        expect(offered.first.end, heading.length - 1);
+      },
+    );
+
+    test('omits the uncertain paragraph with a CRLF separator at the edge', () {
+      const headCr = 'Paragraph start\r\n';
+      final fillCr =
+          maxOutlineSourceLength + maxOutlineLookaheadLength - headCr.length;
+      final source = '$headCr${' ' * fillCr}continued';
+      final full = parseDocumentBlocks(source);
+      expect(full, hasLength(1));
+      expect(full.first.end, source.length);
+      expect(parseOutlineBlocks(source), isEmpty);
+    });
+  });
+
   _platformTest(
     'a paragraph whose terminator is exactly at the cutoff is not offered',
     TargetPlatform.macOS,

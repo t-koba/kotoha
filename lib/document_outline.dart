@@ -66,28 +66,53 @@ class _OutlineData {
       _flags[index] ??= detectDocumentReviewFlags(blocks[index].text);
 }
 
-_OutlineData _parseOutline(String text) {
+/// The exact, source-ordered blocks the outline may offer for [text].
+///
+/// Only a bounded prefix is parsed. A block is offered only when its whole
+/// range is established inside the disclosed prefix; an unclosed fence's end
+/// must be strictly inside it. The lookahead window can end in the middle of a
+/// line, so a whitespace-only final line is not a known blank separator: unseen
+/// text can turn it into a continuation. A paragraph whose end rests on such a
+/// false separator is omitted rather than offered with an inexact range.
+List<DocumentBlock> parseOutlineBlocks(String text) {
   final boundary = min(text.length, maxOutlineSourceLength);
   final prefixTruncated = boundary < text.length;
-  var blocks = parseDocumentBlocks(
-    text.substring(0, outlineParseEnd(text.length)),
-  );
-  if (prefixTruncated) {
-    // A block is only offered when its whole range is established inside the
-    // disclosed prefix. An unclosed fence can end exactly at the boundary, so
-    // its closing marker must be strictly inside it.
-    blocks = blocks.where((block) {
-      if (block.start >= boundary) return false;
-      if (block.kind == DocumentBlockKind.codeBlock) {
-        return block.end < boundary;
-      }
-      return block.end <= boundary;
-    }).toList();
-  }
+  final parseEnd = outlineParseEnd(text.length);
+  final window = text.substring(0, parseEnd);
+  var blocks = parseDocumentBlocks(window);
+  if (!prefixTruncated) return blocks;
+
+  final lastLf = window.lastIndexOf('\n');
+  final tailStart = lastLf + 1;
+  final partialBlankTail =
+      parseEnd < text.length &&
+      tailStart < parseEnd &&
+      window.substring(tailStart).trim().isEmpty;
+  // The content end of the line just before the partial tail: with CRLF the
+  // content ends at the carriage return, one code unit before the line feed.
+  final falseSeparatorEnd = lastLf > 0 && window.codeUnitAt(lastLf - 1) == 0x0D
+      ? lastLf - 1
+      : lastLf;
+
+  return blocks.where((block) {
+    if (block.start >= boundary) return false;
+    if (block.kind == DocumentBlockKind.codeBlock) return block.end < boundary;
+    if (block.end > boundary) return false;
+    if (partialBlankTail &&
+        block.kind == DocumentBlockKind.paragraph &&
+        block.end == falseSeparatorEnd) {
+      return false;
+    }
+    return true;
+  }).toList();
+}
+
+_OutlineData _parseOutline(String text) {
+  final blocks = parseOutlineBlocks(text);
   return _OutlineData(
     text: text,
     blocks: blocks,
-    prefixTruncated: prefixTruncated,
+    prefixTruncated: min(text.length, maxOutlineSourceLength) < text.length,
     blocksTruncated: blocks.length > maxVisibleOutlineBlocks,
   );
 }
