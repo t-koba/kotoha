@@ -1,6 +1,6 @@
 {
-  "checks": 94,
-  "passed": 94,
+  "checks": 95,
+  "passed": 95,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -459,6 +459,11 @@
     },
     {
       "name": "HTML acceptance mirror",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Locale parity",
       "status": "pass",
       "case": "compatible"
     },

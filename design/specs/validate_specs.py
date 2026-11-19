@@ -384,6 +384,30 @@ def validate_html_acceptance_mirror() -> None:
         for cell in cells:
             require(cell in html, f"HTML mirror missing {cells[0]}: {cell}")
 
+
+def validate_locale_parity() -> None:
+    """Keep English and Japanese message keys and placeholders in lockstep."""
+    l10n = ROOT.parent / "lib" / "l10n"
+    english = json.loads((l10n / "app_en.arb").read_text(encoding="utf-8"))
+    japanese = json.loads((l10n / "app_ja.arb").read_text(encoding="utf-8"))
+    keys = lambda data: {key for key in data if not key.startswith("@@")}
+    require(keys(english) == keys(japanese), "locale message keys")
+    for key in keys(english):
+        english_placeholders = (
+            set(english[key].get("placeholders", {}))
+            if isinstance(english[key], dict)
+            else set()
+        )
+        japanese_placeholders = (
+            set(japanese[key].get("placeholders", {}))
+            if isinstance(japanese[key], dict)
+            else set()
+        )
+        require(
+            english_placeholders == japanese_placeholders,
+            f"locale placeholders: {key}",
+        )
+
 def main() -> int:
     for name, schema in SCHEMAS.items():
         check(f"Schema: {name}", lambda schema=schema: Draft202012Validator.check_schema(schema))
@@ -481,6 +505,7 @@ def main() -> int:
     expected={f"F{i:02}" for i in range(1,39)}
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
     check("HTML acceptance mirror", validate_html_acceptance_mirror)
+    check("Locale parity", validate_locale_parity)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
     check("Apple bundle metadata", validate_apple_bundle_metadata)
     report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}
