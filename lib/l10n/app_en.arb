@@ -281,5 +281,13 @@
   "documentReviewPlaceholder": "placeholder",
   "@documentReviewPlaceholder": {
     "description": "Review hint for source text containing a placeholder."
+  },
+  "documentOutlineReviewOnly": "Review only",
+  "@documentOutlineReviewOnly": {
+    "description": "Toggle that shows only outline entries with local review hints."
+  },
+  "documentOutlineNoReviewMatches": "No outline entries need local review.",
+  "@documentOutlineNoReviewMatches": {
+    "description": "Empty state when the review-only filter hides every outline entry."
   }
 }

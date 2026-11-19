@@ -281,5 +281,13 @@
   "documentReviewPlaceholder": "プレースホルダー",
   "@documentReviewPlaceholder": {
     "description": "プレースホルダーを含む原文に対する確認案内。"
+  },
+  "documentOutlineReviewOnly": "確認が必要な項目のみ",
+  "@documentOutlineReviewOnly": {
+    "description": "ローカルの確認案内がある構成の項目だけを表示する切り替え。"
+  },
+  "documentOutlineNoReviewMatches": "ローカルで確認が必要な構成の項目はありません。",
+  "@documentOutlineNoReviewMatches": {
+    "description": "確認のみの絞り込みで構成の項目がすべて隠れたときの案内。"
   }
 }

@@ -770,4 +770,60 @@ void main() {
       },
     );
   }
+
+  _platformTest(
+    'the review-only filter keeps original indices and exact selection',
+    TargetPlatform.macOS,
+    (tester) async {
+      final source =
+          '## Plain one\n'
+          '## Version 2 {name}\n'
+          '## Plain two\n'
+          '## See https://example.com';
+      final controller = await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: source,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('document-outline-review-only')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('document-block-0')), findsNothing);
+      expect(find.byKey(const ValueKey('document-block-1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('document-block-2')), findsNothing);
+      expect(find.byKey(const ValueKey('document-block-3')), findsOneWidget);
+
+      final expected = parseDocumentBlocks(source)[1];
+      await tester.tap(find.byKey(const ValueKey('document-block-1')));
+      await tester.pumpAndSettle();
+      expect(
+        controller.selection,
+        TextSelection(baseOffset: expected.start, extentOffset: expected.end),
+      );
+    },
+  );
+
+  for (final (locale, notice) in [
+    (const Locale('en'), 'No outline entries need local review.'),
+    (const Locale('ja'), 'ローカルで確認が必要な構成の項目はありません。'),
+  ]) {
+    _platformTest(
+      'review-only filter has a localized empty state for $locale',
+      TargetPlatform.macOS,
+      (tester) async {
+        await _pumpApp(
+          tester,
+          locale: locale,
+          source: '## Plain one\n## Plain two',
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('document-outline-review-only')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(notice), findsOneWidget);
+      },
+    );
+  }
 }

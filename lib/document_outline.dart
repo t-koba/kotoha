@@ -98,6 +98,7 @@ class _DocumentOutlineState extends State<DocumentOutline> {
   final TextEditingController _searchController = TextEditingController();
 
   late _OutlineData _data;
+  bool _reviewOnly = false;
 
   @override
   void initState() {
@@ -147,10 +148,13 @@ class _DocumentOutlineState extends State<DocumentOutline> {
       if (hasQuery && !_outlineLabel(block).toLowerCase().contains(query)) {
         continue;
       }
+      if (_reviewOnly && detectDocumentReviewFlags(block.text).isEmpty) {
+        continue;
+      }
       matches.add((index, block));
     }
     final matchesTruncated =
-        hasQuery && matches.length > maxVisibleOutlineBlocks;
+        (hasQuery || _reviewOnly) && matches.length > maxVisibleOutlineBlocks;
 
     return Column(
       key: const ValueKey('document-outline'),
@@ -178,12 +182,21 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             ),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: FilterChip(
+            key: const ValueKey('document-outline-review-only'),
+            label: Text(strings.documentOutlineReviewOnly),
+            selected: _reviewOnly,
+            onSelected: (selected) => setState(() => _reviewOnly = selected),
+          ),
+        ),
         if (data.prefixTruncated)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(strings.documentOutlineTruncated),
           ),
-        if (!hasQuery && data.blocksTruncated)
+        if (!hasQuery && !_reviewOnly && data.blocksTruncated)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(strings.documentOutlineEntriesTruncated),
@@ -199,6 +212,8 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             child: Text(
               hasQuery
                   ? strings.documentOutlineNoMatches
+                  : _reviewOnly
+                  ? strings.documentOutlineNoReviewMatches
                   : strings.documentOutlineEmpty,
             ),
           )

@@ -685,6 +685,18 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'プレースホルダー'**
   String get documentReviewPlaceholder;
+
+  /// ローカルの確認案内がある構成の項目だけを表示する切り替え。
+  ///
+  /// In ja, this message translates to:
+  /// **'確認が必要な項目のみ'**
+  String get documentOutlineReviewOnly;
+
+  /// 確認のみの絞り込みで構成の項目がすべて隠れたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'ローカルで確認が必要な構成の項目はありません。'**
+  String get documentOutlineNoReviewMatches;
 }
 
 class _AppLocalizationsDelegate

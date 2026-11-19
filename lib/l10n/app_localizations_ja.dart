@@ -337,4 +337,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get documentReviewPlaceholder => 'プレースホルダー';
+
+  @override
+  String get documentOutlineReviewOnly => '確認が必要な項目のみ';
+
+  @override
+  String get documentOutlineNoReviewMatches => 'ローカルで確認が必要な構成の項目はありません。';
 }

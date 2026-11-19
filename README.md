@@ -28,6 +28,7 @@ blocks are recognized, that the flat source and its exact ranges remain canonica
 and that inline formatting, numbers, links and placeholders need manual review.
 Outline entries carrying digits, web/email links or brace/percent placeholders
 get a local “Review” hint; it is only a navigation aid and never rewrites text.
+A “Review only” toggle filters the same cached entries without reparsing the source.
 
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the

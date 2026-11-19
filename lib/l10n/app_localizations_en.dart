@@ -351,4 +351,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get documentReviewPlaceholder => 'placeholder';
+
+  @override
+  String get documentOutlineReviewOnly => 'Review only';
+
+  @override
+  String get documentOutlineNoReviewMatches =>
+      'No outline entries need local review.';
 }
