@@ -203,6 +203,41 @@ void main() {
     }
   });
 
+  testWidgets('restoring an empty export clears every stale field', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async =>
+          _File(formatWorkspaceExport(TextWorkspaceDraft.empty()));
+      await open(tester);
+      await tester.enterText(field('source-language'), 'ja');
+      await tester.enterText(field('source-text'), 'stale source');
+      await tester.enterText(field('target-language-0'), 'en');
+      await tester.enterText(field('translation-text-0'), 'stale translation');
+      final addTranslation = find.text('Add translation');
+      await tester.ensureVisible(addTranslation);
+      await tester.tap(addTranslation);
+      await tester.pumpAndSettle();
+      await tester.enterText(field('target-language-1'), 'fr');
+      await tester.enterText(field('translation-text-1'), 'second');
+
+      await restore(tester);
+      await tester.tap(field('restore-workspace-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(textOf(tester, 'source-language'), isEmpty);
+      expect(textOf(tester, 'source-text'), isEmpty);
+      expect(textOf(tester, 'target-language-0'), isEmpty);
+      expect(textOf(tester, 'translation-text-0'), isEmpty);
+      expect(find.byKey(const ValueKey('target-language-1')), findsNothing);
+      expect(find.byKey(const ValueKey('translation-text-1')), findsNothing);
+      expect(find.text('Workspace restored.'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('restores a v2 document with a UTF-8 BOM', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
