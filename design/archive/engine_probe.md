@@ -1072,6 +1072,20 @@ mapping. Unknown classifications fail closed, and adoption stays disabled
 until exact selected-member identity, complete term evidence, pinned notice
 text and a user-accessible delivery plan are recorded.
 
+**Single-component field check — generated Unicode data.** For the candidate
+`src/unicode-data.cpp` (SHA-256
+`5c80b44db0958e673a1940e2a602a5eea2725916ff67bbaeb48ecc7634f84f29`), the
+retained evidence already identifies the expression `Unicode-3.0`, the selected
+Unicode License V3 terms and their permissive classification, the candidate
+source path and its content digest. The concrete policy gap is the `notices`
+field: the bundled app notice uses copyright `1991-2026` for Kotoha's separate
+`Unicode Bidi Data` projection, while the pinned Unicode 16 audit reference uses
+`2001-2024`; neither is bound to the engine table's historical producer or
+registered as a distinct `Unicode Engine Data` component. `distribution_scope`
+is likewise only prospective engine redistribution, without selected-member
+identity. No notice asset or registry entry is added from this check; adoption
+remains disabled.
+
 ### Earlier partial installed-NDK captures (historical)
 
 These exact reports predate the later 47-member capture summarized at the
