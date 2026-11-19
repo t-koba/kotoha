@@ -104,6 +104,55 @@ void main() {
       expect(calls, 1);
     });
 
+    Future<void> populate(WidgetTester tester) async {
+      await tester.enterText(field('source-language'), 'current-language');
+      await tester.enterText(field('target-language-0'), 'current-target');
+      await tester.enterText(
+        field('translation-text-0'),
+        'current translation',
+      );
+    }
+
+    mobileTest('confirmation replaces a populated workspace', (tester) async {
+      reply = () async => document(formatWorkspaceExport(draft()));
+      await open(tester, source: 'current source');
+      await populate(tester);
+
+      await restore(tester);
+
+      expect(
+        find.byKey(const ValueKey('restore-workspace-confirm')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('restore-workspace-confirm')));
+      await tester.pumpAndSettle();
+
+      expectRestored(tester);
+    });
+
+    mobileTest('canceling confirmation keeps a populated workspace', (
+      tester,
+    ) async {
+      reply = () async => document(formatWorkspaceExport(draft()));
+      await open(tester, source: 'current source');
+      await populate(tester);
+
+      await restore(tester);
+
+      expect(
+        find.byKey(const ValueKey('restore-workspace-cancel')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('restore-workspace-cancel')));
+      await tester.pumpAndSettle();
+
+      expect(textOf(tester, 'source-language'), 'current-language');
+      expect(textOf(tester, 'source-text'), 'current source');
+      expect(textOf(tester, 'target-language-0'), 'current-target');
+      expect(textOf(tester, 'translation-text-0'), 'current translation');
+      expect(find.text('Workspace restored.'), findsNothing);
+    });
+
     mobileTest('cancellation keeps drafts silently', (tester) async {
       await open(tester, source: 'keep me');
 
