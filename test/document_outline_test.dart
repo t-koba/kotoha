@@ -527,6 +527,32 @@ void main() {
     },
   );
 
+  _platformTest('outline search folds German sharp s', TargetPlatform.macOS, (
+    tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      locale: const Locale('en'),
+      source: '## Stra\u00dfe\n',
+    );
+    final search = find.byKey(const ValueKey('document-outline-search'));
+    expect(find.byKey(const ValueKey('document-block-0')), findsOneWidget);
+    await tester.enterText(search, 'STRASSE');
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('document-block-0')),
+      findsOneWidget,
+      reason: 'an ss query should match a sharp-s label',
+    );
+    await tester.enterText(search, 'STRASB');
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('document-block-0')),
+      findsNothing,
+      reason: 'an unrelated query must still filter the label out',
+    );
+  });
+
   _platformTest(
     'a filtered match selects its exact source range',
     TargetPlatform.macOS,

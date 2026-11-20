@@ -34,10 +34,13 @@ String _outlineLabel(DocumentBlock block) =>
     _normalizeOutlineWhitespace(block.text);
 
 /// Case-folds a label or query for matching. Dart's lowercase leaves the
-/// Greek final sigma (U+03C2) distinct from the regular sigma (U+03C3), even
-/// though Unicode case folding maps both to U+03C3.
-String _caseFold(String text) =>
-    text.toLowerCase().replaceAll('\u03c2', '\u03c3');
+/// Greek final sigma (U+03C2) distinct from the regular sigma (U+03C3), and
+/// the German sharp s (U+00DF) distinct from "ss", even though Unicode case
+/// folding maps both pairs together.
+String _caseFold(String text) => text
+    .toLowerCase()
+    .replaceAll('\u03c2', '\u03c3')
+    .replaceAll('\u00df', 'ss');
 
 class _OutlineData {
   _OutlineData({
