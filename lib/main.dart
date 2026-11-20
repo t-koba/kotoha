@@ -113,6 +113,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   int _findTarget = 0;
   int _findCount = 0;
   _FindStatus _findStatus = _FindStatus.none;
+  String _findStatusQuery = '';
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
@@ -963,6 +964,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final found = findNext(controller, _findQuery.text);
     setState(() {
       _findCount = 0;
+      _findStatusQuery = _findQuery.text;
       _findStatus = found ? _FindStatus.none : _FindStatus.noMatch;
     });
   }
@@ -977,6 +979,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
     setState(() {
       _findCount = replaced ? 1 : 0;
+      _findStatusQuery = _findQuery.text;
       _findStatus = replaced ? _FindStatus.replaced : _FindStatus.mismatch;
     });
   }
@@ -991,6 +994,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
     setState(() {
       _findCount = count;
+      _findStatusQuery = _findQuery.text;
       _findStatus = count == 0 ? _FindStatus.noMatch : _FindStatus.replaced;
     });
   }
@@ -1031,6 +1035,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                   if (value != null) {
                     _findTarget = value;
                     _findStatus = _FindStatus.none;
+                    _findStatusQuery = '';
                     _findCount = 0;
                   }
                 }),
@@ -1061,12 +1066,16 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           valueListenable: _findQuery,
           builder: (context, query, _) {
             final canAct = _appResumed && query.text.isNotEmpty;
-            final status = switch (_findStatus) {
-              _FindStatus.none => '',
-              _FindStatus.noMatch => strings.findNoMatch,
-              _FindStatus.mismatch => strings.findSelectionMismatch,
-              _FindStatus.replaced => strings.findReplacedCount(_findCount),
-            };
+            final status = query.text != _findStatusQuery
+                ? ''
+                : switch (_findStatus) {
+                    _FindStatus.none => '',
+                    _FindStatus.noMatch => strings.findNoMatch,
+                    _FindStatus.mismatch => strings.findSelectionMismatch,
+                    _FindStatus.replaced => strings.findReplacedCount(
+                      _findCount,
+                    ),
+                  };
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

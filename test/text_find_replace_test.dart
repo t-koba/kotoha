@@ -186,6 +186,11 @@ void main() {
       'No match found.',
     );
     expect(translationController.text, 'A B A');
+
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'A');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('find-status')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
