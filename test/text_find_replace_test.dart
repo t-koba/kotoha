@@ -614,6 +614,16 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(panel, findsNothing);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+    expect(
+      _hasPrimaryFocus(tester, find.byKey(const ValueKey('find-query'))),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 }

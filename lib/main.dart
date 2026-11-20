@@ -119,6 +119,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   final FocusNode _findQueryFocusNode = FocusNode();
+  final FocusNode _workspaceFocusNode = FocusNode(skipTraversal: true);
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
@@ -179,6 +180,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _sourceTextFocusNode.dispose();
     _imePersonalizedLearningFocusNode.dispose();
     _findQueryFocusNode.dispose();
+    _workspaceFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
     }
@@ -965,7 +967,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             includeRepeats: false,
           ): _findFromShortcut,
         },
-        child: Focus(autofocus: true, skipTraversal: true, child: scaffold),
+        child: Focus(
+          focusNode: _workspaceFocusNode,
+          autofocus: true,
+          skipTraversal: true,
+          child: scaffold,
+        ),
       ),
       strings,
     );
@@ -1011,6 +1018,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (!_appResumed || !_findReplaceOpen) return;
     _findQueryFocusNode.unfocus();
     setState(() => _findReplaceOpen = false);
+    _workspaceFocusNode.requestFocus();
   }
 
   TextEditingController? _findTargetController() {
