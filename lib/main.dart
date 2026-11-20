@@ -954,10 +954,16 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     return _privacyShield(
       CallbackShortcuts(
         bindings: <ShortcutActivator, VoidCallback>{
-          const SingleActivator(LogicalKeyboardKey.keyF, control: true):
-              _findFromShortcut,
-          const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
-              _findFromShortcut,
+          const SingleActivator(
+            LogicalKeyboardKey.keyF,
+            control: true,
+            includeRepeats: false,
+          ): _findFromShortcut,
+          const SingleActivator(
+            LogicalKeyboardKey.keyF,
+            meta: true,
+            includeRepeats: false,
+          ): _findFromShortcut,
         },
         child: scaffold,
       ),
@@ -990,11 +996,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _findFromShortcut() {
     if (!_appResumed) return;
-    if (_findReplaceOpen) {
-      _closeFindReplace();
-      return;
-    }
-    setState(() => _findReplaceOpen = true);
+    if (!_findReplaceOpen) setState(() => _findReplaceOpen = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_findReplaceOpen) return;
       _findQuery.selection = TextSelection(
@@ -1125,6 +1127,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
             textDirection: firstStrongDirection(value.text),
             textInputAction: TextInputAction.search,
+            onEditingComplete: _findQuery.clearComposing,
             onSubmitted: (_) {
               if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
                 _runFindNext();

@@ -485,4 +485,63 @@ void main() {
     expect(controller.selection.extentOffset, 'needle'.length);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('repeated Enter keeps query focus and finds each match', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'one two one');
+    final controller = tester.widget<TextField>(source).controller!;
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'one');
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(controller.selection.start, 0);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(controller.selection.start, 8);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('repeated Ctrl+F refocuses the query without closing the panel', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final replacement = find.byKey(const ValueKey('find-replacement'));
+    await _tapVisible(tester, replacement);
+    expect(_hasPrimaryFocus(tester, replacement), isTrue);
+
+    for (var press = 0; press < 2; press++) {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('find-replace-panel')), findsOneWidget);
+      expect(
+        _hasPrimaryFocus(tester, find.byKey(const ValueKey('find-query'))),
+        isTrue,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 }
