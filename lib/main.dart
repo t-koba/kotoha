@@ -965,7 +965,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             includeRepeats: false,
           ): _findFromShortcut,
         },
-        child: scaffold,
+        child: Focus(autofocus: true, skipTraversal: true, child: scaffold),
       ),
       strings,
     );

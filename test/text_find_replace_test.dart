@@ -588,4 +588,26 @@ void main() {
     expect(tester.widget<TextField>(query).controller!.text, 'stale');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('find shortcuts work before any field has focus', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final panel = find.byKey(const ValueKey('find-replace-panel'));
+    expect(panel, findsNothing);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+    expect(
+      _hasPrimaryFocus(tester, find.byKey(const ValueKey('find-query'))),
+      isTrue,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(panel, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
