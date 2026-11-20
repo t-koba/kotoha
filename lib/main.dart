@@ -114,7 +114,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   int _findCount = 0;
   _FindStatus _findStatus = _FindStatus.none;
   String _findStatusQuery = '';
-  String _findStatusText = '';
   String _findQueryText = '';
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
@@ -989,8 +988,16 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void _clearFindFeedback() {
     _findStatus = _FindStatus.none;
     _findStatusQuery = '';
-    _findStatusText = '';
     _findCount = 0;
+  }
+
+  void _onDocumentChanged() {
+    if (_findStatus == _FindStatus.none &&
+        _findStatusQuery.isEmpty &&
+        _findCount == 0) {
+      return;
+    }
+    setState(_clearFindFeedback);
   }
 
   void _onFindQueryChanged() {
@@ -1057,7 +1064,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() {
       _findCount = 0;
       _findStatusQuery = _findQuery.text;
-      _findStatusText = controller.text;
       _findStatus = found ? _FindStatus.found : _FindStatus.noMatch;
     });
   }
@@ -1073,7 +1079,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() {
       _findCount = replaced ? 1 : 0;
       _findStatusQuery = _findQuery.text;
-      _findStatusText = controller.text;
       _findStatus = replaced ? _FindStatus.replaced : _FindStatus.mismatch;
     });
   }
@@ -1089,9 +1094,19 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() {
       _findCount = count;
       _findStatusQuery = _findQuery.text;
-      _findStatusText = controller.text;
       _findStatus = count == 0 ? _FindStatus.noMatch : _FindStatus.replaced;
     });
+  }
+
+  String? _statusForQuery(TextEditingValue query, AppLocalizations strings) {
+    if (query.text != _findStatusQuery) return null;
+    return switch (_findStatus) {
+      _FindStatus.none => null,
+      _FindStatus.found => strings.findMatchFound,
+      _FindStatus.noMatch => strings.findNoMatch,
+      _FindStatus.mismatch => strings.findSelectionMismatch,
+      _FindStatus.replaced => strings.findReplacedCount(_findCount),
+    };
   }
 
   Widget _findReplacePanel(AppLocalizations strings) {
@@ -1206,36 +1221,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                     ),
                   ],
                 ),
-                ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: target ?? _sourceText,
-                  builder: (context, selectedText, _) {
-                    final status =
-                        query.text != _findStatusQuery ||
-                            selectedText.text != _findStatusText
-                        ? ''
-                        : switch (_findStatus) {
-                            _FindStatus.none => '',
-                            _FindStatus.found => strings.findMatchFound,
-                            _FindStatus.noMatch => strings.findNoMatch,
-                            _FindStatus.mismatch =>
-                              strings.findSelectionMismatch,
-                            _FindStatus.replaced => strings.findReplacedCount(
-                              _findCount,
-                            ),
-                          };
-                    if (status.isEmpty) return const SizedBox.shrink();
-                    return Semantics(
-                      container: true,
-                      liveRegion: true,
-                      label: status,
-                      excludeSemantics: true,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(status, key: const ValueKey('find-status')),
-                      ),
-                    );
-                  },
-                ),
+                if (_statusForQuery(query, strings) case final String status)
+                  Semantics(
+                    container: true,
+                    liveRegion: true,
+                    label: status,
+                    excludeSemantics: true,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(status, key: const ValueKey('find-status')),
+                    ),
+                  ),
               ],
             );
           },
@@ -1404,6 +1400,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             key: key,
             controller: controller,
             focusNode: focusNode,
+            onChanged: (_) => _onDocumentChanged(),
             readOnly: !_appResumed,
             enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
             textDirection: firstStrongDirection(value.text),

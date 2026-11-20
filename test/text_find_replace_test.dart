@@ -915,6 +915,11 @@ void main() {
     await tester.enterText(source, 'dog');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('find-status')), findsNothing);
+
+    // Restoring the exact text must not revive a stale result.
+    await tester.enterText(source, 'cat');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('find-status')), findsNothing);
     expect(_hasPrimaryFocus(tester, source), isTrue);
     expect(tester.takeException(), isNull);
   });
