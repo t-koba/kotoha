@@ -119,6 +119,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   final FocusNode _findQueryFocusNode = FocusNode();
+  final FocusNode _findTargetFocusNode = FocusNode();
   final FocusNode _workspaceFocusNode = FocusNode(skipTraversal: true);
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
@@ -180,6 +181,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _sourceTextFocusNode.dispose();
     _imePersonalizedLearningFocusNode.dispose();
     _findQueryFocusNode.dispose();
+    _findTargetFocusNode.dispose();
     _workspaceFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
@@ -1101,6 +1103,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           key: const ValueKey('find-target'),
           child: DropdownButtonFormField<TextEditingController>(
             key: ValueKey(target ?? 'find-target-none'),
+            focusNode: _findTargetFocusNode,
             initialValue: target,
             hint: Text(strings.findTarget),
             isExpanded: true,

@@ -779,4 +779,40 @@ void main() {
     expect(_hasPrimaryFocus(tester, query), isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('changing find target keeps focus in the selector', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final target = find.byKey(const ValueKey('find-target'));
+    final query = find.byKey(const ValueKey('find-query'));
+    await tester.ensureVisible(target);
+    await tester.pumpAndSettle();
+    var reached = false;
+    for (var i = 0; i < 80; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      if (_hasPrimaryFocus(tester, target)) {
+        reached = true;
+        break;
+      }
+    }
+    expect(reached, isTrue, reason: 'Tab can reach the find target');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Translation 1'));
+    await tester.pumpAndSettle();
+    expect(_hasPrimaryFocus(tester, target), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    expect(tester.takeException(), isNull);
+  });
 }
