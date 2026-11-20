@@ -568,12 +568,18 @@ void main() {
       selection: const TextSelection.collapsed(offset: 5),
     );
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await tester.pump();
     tester.testTextInput.updateEditingValue(stale);
     await tester.pumpAndSettle();
 
     expect(tester.widget<TextField>(replacement).controller!.text, 'also');
     expect(tester.widget<TextField>(query).controller!.text, 'keep');
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('find-replace-panel')), findsOneWidget);
+    expect(_hasPrimaryFocus(tester, query), isFalse);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('find-replace-panel')), findsOneWidget);
