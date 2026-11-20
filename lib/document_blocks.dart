@@ -31,6 +31,23 @@ class DocumentBlock {
   final String text;
 }
 
+/// Whether [block] is a code block with its closing fence inside [source].
+///
+/// The recognition uses the same fence rules as [parseDocumentBlocks], so a
+/// caller can distinguish an exactly known range from a block that continues.
+bool hasClosingFence(String source, DocumentBlock block) {
+  if (block.kind != DocumentBlockKind.codeBlock) return false;
+  final openingEnd = source.indexOf('\n', block.start);
+  final openingLine = source.substring(
+    block.start,
+    openingEnd < 0 ? block.end : openingEnd,
+  );
+  final fence = _openFence(openingLine);
+  if (fence == null) return false;
+  final closingStart = source.lastIndexOf('\n', block.end - 1) + 1;
+  return _isClosingFence(source.substring(closingStart, block.end), fence);
+}
+
 /// Parses [source] into non-overlapping, source-ordered [DocumentBlock]s.
 ///
 /// LF and CRLF are line terminators; a lone CR stays in the line's content.

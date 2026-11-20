@@ -274,4 +274,16 @@ void main() {
       previousEnd = block.end;
     }
   });
+
+  test('hasClosingFence follows the parser fence rules', () {
+    for (final (source, closed) in [
+      ('````\ncode\n````', true),
+      ('````\ncode\n```', false),
+      ('```\ncode\n~~~', false),
+    ]) {
+      final blocks = parseDocumentBlocks(source);
+      expect(blocks, hasLength(1), reason: source);
+      expect(hasClosingFence(source, blocks.single), closed, reason: source);
+    }
+  });
 }
