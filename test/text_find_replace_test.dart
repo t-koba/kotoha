@@ -735,4 +735,26 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets('Escape closes the panel from an editor', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final toggle = find.byKey(const ValueKey('find-replace-toggle'));
+    final panel = find.byKey(const ValueKey('find-replace-panel'));
+    await _tapVisible(tester, toggle);
+    await _tapVisible(tester, find.byKey(const ValueKey('source-text')));
+    expect(panel, findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(panel, findsNothing);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

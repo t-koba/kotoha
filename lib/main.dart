@@ -966,6 +966,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             meta: true,
             includeRepeats: false,
           ): _findFromShortcut,
+          if (_findReplaceOpen)
+            const SingleActivator(
+              LogicalKeyboardKey.escape,
+              includeRepeats: false,
+            ): _closeFindReplace,
         },
         child: Focus(
           focusNode: _workspaceFocusNode,
