@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
@@ -41,6 +42,14 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
   await tester.tap(finder);
   await tester.pumpAndSettle();
+}
+
+void _collectSemanticsLabels(SemanticsNode node, List<String> labels) {
+  if (node.label.isNotEmpty) labels.add(node.label);
+  node.visitChildren((child) {
+    _collectSemanticsLabels(child, labels);
+    return true;
+  });
 }
 
 bool _hasPrimaryFocus(WidgetTester tester, Finder finder) {
@@ -846,5 +855,41 @@ void main() {
     expect(_hasPrimaryFocus(tester, query), isTrue);
     expect(controller.selection.start, 8);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('find status is exposed to semantics clients', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+    final handle = tester.ensureSemantics();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('source-text')),
+      'one two one',
+    );
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'one');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    final labels = <String>[];
+    _collectSemanticsLabels(
+      tester
+          .binding
+          .renderViews
+          .single
+          .owner!
+          .semanticsOwner!
+          .rootSemanticsNode!,
+      labels,
+    );
+    expect(labels, contains('Match found.'));
+    expect(tester.takeException(), isNull);
+    handle.dispose();
   });
 }

@@ -1216,6 +1216,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                   Semantics(
                     container: true,
                     liveRegion: true,
+                    label: status,
                     excludeSemantics: true,
                     child: Padding(
                       padding: const EdgeInsets.only(top: 8),
