@@ -757,4 +757,26 @@ void main() {
     expect(panel, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Ctrl+F on an open panel focuses the query immediately', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    await _tapVisible(tester, find.byKey(const ValueKey('source-text')));
+    final query = find.byKey(const ValueKey('find-query'));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    await tester.pumpAndSettle();
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    expect(tester.takeException(), isNull);
+  });
 }

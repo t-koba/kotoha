@@ -1006,17 +1006,25 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() => _findReplaceOpen = !_findReplaceOpen);
   }
 
+  void _focusFindQuery() {
+    _findQuery.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _findQuery.text.length,
+    );
+    _findQueryFocusNode.requestFocus();
+  }
+
   void _findFromShortcut() {
     if (!_appResumed) return;
-    if (!_findReplaceOpen) setState(() => _findReplaceOpen = true);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_appResumed || !_findReplaceOpen) return;
-      _findQuery.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _findQuery.text.length,
-      );
-      _findQueryFocusNode.requestFocus();
-    });
+    if (!_findReplaceOpen) {
+      setState(() => _findReplaceOpen = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_appResumed || !_findReplaceOpen) return;
+        _focusFindQuery();
+      });
+      return;
+    }
+    _focusFindQuery();
   }
 
   void _closeFindReplace() {
