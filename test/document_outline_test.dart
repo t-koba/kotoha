@@ -848,6 +848,20 @@ void main() {
     },
   );
 
+  test('a closed fence ending exactly at the cutoff is offered', () {
+    const opening = '```\n';
+    const closing = '```';
+    final fill = maxOutlineSourceLength - opening.length - 1 - closing.length;
+    final prefix = '$opening${'x' * fill}\n$closing';
+    expect(prefix.length, maxOutlineSourceLength);
+
+    final blocks = parseOutlineBlocks('$prefix\n## After');
+    expect(blocks, hasLength(1));
+    expect(blocks.single.kind, DocumentBlockKind.codeBlock);
+    expect(blocks.single.start, 0);
+    expect(blocks.single.end, maxOutlineSourceLength);
+  });
+
   _platformTest(
     'an open fence crossing a line terminator at the cutoff is not offered',
     TargetPlatform.macOS,

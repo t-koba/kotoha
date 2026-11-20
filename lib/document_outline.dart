@@ -87,6 +87,28 @@ class _OutlineData {
 /// line, so a whitespace-only final line is not a known blank separator: unseen
 /// text can turn it into a continuation. A paragraph whose end rests on such a
 /// false separator is omitted rather than offered with an inexact range.
+
+/// Whether the line ending at [end] is a complete closing fence. An open
+/// block's last line can never be a closer: the block parser would have closed
+/// it there instead.
+bool _endsWithClosingFence(String source, int end) {
+  final lineStart = source.lastIndexOf('\n', end - 1) + 1;
+  var i = lineStart;
+  while (i < end &&
+      (source.codeUnitAt(i) == 0x20 || source.codeUnitAt(i) == 0x09)) {
+    i++;
+  }
+  final fenceStart = i;
+  if (i + 3 > end) return false;
+  final unit = source.codeUnitAt(i);
+  if (unit != 0x60 && unit != 0x7E) return false;
+  while (i < end && source.codeUnitAt(i) == unit) {
+    i++;
+  }
+  if (i - fenceStart < 3) return false;
+  return source.substring(i, end).trim().isEmpty;
+}
+
 List<DocumentBlock> parseOutlineBlocks(String text) {
   final boundary = min(text.length, maxOutlineSourceLength);
   final prefixTruncated = boundary < text.length;
@@ -109,7 +131,12 @@ List<DocumentBlock> parseOutlineBlocks(String text) {
 
   return blocks.where((block) {
     if (block.start >= boundary) return false;
-    if (block.kind == DocumentBlockKind.codeBlock) return block.end < boundary;
+    if (block.kind == DocumentBlockKind.codeBlock) {
+      // A closer whose fence ends exactly at the boundary is fully known, so
+      // the block is exact even though nothing follows it in the prefix.
+      return block.end < boundary ||
+          (block.end == boundary && _endsWithClosingFence(window, block.end));
+    }
     if (block.end > boundary) return false;
     if (partialBlankTail &&
         block.kind == DocumentBlockKind.paragraph &&
