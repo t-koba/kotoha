@@ -501,6 +501,7 @@ void main() {
           find.byKey(const ValueKey('document-outline-search')),
           find.byKey(const ValueKey('document-outline-review-only')),
           find.byKey(const ValueKey('document-block-0')),
+          find.byKey(const ValueKey('find-replace-toggle')),
           find.byKey(const ValueKey('copy-workspace')),
           find.byKey(const ValueKey('restore-workspace')),
           find.bySemanticsLabel(targetLanguage),
@@ -577,7 +578,7 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[10],
-              'copy workspace after outline entry',
+              'find and replace toggle after outline entry',
             );
             await pressShiftTab();
             expectFocused(firstCardOrder[9], 'outline entry after reverse tab');
@@ -585,44 +586,55 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[11],
-              'restore workspace after copy workspace',
+              'copy workspace after find and replace toggle',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[10],
-              'copy workspace after reverse tab',
+              'find and replace toggle after reverse tab',
             );
           } else if (index == 11) {
             await pressTab();
             expectFocused(
               firstCardOrder[12],
-              'target language after restore workspace',
+              'restore workspace after copy workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[11],
-              'restore workspace after reverse tab',
+              'copy workspace after reverse tab',
             );
           } else if (index == 12) {
             await pressTab();
             expectFocused(
               firstCardOrder[13],
-              'copy action after RTL target language',
+              'target language after restore workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[12],
-              'target language after reverse tab',
+              'restore workspace after reverse tab',
             );
-          } else if (index == 14) {
+          } else if (index == 13) {
             await pressTab();
             expectFocused(
-              firstCardOrder[15],
+              firstCardOrder[14],
+              'copy action after RTL target language',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[13],
+              'target language after reverse tab',
+            );
+          } else if (index == 15) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[16],
               'Add translation after RTL translation text',
             );
             await pressShiftTab();
             expectFocused(
-              firstCardOrder[14],
+              firstCardOrder[15],
               'RTL translation text after reverse tab',
             );
           }
@@ -652,6 +664,7 @@ void main() {
           find.byKey(const ValueKey('document-outline-search')),
           find.byKey(const ValueKey('document-outline-review-only')),
           find.byKey(const ValueKey('document-block-0')),
+          find.byKey(const ValueKey('find-replace-toggle')),
           find.byKey(const ValueKey('copy-workspace')),
           find.byKey(const ValueKey('restore-workspace')),
           find.bySemanticsLabel(targetLanguage).at(0),

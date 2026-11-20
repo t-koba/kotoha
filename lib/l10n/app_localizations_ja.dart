@@ -343,4 +343,50 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get documentOutlineNoReviewMatches => 'ローカルで確認が必要な構成の項目はありません。';
+
+  @override
+  String get findReplaceTitle => '検索と置換';
+
+  @override
+  String get findReplaceShortcut => 'Ctrl+F / ⌘+F';
+
+  @override
+  String get findTarget => '検索対象';
+
+  @override
+  String get findSourceTarget => '原文';
+
+  @override
+  String findTranslationTarget(int number) {
+    return '$number件目の訳文';
+  }
+
+  @override
+  String get findQuery => '検索語';
+
+  @override
+  String get findReplacement => '置換後の文字列';
+
+  @override
+  String get findLiteralNotice => '検索はリテラル一致で大文字と小文字を区別します。下書きはメモリ内に保持されます。';
+
+  @override
+  String get findNextButton => '次を検索';
+
+  @override
+  String get replaceButton => '置換';
+
+  @override
+  String get replaceAllButton => 'すべて置換';
+
+  @override
+  String get findNoMatch => '一致する文字列はありません。';
+
+  @override
+  String get findSelectionMismatch => '置換するには、一致する文字列を選択してください。';
+
+  @override
+  String findReplacedCount(int count) {
+    return '$count件を置換しました。';
+  }
 }

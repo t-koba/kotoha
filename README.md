@@ -31,6 +31,8 @@ Outline entries carrying digits, web/email links or brace/percent placeholders
 get a local “Review” hint; it is only a navigation aid and never rewrites text.
 A “Review only” toggle filters the same cached entries without reparsing the source.
 
+Below the source editor’s outline and format note, a “Find and replace” button (also Ctrl+F / ⌘+F) opens one compact panel for the source text field and every current translation field. Pick Source or Translation N, enter a query and replacement, then use Find next, Replace (only when the selected text exactly equals the query) or Replace all. Search is literal and case-sensitive — no patterns — and the panel reports no-match and replacement counts. These actions edit only the chosen text field and leave language fields, import/export and restore untouched; drafts stay temporary and in memory, with no save path.
+
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the
 workspace. The same platforms can export the whole workspace as a reversible v2

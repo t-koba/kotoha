@@ -11,6 +11,7 @@ import 'content_locale.dart';
 import 'document_format_support.dart';
 import 'document_outline.dart';
 import 'first_strong_direction.dart';
+import 'text_find_replace.dart';
 import 'l10n/app_localizations.dart';
 import 'text_document_exporter.dart';
 import 'text_document_picker.dart';
@@ -106,6 +107,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     with WidgetsBindingObserver {
   late final _sourceLanguage = _DraftController(() => _appResumed);
   late final _sourceText = _DraftController(() => _appResumed);
+  final TextEditingController _findQuery = TextEditingController();
+  final TextEditingController _findReplacement = TextEditingController();
+  bool _findReplaceOpen = false;
+  int _findTarget = 0;
+  int _findCount = 0;
+  _FindStatus _findStatus = _FindStatus.none;
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
@@ -160,6 +167,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _sessionModelAuthorization = null;
     _sourceLanguage.dispose();
     _sourceText.dispose();
+    _findQuery.dispose();
+    _findReplacement.dispose();
     _addTranslationFocusNode.dispose();
     _sourceTextFocusNode.dispose();
     _imePersonalizedLearningFocusNode.dispose();
@@ -835,6 +844,22 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                             _allowImePersonalizedLearning,
                       ),
                       const DocumentFormatSupport(),
+                      const SizedBox(height: 12),
+                      // Keep the toggle in normal Tab order; Ctrl/⌘+F is an
+                      // additional way to reach the same action.
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Tooltip(
+                          message: strings.findReplaceShortcut,
+                          child: OutlinedButton.icon(
+                            key: const ValueKey('find-replace-toggle'),
+                            onPressed: _toggleFindReplace,
+                            icon: const Icon(Icons.search),
+                            label: Text(strings.findReplaceTitle),
+                          ),
+                        ),
+                      ),
+                      if (_findReplaceOpen) _findReplacePanel(strings),
                       const SizedBox(height: 24),
                       Text(
                         strings.translations,
@@ -904,7 +929,181 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         ),
       ),
     );
-    return _privacyShield(scaffold, strings);
+    return _privacyShield(
+      CallbackShortcuts(
+        bindings: <ShortcutActivator, VoidCallback>{
+          const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+              _toggleFindReplace,
+          const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+              _toggleFindReplace,
+        },
+        child: scaffold,
+      ),
+      strings,
+    );
+  }
+
+  void _toggleFindReplace() {
+    if (!_appResumed) return;
+    setState(() => _findReplaceOpen = !_findReplaceOpen);
+  }
+
+  TextEditingController? _findTargetController() {
+    final index = _findTarget.clamp(0, _translations.length);
+    return index == 0 ? _sourceText : _translations[index - 1].text;
+  }
+
+  void _runFindNext() {
+    final controller = _findTargetController();
+    if (controller == null) return;
+    final found = findNext(controller, _findQuery.text);
+    setState(() {
+      _findCount = 0;
+      _findStatus = found ? _FindStatus.none : _FindStatus.noMatch;
+    });
+  }
+
+  void _runReplaceSelection() {
+    final controller = _findTargetController();
+    if (controller == null) return;
+    final replaced = replaceSelection(
+      controller,
+      _findQuery.text,
+      _findReplacement.text,
+    );
+    setState(() {
+      _findCount = replaced ? 1 : 0;
+      _findStatus = replaced ? _FindStatus.replaced : _FindStatus.mismatch;
+    });
+  }
+
+  void _runReplaceAll() {
+    final controller = _findTargetController();
+    if (controller == null) return;
+    final count = replaceAll(
+      controller,
+      _findQuery.text,
+      _findReplacement.text,
+    );
+    setState(() {
+      _findCount = count;
+      _findStatus = count == 0 ? _FindStatus.noMatch : _FindStatus.replaced;
+    });
+  }
+
+  Widget _findReplacePanel(AppLocalizations strings) {
+    // A removed or restored translation can leave a stale index; the selector
+    // and every action resolve it against the current field list.
+    final target = _findTarget.clamp(0, _translations.length);
+    return Column(
+      key: const ValueKey('find-replace-panel'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int>(
+          key: const ValueKey('find-target'),
+          initialValue: target,
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: strings.findTarget,
+            border: const OutlineInputBorder(),
+          ),
+          items: [
+            DropdownMenuItem<int>(
+              key: const ValueKey('find-target-source'),
+              value: 0,
+              child: Text(strings.findSourceTarget),
+            ),
+            for (var index = 0; index < _translations.length; index++)
+              DropdownMenuItem<int>(
+                key: ValueKey('find-target-translation-${index + 1}'),
+                value: index + 1,
+                child: Text(strings.findTranslationTarget(index + 1)),
+              ),
+          ],
+          onChanged: !_appResumed
+              ? null
+              : (value) => setState(() {
+                  if (value != null) {
+                    _findTarget = value;
+                    _findStatus = _FindStatus.none;
+                    _findCount = 0;
+                  }
+                }),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('find-query'),
+          controller: _findQuery,
+          readOnly: !_appResumed,
+          decoration: InputDecoration(
+            labelText: strings.findQuery,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('find-replacement'),
+          controller: _findReplacement,
+          readOnly: !_appResumed,
+          decoration: InputDecoration(
+            labelText: strings.findReplacement,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(strings.findLiteralNotice),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _findQuery,
+          builder: (context, query, _) {
+            final canAct = _appResumed && query.text.isNotEmpty;
+            final status = switch (_findStatus) {
+              _FindStatus.none => '',
+              _FindStatus.noMatch => strings.findNoMatch,
+              _FindStatus.mismatch => strings.findSelectionMismatch,
+              _FindStatus.replaced => strings.findReplacedCount(_findCount),
+            };
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    OutlinedButton(
+                      key: const ValueKey('find-next'),
+                      onPressed: canAct ? _runFindNext : null,
+                      child: Text(strings.findNextButton),
+                    ),
+                    OutlinedButton(
+                      key: const ValueKey('replace-selection'),
+                      onPressed: canAct ? _runReplaceSelection : null,
+                      child: Text(strings.replaceButton),
+                    ),
+                    OutlinedButton(
+                      key: const ValueKey('replace-all'),
+                      onPressed: canAct ? _runReplaceAll : null,
+                      child: Text(strings.replaceAllButton),
+                    ),
+                  ],
+                ),
+                if (status.isNotEmpty)
+                  Semantics(
+                    container: true,
+                    liveRegion: true,
+                    excludeSemantics: true,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(status, key: const ValueKey('find-status')),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _privacyShield(Widget child, AppLocalizations strings) => Stack(
@@ -1083,6 +1282,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
   }
 }
+
+enum _FindStatus { none, noMatch, mismatch, replaced }
 
 class _TemporaryDraftNotice extends StatelessWidget {
   const _TemporaryDraftNotice();

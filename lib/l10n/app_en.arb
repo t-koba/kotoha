@@ -289,5 +289,35 @@
   "documentOutlineNoReviewMatches": "No outline entries need local review.",
   "@documentOutlineNoReviewMatches": {
     "description": "Empty state when the review-only filter hides every outline entry."
+  },
+  "findReplaceTitle": "Find and replace",
+  "findReplaceShortcut": "Ctrl+F / ⌘+F",
+  "findTarget": "Target",
+  "findSourceTarget": "Source",
+  "findTranslationTarget": "Translation {number}",
+  "@findTranslationTarget": {
+    "description": "Label for the numbered translation target in the find/replace panel.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "findQuery": "Find",
+  "findReplacement": "Replace with",
+  "findLiteralNotice": "Search is literal and case-sensitive; drafts stay in memory.",
+  "findNextButton": "Find next",
+  "replaceButton": "Replace",
+  "replaceAllButton": "Replace all",
+  "findNoMatch": "No match found.",
+  "findSelectionMismatch": "Select an exact match before replacing.",
+  "findReplacedCount": "Replaced {count} matches.",
+  "@findReplacedCount": {
+    "description": "Count of occurrences replaced by the find/replace panel.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -697,6 +697,90 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'ローカルで確認が必要な構成の項目はありません。'**
   String get documentOutlineNoReviewMatches;
+
+  /// No description provided for @findReplaceTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索と置換'**
+  String get findReplaceTitle;
+
+  /// No description provided for @findReplaceShortcut.
+  ///
+  /// In ja, this message translates to:
+  /// **'Ctrl+F / ⌘+F'**
+  String get findReplaceShortcut;
+
+  /// No description provided for @findTarget.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索対象'**
+  String get findTarget;
+
+  /// No description provided for @findSourceTarget.
+  ///
+  /// In ja, this message translates to:
+  /// **'原文'**
+  String get findSourceTarget;
+
+  /// 検索と置換の対象となる番号付き訳文のラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'{number}件目の訳文'**
+  String findTranslationTarget(int number);
+
+  /// No description provided for @findQuery.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索語'**
+  String get findQuery;
+
+  /// No description provided for @findReplacement.
+  ///
+  /// In ja, this message translates to:
+  /// **'置換後の文字列'**
+  String get findReplacement;
+
+  /// No description provided for @findLiteralNotice.
+  ///
+  /// In ja, this message translates to:
+  /// **'検索はリテラル一致で大文字と小文字を区別します。下書きはメモリ内に保持されます。'**
+  String get findLiteralNotice;
+
+  /// No description provided for @findNextButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'次を検索'**
+  String get findNextButton;
+
+  /// No description provided for @replaceButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'置換'**
+  String get replaceButton;
+
+  /// No description provided for @replaceAllButton.
+  ///
+  /// In ja, this message translates to:
+  /// **'すべて置換'**
+  String get replaceAllButton;
+
+  /// No description provided for @findNoMatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'一致する文字列はありません。'**
+  String get findNoMatch;
+
+  /// No description provided for @findSelectionMismatch.
+  ///
+  /// In ja, this message translates to:
+  /// **'置換するには、一致する文字列を選択してください。'**
+  String get findSelectionMismatch;
+
+  /// 検索と置換で置換した件数。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count}件を置換しました。'**
+  String findReplacedCount(int count);
 }
 
 class _AppLocalizationsDelegate

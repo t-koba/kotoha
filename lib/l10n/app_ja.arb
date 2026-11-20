@@ -289,5 +289,35 @@
   "documentOutlineNoReviewMatches": "ローカルで確認が必要な構成の項目はありません。",
   "@documentOutlineNoReviewMatches": {
     "description": "確認のみの絞り込みで構成の項目がすべて隠れたときの案内。"
+  },
+  "findReplaceTitle": "検索と置換",
+  "findReplaceShortcut": "Ctrl+F / ⌘+F",
+  "findTarget": "検索対象",
+  "findSourceTarget": "原文",
+  "findTranslationTarget": "{number}件目の訳文",
+  "@findTranslationTarget": {
+    "description": "検索と置換の対象となる番号付き訳文のラベル。",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "findQuery": "検索語",
+  "findReplacement": "置換後の文字列",
+  "findLiteralNotice": "検索はリテラル一致で大文字と小文字を区別します。下書きはメモリ内に保持されます。",
+  "findNextButton": "次を検索",
+  "replaceButton": "置換",
+  "replaceAllButton": "すべて置換",
+  "findNoMatch": "一致する文字列はありません。",
+  "findSelectionMismatch": "置換するには、一致する文字列を選択してください。",
+  "findReplacedCount": "{count}件を置換しました。",
+  "@findReplacedCount": {
+    "description": "検索と置換で置換した件数。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

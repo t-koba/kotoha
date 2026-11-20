@@ -358,4 +358,51 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get documentOutlineNoReviewMatches =>
       'No outline entries need local review.';
+
+  @override
+  String get findReplaceTitle => 'Find and replace';
+
+  @override
+  String get findReplaceShortcut => 'Ctrl+F / ⌘+F';
+
+  @override
+  String get findTarget => 'Target';
+
+  @override
+  String get findSourceTarget => 'Source';
+
+  @override
+  String findTranslationTarget(int number) {
+    return 'Translation $number';
+  }
+
+  @override
+  String get findQuery => 'Find';
+
+  @override
+  String get findReplacement => 'Replace with';
+
+  @override
+  String get findLiteralNotice =>
+      'Search is literal and case-sensitive; drafts stay in memory.';
+
+  @override
+  String get findNextButton => 'Find next';
+
+  @override
+  String get replaceButton => 'Replace';
+
+  @override
+  String get replaceAllButton => 'Replace all';
+
+  @override
+  String get findNoMatch => 'No match found.';
+
+  @override
+  String get findSelectionMismatch => 'Select an exact match before replacing.';
+
+  @override
+  String findReplacedCount(int count) {
+    return 'Replaced $count matches.';
+  }
 }
