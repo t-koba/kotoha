@@ -325,6 +325,30 @@ void main() {
     });
   });
 
+  testWidgets('a language-only workspace is exported and round-trips', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final writer = _Writer();
+      selector.result = FileSaveLocation('/user/chosen/workspace.txt');
+      await pumpWorkspace(tester, writer);
+      await tester.enterText(field('source-language'), 'ja');
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      expect(selector.calls, 1);
+      expect(writer.writes, hasLength(1));
+      final parsed = parseWorkspaceExport(writer.writes.single.$2);
+      expect(parsed.sourceLanguage, 'ja');
+      expect(parsed.sourceText, isEmpty);
+      expect(parsed.translations, hasLength(1));
+      expect(parsed.translations.single.text, isEmpty);
+    });
+  });
+
   testWidgets('a write failure is reported without changing drafts', (
     tester,
   ) async {

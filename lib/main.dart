@@ -409,12 +409,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Snapshot the in-memory fields once for both output routes. Null means
   // there is no text to copy or export.
   TextWorkspaceDraft? _nonEmptyWorkspaceDraft() {
-    final draft = _workspaceDraft();
-    if (draft.sourceText.isEmpty &&
-        draft.translations.every((translation) => translation.text.isEmpty)) {
-      return null;
-    }
-    return draft;
+    // Any populated field counts, matching restore's unsaved-change check:
+    // a language-only workspace round-trips through the export format.
+    if (!_workspaceHasAnyText()) return null;
+    return _workspaceDraft();
   }
 
   bool _workspaceHasAnyText() =>
