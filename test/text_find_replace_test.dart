@@ -392,4 +392,43 @@ void main() {
     expect(controller.selection.textInside(controller.text), 'one');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('find fields follow their content direction and IME setting', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    final replacement = find.byKey(const ValueKey('find-replacement'));
+
+    expect(tester.widget<TextField>(query).textDirection, TextDirection.ltr);
+    expect(
+      tester.widget<TextField>(query).enableIMEPersonalizedLearning,
+      isFalse,
+    );
+    expect(
+      tester.widget<TextField>(replacement).enableIMEPersonalizedLearning,
+      isFalse,
+    );
+
+    const arabic = 'العربية';
+    await _tapVisible(tester, query);
+    await tester.enterText(query, arabic);
+    await _tapVisible(tester, replacement);
+    await tester.enterText(replacement, arabic);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(query).textDirection, TextDirection.rtl);
+    expect(
+      tester.widget<TextField>(replacement).textDirection,
+      TextDirection.rtl,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }

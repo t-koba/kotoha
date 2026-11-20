@@ -1090,29 +1090,39 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                 }),
         ),
         const SizedBox(height: 8),
-        TextField(
-          key: const ValueKey('find-query'),
-          controller: _findQuery,
-          readOnly: !_appResumed,
-          textInputAction: TextInputAction.search,
-          onSubmitted: (_) {
-            if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
-              _runFindNext();
-            }
-          },
-          decoration: InputDecoration(
-            labelText: strings.findQuery,
-            border: const OutlineInputBorder(),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _findQuery,
+          builder: (context, value, _) => TextField(
+            key: const ValueKey('find-query'),
+            controller: _findQuery,
+            readOnly: !_appResumed,
+            enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+            textDirection: firstStrongDirection(value.text),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) {
+              if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
+                _runFindNext();
+              }
+            },
+            decoration: InputDecoration(
+              labelText: strings.findQuery,
+              border: const OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          key: const ValueKey('find-replacement'),
-          controller: _findReplacement,
-          readOnly: !_appResumed,
-          decoration: InputDecoration(
-            labelText: strings.findReplacement,
-            border: const OutlineInputBorder(),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _findReplacement,
+          builder: (context, value, _) => TextField(
+            key: const ValueKey('find-replacement'),
+            controller: _findReplacement,
+            readOnly: !_appResumed,
+            enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+            textDirection: firstStrongDirection(value.text),
+            decoration: InputDecoration(
+              labelText: strings.findReplacement,
+              border: const OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(height: 4),
