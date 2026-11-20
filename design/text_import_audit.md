@@ -695,6 +695,15 @@ and Xcode/Apple SDK, so this audit did not compile or execute them locally:
   longer waits. Neither run is a durable closure. The product's exact editing and traversal behavior remains owned by the
   Flutter widget tests on this revision.
 
+  Current CI state: `MainActivityAccessibilityTest` and the iOS
+  `LanguageFieldAccessibilityTests` XCUI target remain in the sources but are no
+  longer CI gates. CI no longer checks native language-field labels/values,
+  synthesized input/focus continuity, forward/reverse Tab through the native
+  layer, or iOS system-picker presentation and cancellation through XCUI;
+  Flutter widget tests and the retained native privacy/import checks cover the
+  behaviours they can observe. A runner with deterministic key injection and a
+  visible software keyboard is needed to revive those checks as gates.
+
 Source review finds no import-path writes, cache staging, URI grant persistence,
 bookmarks, selected-location history or network client. Worker reads release their
 local URL/URI and bytes on completion; detach clears the callback immediately and

@@ -102,17 +102,28 @@ The workflow also builds debug apps on Android, iOS/macOS, and Windows runners.
 A separate, path-scoped `Native engine probe` workflow runs on reviewed `mizu`
 publications with changed probe inputs; it builds an isolated Windows CPU candidate,
 not product inference. See `design/archive/engine_probe.md` for its evidence and gates.
-On the same pinned mobile profiles used for privacy callback tests,
-native tests inspect localized source/target language-field names and values during
-Arabic-to-Latin edits under English and Japanese app UI locales, and check
-synthesized text input/focus continuity (Android also checks forward/reverse Tab).
-iOS uses a minimal XCUI test target; the hosted unit-test target still checks
-privacy callbacks.
+On the same pinned mobile profiles used for privacy callback tests, CI runs the
+native privacy and import checks that can pass on hosted runners. Flutter widget
+tests cover localized language-field semantics, bidirectional entry and focus,
+keyboard traversal, and picker cancellation with draft preservation.
 
-These tests do not validate TalkBack/VoiceOver speech or gestures, physical-device
-or physical-keyboard behavior. Native execution requires those CI profiles; no local
-widget-test result substitutes for it. Wait budgets are configured in the workflow
-and passed to the native tests; missing profiles and inaccessible fields fail, not skip.
+Three native checks remain in the sources but are not CI gates because their
+result depends on the runner rather than the product: Android's
+`MainActivityAccessibilityTest` (shell-injected key delivery varies between
+identical runs), `ios/RunnerUITests/LanguageFieldAccessibilityTests` (simulator
+software-keyboard presence) and `macos/RunnerUITests/NativeExportPanelUITests`
+(the hosted XCUI client lacks Accessibility trust). CI therefore no longer
+observes native language-field labels/values and synthesized input, iOS
+system-picker presentation and cancellation through XCUI, or the macOS save
+panel's accessibility and cancel-preserves-draft path. Those behaviours need a
+runner with the required keyboard and accessibility conditions; the audits below
+record the evidence. All retained native checks still fail on missing profiles
+or inaccessible fields rather than skipping.
+
+None of these checks validates TalkBack/VoiceOver speech or gestures,
+physical-device or physical-keyboard behavior. Native execution requires the CI
+profiles; no local widget-test result substitutes for it. Wait budgets are
+configured in the workflow and passed to the native tests.
 These are validation builds, not signed release artifacts. Linux remains
 intentionally unscaffolded: Kotoha has not adopted or verified a GTK-free host
 against its pinned Flutter version, dependencies, accessibility needs, and CI.
