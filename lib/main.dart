@@ -114,6 +114,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   int _findCount = 0;
   _FindStatus _findStatus = _FindStatus.none;
   String _findStatusQuery = '';
+  String _findStatusText = '';
   String _findQueryText = '';
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
@@ -988,6 +989,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void _clearFindFeedback() {
     _findStatus = _FindStatus.none;
     _findStatusQuery = '';
+    _findStatusText = '';
     _findCount = 0;
   }
 
@@ -1055,6 +1057,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() {
       _findCount = 0;
       _findStatusQuery = _findQuery.text;
+      _findStatusText = controller.text;
       _findStatus = found ? _FindStatus.found : _FindStatus.noMatch;
     });
   }
@@ -1070,6 +1073,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() {
       _findCount = replaced ? 1 : 0;
       _findStatusQuery = _findQuery.text;
+      _findStatusText = controller.text;
       _findStatus = replaced ? _FindStatus.replaced : _FindStatus.mismatch;
     });
   }
@@ -1085,6 +1089,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() {
       _findCount = count;
       _findStatusQuery = _findQuery.text;
+      _findStatusText = controller.text;
       _findStatus = count == 0 ? _FindStatus.noMatch : _FindStatus.replaced;
     });
   }
@@ -1176,17 +1181,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           valueListenable: _findQuery,
           builder: (context, query, _) {
             final canAct = _appResumed && hasTarget && query.text.isNotEmpty;
-            final status = query.text != _findStatusQuery
-                ? ''
-                : switch (_findStatus) {
-                    _FindStatus.none => '',
-                    _FindStatus.found => strings.findMatchFound,
-                    _FindStatus.noMatch => strings.findNoMatch,
-                    _FindStatus.mismatch => strings.findSelectionMismatch,
-                    _FindStatus.replaced => strings.findReplacedCount(
-                      _findCount,
-                    ),
-                  };
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1212,17 +1206,36 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                     ),
                   ],
                 ),
-                if (status.isNotEmpty)
-                  Semantics(
-                    container: true,
-                    liveRegion: true,
-                    label: status,
-                    excludeSemantics: true,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(status, key: const ValueKey('find-status')),
-                    ),
-                  ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: target ?? _sourceText,
+                  builder: (context, selectedText, _) {
+                    final status =
+                        query.text != _findStatusQuery ||
+                            selectedText.text != _findStatusText
+                        ? ''
+                        : switch (_findStatus) {
+                            _FindStatus.none => '',
+                            _FindStatus.found => strings.findMatchFound,
+                            _FindStatus.noMatch => strings.findNoMatch,
+                            _FindStatus.mismatch =>
+                              strings.findSelectionMismatch,
+                            _FindStatus.replaced => strings.findReplacedCount(
+                              _findCount,
+                            ),
+                          };
+                    if (status.isEmpty) return const SizedBox.shrink();
+                    return Semantics(
+                      container: true,
+                      liveRegion: true,
+                      label: status,
+                      excludeSemantics: true,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(status, key: const ValueKey('find-status')),
+                      ),
+                    );
+                  },
+                ),
               ],
             );
           },

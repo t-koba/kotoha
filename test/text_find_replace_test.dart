@@ -892,4 +892,30 @@ void main() {
     expect(tester.takeException(), isNull);
     handle.dispose();
   });
+
+  testWidgets('editing the found field clears stale feedback', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'cat');
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'cat');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Match found.'), findsOneWidget);
+
+    await _tapVisible(tester, source);
+    await tester.enterText(source, 'dog');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('find-status')), findsNothing);
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+    expect(tester.takeException(), isNull);
+  });
 }
