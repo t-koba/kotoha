@@ -364,4 +364,32 @@ void main() {
     expect(panel, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('the query field search action selects the next match', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'one two one');
+    final controller = tester.widget<TextField>(source).controller!;
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'one');
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(controller.selection.start, 0);
+    expect(controller.selection.end, 3);
+    expect(controller.selection.textInside(controller.text), 'one');
+    expect(tester.takeException(), isNull);
+  });
 }

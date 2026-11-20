@@ -1094,6 +1094,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           key: const ValueKey('find-query'),
           controller: _findQuery,
           readOnly: !_appResumed,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) {
+            if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
+              _runFindNext();
+            }
+          },
           decoration: InputDecoration(
             labelText: strings.findQuery,
             border: const OutlineInputBorder(),
