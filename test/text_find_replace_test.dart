@@ -544,4 +544,48 @@ void main() {
     }
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('find fields ignore stale input while the app is paused', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    final replacement = find.byKey(const ValueKey('find-replacement'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'keep');
+    await _tapVisible(tester, replacement);
+    await tester.enterText(replacement, 'also');
+
+    final stale = TextEditingValue(
+      text: 'stale',
+      selection: const TextSelection.collapsed(offset: 5),
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.testTextInput.updateEditingValue(stale);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<TextField>(replacement).controller!.text, 'also');
+    expect(tester.widget<TextField>(query).controller!.text, 'keep');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('find-replace-panel')), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await _tapVisible(tester, query);
+    tester.testTextInput.updateEditingValue(stale);
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(query).controller!.text, 'stale');
+    expect(tester.takeException(), isNull);
+  });
 }

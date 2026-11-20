@@ -107,8 +107,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     with WidgetsBindingObserver {
   late final _sourceLanguage = _DraftController(() => _appResumed);
   late final _sourceText = _DraftController(() => _appResumed);
-  final TextEditingController _findQuery = TextEditingController();
-  final TextEditingController _findReplacement = TextEditingController();
+  late final _findQuery = _DraftController(() => _appResumed);
+  late final _findReplacement = _DraftController(() => _appResumed);
   bool _findReplaceOpen = false;
   TextEditingController? _selectedFindTarget;
   int _findCount = 0;
@@ -998,7 +998,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (!_appResumed) return;
     if (!_findReplaceOpen) setState(() => _findReplaceOpen = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_findReplaceOpen) return;
+      if (!mounted || !_appResumed || !_findReplaceOpen) return;
       _findQuery.selection = TextSelection(
         baseOffset: 0,
         extentOffset: _findQuery.text.length,
@@ -1008,7 +1008,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   void _closeFindReplace() {
-    if (!_findReplaceOpen) return;
+    if (!_appResumed || !_findReplaceOpen) return;
     _findQueryFocusNode.unfocus();
     setState(() => _findReplaceOpen = false);
   }
