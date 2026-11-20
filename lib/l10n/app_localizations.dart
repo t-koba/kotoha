@@ -776,6 +776,12 @@ abstract class AppLocalizations {
   /// **'すべて置換'**
   String get replaceAllButton;
 
+  /// No description provided for @findMatchFound.
+  ///
+  /// In ja, this message translates to:
+  /// **'一致する文字列が見つかりました。'**
+  String get findMatchFound;
+
   /// No description provided for @findNoMatch.
   ///
   /// In ja, this message translates to:

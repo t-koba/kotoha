@@ -317,6 +317,7 @@
   "findNextButton": "Find next",
   "replaceButton": "Replace",
   "replaceAllButton": "Replace all",
+  "findMatchFound": "Match found.",
   "findNoMatch": "No match found.",
   "findSelectionMismatch": "Select an exact match before replacing.",
   "findReplacedCount": "Replaced {count} matches.",

@@ -404,6 +404,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get replaceAllButton => 'Replace all';
 
   @override
+  String get findMatchFound => 'Match found.';
+
+  @override
   String get findNoMatch => 'No match found.';
 
   @override

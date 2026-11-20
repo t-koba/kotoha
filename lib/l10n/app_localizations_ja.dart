@@ -388,6 +388,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get replaceAllButton => 'すべて置換';
 
   @override
+  String get findMatchFound => '一致する文字列が見つかりました。';
+
+  @override
   String get findNoMatch => '一致する文字列はありません。';
 
   @override

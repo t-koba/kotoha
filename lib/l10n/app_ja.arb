@@ -317,6 +317,7 @@
   "findNextButton": "次を検索",
   "replaceButton": "置換",
   "replaceAllButton": "すべて置換",
+  "findMatchFound": "一致する文字列が見つかりました。",
   "findNoMatch": "一致する文字列はありません。",
   "findSelectionMismatch": "置換するには、一致する文字列を選択してください。",
   "findReplacedCount": "{count}件を置換しました。",

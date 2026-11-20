@@ -815,4 +815,36 @@ void main() {
     expect(_hasPrimaryFocus(tester, query), isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('a successful find shows visible confirmation', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'one two one');
+    final controller = tester.widget<TextField>(source).controller!;
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'one');
+    expect(find.byKey(const ValueKey('find-status')), findsNothing);
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Match found.'), findsOneWidget);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    expect(controller.selection.textInside(controller.text), 'one');
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Match found.'), findsOneWidget);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    expect(controller.selection.start, 8);
+    expect(tester.takeException(), isNull);
+  });
 }
