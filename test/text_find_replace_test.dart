@@ -923,4 +923,62 @@ void main() {
     expect(_hasPrimaryFocus(tester, source), isTrue);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('restoring a document clears a stale find result', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final original = FileSelectorPlatform.instance;
+      final picker = _PendingPicker();
+      FileSelectorPlatform.instance = picker;
+      addTearDown(() => FileSelectorPlatform.instance = original);
+      tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.enterText(
+        find.byKey(const ValueKey('source-text')),
+        'cat cat',
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const ValueKey('find-replace-toggle')),
+      );
+      await tester.enterText(find.byKey(const ValueKey('find-query')), 'cat');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(find.text('Match found.'), findsOneWidget);
+
+      final restored = TextWorkspaceDraft(
+        sourceLanguage: 'en',
+        sourceText: 'dog dog',
+        translations: [
+          const ManualTranslationDraft(targetLanguage: 'fr', text: 'bonjour'),
+        ],
+      );
+      await _tapVisible(
+        tester,
+        find.byKey(const ValueKey('restore-workspace')),
+      );
+      picker.pending.complete(_WorkspaceFile(formatWorkspaceExport(restored)));
+      await tester.pumpAndSettle();
+      await _tapVisible(
+        tester,
+        find.byKey(const ValueKey('restore-workspace-confirm')),
+      );
+
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('source-text')))
+            .controller!
+            .text,
+        'dog dog',
+      );
+      expect(find.byKey(const ValueKey('find-status')), findsNothing);
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 }

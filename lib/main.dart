@@ -248,7 +248,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         _importNotice(AppLocalizations.of(context)!.importSourceChangedNotice);
         return;
       }
-      _sourceText.replaceText(text);
+      setState(() => _replaceDocumentText(_sourceText, text));
     } on TextDocumentTooLarge {
       if (mounted) {
         _importNotice(AppLocalizations.of(context)!.importSourceTooLargeNotice);
@@ -503,11 +503,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       ];
       setState(() {
         _sourceLanguage.replaceText(restored.sourceLanguage);
-        _sourceText.replaceText(restored.sourceText);
+        _replaceDocumentText(_sourceText, restored.sourceText);
         for (final old in _translations) {
           if (identical(_selectedFindTarget, old.text)) {
             _selectedFindTarget = null;
-            _clearFindFeedback();
           }
           old.dispose();
         }
@@ -989,6 +988,13 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _findStatus = _FindStatus.none;
     _findStatusQuery = '';
     _findCount = 0;
+  }
+
+  /// A programmatic document replacement bypasses TextField.onChanged, so it
+  /// must clear find feedback itself. Callers own the surrounding setState.
+  void _replaceDocumentText(_DraftController controller, String text) {
+    controller.replaceText(text);
+    _clearFindFeedback();
   }
 
   void _onDocumentChanged() {
