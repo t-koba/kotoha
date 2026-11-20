@@ -114,6 +114,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   int _findCount = 0;
   _FindStatus _findStatus = _FindStatus.none;
   String _findStatusQuery = '';
+  String _findQueryText = '';
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
@@ -131,6 +132,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   @override
   void initState() {
     super.initState();
+    _findQuery.addListener(_onFindQueryChanged);
     WidgetsBinding.instance.addObserver(this);
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     if (lifecycle != null) {
@@ -168,6 +170,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _sessionModelAuthorization = null;
     _sourceLanguage.dispose();
     _sourceText.dispose();
+    _findQuery.removeListener(_onFindQueryChanged);
     _findQuery.dispose();
     _findReplacement.dispose();
     _addTranslationFocusNode.dispose();
@@ -946,6 +949,22 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       ),
       strings,
     );
+  }
+
+  void _onFindQueryChanged() {
+    final text = _findQuery.text;
+    if (text == _findQueryText) return;
+    _findQueryText = text;
+    if (_findStatus == _FindStatus.none &&
+        _findStatusQuery.isEmpty &&
+        _findCount == 0) {
+      return;
+    }
+    setState(() {
+      _findStatus = _FindStatus.none;
+      _findStatusQuery = '';
+      _findCount = 0;
+    });
   }
 
   void _toggleFindReplace() {

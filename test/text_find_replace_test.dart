@@ -187,10 +187,36 @@ void main() {
     );
     expect(translationController.text, 'A B A');
 
+    final queryController = tester
+        .widget<TextField>(find.byKey(const ValueKey('find-query')))
+        .controller!;
+    queryController.selection = const TextSelection.collapsed(offset: 0);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('find-status')),
+      findsOneWidget,
+      reason: 'moving the caret does not edit the query',
+    );
+
     await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
     await tester.enterText(find.byKey(const ValueKey('find-query')), 'A');
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('find-status')), findsNothing);
+
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'missing');
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('find-status')),
+      findsNothing,
+      reason: 'returning to an earlier query must not revive old feedback',
+    );
+
+    await _tapVisible(tester, find.byKey(const ValueKey('find-next')));
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('find-status'))).data,
+      'No match found.',
+    );
     expect(tester.takeException(), isNull);
   });
 
