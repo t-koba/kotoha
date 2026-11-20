@@ -488,6 +488,12 @@ abstract class AppLocalizations {
   /// **'読み込めませんでした。UTF-8の.txt、.md、.markdownファイルを選択してください。'**
   String get importFailureNotice;
 
+  /// 読み込むテキストがサイズ上限を超えたときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'このファイルは大きすぎて読み込めません。小さいUTF-8テキストドキュメントを選んでください。'**
+  String get importSourceTooLargeNotice;
+
   /// No description provided for @importSourceChangedNotice.
   ///
   /// In ja, this message translates to:

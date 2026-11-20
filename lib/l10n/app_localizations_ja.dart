@@ -225,6 +225,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '読み込めませんでした。UTF-8の.txt、.md、.markdownファイルを選択してください。';
 
   @override
+  String get importSourceTooLargeNotice =>
+      'このファイルは大きすぎて読み込めません。小さいUTF-8テキストドキュメントを選んでください。';
+
+  @override
   String get importSourceChangedNotice =>
       '読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。';
 

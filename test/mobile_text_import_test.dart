@@ -11,6 +11,9 @@ import 'package:kotoha/text_document_picker.dart';
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
   const channel = MethodChannel('org.kotoha/text_import');
+  const genericNotice = 'Could not import this document.';
+  const tooLargeNotice =
+      'This file is too large to import. Choose a smaller UTF-8 text document.';
   late Future<Object?> Function() reply;
   var calls = 0;
   Map<String, Object> document(
@@ -112,6 +115,7 @@ void main() {
       mobileTest('$failure fails closed without leaking details', (
         tester,
       ) async {
+        final sizeFailure = failure == 'size' || failure == 'native-size';
         reply = () async => switch (failure) {
           'name' => {'bytes': Uint8List(0)},
           'extension' => document('no', name: 'private.pdf'),
@@ -146,12 +150,31 @@ void main() {
         preserved(tester, 'keep');
         expect(find.byType(AlertDialog), findsNothing);
         expect(
-          find.textContaining('Could not import this document.'),
+          find.textContaining(sizeFailure ? tooLargeNotice : genericNotice),
           findsOneWidget,
+        );
+        expect(
+          find.textContaining(sizeFailure ? genericNotice : tooLargeNotice),
+          findsNothing,
         );
         expect(find.textContaining('private'), findsNothing);
       });
     }
+
+    mobileTest('uses the Japanese too-large import notice', (tester) async {
+      binding.platformDispatcher.localesTestValue = const [Locale('ja')];
+      reply = () async =>
+          throw PlatformException(code: 'too_large', message: 'private/path');
+      await open(tester, source: 'keep');
+      await import(tester);
+      preserved(tester, 'keep');
+      expect(
+        find.text('このファイルは大きすぎて読み込めません。小さいUTF-8テキストドキュメントを選んでください。'),
+        findsOneWidget,
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.textContaining('private'), findsNothing);
+    });
 
     mobileTest('consent and edits during native read or confirmation', (
       tester,

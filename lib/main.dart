@@ -238,6 +238,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         return;
       }
       _sourceText.replaceText(text);
+    } on TextDocumentTooLarge {
+      if (mounted) {
+        _importNotice(AppLocalizations.of(context)!.importSourceTooLargeNotice);
+      }
     } on Exception {
       if (mounted) {
         _importNotice(AppLocalizations.of(context)!.importFailureNotice);

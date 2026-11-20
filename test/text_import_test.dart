@@ -54,6 +54,9 @@ class _File extends XFile {
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
+  const genericNotice = 'Could not import this document.';
+  const tooLargeNotice =
+      'This file is too large to import. Choose a smaller UTF-8 text document.';
   late FileSelectorPlatform original;
   late _Picker picker;
 
@@ -149,40 +152,46 @@ void main() {
     'size',
     'grew',
   ]) {
-    importTest('$failure failure is generic and preserves current source', (
-      tester,
-    ) async {
-      final file = _File(
-        failure == 'extension' ? 'private.pdf' : 'private.txt',
-        failure == 'size' ? maxTextImportBytes + 1 : 2,
-        () async {
-          if (failure == 'read') throw Exception('/private/path');
-          if (failure == 'size' || failure == 'grew') {
-            return Uint8List(maxTextImportBytes + 1);
+    importTest(
+      '$failure failure reports the right notice and preserves source',
+      (tester) async {
+        final sizeFailure = failure == 'size' || failure == 'grew';
+        final file = _File(
+          failure == 'extension' ? 'private.pdf' : 'private.txt',
+          failure == 'size' ? maxTextImportBytes + 1 : 2,
+          () async {
+            if (failure == 'read') throw Exception('/private/path');
+            if (failure == 'size' || failure == 'grew') {
+              return Uint8List(maxTextImportBytes + 1);
+            }
+            return Uint8List.fromList([0xc3, 0x28]);
+          },
+        );
+        picker.pick = () async {
+          if (failure == 'picker') {
+            throw PlatformException(code: 'failure', message: '/private/path');
           }
-          return Uint8List.fromList([0xc3, 0x28]);
-        },
-      );
-      picker.pick = () async {
-        if (failure == 'picker') {
-          throw PlatformException(code: 'failure', message: '/private/path');
-        }
-        return file;
-      };
-      await open(tester, source: 'keep');
-      await import(tester);
-      expect(controller(tester, 'source-text').text, 'keep');
-      expect(
-        find.textContaining('Could not import this document.'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('private'), findsNothing);
-      expect(find.byType(AlertDialog), findsNothing);
-      expect(
-        file.reads,
-        ['extension', 'picker', 'size'].contains(failure) ? 0 : 1,
-      );
-    });
+          return file;
+        };
+        await open(tester, source: 'keep');
+        await import(tester);
+        expect(controller(tester, 'source-text').text, 'keep');
+        expect(
+          find.textContaining(sizeFailure ? tooLargeNotice : genericNotice),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(sizeFailure ? genericNotice : tooLargeNotice),
+          findsNothing,
+        );
+        expect(find.textContaining('private'), findsNothing);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(
+          file.reads,
+          ['extension', 'picker', 'size'].contains(failure) ? 0 : 1,
+        );
+      },
+    );
   }
 
   importTest('replacement requires consent; decline leaves source intact', (

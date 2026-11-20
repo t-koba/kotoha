@@ -34,9 +34,17 @@ class UnsupportedTextDocument extends FormatException {
 Future<TextDocument?> pickTextDocument() async {
   if (defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS) {
-    final reply = await _mobileImport.invokeMethod<Object?>('open', {
-      'maxBytes': maxTextImportBytes,
-    });
+    Object? reply;
+    try {
+      reply = await _mobileImport.invokeMethod<Object?>('open', {
+        'maxBytes': maxTextImportBytes,
+      });
+    } on PlatformException catch (e) {
+      // Native adapters enforce maxBytes and report an oversized document as
+      // too_large. Preserve the size cause; other codes stay distinct for restore.
+      if (e.code == 'too_large') throw const TextDocumentTooLarge();
+      rethrow;
+    }
     if (reply == null) return null;
     if (reply is! Map ||
         reply['name'] is! String ||

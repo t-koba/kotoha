@@ -234,6 +234,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.';
 
   @override
+  String get importSourceTooLargeNotice =>
+      'This file is too large to import. Choose a smaller UTF-8 text document.';
+
+  @override
   String get importSourceChangedNotice =>
       'Source text changed during import. Your edits were kept; import again to retry.';
 

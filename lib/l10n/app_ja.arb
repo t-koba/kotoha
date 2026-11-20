@@ -170,6 +170,10 @@
   "cancelImport": "キャンセル",
   "replaceSource": "置き換える",
   "importFailureNotice": "読み込めませんでした。UTF-8の.txt、.md、.markdownファイルを選択してください。",
+  "importSourceTooLargeNotice": "このファイルは大きすぎて読み込めません。小さいUTF-8テキストドキュメントを選んでください。",
+  "@importSourceTooLargeNotice": {
+    "description": "読み込むテキストがサイズ上限を超えたときの案内。"
+  },
   "importSourceChangedNotice": "読み込み中に原文が変更されました。編集内容は保持されています。再度読み込んでください。",
   "reviewModelTerms": "モデルパッケージの利用条件を確認",
   "modelTermsTitle": "{name} の利用条件",
