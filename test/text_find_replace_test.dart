@@ -1,8 +1,40 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/main.dart';
 import 'package:kotoha/text_find_replace.dart';
+import 'package:kotoha/workspace.dart';
+import 'package:kotoha/workspace_export.dart';
+
+class _PendingPicker extends FileSelectorPlatform {
+  final Completer<XFile?> pending = Completer<XFile?>();
+
+  @override
+  Future<XFile?> openFile({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) => pending.future;
+}
+
+class _WorkspaceFile extends XFile {
+  _WorkspaceFile(this.text) : super('/not-stored/workspace.txt');
+
+  final String text;
+
+  @override
+  Future<int> length() async => utf8.encode(text).length;
+
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) async* {
+    yield utf8.encode(text);
+  }
+}
 
 Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
@@ -625,5 +657,82 @@ void main() {
       isTrue,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a menu choice made before restore cannot edit restored text', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final original = FileSelectorPlatform.instance;
+      final picker = _PendingPicker();
+      FileSelectorPlatform.instance = picker;
+      addTearDown(() => FileSelectorPlatform.instance = original);
+      tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      await tester.pumpWidget(const KotohaApp());
+
+      final restored = TextWorkspaceDraft(
+        sourceLanguage: 'ja',
+        sourceText: 'source',
+        translations: [
+          const ManualTranslationDraft(
+            targetLanguage: 'en',
+            text: 'Translation Translation',
+          ),
+        ],
+      );
+      final restoreButton = find.byKey(const ValueKey('restore-workspace'));
+      await _tapVisible(tester, restoreButton);
+      await tester.pumpAndSettle();
+
+      await _tapVisible(
+        tester,
+        find.byKey(const ValueKey('find-replace-toggle')),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('find-query')),
+        'Translation',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('find-replacement')),
+        'WRONG',
+      );
+      await _tapVisible(tester, find.byKey(const ValueKey('find-target')));
+      expect(find.text('Translation 1'), findsOneWidget);
+
+      picker.pending.complete(_WorkspaceFile(formatWorkspaceExport(restored)));
+      await tester.pumpAndSettle();
+      final restoredText = find.byKey(const ValueKey('translation-text-0'));
+      expect(
+        tester.widget<TextField>(restoredText).controller!.text,
+        'Translation Translation',
+      );
+
+      await tester.tap(find.text('Translation 1'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<OutlinedButton>(find.byKey(const ValueKey('replace-all')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester.widget<TextField>(restoredText).controller!.text,
+        'Translation Translation',
+      );
+
+      await _tapVisible(tester, find.byKey(const ValueKey('find-target')));
+      await tester.tap(find.text('Translation 1'));
+      await tester.pumpAndSettle();
+      await _tapVisible(tester, find.byKey(const ValueKey('replace-all')));
+      expect(
+        tester.widget<TextField>(restoredText).controller!.text,
+        'WRONG WRONG',
+      );
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 }

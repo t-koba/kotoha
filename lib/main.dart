@@ -1021,25 +1021,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _workspaceFocusNode.requestFocus();
   }
 
-  TextEditingController? _findTargetController() {
-    final selected = _selectedFindTarget;
-    if (selected == null) return null;
-    if (identical(selected, _sourceText)) return _sourceText;
+  TextEditingController? _currentFindTarget(TextEditingController? candidate) {
+    if (candidate == null) return null;
+    if (identical(candidate, _sourceText)) return _sourceText;
     for (final fields in _translations) {
-      if (identical(fields.text, selected)) return fields.text;
+      if (identical(fields.text, candidate)) return fields.text;
     }
     return null;
   }
 
-  int? _findTargetIndex() {
-    final selected = _selectedFindTarget;
-    if (selected == null) return null;
-    if (identical(selected, _sourceText)) return 0;
-    final index = _translations.indexWhere(
-      (fields) => identical(fields.text, selected),
-    );
-    return index < 0 ? null : index + 1;
-  }
+  TextEditingController? _findTargetController() =>
+      _currentFindTarget(_selectedFindTarget);
 
   void _runFindNext() {
     final controller = _findTargetController();
@@ -1085,44 +1077,44 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   Widget _findReplacePanel(AppLocalizations strings) {
     // The selector and every action resolve the chosen field by identity, so
     // removing an earlier card cannot redirect edits to a different draft.
-    final target = _findTargetIndex();
-    final hasTarget = _findTargetController() != null;
+    final target = _findTargetController();
+    final hasTarget = target != null;
     final panel = Column(
       key: const ValueKey('find-replace-panel'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
+        KeyedSubtree(
           key: const ValueKey('find-target'),
-          initialValue: target,
-          hint: Text(strings.findTarget),
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: strings.findTarget,
-            border: const OutlineInputBorder(),
-          ),
-          items: [
-            DropdownMenuItem<int>(
-              key: const ValueKey('find-target-source'),
-              value: 0,
-              child: Text(strings.findSourceTarget),
+          child: DropdownButtonFormField<TextEditingController>(
+            key: ValueKey(target ?? 'find-target-none'),
+            initialValue: target,
+            hint: Text(strings.findTarget),
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: strings.findTarget,
+              border: const OutlineInputBorder(),
             ),
-            for (var index = 0; index < _translations.length; index++)
-              DropdownMenuItem<int>(
-                key: ValueKey('find-target-translation-${index + 1}'),
-                value: index + 1,
-                child: Text(strings.findTranslationTarget(index + 1)),
+            items: [
+              DropdownMenuItem<TextEditingController>(
+                key: const ValueKey('find-target-source'),
+                value: _sourceText,
+                child: Text(strings.findSourceTarget),
               ),
-          ],
-          onChanged: !_appResumed
-              ? null
-              : (value) => setState(() {
-                  _selectedFindTarget = switch (value) {
-                    0 || null => _sourceText,
-                    _ => _translations[value - 1].text,
-                  };
-                  _clearFindFeedback();
-                }),
+              for (var index = 0; index < _translations.length; index++)
+                DropdownMenuItem<TextEditingController>(
+                  key: ValueKey('find-target-translation-${index + 1}'),
+                  value: _translations[index].text,
+                  child: Text(strings.findTranslationTarget(index + 1)),
+                ),
+            ],
+            onChanged: !_appResumed
+                ? null
+                : (value) => setState(() {
+                    _selectedFindTarget = _currentFindTarget(value);
+                    _clearFindFeedback();
+                  }),
+          ),
         ),
         const SizedBox(height: 8),
         ValueListenableBuilder<TextEditingValue>(
