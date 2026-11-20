@@ -431,4 +431,25 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Escape closes the find panel while a field has focus', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    expect(find.byKey(const ValueKey('find-replace-panel')), findsOneWidget);
+
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('find-replace-panel')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

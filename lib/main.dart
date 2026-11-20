@@ -986,6 +986,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() => _findReplaceOpen = !_findReplaceOpen);
   }
 
+  void _closeFindReplace() {
+    if (_findReplaceOpen) setState(() => _findReplaceOpen = false);
+  }
+
   TextEditingController? _findTargetController() {
     final selected = _selectedFindTarget;
     if (selected == null) return null;
@@ -1052,7 +1056,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     // removing an earlier card cannot redirect edits to a different draft.
     final target = _findTargetIndex();
     final hasTarget = _findTargetController() != null;
-    return Column(
+    final panel = Column(
       key: const ValueKey('find-replace-panel'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1181,6 +1185,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           },
         ),
       ],
+    );
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): _closeFindReplace,
+      },
+      child: panel,
     );
   }
 
