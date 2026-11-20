@@ -240,7 +240,7 @@ void main() {
 
       expect(
         find.text(
-          'Source text changed during import. Your edits were kept; import again to retry.',
+          'Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.',
         ),
         findsOneWidget,
       );
@@ -416,7 +416,7 @@ void main() {
 
         expect(
           find.text(
-            'Source text changed during import. Your edits were kept; import again to retry.',
+            'Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.',
           ),
           findsOneWidget,
         );

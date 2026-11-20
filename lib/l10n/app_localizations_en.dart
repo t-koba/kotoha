@@ -171,6 +171,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose a .txt, .md, or .markdown file to restore.';
 
   @override
+  String get restoreWorkspaceChangedNotice =>
+      'Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.';
+
+  @override
   String get exportWorkspace => 'Export workspace';
 
   @override

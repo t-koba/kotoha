@@ -454,7 +454,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       bool changed() => !_sameWorkspaceDraft(_workspaceDraft(), before);
 
       if (changed()) {
-        _importNotice(strings.importSourceChangedNotice);
+        _importNotice(strings.restoreWorkspaceChangedNotice);
         return;
       }
       if (_workspaceHasAnyText()) {
@@ -479,7 +479,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         );
         if (!mounted || replace != true) return;
         if (changed()) {
-          _importNotice(strings.importSourceChangedNotice);
+          _importNotice(strings.restoreWorkspaceChangedNotice);
           return;
         }
       }

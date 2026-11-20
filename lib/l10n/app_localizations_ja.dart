@@ -164,6 +164,10 @@ class AppLocalizationsJa extends AppLocalizations {
       '復元するには.txt、.md、.markdownファイルを選んでください。';
 
   @override
+  String get restoreWorkspaceChangedNotice =>
+      '復元中に作業内容が変更されました。編集内容は保持されています。もう一度「作業内容を復元」を選んで再試行してください。';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override

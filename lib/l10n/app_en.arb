@@ -127,6 +127,10 @@
   "@restoreWorkspaceUnsupportedTypeNotice": {
     "description": "Notice shown when a selected workspace file has an unsupported extension."
   },
+  "restoreWorkspaceChangedNotice": "Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.",
+  "@restoreWorkspaceChangedNotice": {
+    "description": "Notice shown when the workspace changed during restore; edits were kept and restore must be retried."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

@@ -249,6 +249,12 @@ void main() {
         find.textContaining('Source text changed during import.'),
         findsOneWidget,
       );
+      expect(
+        find.text(
+          'Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.',
+        ),
+        findsNothing,
+      );
     });
   }
 

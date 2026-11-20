@@ -374,6 +374,12 @@ abstract class AppLocalizations {
   /// **'復元するには.txt、.md、.markdownファイルを選んでください。'**
   String get restoreWorkspaceUnsupportedTypeNotice;
 
+  /// 復元中に作業内容が変更されたときの案内。編集内容は保持され、再試行を促す。
+  ///
+  /// In ja, this message translates to:
+  /// **'復元中に作業内容が変更されました。編集内容は保持されています。もう一度「作業内容を復元」を選んで再試行してください。'**
+  String get restoreWorkspaceChangedNotice;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:
