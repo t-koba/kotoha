@@ -118,6 +118,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
+  final FocusNode _findQueryFocusNode = FocusNode();
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
@@ -177,6 +178,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _addTranslationFocusNode.dispose();
     _sourceTextFocusNode.dispose();
     _imePersonalizedLearningFocusNode.dispose();
+    _findQueryFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
     }
@@ -953,9 +955,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       CallbackShortcuts(
         bindings: <ShortcutActivator, VoidCallback>{
           const SingleActivator(LogicalKeyboardKey.keyF, control: true):
-              _toggleFindReplace,
+              _findFromShortcut,
           const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
-              _toggleFindReplace,
+              _findFromShortcut,
         },
         child: scaffold,
       ),
@@ -986,8 +988,27 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     setState(() => _findReplaceOpen = !_findReplaceOpen);
   }
 
+  void _findFromShortcut() {
+    if (!_appResumed) return;
+    if (_findReplaceOpen) {
+      _closeFindReplace();
+      return;
+    }
+    setState(() => _findReplaceOpen = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_findReplaceOpen) return;
+      _findQuery.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _findQuery.text.length,
+      );
+      _findQueryFocusNode.requestFocus();
+    });
+  }
+
   void _closeFindReplace() {
-    if (_findReplaceOpen) setState(() => _findReplaceOpen = false);
+    if (!_findReplaceOpen) return;
+    _findQueryFocusNode.unfocus();
+    setState(() => _findReplaceOpen = false);
   }
 
   TextEditingController? _findTargetController() {
@@ -1099,6 +1120,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           builder: (context, value, _) => TextField(
             key: const ValueKey('find-query'),
             controller: _findQuery,
+            focusNode: _findQueryFocusNode,
             readOnly: !_appResumed,
             enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
             textDirection: firstStrongDirection(value.text),

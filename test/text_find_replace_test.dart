@@ -452,4 +452,37 @@ void main() {
     expect(find.byKey(const ValueKey('find-replace-panel')), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Ctrl+F focuses the query field and selects its text', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'abc');
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'needle');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, source);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    final query = find.byKey(const ValueKey('find-query'));
+    expect(query, findsOneWidget);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+    final controller = tester.widget<TextField>(query).controller!;
+    expect(controller.selection.baseOffset, 0);
+    expect(controller.selection.extentOffset, 'needle'.length);
+    expect(tester.takeException(), isNull);
+  });
 }
