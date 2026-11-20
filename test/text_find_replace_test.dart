@@ -220,6 +220,106 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('keeps the selected field when an earlier card is removed', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    for (var added = 0; added < 2; added++) {
+      await tester.dragUntilVisible(
+        find.text('Add translation'),
+        find.byType(Scrollable).first,
+        const Offset(0, -400),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add translation'));
+      await tester.pumpAndSettle();
+    }
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-1')),
+      'match',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-2')),
+      'match other',
+    );
+    final selectedController = tester
+        .widget<TextField>(find.byKey(const ValueKey('translation-text-1')))
+        .controller!;
+    final otherController = tester
+        .widget<TextField>(find.byKey(const ValueKey('translation-text-2')))
+        .controller!;
+
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('find-replace-toggle')),
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    await _tapVisible(tester, find.byKey(const ValueKey('find-target')));
+    await tester.tap(find.text('Translation 2'));
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'match');
+    await _tapVisible(tester, find.byKey(const ValueKey('find-replacement')));
+    await tester.enterText(
+      find.byKey(const ValueKey('find-replacement')),
+      'NEW',
+    );
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-0')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selectedController.text, 'match');
+    expect(otherController.text, 'match other');
+
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('replace-all')),
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, find.byKey(const ValueKey('replace-all')));
+    expect(selectedController.text, 'NEW');
+    expect(otherController.text, 'match other');
+
+    await tester.dragUntilVisible(
+      find.byKey(const ValueKey('remove-translation-0')),
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-0')),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(otherController.text, 'match other');
+    expect(
+      tester
+          .widget<OutlinedButton>(find.byKey(const ValueKey('replace-all')))
+          .onPressed,
+      isNull,
+      reason: 'a removed selected field requires a deliberate new selection',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Tab reaches the toggle and Space/Enter opens the panel', (
     tester,
   ) async {

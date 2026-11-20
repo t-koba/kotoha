@@ -110,7 +110,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   final TextEditingController _findQuery = TextEditingController();
   final TextEditingController _findReplacement = TextEditingController();
   bool _findReplaceOpen = false;
-  int _findTarget = 0;
+  TextEditingController? _selectedFindTarget;
   int _findCount = 0;
   _FindStatus _findStatus = _FindStatus.none;
   String _findStatusQuery = '';
@@ -133,6 +133,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void initState() {
     super.initState();
     _findQuery.addListener(_onFindQueryChanged);
+    _selectedFindTarget ??= _sourceText;
     WidgetsBinding.instance.addObserver(this);
     final lifecycle = WidgetsBinding.instance.lifecycleState;
     if (lifecycle != null) {
@@ -498,6 +499,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         _sourceLanguage.replaceText(restored.sourceLanguage);
         _sourceText.replaceText(restored.sourceText);
         for (final old in _translations) {
+          if (identical(_selectedFindTarget, old.text)) {
+            _selectedFindTarget = null;
+            _clearFindFeedback();
+          }
           old.dispose();
         }
         _translations = fields;
@@ -678,7 +683,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final following = currentIndex + 1 < _translations.length
         ? _translations[currentIndex + 1]
         : null;
-    setState(() => _translations.removeAt(currentIndex).dispose());
+    final removed = _translations[currentIndex];
+    setState(() {
+      if (identical(_selectedFindTarget, removed.text)) {
+        _selectedFindTarget = null;
+        _clearFindFeedback();
+      }
+      _translations.removeAt(currentIndex).dispose();
+    });
     if (following != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _translations.contains(following)) {
@@ -951,6 +963,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     );
   }
 
+  void _clearFindFeedback() {
+    _findStatus = _FindStatus.none;
+    _findStatusQuery = '';
+    _findCount = 0;
+  }
+
   void _onFindQueryChanged() {
     final text = _findQuery.text;
     if (text == _findQueryText) return;
@@ -960,11 +978,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         _findCount == 0) {
       return;
     }
-    setState(() {
-      _findStatus = _FindStatus.none;
-      _findStatusQuery = '';
-      _findCount = 0;
-    });
+    setState(_clearFindFeedback);
   }
 
   void _toggleFindReplace() {
@@ -973,8 +987,23 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   TextEditingController? _findTargetController() {
-    final index = _findTarget.clamp(0, _translations.length);
-    return index == 0 ? _sourceText : _translations[index - 1].text;
+    final selected = _selectedFindTarget;
+    if (selected == null) return null;
+    if (identical(selected, _sourceText)) return _sourceText;
+    for (final fields in _translations) {
+      if (identical(fields.text, selected)) return fields.text;
+    }
+    return null;
+  }
+
+  int? _findTargetIndex() {
+    final selected = _selectedFindTarget;
+    if (selected == null) return null;
+    if (identical(selected, _sourceText)) return 0;
+    final index = _translations.indexWhere(
+      (fields) => identical(fields.text, selected),
+    );
+    return index < 0 ? null : index + 1;
   }
 
   void _runFindNext() {
@@ -1019,9 +1048,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   Widget _findReplacePanel(AppLocalizations strings) {
-    // A removed or restored translation can leave a stale index; the selector
-    // and every action resolve it against the current field list.
-    final target = _findTarget.clamp(0, _translations.length);
+    // The selector and every action resolve the chosen field by identity, so
+    // removing an earlier card cannot redirect edits to a different draft.
+    final target = _findTargetIndex();
+    final hasTarget = _findTargetController() != null;
     return Column(
       key: const ValueKey('find-replace-panel'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1030,6 +1060,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         DropdownButtonFormField<int>(
           key: const ValueKey('find-target'),
           initialValue: target,
+          hint: Text(strings.findTarget),
           isExpanded: true,
           decoration: InputDecoration(
             labelText: strings.findTarget,
@@ -1051,12 +1082,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           onChanged: !_appResumed
               ? null
               : (value) => setState(() {
-                  if (value != null) {
-                    _findTarget = value;
-                    _findStatus = _FindStatus.none;
-                    _findStatusQuery = '';
-                    _findCount = 0;
-                  }
+                  _selectedFindTarget = switch (value) {
+                    0 || null => _sourceText,
+                    _ => _translations[value - 1].text,
+                  };
+                  _clearFindFeedback();
                 }),
         ),
         const SizedBox(height: 8),
@@ -1084,7 +1114,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: _findQuery,
           builder: (context, query, _) {
-            final canAct = _appResumed && query.text.isNotEmpty;
+            final canAct = _appResumed && hasTarget && query.text.isNotEmpty;
             final status = query.text != _findStatusQuery
                 ? ''
                 : switch (_findStatus) {
