@@ -636,6 +636,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Ctrl+F does not focus the query when paused before the frame', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    addTearDown(() {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    });
+    await tester.pumpWidget(const KotohaApp());
+
+    final panel = find.byKey(const ValueKey('find-replace-panel'));
+    expect(panel, findsNothing);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+
+    expect(panel, findsOneWidget);
+    expect(
+      _hasPrimaryFocus(tester, find.byKey(const ValueKey('find-query'))),
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('find shortcuts work before any field has focus', (tester) async {
     tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
     addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
