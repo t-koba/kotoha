@@ -272,6 +272,12 @@ abstract class AppLocalizations {
   /// **'クリップボードにコピーできませんでした'**
   String get clipboardFailureNotice;
 
+  /// WindowsでNUL文字を含む訳文をコピーできないときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'WindowsのクリップボードではNUL文字を貼り付けできません。訳文を書き出してください。'**
+  String get clipboardNulNotice;
+
   /// No description provided for @copiedTranslationNotice.
   ///
   /// In ja, this message translates to:

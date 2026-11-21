@@ -111,6 +111,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get clipboardFailureNotice => 'クリップボードにコピーできませんでした';
 
   @override
+  String get clipboardNulNotice =>
+      'WindowsのクリップボードではNUL文字を貼り付けできません。訳文を書き出してください。';
+
+  @override
   String get copiedTranslationNotice => '訳文をコピーしました';
 
   @override

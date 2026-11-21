@@ -73,6 +73,10 @@
   },
   "emptyTranslationNotice": "Enter a translation to copy.",
   "clipboardFailureNotice": "Could not copy to the clipboard.",
+  "clipboardNulNotice": "The Windows clipboard cannot paste a NUL character. Export the translation instead.",
+  "@clipboardNulNotice": {
+    "description": "Notice shown when a translation containing NUL cannot be copied on Windows."
+  },
   "copiedTranslationNotice": "Translation copied.",
   "emptyTranslationExportNotice": "Enter a translation to export.",
   "exportFailureNotice": "Could not export the translation.",

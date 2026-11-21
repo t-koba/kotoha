@@ -642,6 +642,19 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     required String content,
     required String successNotice,
   }) async {
+    // Win32 CF_UNICODETEXT is NUL-terminated, so pasting a raw NUL would
+    // silently truncate the text. Workspace copy is escaped by its format.
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.windows &&
+        content.contains('\u0000')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.clipboardNulNotice),
+        ),
+      );
+      return;
+    }
     try {
       await Clipboard.setData(ClipboardData(text: content));
     } on Exception {

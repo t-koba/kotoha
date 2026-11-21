@@ -73,6 +73,10 @@
   },
   "emptyTranslationNotice": "コピーする訳文を入力してください",
   "clipboardFailureNotice": "クリップボードにコピーできませんでした",
+  "clipboardNulNotice": "WindowsのクリップボードではNUL文字を貼り付けできません。訳文を書き出してください。",
+  "@clipboardNulNotice": {
+    "description": "WindowsでNUL文字を含む訳文をコピーできないときの案内。"
+  },
   "copiedTranslationNotice": "訳文をコピーしました",
   "emptyTranslationExportNotice": "書き出す訳文を入力してください",
   "exportFailureNotice": "訳文を書き出せませんでした",

@@ -116,6 +116,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clipboardFailureNotice => 'Could not copy to the clipboard.';
 
   @override
+  String get clipboardNulNotice =>
+      'The Windows clipboard cannot paste a NUL character. Export the translation instead.';
+
+  @override
   String get copiedTranslationNotice => 'Translation copied.';
 
   @override

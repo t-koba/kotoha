@@ -161,6 +161,63 @@ void main() {
     expect(parseWorkspaceExport(delivered).translations.single.text, 'bonjour');
   });
 
+  testWidgets('Windows refuses to copy a translation containing NUL', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final calls = <MethodCall>[];
+      mockClipboard(tester, calls);
+      await pumpWorkspace(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('translation-text-0')),
+        'A\u0000B',
+      );
+      final copy = find.byKey(const ValueKey('copy-translation-0'));
+      await tester.ensureVisible(copy);
+      await tester.tap(copy);
+      await tester.pump();
+
+      expect(calls, isEmpty);
+      expect(
+        find.text(
+          'The Windows clipboard cannot paste a NUL character. Export the translation instead.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Translation copied.'), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const ValueKey('translation-text-0')))
+            .controller!
+            .text,
+        'A\u0000B',
+      );
+    });
+  });
+
+  testWidgets('Windows copies an ordinary translation verbatim', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final calls = <MethodCall>[];
+      mockClipboard(tester, calls);
+      await pumpWorkspace(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey('translation-text-0')),
+        'Hello, 🌏',
+      );
+      final copy = find.byKey(const ValueKey('copy-translation-0'));
+      await tester.ensureVisible(copy);
+      await tester.tap(copy);
+      await tester.pump();
+
+      expect(calls, hasLength(1));
+      expect(calls.single.method, 'Clipboard.setData');
+      expect(calls.single.arguments, {'text': 'Hello, 🌏'});
+      expect(find.text('Translation copied.'), findsOneWidget);
+    });
+  });
+
   testWidgets('an empty workspace is not copied', (tester) async {
     final calls = <MethodCall>[];
     mockClipboard(tester, calls);
