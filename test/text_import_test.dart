@@ -144,6 +144,29 @@ void main() {
     expect(picker.calls, 2);
   });
 
+  importTest('a retry leaves an unrelated notice visible', (tester) async {
+    await open(tester);
+    picker.pick = () async => _File(
+      'bad.txt',
+      4,
+      () async => Uint8List.fromList([255, 254, 253, 252]),
+    );
+    await import(tester);
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+
+    const foreignNotice = 'Enter a translation to copy.';
+    await tester.tap(field('copy-translation-0'));
+    await tester.pumpAndSettle();
+    expect(find.text(foreignNotice), findsOneWidget);
+
+    picker.pick = () async => textFile('good.txt', 'alongside notice');
+    await import(tester);
+
+    expect(controller(tester, 'source-text').text, 'alongside notice');
+    expect(find.text(foreignNotice), findsOneWidget);
+  });
+
   importTest('cancellation keeps source without a replacement dialog', (
     tester,
   ) async {
