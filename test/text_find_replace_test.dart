@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -716,6 +717,59 @@ void main() {
       isTrue,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Ctrl+F works after clicking the inert left gutter', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      await tester.pumpWidget(const KotohaApp());
+
+      final source = find.byKey(const ValueKey('source-text'));
+      await tester.enterText(source, 'abc');
+      await tester.pumpAndSettle();
+      expect(_hasPrimaryFocus(tester, source), isTrue);
+
+      // A real mouse click on inert page chrome drops focus out of the
+      // TextField; the workspace shortcut must still be reachable.
+      final gesture = await tester.startGesture(
+        const Offset(2, 98),
+        kind: PointerDeviceKind.mouse,
+      );
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(_hasPrimaryFocus(tester, source), isFalse);
+
+      final panel = find.byKey(const ValueKey('find-replace-panel'));
+      expect(panel, findsNothing);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      expect(panel, findsOneWidget);
+      expect(
+        _hasPrimaryFocus(tester, find.byKey(const ValueKey('find-query'))),
+        isTrue,
+      );
+
+      // Escape must reach the workspace binding after a second click-away too.
+      final secondClick = await tester.startGesture(
+        const Offset(2, 98),
+        kind: PointerDeviceKind.mouse,
+      );
+      await secondClick.up();
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(panel, findsNothing);
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('a menu choice made before restore cannot edit restored text', (

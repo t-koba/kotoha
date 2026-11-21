@@ -120,7 +120,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   final FocusNode _findQueryFocusNode = FocusNode();
   final FocusNode _findTargetFocusNode = FocusNode();
-  final FocusNode _workspaceFocusNode = FocusNode(skipTraversal: true);
+  final FocusScopeNode _workspaceFocusNode = FocusScopeNode(
+    skipTraversal: true,
+  );
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
@@ -973,8 +975,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               includeRepeats: false,
             ): _closeFindReplace,
         },
-        child: Focus(
-          focusNode: _workspaceFocusNode,
+        child: FocusScope(
+          node: _workspaceFocusNode,
           autofocus: true,
           skipTraversal: true,
           child: scaffold,
