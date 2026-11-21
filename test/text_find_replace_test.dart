@@ -961,6 +961,87 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'find confirmation is visible with the query at the viewport edge',
+    (tester) async {
+      tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.physicalSize = const Size(800, 360);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.binding.setSurfaceSize(const Size(800, 360));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.enterText(
+        find.byKey(const ValueKey('source-text')),
+        'one two one',
+      );
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      final query = find.byKey(const ValueKey('find-query'));
+      final viewport = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(viewport, const Size(800, 360));
+      // Place the query at the lower edge, as it appears when a keyboard user
+      // keeps the panel and the query field in view on a short workspace.
+      final queryRect = tester.getRect(query);
+      final position = tester
+          .widget<Scrollable>(find.byType(Scrollable).first)
+          .controller!
+          .position;
+      position.jumpTo(
+        position.pixels + queryRect.top - (viewport.height - queryRect.height),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(query);
+      await tester.enterText(query, 'one');
+      await tester.pumpAndSettle();
+      final focusedQueryRect = tester.getRect(query);
+      expect(focusedQueryRect.top, greaterThanOrEqualTo(0));
+      expect(focusedQueryRect.bottom, lessThanOrEqualTo(viewport.height));
+      expect(focusedQueryRect.bottom, greaterThan(viewport.height - 80));
+      expect(_hasPrimaryFocus(tester, query), isTrue);
+      expect(find.byKey(const ValueKey('find-status')), findsNothing);
+
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      final status = find.byKey(const ValueKey('find-status'));
+      expect(status, findsOneWidget);
+      final statusRect = tester.getRect(status);
+      expect(
+        statusRect.top,
+        greaterThanOrEqualTo(0),
+        reason:
+            'query $focusedQueryRect, status $statusRect, viewport $viewport',
+      );
+      expect(
+        statusRect.bottom,
+        lessThanOrEqualTo(viewport.height),
+        reason:
+            'query $focusedQueryRect, status $statusRect, viewport $viewport',
+      );
+      expect(tester.widget<Text>(status).data, 'Match found.');
+      expect(_hasPrimaryFocus(tester, query), isTrue);
+      final handle = tester.ensureSemantics();
+      expect(
+        tester
+            .getSemantics(find.bySemanticsLabel('Match found.'))
+            .getSemanticsData()
+            .flagsCollection
+            .isLiveRegion,
+        isTrue,
+      );
+      handle.dispose();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('find status is exposed to semantics clients', (tester) async {
     tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
     addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);

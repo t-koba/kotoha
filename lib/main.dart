@@ -1127,37 +1127,64 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 8),
-        KeyedSubtree(
-          key: const ValueKey('find-target'),
-          child: DropdownButtonFormField<TextEditingController>(
-            key: ValueKey(target ?? 'find-target-none'),
-            focusNode: _findTargetFocusNode,
-            initialValue: target,
-            hint: Text(strings.findTarget),
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: strings.findTarget,
-              border: const OutlineInputBorder(),
-            ),
-            items: [
-              DropdownMenuItem<TextEditingController>(
-                key: const ValueKey('find-target-source'),
-                value: _sourceText,
-                child: Text(strings.findSourceTarget),
+        // The status shares the target row so a match stays in view while the
+        // query is focused near the bottom of a short workspace.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _findQuery,
+          builder: (context, query, _) => Row(
+            children: [
+              Expanded(
+                child: KeyedSubtree(
+                  key: const ValueKey('find-target'),
+                  child: DropdownButtonFormField<TextEditingController>(
+                    key: ValueKey(target ?? 'find-target-none'),
+                    focusNode: _findTargetFocusNode,
+                    initialValue: target,
+                    hint: Text(strings.findTarget),
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: strings.findTarget,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem<TextEditingController>(
+                        key: const ValueKey('find-target-source'),
+                        value: _sourceText,
+                        child: Text(strings.findSourceTarget),
+                      ),
+                      for (var index = 0; index < _translations.length; index++)
+                        DropdownMenuItem<TextEditingController>(
+                          key: ValueKey('find-target-translation-${index + 1}'),
+                          value: _translations[index].text,
+                          child: Text(strings.findTranslationTarget(index + 1)),
+                        ),
+                    ],
+                    onChanged: !_appResumed
+                        ? null
+                        : (value) => setState(() {
+                            _selectedFindTarget = _currentFindTarget(value);
+                            _clearFindFeedback();
+                          }),
+                  ),
+                ),
               ),
-              for (var index = 0; index < _translations.length; index++)
-                DropdownMenuItem<TextEditingController>(
-                  key: ValueKey('find-target-translation-${index + 1}'),
-                  value: _translations[index].text,
-                  child: Text(strings.findTranslationTarget(index + 1)),
+              if (_statusForQuery(query, strings) case final String status)
+                Flexible(
+                  child: Semantics(
+                    container: true,
+                    liveRegion: true,
+                    label: status,
+                    excludeSemantics: true,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text(status, key: const ValueKey('find-status')),
+                      ),
+                    ),
+                  ),
                 ),
             ],
-            onChanged: !_appResumed
-                ? null
-                : (value) => setState(() {
-                    _selectedFindTarget = _currentFindTarget(value);
-                    _clearFindFeedback();
-                  }),
           ),
         ),
         const SizedBox(height: 8),
@@ -1204,43 +1231,29 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           valueListenable: _findQuery,
           builder: (context, query, _) {
             final canAct = _appResumed && hasTarget && query.text.isNotEmpty;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    OutlinedButton(
-                      key: const ValueKey('find-next'),
-                      onPressed: canAct ? _runFindNext : null,
-                      child: Text(strings.findNextButton),
-                    ),
-                    OutlinedButton(
-                      key: const ValueKey('replace-selection'),
-                      onPressed: canAct ? _runReplaceSelection : null,
-                      child: Text(strings.replaceButton),
-                    ),
-                    OutlinedButton(
-                      key: const ValueKey('replace-all'),
-                      onPressed: canAct ? _runReplaceAll : null,
-                      child: Text(strings.replaceAllButton),
-                    ),
-                  ],
-                ),
-                if (_statusForQuery(query, strings) case final String status)
-                  Semantics(
-                    container: true,
-                    liveRegion: true,
-                    label: status,
-                    excludeSemantics: true,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(status, key: const ValueKey('find-status')),
-                    ),
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  OutlinedButton(
+                    key: const ValueKey('find-next'),
+                    onPressed: canAct ? _runFindNext : null,
+                    child: Text(strings.findNextButton),
                   ),
-              ],
+                  OutlinedButton(
+                    key: const ValueKey('replace-selection'),
+                    onPressed: canAct ? _runReplaceSelection : null,
+                    child: Text(strings.replaceButton),
+                  ),
+                  OutlinedButton(
+                    key: const ValueKey('replace-all'),
+                    onPressed: canAct ? _runReplaceAll : null,
+                    child: Text(strings.replaceAllButton),
+                  ),
+                ],
+              ),
             );
           },
         ),
