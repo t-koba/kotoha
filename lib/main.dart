@@ -437,9 +437,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   TextWorkspaceDraft? _nonEmptyWorkspaceDraft() {
     // Any populated field counts, matching restore's unsaved-change check:
     // a language-only workspace round-trips through the export format.
-    if (!_workspaceHasAnyText()) return null;
+    if (!_workspaceHasWorkspaceContent()) return null;
     return _workspaceDraft();
   }
+
+  bool _workspaceHasWorkspaceContent() =>
+      _workspaceHasAnyText() ||
+      // The format keeps one entry per card, so cards the user explicitly
+      // added are workspace content even while their fields are still blank.
+      _translations.length > 1;
 
   bool _workspaceHasAnyText() =>
       _sourceLanguage.text.isNotEmpty ||
@@ -470,7 +476,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         _importNotice(strings.restoreWorkspaceChangedNotice);
         return;
       }
-      if (_workspaceHasAnyText()) {
+      if (_workspaceHasWorkspaceContent()) {
         final replace = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(

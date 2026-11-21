@@ -349,6 +349,32 @@ void main() {
     });
   });
 
+  testWidgets('added blank cards export and round-trip', (tester) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final writer = _Writer();
+      selector.result = FileSaveLocation('/user/chosen/workspace.txt');
+      await pumpWorkspace(tester, writer);
+      final addTranslation = find.text('Add translation');
+      await tester.ensureVisible(addTranslation);
+      await tester.tap(addTranslation);
+      await tester.pumpAndSettle();
+      expect(field('translation-text-1'), findsOneWidget);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      expect(selector.calls, 1);
+      expect(writer.writes, hasLength(1));
+      final parsed = parseWorkspaceExport(writer.writes.single.$2);
+      expect(parsed.sourceLanguage, isEmpty);
+      expect(parsed.sourceText, isEmpty);
+      expect(parsed.translations, hasLength(2));
+      expect(parsed.translations.every((t) => t.text.isEmpty), isTrue);
+    });
+  });
+
   testWidgets('a write failure is reported without changing drafts', (
     tester,
   ) async {

@@ -204,6 +204,31 @@ void main() {
     }
   });
 
+  testWidgets('added blank cards get a replace confirmation on restore', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      picker.pick = () async => _File(formatWorkspaceExport(restoredDraft()));
+      await open(tester);
+      final addTranslation = find.text('Add translation');
+      await tester.ensureVisible(addTranslation);
+      await tester.tap(addTranslation);
+      await tester.pumpAndSettle();
+      expect(field('translation-text-1'), findsOneWidget);
+
+      await restore(tester);
+      expect(field('restore-workspace-confirm'), findsOneWidget);
+
+      await tester.tap(field('restore-workspace-cancel'));
+      await tester.pumpAndSettle();
+      expect(field('translation-text-1'), findsOneWidget);
+      expect(find.text('Workspace restored.'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('confirming replacement installs the restored fields', (
     tester,
   ) async {
