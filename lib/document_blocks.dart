@@ -270,10 +270,10 @@ _Fence? _openFence(String line) {
     j++;
   }
   if (j - i < 3) return null;
-  // A fence's info string cannot contain its own fence character, so a line
-  // like ```inline``` or ~~~inline~~~ stays a literal paragraph instead of
-  // swallowing the document.
-  if (line.substring(j).contains(String.fromCharCode(unit))) return null;
+  // CommonMark 0.31.2 4.5 forbids backticks in an info string only after a
+  // backtick fence, so ```inline``` stays an inline code span instead of
+  // opening a block. Tilde fence info strings may contain tildes and backticks.
+  if (unit == 0x60 && line.substring(j).contains('`')) return null;
   return _Fence(unit, j - i);
 }
 

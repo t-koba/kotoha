@@ -886,16 +886,21 @@ void main() {
     );
   });
 
-  test('a tilde run with a trailing tilde is not a fence opener', () {
-    const source = '~~~inline~~~\n\n## Next section\nBody';
+  test('a tilde fence info string may contain a tilde', () {
+    // CommonMark 0.31.2 4.5: only backtick fences forbid their own character
+    // in the info string; a tilde info string may contain tildes and backticks.
+    const source = '~~~ label~annotated\n## Inside code\n~~~\n## Outside code';
 
     final blocks = parseOutlineBlocks(source);
     expect(blocks.map((block) => block.kind).toList(), [
-      DocumentBlockKind.paragraph,
+      DocumentBlockKind.codeBlock,
       DocumentBlockKind.heading,
-      DocumentBlockKind.paragraph,
     ]);
-    expect(blocks[1].text, 'Next section');
+    expect(
+      source.substring(blocks[0].start, blocks[0].end),
+      contains('## Inside code'),
+    );
+    expect(blocks[1].text, 'Outside code');
   });
 
   test('a code span with trailing backticks is not a fence opener', () {
