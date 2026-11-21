@@ -31,12 +31,10 @@ class DocumentBlock {
   final String text;
 }
 
-/// Whether a partial line already matches a backtick fence opener that later
-/// backticks could invalidate, so its start cannot prove a block boundary.
-bool startsUnconfirmedBacktickFence(String line) {
-  final fence = _openFence(line);
-  return fence != null && fence.unit == 0x60;
-}
+/// Whether a partial line already matches a fence opener that more of its own
+/// fence character could invalidate, so its start cannot prove a block
+/// boundary when the rest of the line is outside the parsed window.
+bool startsUnconfirmedFence(String line) => _openFence(line) != null;
 
 /// Whether [block] is a code block with its closing fence inside [source].
 ///
@@ -272,9 +270,10 @@ _Fence? _openFence(String line) {
     j++;
   }
   if (j - i < 3) return null;
-  // A backtick fence's info string cannot contain a backtick, so a line like
-  // ```inline``` stays a literal paragraph instead of swallowing the document.
-  if (unit == 0x60 && line.substring(j).contains('`')) return null;
+  // A fence's info string cannot contain its own fence character, so a line
+  // like ```inline``` or ~~~inline~~~ stays a literal paragraph instead of
+  // swallowing the document.
+  if (line.substring(j).contains(String.fromCharCode(unit))) return null;
   return _Fence(unit, j - i);
 }
 

@@ -886,6 +886,18 @@ void main() {
     );
   });
 
+  test('a tilde run with a trailing tilde is not a fence opener', () {
+    const source = '~~~inline~~~\n\n## Next section\nBody';
+
+    final blocks = parseOutlineBlocks(source);
+    expect(blocks.map((block) => block.kind).toList(), [
+      DocumentBlockKind.paragraph,
+      DocumentBlockKind.heading,
+      DocumentBlockKind.paragraph,
+    ]);
+    expect(blocks[1].text, 'Next section');
+  });
+
   test('a code span with trailing backticks is not a fence opener', () {
     const source = '```inline```\n\n## Next section\nBody';
 
