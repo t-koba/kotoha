@@ -200,6 +200,12 @@ abstract class AppLocalizations {
   /// **'例: en'**
   String get targetLanguageHint;
 
+  /// Accessible label for the numbered target language field.
+  ///
+  /// In ja, this message translates to:
+  /// **'{number}件目の訳先の言語'**
+  String targetLanguageNumber(int number);
+
   /// 番号付き訳文のコピー操作ラベル。
   ///
   /// In ja, this message translates to:
@@ -247,6 +253,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'手入力した訳文'**
   String get manualTranslation;
+
+  /// Accessible label for the numbered manual translation field.
+  ///
+  /// In ja, this message translates to:
+  /// **'{number}件目の手入力した訳文'**
+  String manualTranslationNumber(int number);
 
   /// No description provided for @emptyTranslationNotice.
   ///

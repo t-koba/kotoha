@@ -69,6 +69,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get targetLanguageHint => 'e.g. en';
 
   @override
+  String targetLanguageNumber(int number) {
+    return 'Target language $number';
+  }
+
+  @override
   String copyTranslationNumber(int number) {
     return 'Copy translation $number';
   }
@@ -98,6 +103,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manualTranslation => 'Manual translation';
+
+  @override
+  String manualTranslationNumber(int number) {
+    return 'Manual translation $number';
+  }
 
   @override
   String get emptyTranslationNotice => 'Enter a translation to copy.';

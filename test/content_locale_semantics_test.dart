@@ -98,7 +98,7 @@ void main() {
 
         // Labels, identifiers and traversal handles remain intact.
         expect(find.bySemanticsIdentifier('source-text'), findsOneWidget);
-        expect(find.bySemanticsLabel('Manual translation'), findsWidgets);
+        expect(find.bySemanticsLabel('Manual translation 1'), findsWidgets);
         expect(find.bySemanticsIdentifier('source-language'), findsOneWidget);
 
         // A free-form language value leaves the field unannotated.
@@ -306,6 +306,53 @@ void main() {
       );
       expect(find.bySemanticsIdentifier('source-text'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('translation editors expose numbered accessible labels', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+    await tester.pumpAndSettle();
+    final semantics = tester.ensureSemantics();
+    try {
+      final add = find.text('Add translation');
+      await tester.dragUntilVisible(
+        add,
+        find.byType(Scrollable).first,
+        const Offset(0, -800),
+      );
+      await tester.tap(add);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .getSemantics(find.bySemanticsIdentifier('target-language-0'))
+            .label,
+        'Target language 1',
+      );
+      expect(
+        tester
+            .getSemantics(find.bySemanticsIdentifier('target-language-1'))
+            .label,
+        'Target language 2',
+      );
+      expect(
+        tester
+            .getSemantics(find.bySemanticsIdentifier('translation-text-0'))
+            .label,
+        'Manual translation 1',
+      );
+      expect(
+        tester
+            .getSemantics(find.bySemanticsIdentifier('translation-text-1'))
+            .label,
+        'Manual translation 2',
+      );
     } finally {
       semantics.dispose();
     }

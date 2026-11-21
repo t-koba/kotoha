@@ -17,6 +17,11 @@
   "addTranslation": "訳先を追加",
   "targetLanguage": "訳先の言語",
   "targetLanguageHint": "例: en",
+  "targetLanguageNumber": "{number}件目の訳先の言語",
+  "@targetLanguageNumber": {
+    "description": "Accessible label for the numbered target language field.",
+    "placeholders": { "number": { "type": "int" } }
+  },
   "copyTranslationNumber": "{number}件目の訳文をコピー",
   "@copyTranslationNumber": {
     "description": "番号付き訳文のコピー操作ラベル。",
@@ -61,6 +66,11 @@
     "description": "訳文を削除せずに保持するボタン。"
   },
   "manualTranslation": "手入力した訳文",
+  "manualTranslationNumber": "{number}件目の手入力した訳文",
+  "@manualTranslationNumber": {
+    "description": "Accessible label for the numbered manual translation field.",
+    "placeholders": { "number": { "type": "int" } }
+  },
   "emptyTranslationNotice": "コピーする訳文を入力してください",
   "clipboardFailureNotice": "クリップボードにコピーできませんでした",
   "copiedTranslationNotice": "訳文をコピーしました",

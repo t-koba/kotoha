@@ -1304,7 +1304,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                 Expanded(
                   child: _languageField(
                     fields.language,
-                    strings.targetLanguage,
+                    strings.targetLanguageNumber(index + 1),
                     strings.targetLanguageHint,
                     key: ValueKey('target-language-$index'),
                   ),
@@ -1339,7 +1339,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               controller: fields.text,
               contentLanguage: fields.language,
               focusNode: fields.textFocusNode,
-              label: strings.manualTranslation,
+              label: strings.manualTranslationNumber(index + 1),
               minLines: 4,
               maxLines: 10,
             ),

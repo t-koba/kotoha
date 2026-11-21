@@ -65,6 +65,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get targetLanguageHint => '例: en';
 
   @override
+  String targetLanguageNumber(int number) {
+    return '$number件目の訳先の言語';
+  }
+
+  @override
   String copyTranslationNumber(int number) {
     return '$number件目の訳文をコピー';
   }
@@ -93,6 +98,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get manualTranslation => '手入力した訳文';
+
+  @override
+  String manualTranslationNumber(int number) {
+    return '$number件目の手入力した訳文';
+  }
 
   @override
   String get emptyTranslationNotice => 'コピーする訳文を入力してください';

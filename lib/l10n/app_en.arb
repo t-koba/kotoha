@@ -17,6 +17,11 @@
   "addTranslation": "Add translation",
   "targetLanguage": "Target language",
   "targetLanguageHint": "e.g. en",
+  "targetLanguageNumber": "Target language {number}",
+  "@targetLanguageNumber": {
+    "description": "Accessible label for the numbered target language field.",
+    "placeholders": { "number": { "type": "int" } }
+  },
   "copyTranslationNumber": "Copy translation {number}",
   "@copyTranslationNumber": {
     "description": "Label for copying the numbered translation.",
@@ -61,6 +66,11 @@
     "description": "Button to keep the translation."
   },
   "manualTranslation": "Manual translation",
+  "manualTranslationNumber": "Manual translation {number}",
+  "@manualTranslationNumber": {
+    "description": "Accessible label for the numbered manual translation field.",
+    "placeholders": { "number": { "type": "int" } }
+  },
   "emptyTranslationNotice": "Enter a translation to copy.",
   "clipboardFailureNotice": "Could not copy to the clipboard.",
   "copiedTranslationNotice": "Translation copied.",

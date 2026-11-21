@@ -74,7 +74,7 @@ void main() {
             in [
               (
                 const Locale('ja'),
-                ['原文の言語', '原文', '訳先の言語', '手入力した訳文'],
+                ['原文の言語', '原文', '1件目の訳先の言語', '1件目の手入力した訳文'],
                 'この下書きは一時的なものです。このアプリには保存されません。',
                 'Androidキーボードの個人学習を許可',
                 '各セッションの初期設定では無効です。設定変更は次にテキスト欄へフォーカスしたときに反映されます。有効にすると、Androidの入力方法に入力履歴やユーザー辞書などの個人データの更新を許可します。実際の動作はキーボード側で管理されます。',
@@ -88,8 +88,8 @@ void main() {
                 [
                   'Source language',
                   'Source text',
-                  'Target language',
-                  'Manual translation',
+                  'Target language 1',
+                  'Manual translation 1',
                 ],
                 'This draft is temporary. It is not saved in this app.',
                 'Allow Android keyboard learning',
@@ -297,11 +297,11 @@ void main() {
           [
             'Source language',
             'Source text',
-            'Target language',
-            'Manual translation',
+            'Target language 1',
+            'Manual translation 1',
           ],
         ),
-        (const Locale('ja'), ['原文の言語', '原文', '訳先の言語', '手入力した訳文']),
+        (const Locale('ja'), ['原文の言語', '原文', '1件目の訳先の言語', '1件目の手入力した訳文']),
       ]) {
         tester.binding.platformDispatcher.localesTestValue = [locale];
         await tester.pumpWidget(const SizedBox());
@@ -381,8 +381,8 @@ void main() {
               const Locale('ja'),
               '原文の言語',
               '原文',
-              '訳先の言語',
-              '手入力した訳文',
+              '1件目の訳先の言語',
+              '1件目の手入力した訳文',
               '表示言語',
               'ライセンス',
               '1件目の訳文をコピー',
@@ -395,8 +395,8 @@ void main() {
               const Locale('en'),
               'Source language',
               'Source text',
-              'Target language',
-              'Manual translation',
+              'Target language 1',
+              'Manual translation 1',
               'Interface language',
               'Licenses',
               'Copy translation 1',
@@ -671,10 +671,10 @@ void main() {
           find.byTooltip(copyOne),
           find.byTooltip(removeOne),
           find.bySemanticsLabel(translation).at(0),
-          find.bySemanticsLabel(targetLanguage).at(1),
+          find.bySemanticsIdentifier('target-language-1'),
           find.byTooltip(copyTwo),
           find.byTooltip(removeTwo),
-          find.bySemanticsLabel(translation).at(1),
+          find.bySemanticsIdentifier('translation-text-1'),
           find.bySemanticsLabel(addTranslation),
         ];
         await pressTab();
@@ -685,7 +685,7 @@ void main() {
         }
         await pressShiftTab();
         expectFocused(
-          find.bySemanticsLabel(translation).at(1),
+          find.bySemanticsIdentifier('translation-text-1'),
           'second translation',
         );
         await pressShiftTab();
