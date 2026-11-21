@@ -1166,4 +1166,37 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets('Escape returns keyboard focus to the editor that was found', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'cat dog');
+    await tester.pumpAndSettle();
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'cat');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    final controller = tester.widget<TextField>(source).controller!;
+    expect(controller.selection.baseOffset, 0);
+    expect(controller.selection.extentOffset, 3);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('find-replace-panel')), findsNothing);
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+    expect(controller.selection.baseOffset, 0);
+    expect(controller.selection.extentOffset, 3);
+    expect(tester.takeException(), isNull);
+  });
 }

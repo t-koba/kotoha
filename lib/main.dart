@@ -1048,9 +1048,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _closeFindReplace() {
     if (!_appResumed || !_findReplaceOpen) return;
-    _findQueryFocusNode.unfocus();
+    _findQueryFocusNode.unfocus(
+      disposition: UnfocusDisposition.previouslyFocusedChild,
+    );
     setState(() => _findReplaceOpen = false);
-    _workspaceFocusNode.requestFocus();
   }
 
   TextEditingController? _currentFindTarget(TextEditingController? candidate) {
