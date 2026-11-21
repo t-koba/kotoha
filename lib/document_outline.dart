@@ -296,12 +296,20 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             itemBuilder: (context, index) {
               final (originalIndex, block) = matches[index];
               return _OutlineEntry(
-                block: block,
                 label: data.labelAt(originalIndex),
                 flags: data.flagsAt(originalIndex),
                 index: originalIndex,
-                controller: widget.controller,
-                sourceFocusNode: widget.sourceFocusNode,
+                onActivate: () {
+                  // A source change since this build leaves the entry's block
+                  // offsets stale; ignore the activation instead of applying
+                  // them to different text.
+                  if (!identical(_data, data)) return;
+                  widget.controller.selection = TextSelection(
+                    baseOffset: block.start,
+                    extentOffset: block.end,
+                  );
+                  widget.sourceFocusNode.requestFocus();
+                },
                 emptyLabel: strings.documentOutlineUntitled,
                 strings: strings,
               );
@@ -314,22 +322,18 @@ class _DocumentOutlineState extends State<DocumentOutline> {
 
 class _OutlineEntry extends StatelessWidget {
   const _OutlineEntry({
-    required this.block,
     required this.label,
     required this.flags,
     required this.index,
-    required this.controller,
-    required this.sourceFocusNode,
+    required this.onActivate,
     required this.emptyLabel,
     required this.strings,
   });
 
-  final DocumentBlock block;
   final String label;
   final Set<DocumentReviewFlag> flags;
   final int index;
-  final TextEditingController controller;
-  final FocusNode sourceFocusNode;
+  final VoidCallback onActivate;
   final String emptyLabel;
   final AppLocalizations strings;
 
@@ -361,13 +365,7 @@ class _OutlineEntry extends StatelessWidget {
         subtitle: review == null
             ? null
             : Text(review, style: Theme.of(context).textTheme.labelSmall),
-        onTap: () {
-          controller.selection = TextSelection(
-            baseOffset: block.start,
-            extentOffset: block.end,
-          );
-          sourceFocusNode.requestFocus();
-        },
+        onTap: onActivate,
       ),
     );
   }

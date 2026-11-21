@@ -1108,4 +1108,32 @@ void main() {
       expect(find.byKey(const ValueKey('document-block-200')), findsNothing);
     },
   );
+
+  testWidgets('an outline tap ignores a source changed during the gesture', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    final controller = await _pumpApp(
+      tester,
+      locale: const Locale('en'),
+      source: '## First\n## Second',
+    );
+
+    final entry = find.byKey(const ValueKey('document-block-1'));
+    expect(entry, findsOneWidget);
+    // Press on the second heading, then change the source while the pointer
+    // is still down and release without rebuilding the entry first.
+    final gesture = await tester.startGesture(tester.getCenter(entry));
+    controller.value = TextEditingValue(
+      text: 'x',
+      selection: const TextSelection.collapsed(offset: 1),
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(controller.text, 'x');
+    expect(controller.selection, const TextSelection.collapsed(offset: 1));
+  });
 }
