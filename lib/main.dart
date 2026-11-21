@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
@@ -127,11 +128,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
-  // Only a source-import notice still in the messenger queue is dismissable on
-  // retry. Its `closed` callback clears this reference, so a timed-out or
-  // replaced notice is never closed again (which would hide a foreign bar).
-  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
-  _sourceImportNoticeController;
+  // Import feedback lives in the source panel so it never joins the
+  // ScaffoldMessenger queue behind another visible notice.
+  String? _sourceImportNotice;
+  Timer? _sourceImportNoticeTimer;
   bool _reviewingModel = false;
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
@@ -180,7 +180,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sessionModelAuthorization = null;
-    _sourceImportNoticeController = null;
+    _sourceImportNoticeTimer?.cancel();
     _sourceLanguage.dispose();
     _sourceText.dispose();
     _findQuery.removeListener(_onFindQueryChanged);
@@ -207,7 +207,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   Future<void> _importSource() async {
     if (_importing || _reviewingModel) return;
-    _dismissSourceImportNotice();
+    _clearSourceImportNotice();
     setState(() => _importing = true);
     // Watch text edits, not selection/focus changes caused by the OS dialog.
     final snapshot = _sourceText.text;
@@ -230,7 +230,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
       if (!mounted) return;
       if (sourceChanged || _sourceText.text != snapshot) {
-        _sourceImportNotice(
+        _showSourceImportNotice(
           AppLocalizations.of(context)!.importSourceChangedNotice,
         );
         return;
@@ -257,7 +257,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         if (!mounted || replace != true) return;
       }
       if (sourceChanged || _sourceText.text != snapshot) {
-        _sourceImportNotice(
+        _showSourceImportNotice(
           AppLocalizations.of(context)!.importSourceChangedNotice,
         );
         return;
@@ -265,13 +265,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       setState(() => _replaceDocumentText(_sourceText, text));
     } on TextDocumentTooLarge {
       if (mounted) {
-        _sourceImportNotice(
+        _showSourceImportNotice(
           AppLocalizations.of(context)!.importSourceTooLargeNotice,
         );
       }
     } on Exception {
       if (mounted) {
-        _sourceImportNotice(AppLocalizations.of(context)!.importFailureNotice);
+        _showSourceImportNotice(
+          AppLocalizations.of(context)!.importFailureNotice,
+        );
       }
     } finally {
       _sourceText.removeListener(watchSource);
@@ -393,22 +395,21 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
 
-  void _dismissSourceImportNotice() {
-    final controller = _sourceImportNoticeController;
-    if (controller == null) return;
-    _sourceImportNoticeController = null;
-    controller.close();
+  void _clearSourceImportNotice() {
+    _sourceImportNoticeTimer?.cancel();
+    _sourceImportNoticeTimer = null;
+    if (_sourceImportNotice != null && mounted) {
+      setState(() => _sourceImportNotice = null);
+    }
   }
 
-  void _sourceImportNotice(String message) {
-    _dismissSourceImportNotice();
-    final controller = ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-    _sourceImportNoticeController = controller;
-    controller.closed.then((_) {
-      if (identical(_sourceImportNoticeController, controller)) {
-        _sourceImportNoticeController = null;
-      }
+  void _showSourceImportNotice(String message) {
+    _clearSourceImportNotice();
+    if (mounted) setState(() => _sourceImportNotice = message);
+    _sourceImportNoticeTimer = Timer(const Duration(seconds: 4), () {
+      _sourceImportNoticeTimer = null;
+      if (!mounted) return;
+      setState(() => _sourceImportNotice = null);
     });
   }
 
@@ -870,6 +871,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                                 : _importSource,
                             icon: const Icon(Icons.file_open_outlined),
                             label: Text(strings.importSource),
+                          ),
+                        ),
+                      if (_sourceImportNotice != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            _sourceImportNotice!,
+                            key: const ValueKey('source-import-notice'),
                           ),
                         ),
                       if (defaultTargetPlatform == TargetPlatform.android) ...[

@@ -167,6 +167,50 @@ void main() {
     expect(find.text(foreignNotice), findsOneWidget);
   });
 
+  importTest('a failure queued behind a visible notice is never closed', (
+    tester,
+  ) async {
+    await open(tester);
+    const foreignNotice = 'Enter a translation to copy.';
+    await tester.tap(field('copy-translation-0'));
+    await tester.pump();
+    expect(find.text(foreignNotice), findsOneWidget);
+
+    picker.pick = () async => _File(
+      'bad.txt',
+      4,
+      () async => Uint8List.fromList([255, 254, 253, 252]),
+    );
+    await import(tester);
+    expect(find.text(foreignNotice), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SnackBar),
+        matching: find.textContaining(genericNotice),
+      ),
+      findsNothing,
+    );
+
+    picker.pick = () async => textFile('good.txt', 'over queued failure');
+    await import(tester);
+
+    expect(controller(tester, 'source-text').text, 'over queued failure');
+    expect(find.text(foreignNotice), findsOneWidget);
+    expect(field('source-import-notice'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(SnackBar),
+        matching: find.textContaining(genericNotice),
+      ),
+      findsNothing,
+    );
+
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+    expect(find.text(foreignNotice), findsNothing);
+    expect(find.textContaining(genericNotice), findsNothing);
+  });
+
   importTest('cancellation keeps source without a replacement dialog', (
     tester,
   ) async {
