@@ -414,4 +414,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String findReplacedCount(int count) {
     return '$count件を置換しました。';
   }
+
+  @override
+  String get findLimitExceeded =>
+      '置換後のテキストがエディターの上限を超えるため、置換しませんでした。テキストは変更されていません。';
 }

@@ -1182,9 +1182,13 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       _findReplacement.text,
     );
     setState(() {
-      _findCount = count;
+      _findCount = count < 0 ? 0 : count;
       _findStatusQuery = _findQuery.text;
-      _findStatus = count == 0 ? _FindStatus.noMatch : _FindStatus.replaced;
+      _findStatus = switch (count) {
+        -1 => _FindStatus.limitExceeded,
+        0 => _FindStatus.noMatch,
+        _ => _FindStatus.replaced,
+      };
     });
   }
 
@@ -1196,6 +1200,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       _FindStatus.noMatch => strings.findNoMatch,
       _FindStatus.mismatch => strings.findSelectionMismatch,
       _FindStatus.replaced => strings.findReplacedCount(_findCount),
+      _FindStatus.limitExceeded => strings.findLimitExceeded,
     };
   }
 
@@ -1544,7 +1549,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 }
 
-enum _FindStatus { none, found, noMatch, mismatch, replaced }
+enum _FindStatus { none, found, noMatch, mismatch, replaced, limitExceeded }
 
 class _TemporaryDraftNotice extends StatelessWidget {
   const _TemporaryDraftNotice();

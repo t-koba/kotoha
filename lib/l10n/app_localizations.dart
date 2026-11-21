@@ -817,6 +817,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'{count}件を置換しました。'**
   String findReplacedCount(int count);
+
+  /// 置換結果がエディターの上限を超えるためすべて置換を拒否したときに表示する検索ステータスのメッセージ。
+  ///
+  /// In ja, this message translates to:
+  /// **'置換後のテキストがエディターの上限を超えるため、置換しませんでした。テキストは変更されていません。'**
+  String get findLimitExceeded;
 }
 
 class _AppLocalizationsDelegate

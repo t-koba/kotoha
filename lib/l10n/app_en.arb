@@ -342,5 +342,9 @@
         "type": "int"
       }
     }
+  },
+  "findLimitExceeded": "The replacement would exceed the editor limit. No text was changed.",
+  "@findLimitExceeded": {
+    "description": "Find-status message shown when replace all is refused because the result would exceed the editor size limit."
   }
 }

@@ -154,6 +154,72 @@ void main() {
     expect(before.selection.baseOffset, 0);
   });
 
+  test('replace all enforces the output budget before changing the value', () {
+    final within = TextEditingController(text: 'aaaa');
+    expect(replaceAll(within, 'a', 'aa', maxOutputLength: 8), 4);
+    expect(within.text, 'aaaaaaaa');
+
+    final controller = TextEditingController();
+    controller.value = TextEditingValue(
+      text: 'aaaa',
+      selection: const TextSelection(baseOffset: 1, extentOffset: 3),
+      composing: const TextRange(start: 0, end: 1),
+    );
+    final before = controller.value;
+    expect(replaceAll(controller, 'a', 'aa', maxOutputLength: 7), -1);
+    expect(controller.value, before);
+    expect(controller.text, 'aaaa');
+    expect(controller.selection, before.selection);
+    expect(controller.value.composing, before.composing);
+  });
+
+  test('a shrinking replacement works above the output budget', () {
+    final controller = TextEditingController(text: 'a' * 20);
+    expect(replaceAll(controller, 'aa', 'b', maxOutputLength: 8), 10);
+    expect(controller.text, 'b' * 10);
+  });
+
+  test('replace all refuses a runaway expansion promptly', () {
+    final controller = TextEditingController(text: 'x' * 65536);
+    final before = controller.value;
+    final stopwatch = Stopwatch()..start();
+    expect(replaceAll(controller, 'x', 'y' * 65536), -1);
+    stopwatch.stop();
+    expect(controller.value, before);
+    expect(stopwatch.elapsedMilliseconds, lessThan(5000));
+  });
+
+  testWidgets('replace all over the editor limit shows a localized refusal', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'x' * 129);
+    final controller = tester.widget<TextField>(source).controller!;
+    final before = controller.value;
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'x');
+    final replacement = find.byKey(const ValueKey('find-replacement'));
+    tester.widget<TextField>(replacement).controller!.text = 'y' * 65536;
+    await tester.pumpAndSettle();
+
+    await _tapVisible(tester, find.byKey(const ValueKey('replace-all')));
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('find-status'))).data,
+      'The replacement would exceed the editor limit. No text was changed.',
+    );
+    expect(controller.value, before);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the keyboard shortcut opens the localized panel', (
     tester,
   ) async {

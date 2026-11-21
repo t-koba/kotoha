@@ -430,4 +430,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String findReplacedCount(int count) {
     return 'Replaced $count matches.';
   }
+
+  @override
+  String get findLimitExceeded =>
+      'The replacement would exceed the editor limit. No text was changed.';
 }
