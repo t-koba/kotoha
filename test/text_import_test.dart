@@ -190,6 +190,13 @@ void main() {
       ),
       findsNothing,
     );
+    final semantics = tester.ensureSemantics();
+    final noticeSemantics = tester
+        .getSemantics(field('source-import-notice'))
+        .getSemanticsData();
+    expect(noticeSemantics.flagsCollection.isLiveRegion, isTrue);
+    expect(noticeSemantics.label, contains(genericNotice));
+    semantics.dispose();
 
     picker.pick = () async => textFile('good.txt', 'over queued failure');
     await import(tester);

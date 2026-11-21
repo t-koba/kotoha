@@ -876,9 +876,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                       if (_sourceImportNotice != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            _sourceImportNotice!,
-                            key: const ValueKey('source-import-notice'),
+                          child: Semantics(
+                            container: true,
+                            liveRegion: true,
+                            label: _sourceImportNotice!,
+                            excludeSemantics: true,
+                            child: Text(
+                              _sourceImportNotice!,
+                              key: const ValueKey('source-import-notice'),
+                            ),
                           ),
                         ),
                       if (defaultTargetPlatform == TargetPlatform.android) ...[
