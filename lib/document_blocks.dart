@@ -34,7 +34,11 @@ class DocumentBlock {
 /// Whether a partial line already matches a fence opener that more of its own
 /// fence character could invalidate, so its start cannot prove a block
 /// boundary when the rest of the line is outside the parsed window.
-bool startsUnconfirmedFence(String line) => _openFence(line) != null;
+///
+/// Only a backtick info string can contain another backtick and stop being an
+/// opener. A tilde info string may contain tildes, so a visible tilde opener
+/// already proves the preceding block boundary.
+bool startsUnconfirmedFence(String line) => _openFence(line)?.unit == 0x60;
 
 /// Whether [block] is a code block with its closing fence inside [source].
 ///

@@ -886,25 +886,44 @@ void main() {
     );
   });
 
-  test('a partial tilde fence at the lookahead edge is not a separator', () {
-    const head = 'Intro\n';
-    const opening = '~~~inline';
-    final fill =
-        maxOutlineSourceLength +
-        maxOutlineLookaheadLength -
-        head.length -
-        opening.length;
-    // The lookahead window ends inside the tilde opener's line, before the
-    // final tilde and the following heading are visible.
-    final source = '$head$opening${' ' * fill}~\n## Next';
+  test(
+    'a partial tilde fence at the lookahead edge still ends a paragraph',
+    () {
+      const head = 'Intro\n';
+      const opening = '~~~inline';
+      final fill =
+          maxOutlineSourceLength +
+          maxOutlineLookaheadLength -
+          head.length -
+          opening.length;
+      // The lookahead window ends inside the tilde opener's line, before the
+      // final tilde and the following heading are visible.
+      final source = '$head$opening${' ' * fill}~\n## Next';
 
-    expect(
-      parseOutlineBlocks(source).map((block) => block.kind).toList(),
-      isEmpty,
-      reason:
-          'a partial tilde fence opener in the lookahead makes the preceding '
-          "paragraph's end inexact, so it is not offered",
-    );
+      final blocks = parseOutlineBlocks(source);
+      expect(blocks, hasLength(1));
+      expect(blocks.single.kind, DocumentBlockKind.paragraph);
+      expect(blocks.single.start, 0);
+      expect(blocks.single.end, head.length - 1);
+    },
+  );
+
+  test('a final newline does not hide a paragraph before a tilde fence', () {
+    const head = 'Intro\n~~~';
+    final atEdge =
+        head +
+        'x' *
+            (maxOutlineSourceLength + maxOutlineLookaheadLength - head.length);
+    final source = '$atEdge\n';
+    final full = parseDocumentBlocks(source);
+
+    expect(full.first.kind, DocumentBlockKind.paragraph);
+    expect(full.first.end, 5);
+    final blocks = parseOutlineBlocks(source);
+    expect(blocks, hasLength(1));
+    expect(blocks.single.kind, DocumentBlockKind.paragraph);
+    expect(blocks.single.start, 0);
+    expect(blocks.single.end, 5);
   });
 
   test('a tilde fence info string may contain a tilde', () {
