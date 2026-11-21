@@ -1699,6 +1699,98 @@ void main() {
     },
   );
 
+  testWidgets('Ctrl+F after a no-handoff Escape forgets a removed find', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    final toggle = find.byKey(const ValueKey('find-replace-toggle'));
+    final query = find.byKey(const ValueKey('find-query'));
+    final panel = find.byKey(const ValueKey('find-replace-panel'));
+    await tester.enterText(source, 'cat dog');
+    await tester.dragUntilVisible(
+      find.text('Add translation'),
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add translation'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-0')),
+      'alpha beta',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-1')),
+      'gamma',
+    );
+    final sourceController = tester.widget<TextField>(source).controller!;
+    const sourceSelection = TextSelection(baseOffset: 4, extentOffset: 7);
+    sourceController.selection = sourceSelection;
+
+    await tester.dragUntilVisible(
+      toggle,
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, toggle);
+    await _tapVisible(tester, find.byKey(const ValueKey('find-target')));
+    await tester.tap(find.text('Translation 1'));
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'beta');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-0')),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-confirm')),
+    );
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+
+    // Focus is in Source, so Escape closes without a handoff. The removed
+    // target's memo still matches the query until the close clears it.
+    await _tapVisible(tester, source);
+    sourceController.selection = sourceSelection;
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(panel, findsNothing);
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+    expect(_hasPrimaryFocus(tester, toggle), isFalse);
+
+    // Reopening by Ctrl+F is not a toggle press; the next Escape must not
+    // reuse the removal memo from the closed session.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(panel, findsNothing);
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+    expect(_hasPrimaryFocus(tester, toggle), isFalse);
+    expect(sourceController.text, 'cat dog');
+    expect(sourceController.selection, sourceSelection);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Escape leaves an editor chosen after Find Next focused', (
     tester,
   ) async {

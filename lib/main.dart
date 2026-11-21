@@ -1126,6 +1126,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _findFromShortcut() {
     if (!_appResumed) return;
+    _removedFoundQuery = null;
     if (!_findReplaceOpen) {
       setState(() => _findReplaceOpen = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1153,12 +1154,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final foundEditor = handOffFocus
         ? _findTargetEditorFocusNode(_findTargetController())
         : null;
+    _removedFoundQuery = null;
     _findQueryFocusNode.unfocus(
       disposition: UnfocusDisposition.previouslyFocusedChild,
     );
     setState(() => _findReplaceOpen = false);
     if (!handOffFocus) return;
-    _removedFoundQuery = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _findReplaceOpen) return;
       final context = foundEditor?.context;
