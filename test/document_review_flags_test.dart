@@ -35,6 +35,11 @@ void main() {
       });
     });
 
+    test('long text without an address stays responsive', () {
+      final flags = detectDocumentReviewFlags('${'b-' * 20000}b!');
+      expect(flags, isEmpty);
+    }, timeout: const Timeout(Duration(seconds: 3)));
+
     test('keeps flagging malformed dot-atom email hints', () {
       expect(detectDocumentReviewFlags('user@example..com'), {
         DocumentReviewFlag.link,

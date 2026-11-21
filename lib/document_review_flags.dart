@@ -8,9 +8,13 @@ enum DocumentReviewFlag { number, link, placeholder }
 final RegExp _numberPattern = RegExp(r'\p{Nd}', unicode: true);
 // A review hint, not an email validator: internationalized local parts and
 // domains are flagged just like ASCII ones, with no normalization or rewriting.
-final RegExp _linkPattern = RegExp(
-  r'https?://|www\.|['
-  r'\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}.-]+'
+final RegExp _urlPattern = RegExp(
+  r'https?://|www\.',
+  unicode: true,
+  caseSensitive: false,
+);
+final RegExp _emailPattern = RegExp(
+  r'[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}.-]+'
   r'(?:\.[\p{L}\p{M}\p{N}.-]+)+',
   unicode: true,
   caseSensitive: false,
@@ -23,7 +27,12 @@ final RegExp _placeholderPattern = RegExp(
 Set<DocumentReviewFlag> detectDocumentReviewFlags(String text) {
   final flags = <DocumentReviewFlag>{};
   if (_numberPattern.hasMatch(text)) flags.add(DocumentReviewFlag.number);
-  if (_linkPattern.hasMatch(text)) flags.add(DocumentReviewFlag.link);
+  // The email branch backtracks over its whole candidate span when the text
+  // has no address, so skip it unless an '@' can start one.
+  if (_urlPattern.hasMatch(text) ||
+      (text.contains('@') && _emailPattern.hasMatch(text))) {
+    flags.add(DocumentReviewFlag.link);
+  }
   if (_placeholderPattern.hasMatch(text)) {
     flags.add(DocumentReviewFlag.placeholder);
   }
