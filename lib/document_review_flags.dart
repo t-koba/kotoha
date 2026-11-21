@@ -13,14 +13,20 @@ final RegExp _urlPattern = RegExp(
   unicode: true,
   caseSensitive: false,
 );
-final RegExp _emailPattern = RegExp(
-  // The local part accepts the RFC 5322 atom punctuation, not just the
-  // commonly typed subset, so a valid address is never silently unflagged.
-  r"[\p{L}\p{M}\p{N}.!#$%&'*+/=?^_`{|}~-]+@[\p{L}\p{M}\p{N}.-]+"
-  r'(?:\.[\p{L}\p{M}\p{N}.-]+)+',
+// Single-rune classes for the linear email-hint scan (same characters as
+// the old local-part and domain runs).
+final RegExp _localRunePattern = RegExp(
+  r"[\p{L}\p{M}\p{N}.!#$%&'*+/=?^_`{|}~-]",
   unicode: true,
-  caseSensitive: false,
 );
+final RegExp _domainRunePattern = RegExp(r'[\p{L}\p{M}\p{N}.-]', unicode: true);
+
+bool _isLocalRune(int rune) =>
+    _localRunePattern.hasMatch(String.fromCharCode(rune));
+
+bool _isDomainRune(int rune) =>
+    _domainRunePattern.hasMatch(String.fromCharCode(rune));
+
 final RegExp _placeholderPattern = RegExp(
   r'\{[^{}]+\}|%[A-Za-z_][A-Za-z0-9_]*%',
 );
@@ -29,16 +35,47 @@ final RegExp _placeholderPattern = RegExp(
 Set<DocumentReviewFlag> detectDocumentReviewFlags(String text) {
   final flags = <DocumentReviewFlag>{};
   if (_numberPattern.hasMatch(text)) flags.add(DocumentReviewFlag.number);
-  // The email branch backtracks over its whole candidate span when no address
-  // can match, so skip it unless an '@' precedes a dot, its minimum shape.
-  final at = text.indexOf('@');
-  final dot = text.lastIndexOf('.');
-  if (_urlPattern.hasMatch(text) ||
-      (at >= 0 && dot > at && _emailPattern.hasMatch(text))) {
+  if (_urlPattern.hasMatch(text) || _hasEmailHint(text)) {
     flags.add(DocumentReviewFlag.link);
   }
   if (_placeholderPattern.hasMatch(text)) {
     flags.add(DocumentReviewFlag.placeholder);
   }
   return flags;
+}
+
+/// A review hint, not an address validator: one dot with text on both sides
+/// is enough. Malformed dot atoms stay flagged.
+// '@' is in neither char class, so forward domain scans from successive
+// markers and backward local scans to preceding markers do not overlap;
+// each rune is inspected a bounded number of times, giving O(n) total work.
+bool _hasEmailHint(String text) {
+  final runes = text.runes.toList();
+  for (var i = 0; i < runes.length; i++) {
+    if (runes[i] != 0x40) {
+      continue;
+    }
+    var end = i + 1;
+    while (end < runes.length && _isDomainRune(runes[end])) {
+      end++;
+    }
+    var hasInnerDot = false;
+    for (var dot = i + 2; dot < end - 1; dot++) {
+      if (runes[dot] == 0x2E) {
+        hasInnerDot = true;
+        break;
+      }
+    }
+    if (!hasInnerDot) {
+      continue;
+    }
+    var start = i - 1;
+    while (start >= 0 && _isLocalRune(runes[start])) {
+      start--;
+    }
+    if (start < i - 1) {
+      return true;
+    }
+  }
+  return false;
 }
