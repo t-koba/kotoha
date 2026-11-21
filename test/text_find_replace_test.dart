@@ -517,6 +517,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('submit action during IME composition does not search', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'cat dog cat');
+    final sourceController = tester.widget<TextField>(source).controller!;
+    sourceController.selection = const TextSelection.collapsed(offset: 7);
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'dog');
+    tester.testTextInput.updateEditingValue(
+      TextEditingValue(
+        text: 'dog',
+        selection: const TextSelection.collapsed(offset: 3),
+        composing: const TextRange(start: 0, end: 3),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(sourceController.selection.baseOffset, 7);
+    expect(sourceController.selection.extentOffset, 7);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('replace all preserves pasted line breaks', (tester) async {
     tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
     addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);

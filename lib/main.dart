@@ -115,6 +115,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   _FindStatus _findStatus = _FindStatus.none;
   String _findStatusQuery = '';
   String _findQueryText = '';
+  bool _findSubmitWasComposing = false;
   final FocusNode _addTranslationFocusNode = FocusNode();
   final FocusNode _sourceTextFocusNode = FocusNode();
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
@@ -1112,6 +1113,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   TextEditingController? _findTargetController() =>
       _currentFindTarget(_selectedFindTarget);
 
+  void _findOnEnter(bool composing) {
+    if (composing || !_appResumed || _findQuery.text.isEmpty) return;
+    _runFindNext();
+  }
+
   void _runFindNext() {
     final controller = _findTargetController();
     if (controller == null) return;
@@ -1242,12 +1248,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               const SingleActivator(LogicalKeyboardKey.enter): () {
                 // An Enter that commits an IME candidate must not search on
                 // text that the IME has not committed yet.
-                if (_appResumed &&
-                    hasTarget &&
-                    _findQuery.text.isNotEmpty &&
-                    !_findQuery.value.composing.isValid) {
-                  _runFindNext();
-                }
+                _findOnEnter(_findQuery.value.composing.isValid);
               },
             },
             child: TextField(
@@ -1261,11 +1262,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               minLines: 1,
               maxLines: 2,
               textInputAction: TextInputAction.search,
-              onEditingComplete: _findQuery.clearComposing,
+              onEditingComplete: () {
+                // The submit callback runs after editing completes, so record
+                // an in-progress IME candidate before clearing it.
+                _findSubmitWasComposing = _findQuery.value.composing.isValid;
+                _findQuery.clearComposing();
+              },
               onSubmitted: (_) {
-                if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
-                  _runFindNext();
-                }
+                _findOnEnter(_findSubmitWasComposing);
+                _findSubmitWasComposing = false;
               },
               decoration: InputDecoration(
                 labelText: strings.findQuery,
