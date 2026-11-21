@@ -10,8 +10,8 @@ final RegExp _numberPattern = RegExp(r'\p{Nd}', unicode: true);
 // domains are flagged just like ASCII ones, with no normalization or rewriting.
 final RegExp _linkPattern = RegExp(
   r'https?://|www\.|['
-  r'\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}-]+'
-  r'(?:\.[\p{L}\p{M}\p{N}-]+)+',
+  r'\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}.-]+'
+  r'(?:\.[\p{L}\p{M}\p{N}.-]+)+',
   unicode: true,
   caseSensitive: false,
 );

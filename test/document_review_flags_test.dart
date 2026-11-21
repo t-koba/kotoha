@@ -35,6 +35,15 @@ void main() {
       });
     });
 
+    test('keeps flagging malformed dot-atom email hints', () {
+      expect(detectDocumentReviewFlags('user@example..com'), {
+        DocumentReviewFlag.link,
+      });
+      expect(detectDocumentReviewFlags('user@exa..mple.com'), {
+        DocumentReviewFlag.link,
+      });
+    });
+
     test('recognizes email links and percent placeholders', () {
       expect(detectDocumentReviewFlags('mail user@example.com'), {
         DocumentReviewFlag.link,
