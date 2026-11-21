@@ -140,11 +140,11 @@ class ModelTermsImport {
       );
     }
     // The reviewer runs only after all unique terms files verify.
-    final digestEntries = verifiedText.entries.map((entry) {
-      final binding = files[entry.key]!;
-      final digest = binding['sha256'] as String;
-      return '${entry.key}:$digest:${sha256.convert(utf8.encode(entry.value))}';
-    }).toList();
+    final digestPaths = verifiedText.keys.toList()..sort();
+    final digestEntries = digestPaths.map((path) {
+      final digest = files[path]!['sha256'] as String;
+      return '$path:$digest:${sha256.convert(utf8.encode(verifiedText[path]!))}';
+    });
     final review = VerifiedTerms(
       modelId: decoded['id'] as String,
       modelName: decoded['display_name'] as String,

@@ -217,6 +217,86 @@ void main() {
       expect(a, isNotNull);
     },
   );
+  test('termsDigest is independent of terms entry order', () async {
+    const first = 'First terms';
+    const second = 'Second terms';
+    final firstHash = sha256.convert(bytes(first)).toString();
+    final secondHash = sha256.convert(bytes(second)).toString();
+    final firstEntry = <String, Object?>{
+      'id': 'first-terms',
+      'text_file': 'license/terms.txt',
+      'text_sha256': firstHash,
+      'consent': 'explicit',
+      'usage_requirements': ['Use locally'],
+      'required_attributions': [],
+      'covered_files': ['weights.bin', 'license/terms.txt'],
+    };
+    final secondEntry = <String, Object?>{
+      'id': 'second-terms',
+      'text_file': 'license/more.txt',
+      'text_sha256': secondHash,
+      'consent': 'explicit',
+      'usage_requirements': [],
+      'required_attributions': ['Attribution Y'],
+      'covered_files': ['license/more.txt', 'weights.bin'],
+    };
+    Map<String, Object?> manifest(List<Map<String, Object?>> entries) =>
+        fullManifest(
+          first,
+          extraTermsFiles: [
+            {
+              'path': 'license/more.txt',
+              'role': 'terms',
+              'sha256': secondHash,
+              'size_bytes': bytes(second).length,
+            },
+          ],
+          termsEntries: entries,
+        );
+    final termsByPath = {
+      'license/terms.txt': first,
+      'license/more.txt': second,
+    };
+    final forward = reader(manifest([firstEntry, secondEntry]), termsByPath);
+    final reverse = reader(manifest([secondEntry, firstEntry]), termsByPath);
+    VerifiedTerms? forwardReview;
+    VerifiedTerms? reverseReview;
+    await const ModelTermsImport().run(forward, (v) async {
+      forwardReview = v;
+      return true;
+    });
+    await const ModelTermsImport().run(reverse, (v) async {
+      reverseReview = v;
+      return true;
+    });
+
+    expect(forwardReview, isNotNull);
+    expect(reverseReview, isNotNull);
+    final forwardTerms = forwardReview!;
+    final reverseTerms = reverseReview!;
+    expect(forwardTerms.termsDigest, reverseTerms.termsDigest);
+    // Documents still follow manifest order in both imports.
+    expect(forwardTerms.documents.map((d) => d.id), [
+      'first-terms',
+      'second-terms',
+    ]);
+    expect(reverseTerms.documents.map((d) => d.id), [
+      'second-terms',
+      'first-terms',
+    ]);
+    expect(reverseTerms.documents.map((d) => d.text), [second, first]);
+    // Read order is unchanged as well.
+    expect(forward.requests, [
+      'model_manifest.json',
+      'license/terms.txt',
+      'license/more.txt',
+    ]);
+    expect(reverse.requests, [
+      'model_manifest.json',
+      'license/more.txt',
+      'license/terms.txt',
+    ]);
+  });
   test('multiple term records may share one verified terms file', () async {
     const terms = 'Shared synthetic terms';
     final digest = sha256.convert(bytes(terms)).toString();
