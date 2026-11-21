@@ -886,6 +886,27 @@ void main() {
     );
   });
 
+  test('a partial tilde fence at the lookahead edge is not a separator', () {
+    const head = 'Intro\n';
+    const opening = '~~~inline';
+    final fill =
+        maxOutlineSourceLength +
+        maxOutlineLookaheadLength -
+        head.length -
+        opening.length;
+    // The lookahead window ends inside the tilde opener's line, before the
+    // final tilde and the following heading are visible.
+    final source = '$head$opening${' ' * fill}~\n## Next';
+
+    expect(
+      parseOutlineBlocks(source).map((block) => block.kind).toList(),
+      isEmpty,
+      reason:
+          'a partial tilde fence opener in the lookahead makes the preceding '
+          "paragraph's end inexact, so it is not offered",
+    );
+  });
+
   test('a tilde fence info string may contain a tilde', () {
     // CommonMark 0.31.2 4.5: only backtick fences forbid their own character
     // in the info string; a tilde info string may contain tildes and backticks.
