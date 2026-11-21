@@ -1240,8 +1240,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           builder: (context, value, _) => CallbackShortcuts(
             bindings: {
               const SingleActivator(LogicalKeyboardKey.enter): () {
-                if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
-                  _findQuery.clearComposing();
+                // An Enter that commits an IME candidate must not search on
+                // text that the IME has not committed yet.
+                if (_appResumed &&
+                    hasTarget &&
+                    _findQuery.text.isNotEmpty &&
+                    !_findQuery.value.composing.isValid) {
                   _runFindNext();
                 }
               },
