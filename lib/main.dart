@@ -126,8 +126,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
-  // Only the source-import notice is dismissable on retry; other SnackBars on
-  // the shared messenger (copy, export, restore) keep their own lifetime.
+  // Only a source-import notice still in the messenger queue is dismissable on
+  // retry. Its `closed` callback clears this reference, so a timed-out or
+  // replaced notice is never closed again (which would hide a foreign bar).
   ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
   _sourceImportNoticeController;
   bool _reviewingModel = false;
@@ -392,14 +393,22 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           .showSnackBar(SnackBar(content: Text(message)));
 
   void _dismissSourceImportNotice() {
-    _sourceImportNoticeController?.close();
+    final controller = _sourceImportNoticeController;
+    if (controller == null) return;
     _sourceImportNoticeController = null;
+    controller.close();
   }
 
   void _sourceImportNotice(String message) {
     _dismissSourceImportNotice();
-    _sourceImportNoticeController = ScaffoldMessenger.of(context)
+    final controller = ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+    _sourceImportNoticeController = controller;
+    controller.closed.then((_) {
+      if (identical(_sourceImportNoticeController, controller)) {
+        _sourceImportNoticeController = null;
+      }
+    });
   }
 
   Future<void> _copyTranslation(_TranslationFields fields) async {

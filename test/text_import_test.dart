@@ -122,6 +122,28 @@ void main() {
     expect(find.textContaining(genericNotice), findsNothing);
   });
 
+  importTest('a retry after the notice timed out still imports', (
+    tester,
+  ) async {
+    await open(tester);
+    picker.pick = () async => _File(
+      'bad.txt',
+      4,
+      () async => Uint8List.fromList([255, 254, 253, 252]),
+    );
+    await import(tester);
+    expect(find.textContaining(genericNotice), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(genericNotice), findsNothing);
+
+    picker.pick = () async => textFile('good.txt', 'after timeout');
+    await import(tester);
+    expect(controller(tester, 'source-text').text, 'after timeout');
+    expect(picker.calls, 2);
+  });
+
   importTest('cancellation keeps source without a replacement dialog', (
     tester,
   ) async {
