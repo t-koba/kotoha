@@ -61,9 +61,10 @@ bool hasClosingFence(String source, DocumentBlock block) {
 ///
 /// LF and CRLF are line terminators; a lone CR stays in the line's content.
 /// Blank lines are skipped. A leading U+FEFF is ignored when recognizing any
-/// marker but kept in the range. Headings start at the beginning of a line,
-/// list items may be indented, and fenced code swallows any marker-looking
-/// lines until its closing fence or the end of the input.
+/// marker but kept in the range. Headings start at the beginning of a line and
+/// list items may be indented; a fence may be indented by at most three ASCII
+/// spaces (0x20). Fenced code swallows any marker-looking lines until its
+/// closing fence or the end of the input.
 List<DocumentBlock> parseDocumentBlocks(String source) {
   final probe = source.startsWith('\uFEFF') ? source.substring(1) : source;
   if (probe.trim().isEmpty) return const <DocumentBlock>[];
@@ -211,6 +212,19 @@ int _skipIndent(String line) {
   return i;
 }
 
+/// Returns the index just past a leading U+FEFF and at most three ASCII
+/// spaces. Fences do not accept tab indentation or a fourth space: that
+/// leaves the marker in place so the line is not a fence (CommonMark 4.5).
+int _skipFenceIndent(String line) {
+  var i = _skipBom(line);
+  var spaces = 0;
+  while (i < line.length && line.codeUnitAt(i) == 0x20 && spaces < 3) {
+    i++;
+    spaces++;
+  }
+  return i;
+}
+
 bool _isMarkerSpace(int unit) => unit == 0x20 || unit == 0x09;
 
 class _Heading {
@@ -265,7 +279,7 @@ class _Fence {
 }
 
 _Fence? _openFence(String line) {
-  final i = _skipIndent(line);
+  final i = _skipFenceIndent(line);
   if (i >= line.length) return null;
   final unit = line.codeUnitAt(i);
   if (unit != 0x60 && unit != 0x7E) return null;
@@ -284,7 +298,7 @@ _Fence? _openFence(String line) {
 /// A closer uses the opening character with at least its run length and no
 /// trailing text; an opening info string is not mistaken for a closer.
 bool _isClosingFence(String line, _Fence opening) {
-  final i = _skipIndent(line);
+  final i = _skipFenceIndent(line);
   if (i >= line.length || line.codeUnitAt(i) != opening.unit) return false;
   var j = i;
   while (j < line.length && line.codeUnitAt(j) == opening.unit) {

@@ -154,6 +154,57 @@ void main() {
     },
   );
 
+  test('four spaces do not close a fence; three spaces do', () {
+    final source = '~~~text\n    ~~~\n# Still code\n   ~~~\n# Real heading';
+    final blocks = parseDocumentBlocks(source);
+    expect(blocks, hasLength(2));
+    expect(blocks[0].kind, DocumentBlockKind.codeBlock);
+    expect(blocks[0].start, 0);
+    expect(blocks[0].end, source.indexOf('\n# Real heading'));
+    expect(
+      source.substring(blocks[0].start, blocks[0].end),
+      '~~~text\n    ~~~\n# Still code\n   ~~~',
+    );
+    expect(blocks[0].text, '    ~~~\n# Still code');
+    expect(blocks[0].level, 0);
+    expect(blocks[1].kind, DocumentBlockKind.heading);
+    expect(blocks[1].level, 1);
+    expect(blocks[1].text, 'Real heading');
+    expect(blocks[1].start, source.indexOf('# Real heading'));
+    expect(blocks[1].end, source.length);
+    expect(source.substring(blocks[1].start, blocks[1].end), '# Real heading');
+  });
+
+  test('four spaces or a tab before a fence marker open no fence', () {
+    for (final prefix in <String>['    ', '\t']) {
+      for (final marker in <String>['```', '~~~']) {
+        final line = '$prefix$marker';
+        final source = '$line\n# Heading';
+        final blocks = parseDocumentBlocks(source);
+        expect(blocks.map((b) => b.kind).toList(), <DocumentBlockKind>[
+          DocumentBlockKind.paragraph,
+          DocumentBlockKind.heading,
+        ], reason: source);
+        expect(blocks[0].start, 0, reason: source);
+        expect(blocks[0].end, line.length, reason: source);
+        expect(
+          source.substring(blocks[0].start, blocks[0].end),
+          line,
+          reason: source,
+        );
+        expect(blocks[0].text, line, reason: source);
+        expect(blocks[1].start, source.indexOf('# Heading'), reason: source);
+        expect(blocks[1].end, source.length, reason: source);
+        expect(
+          source.substring(blocks[1].start, blocks[1].end),
+          '# Heading',
+          reason: source,
+        );
+        expect(blocks[1].text, 'Heading', reason: source);
+      }
+    }
+  });
+
   test('an opening info string is not mistaken for a closing fence', () {
     final blocks = parseDocumentBlocks('```dart\nlet x = 1;\n```js\n```\n');
     expect(blocks, hasLength(1));
@@ -200,6 +251,15 @@ void main() {
     final indented = parseDocumentBlocks('\uFEFF  ```\ncode\n  ```');
     expect(indented.single.kind, DocumentBlockKind.codeBlock);
     expect(indented.single.text, 'code');
+    final overIndented = parseDocumentBlocks('\uFEFF    ```\n# Heading');
+    expect(overIndented.map((b) => b.kind).toList(), <DocumentBlockKind>[
+      DocumentBlockKind.paragraph,
+      DocumentBlockKind.heading,
+    ]);
+    expect(overIndented[0].start, 0);
+    expect(overIndented[0].end, '\uFEFF    ```'.length);
+    expect(overIndented[0].text, '\uFEFF    ```');
+    expect(overIndented[1].text, 'Heading');
   });
 
   test('mixed document ranges reconstruct exactly and never overlap', () {
@@ -275,11 +335,30 @@ void main() {
     }
   });
 
+  test('startsUnconfirmedFence shares the fence indentation rule', () {
+    for (final (line, unconfirmed) in [
+      ('```dart', true),
+      ('   ```dart', true),
+      ('    ```dart', false),
+      ('\t```dart', false),
+      ('\uFEFF   ```dart', true),
+      ('\uFEFF    ```dart', false),
+      ('~~~lang', false),
+    ]) {
+      expect(startsUnconfirmedFence(line), unconfirmed, reason: line);
+    }
+  });
+
   test('hasClosingFence follows the parser fence rules', () {
     for (final (source, closed) in [
       ('````\ncode\n````', true),
       ('````\ncode\n```', false),
       ('```\ncode\n~~~', false),
+      ('   ```\ncode\n   ```', true),
+      ('```\ncode\n    ```', false),
+      ('```\ncode\n\t```', false),
+      ('```\ncode\n\uFEFF   ```', true),
+      ('```\ncode\n\uFEFF    ```', false),
     ]) {
       final blocks = parseDocumentBlocks(source);
       expect(blocks, hasLength(1), reason: source);
