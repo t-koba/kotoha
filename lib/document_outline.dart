@@ -98,10 +98,11 @@ List<DocumentBlock> parseOutlineBlocks(String text) {
 
   final lastLf = window.lastIndexOf('\n');
   final tailStart = lastLf + 1;
-  final partialBlankTail =
+  final tail = window.substring(tailStart);
+  final uncertainTail =
       parseEnd < text.length &&
       tailStart < parseEnd &&
-      window.substring(tailStart).trim().isEmpty;
+      (tail.trim().isEmpty || startsUnconfirmedBacktickFence(tail));
   // The content end of the line just before the partial tail: with CRLF the
   // content ends at the carriage return, one code unit before the line feed.
   final falseSeparatorEnd = lastLf > 0 && window.codeUnitAt(lastLf - 1) == 0x0D
@@ -117,7 +118,7 @@ List<DocumentBlock> parseOutlineBlocks(String text) {
           (block.end == boundary && hasClosingFence(window, block));
     }
     if (block.end > boundary) return false;
-    if (partialBlankTail &&
+    if (uncertainTail &&
         block.kind == DocumentBlockKind.paragraph &&
         block.end == falseSeparatorEnd) {
       return false;

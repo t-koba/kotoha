@@ -862,6 +862,44 @@ void main() {
     expect(blocks.single.end, maxOutlineSourceLength);
   });
 
+  test('a partial backtick fence-looking line is not a known separator', () {
+    const head = 'Intro\n';
+    const opening = '```inline';
+    final fill =
+        maxOutlineSourceLength +
+        maxOutlineLookaheadLength -
+        head.length -
+        opening.length;
+    final source = '$head$opening${' ' * fill}`\n## Next';
+
+    final full = parseDocumentBlocks(source);
+    expect(full, hasLength(2));
+    expect(full.first.kind, DocumentBlockKind.paragraph);
+    expect(full.first.end, source.indexOf('\n## Next'));
+
+    expect(
+      parseOutlineBlocks(source).map((block) => block.kind).toList(),
+      isEmpty,
+      reason:
+          'the unseen backtick can invalidate the partial fence-looking line, '
+          'so Intro cannot end there',
+    );
+  });
+
+  test('a code span with trailing backticks is not a fence opener', () {
+    const source = '```inline```\n\n## Next section\nBody';
+
+    final blocks = parseOutlineBlocks(source);
+    expect(blocks.map((block) => block.kind).toList(), [
+      DocumentBlockKind.paragraph,
+      DocumentBlockKind.heading,
+      DocumentBlockKind.paragraph,
+    ]);
+    final heading = blocks[1];
+    expect(heading.text, 'Next section');
+    expect(source.substring(heading.start, heading.end), '## Next section');
+  });
+
   _platformTest(
     'an open fence crossing a line terminator at the cutoff is not offered',
     TargetPlatform.macOS,
