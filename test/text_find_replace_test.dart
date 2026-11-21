@@ -132,6 +132,27 @@ void main() {
     expect(absent.value, before);
   });
 
+  test('replace all keeps the caret on a UTF-16 boundary', () {
+    final controller = TextEditingController(text: 'a!');
+    controller.selection = const TextSelection.collapsed(offset: 1);
+
+    expect(replaceAll(controller, 'a', '😀'), 1);
+    expect(controller.text, '😀!');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 2);
+    expect(controller.selection.extentOffset, 2);
+
+    final after = TextEditingController(text: '!a');
+    after.selection = const TextSelection.collapsed(offset: 2);
+    expect(replaceAll(after, 'a', '😀'), 1);
+    expect(after.selection.baseOffset, 3);
+
+    final before = TextEditingController(text: 'a!');
+    before.selection = const TextSelection.collapsed(offset: 0);
+    expect(replaceAll(before, 'a', '😀'), 1);
+    expect(before.selection.baseOffset, 0);
+  });
+
   testWidgets('the keyboard shortcut opens the localized panel', (
     tester,
   ) async {

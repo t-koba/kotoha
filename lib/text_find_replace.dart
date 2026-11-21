@@ -68,24 +68,43 @@ int replaceAll(
   if (query.isEmpty) return 0;
   final value = controller.value;
   final text = value.text;
+  final caret = value.selection.end.clamp(0, text.length);
+  var mappedCaret = caret;
+  var caretMapped = false;
+  var shift = 0;
   final replaced = StringBuffer();
   var scanFrom = 0;
   var count = 0;
   while (true) {
     final index = text.indexOf(query, scanFrom);
     if (index < 0) break;
+    final matchEnd = index + query.length;
+    if (!caretMapped) {
+      if (caret <= index) {
+        mappedCaret = caret + shift;
+        caretMapped = true;
+      } else if (caret < matchEnd) {
+        // A caret inside the replaced text moves to the end of its
+        // replacement so it never lands between UTF-16 code units.
+        mappedCaret = index + shift + replacement.length;
+        caretMapped = true;
+      } else {
+        shift += replacement.length - query.length;
+      }
+    }
     replaced.write(text.substring(scanFrom, index));
     replaced.write(replacement);
     count++;
-    scanFrom = index + query.length;
+    scanFrom = matchEnd;
   }
   if (count == 0) return 0;
+  if (!caretMapped) mappedCaret = caret + shift;
   replaced.write(text.substring(scanFrom));
   final updated = replaced.toString();
   controller.value = value.copyWith(
     text: updated,
     selection: TextSelection.collapsed(
-      offset: value.selection.end.clamp(0, updated.length),
+      offset: mappedCaret.clamp(0, updated.length),
     ),
     composing: TextRange.empty,
   );
