@@ -19,12 +19,15 @@ void main() {
   late List<String> requests;
   late List<String> methods;
 
-  Map<String, Object?> fixtureManifest(String terms) {
+  Map<String, Object?> fixtureManifest(
+    String terms, {
+    String displayName = 'Test model',
+  }) {
     final h = sha256.convert(bytes(terms)).toString();
     final size = bytes(terms).length;
     return {
       'id': 'test-model',
-      'display_name': 'Test model',
+      'display_name': displayName,
       'publisher': 'fixture',
       'files': [
         {
@@ -81,8 +84,8 @@ void main() {
     };
   }
 
-  void installFixture(String terms) {
-    final manifest = fixtureManifest(terms);
+  void installFixture(String terms, {String displayName = 'Test model'}) {
+    final manifest = fixtureManifest(terms, displayName: displayName);
     package = {
       'model_manifest.json': bytes(jsonEncode(manifest)),
       'license/terms.txt': bytes(terms),
@@ -185,6 +188,39 @@ void main() {
       expect(requests, ['model_manifest.json', 'license/terms.txt']);
       expect(requests.contains('weights.bin'), isFalse);
       expect(methods.contains('release'), isTrue);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('a long model name keeps the terms reachable', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      tester.view.physicalSize = const Size(360, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      installFixture(
+        'Synthetic license body',
+        displayName: 'Multilingual Model Edition ' * 40,
+      );
+      await openAndroid(tester);
+      await tester.ensureVisible(reviewButton());
+      await tester.tap(reviewButton());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final termsBody = find.text('Synthetic license body');
+      expect(termsBody, findsOneWidget);
+      await tester.ensureVisible(termsBody);
+      await tester.pumpAndSettle();
+      final termsRect = tester.getRect(termsBody);
+      final view = tester.view.physicalSize / tester.view.devicePixelRatio;
+      expect(termsRect.top, greaterThanOrEqualTo(0));
+      expect(termsRect.bottom, lessThanOrEqualTo(view.height));
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('decline-model-terms')));
+      await tester.pumpAndSettle();
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

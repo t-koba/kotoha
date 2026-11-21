@@ -282,46 +282,45 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
+            scrollable: true,
             title: Text(strings.modelTermsTitle(review.modelName)),
             content: SizedBox(
               width: 560,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(strings.modelRuntimeDisabled),
-                    const SizedBox(height: 8),
-                    Text(strings.modelIntegrityOnly),
-                    const SizedBox(height: 8),
-                    Text(strings.modelPackageId(review.modelId)),
-                    const SizedBox(height: 4),
-                    Text(strings.modelDeclaredPublisher(review.publisher)),
-                    const SizedBox(height: 8),
-                    Text(
-                      strings.modelAllTermsVerified(
-                        review.verifiedTermsFileCount,
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(strings.modelRuntimeDisabled),
+                  const SizedBox(height: 8),
+                  Text(strings.modelIntegrityOnly),
+                  const SizedBox(height: 8),
+                  Text(strings.modelPackageId(review.modelId)),
+                  const SizedBox(height: 4),
+                  Text(strings.modelDeclaredPublisher(review.publisher)),
+                  const SizedBox(height: 8),
+                  Text(
+                    strings.modelAllTermsVerified(
+                      review.verifiedTermsFileCount,
                     ),
-                    for (final document in review.documents) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        document.id,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      SelectableText(document.text),
-                      if (document.usageRequirements.isNotEmpty) ...[
-                        Text(strings.modelUsageRequirements),
-                        for (final value in document.usageRequirements)
-                          Text('• $value'),
-                      ],
-                      if (document.attributions.isNotEmpty) ...[
-                        Text(strings.modelAttributions),
-                        for (final value in document.attributions)
-                          Text('• $value'),
-                      ],
+                  ),
+                  for (final document in review.documents) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      document.id,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    SelectableText(document.text),
+                    if (document.usageRequirements.isNotEmpty) ...[
+                      Text(strings.modelUsageRequirements),
+                      for (final value in document.usageRequirements)
+                        Text('• $value'),
+                    ],
+                    if (document.attributions.isNotEmpty) ...[
+                      Text(strings.modelAttributions),
+                      for (final value in document.attributions)
+                        Text('• $value'),
                     ],
                   ],
-                ),
+                ],
               ),
             ),
             actions: [
