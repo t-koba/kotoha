@@ -35,8 +35,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   func testEnglishTargetLanguageField() {
     selectLocale("English")
-    checkField("target-language-0", label: "Target language", nextID: "translation-text-0",
-               nextLabel: "Manual translation")
+    checkField("target-language-0", label: "Target language 1", nextID: "translation-text-0",
+               nextLabel: "Manual translation 1")
   }
 
   func testJapaneseSourceLanguageField() {
@@ -46,8 +46,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   func testJapaneseTargetLanguageField() {
     selectLocale("日本語")
-    checkField("target-language-0", label: "訳先の言語", nextID: "translation-text-0",
-               nextLabel: "手入力した訳文")
+    checkField("target-language-0", label: "1件目の訳先の言語", nextID: "translation-text-0",
+               nextLabel: "1件目の手入力した訳文")
   }
 
   func testImportChannelPresentsSystemPickerAndCancellationKeepsDraft() {

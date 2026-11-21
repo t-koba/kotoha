@@ -89,7 +89,7 @@ public final class MainActivityAccessibilityTest
     }
 
     public void testEnglishLanguageFields() {
-        checkLocale("English", "Source language", "Source text", "Target language",
+        checkLocale("English", "Source language", "Source text", "Target language 1",
                 "Copy translation 1", "Import text or Markdown", "Review model package terms");
     }
 
@@ -100,7 +100,7 @@ public final class MainActivityAccessibilityTest
         getInstrumentation().waitForIdleSync();
 
         String id = "target-language-0";
-        String label = "Target language";
+        String label = "Target language 1";
         revealField(id);
         click(label, n -> field(n, id));
         assertField(id, label, "");
@@ -112,7 +112,7 @@ public final class MainActivityAccessibilityTest
     }
 
     public void testJapaneseLanguageFields() {
-        checkLocale("日本語", "原文の言語", "原文", "訳先の言語",
+        checkLocale("日本語", "原文の言語", "原文", "1件目の訳先の言語",
                 "1件目の訳文をコピー", "テキスト・Markdownを読み込む",
                 "モデルパッケージの利用条件を確認");
     }
