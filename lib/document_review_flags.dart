@@ -27,10 +27,12 @@ final RegExp _placeholderPattern = RegExp(
 Set<DocumentReviewFlag> detectDocumentReviewFlags(String text) {
   final flags = <DocumentReviewFlag>{};
   if (_numberPattern.hasMatch(text)) flags.add(DocumentReviewFlag.number);
-  // The email branch backtracks over its whole candidate span when the text
-  // has no address, so skip it unless an '@' can start one.
+  // The email branch backtracks over its whole candidate span when no address
+  // can match, so skip it unless an '@' precedes a dot, its minimum shape.
+  final at = text.indexOf('@');
+  final dot = text.lastIndexOf('.');
   if (_urlPattern.hasMatch(text) ||
-      (text.contains('@') && _emailPattern.hasMatch(text))) {
+      (at >= 0 && dot > at && _emailPattern.hasMatch(text))) {
     flags.add(DocumentReviewFlag.link);
   }
   if (_placeholderPattern.hasMatch(text)) {

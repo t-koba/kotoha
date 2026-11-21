@@ -35,6 +35,11 @@ void main() {
       });
     });
 
+    test('an address-like token without a domain dot stays responsive', () {
+      final flags = detectDocumentReviewFlags('a@${'b-' * 20000}b!');
+      expect(flags, isEmpty);
+    }, timeout: const Timeout(Duration(seconds: 3)));
+
     test('long text without an address stays responsive', () {
       final flags = detectDocumentReviewFlags('${'b-' * 20000}b!');
       expect(flags, isEmpty);
