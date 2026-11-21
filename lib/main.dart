@@ -1079,6 +1079,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   void _onDocumentChanged() {
+    _removedFoundQuery = null;
     if (_findStatus == _FindStatus.none &&
         _findStatusQuery.isEmpty &&
         _findCount == 0) {
@@ -1144,7 +1145,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         _selectedFindTarget == null &&
         _removedFoundQuery != null &&
         _removedFoundQuery == _findQuery.text;
-    final handOffFocus = hasCurrentFind || hasRemovedFind;
+    // Only hand focus back while Escape closes a find still owned by the
+    // query. A click into another editor already moved focus deliberately.
+    final handOffFocus =
+        _findQueryFocusNode.hasPrimaryFocus &&
+        (hasCurrentFind || hasRemovedFind);
     final foundEditor = handOffFocus
         ? _findTargetEditorFocusNode(_findTargetController())
         : null;
@@ -1295,6 +1300,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                         ? null
                         : (value) => setState(() {
                             _selectedFindTarget = _currentFindTarget(value);
+                            _removedFoundQuery = null;
                             _clearFindFeedback();
                           }),
                   ),

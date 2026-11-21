@@ -1678,11 +1678,11 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('find-replace-panel')), findsOneWidget);
-      await _tapVisible(tester, source);
-      sourceController.selection = const TextSelection(
-        baseOffset: 0,
-        extentOffset: 3,
-      );
+      // Focus is still in the query: the removed card's memo may hand focus
+      // back to a stable widget, but not to an editor the user walked away to.
+      final query = find.byKey(const ValueKey('find-query'));
+      await _tapVisible(tester, query);
+      expect(_hasPrimaryFocus(tester, query), isTrue);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -1698,6 +1698,119 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Escape leaves an editor chosen after Find Next focused', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    final translation = find.byKey(const ValueKey('translation-text-0'));
+    final query = find.byKey(const ValueKey('find-query'));
+    final panel = find.byKey(const ValueKey('find-replace-panel'));
+    await tester.enterText(source, 'cat dog');
+    await tester.enterText(translation, 'alpha beta');
+    final sourceController = tester.widget<TextField>(source).controller!;
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    await _tapVisible(tester, find.byKey(const ValueKey('find-target')));
+    await tester.tap(find.text('Translation 1'));
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'beta');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(_hasPrimaryFocus(tester, query), isTrue);
+
+    await _tapVisible(tester, source);
+    const sourceSelection = TextSelection(baseOffset: 4, extentOffset: 7);
+    sourceController.selection = sourceSelection;
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(panel, findsNothing);
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+    expect(sourceController.text, 'cat dog');
+    expect(sourceController.selection, sourceSelection);
+    expect(_hasPrimaryFocus(tester, translation), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Escape after a document edit keeps that editor focused', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    final toggle = find.byKey(const ValueKey('find-replace-toggle'));
+    final panel = find.byKey(const ValueKey('find-replace-panel'));
+    await tester.enterText(source, 'cat dog');
+    await tester.dragUntilVisible(
+      find.text('Add translation'),
+      find.byType(Scrollable).first,
+      const Offset(0, -400),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add translation'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-0')),
+      'alpha beta',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-1')),
+      'gamma',
+    );
+
+    await tester.dragUntilVisible(
+      toggle,
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, toggle);
+    await _tapVisible(tester, find.byKey(const ValueKey('find-target')));
+    await tester.tap(find.text('Translation 1'));
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'beta');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-0')),
+    );
+    await tester.pumpAndSettle();
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('remove-translation-confirm')),
+    );
+    await tester.pumpAndSettle();
+    expect(panel, findsOneWidget);
+
+    await _tapVisible(tester, source);
+    await tester.enterText(source, 'cat dog typed');
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(panel, findsNothing);
+    expect(_hasPrimaryFocus(tester, source), isTrue);
+    expect(tester.widget<TextField>(source).controller!.text, 'cat dog typed');
+    expect(_hasPrimaryFocus(tester, toggle), isFalse);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Escape returns keyboard focus to the editor that was found', (
     tester,
