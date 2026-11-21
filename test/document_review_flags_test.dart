@@ -29,6 +29,12 @@ void main() {
       expect(detectDocumentReviewFlags('plain words only'), isEmpty);
     });
 
+    test('flags an email with an internationalized domain', () {
+      expect(detectDocumentReviewFlags('連絡先: editor@例え.テスト'), {
+        DocumentReviewFlag.link,
+      });
+    });
+
     test('recognizes email links and percent placeholders', () {
       expect(detectDocumentReviewFlags('mail user@example.com'), {
         DocumentReviewFlag.link,
