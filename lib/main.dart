@@ -126,6 +126,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
+  // Only the source-import notice is dismissable on retry; other SnackBars on
+  // the shared messenger (copy, export, restore) keep their own lifetime.
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>?
+  _sourceImportNoticeController;
   bool _reviewingModel = false;
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
@@ -174,6 +178,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sessionModelAuthorization = null;
+    _sourceImportNoticeController = null;
     _sourceLanguage.dispose();
     _sourceText.dispose();
     _findQuery.removeListener(_onFindQueryChanged);
@@ -200,6 +205,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   Future<void> _importSource() async {
     if (_importing || _reviewingModel) return;
+    _dismissSourceImportNotice();
     setState(() => _importing = true);
     // Watch text edits, not selection/focus changes caused by the OS dialog.
     final snapshot = _sourceText.text;
@@ -222,7 +228,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
       if (!mounted) return;
       if (sourceChanged || _sourceText.text != snapshot) {
-        _importNotice(AppLocalizations.of(context)!.importSourceChangedNotice);
+        _sourceImportNotice(
+          AppLocalizations.of(context)!.importSourceChangedNotice,
+        );
         return;
       }
       if (snapshot.isNotEmpty) {
@@ -247,17 +255,21 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         if (!mounted || replace != true) return;
       }
       if (sourceChanged || _sourceText.text != snapshot) {
-        _importNotice(AppLocalizations.of(context)!.importSourceChangedNotice);
+        _sourceImportNotice(
+          AppLocalizations.of(context)!.importSourceChangedNotice,
+        );
         return;
       }
       setState(() => _replaceDocumentText(_sourceText, text));
     } on TextDocumentTooLarge {
       if (mounted) {
-        _importNotice(AppLocalizations.of(context)!.importSourceTooLargeNotice);
+        _sourceImportNotice(
+          AppLocalizations.of(context)!.importSourceTooLargeNotice,
+        );
       }
     } on Exception {
       if (mounted) {
-        _importNotice(AppLocalizations.of(context)!.importFailureNotice);
+        _sourceImportNotice(AppLocalizations.of(context)!.importFailureNotice);
       }
     } finally {
       _sourceText.removeListener(watchSource);
@@ -379,6 +391,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void _importNotice(String message) =>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
+
+  void _dismissSourceImportNotice() {
+    _sourceImportNoticeController?.close();
+    _sourceImportNoticeController = null;
+  }
+
+  void _sourceImportNotice(String message) {
+    _dismissSourceImportNotice();
+    _sourceImportNoticeController = ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
 
   Future<void> _copyTranslation(_TranslationFields fields) async {
     // The rendered button keeps its card; a callback made stale by a removal

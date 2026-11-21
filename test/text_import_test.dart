@@ -103,6 +103,25 @@ void main() {
     return _File(name, bytes.length, () async => bytes);
   }
 
+  importTest('a successful retry clears the previous failure notice', (
+    tester,
+  ) async {
+    await open(tester);
+    picker.pick = () async => _File(
+      'bad.txt',
+      4,
+      () async => Uint8List.fromList([255, 254, 253, 252]),
+    );
+    await import(tester);
+    expect(find.textContaining(genericNotice), findsOneWidget);
+
+    picker.pick = () async => textFile('good.txt', 'new source');
+    await import(tester);
+
+    expect(controller(tester, 'source-text').text, 'new source');
+    expect(find.textContaining(genericNotice), findsNothing);
+  });
+
   importTest('cancellation keeps source without a replacement dialog', (
     tester,
   ) async {
