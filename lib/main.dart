@@ -1237,23 +1237,36 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         const SizedBox(height: 8),
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: _findQuery,
-          builder: (context, value, _) => TextField(
-            key: const ValueKey('find-query'),
-            controller: _findQuery,
-            focusNode: _findQueryFocusNode,
-            readOnly: !_appResumed,
-            enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
-            textDirection: firstStrongDirection(value.text),
-            textInputAction: TextInputAction.search,
-            onEditingComplete: _findQuery.clearComposing,
-            onSubmitted: (_) {
-              if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
-                _runFindNext();
-              }
+          builder: (context, value, _) => CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.enter): () {
+                if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
+                  _findQuery.clearComposing();
+                  _runFindNext();
+                }
+              },
             },
-            decoration: InputDecoration(
-              labelText: strings.findQuery,
-              border: const OutlineInputBorder(),
+            child: TextField(
+              key: const ValueKey('find-query'),
+              controller: _findQuery,
+              focusNode: _findQueryFocusNode,
+              readOnly: !_appResumed,
+              enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
+              textDirection: firstStrongDirection(value.text),
+              keyboardType: TextInputType.text,
+              minLines: 1,
+              maxLines: 2,
+              textInputAction: TextInputAction.search,
+              onEditingComplete: _findQuery.clearComposing,
+              onSubmitted: (_) {
+                if (_appResumed && hasTarget && _findQuery.text.isNotEmpty) {
+                  _runFindNext();
+                }
+              },
+              decoration: InputDecoration(
+                labelText: strings.findQuery,
+                border: const OutlineInputBorder(),
+              ),
             ),
           ),
         ),
@@ -1266,6 +1279,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
             readOnly: !_appResumed,
             enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
             textDirection: firstStrongDirection(value.text),
+            minLines: 1,
+            maxLines: 2,
             decoration: InputDecoration(
               labelText: strings.findReplacement,
               border: const OutlineInputBorder(),

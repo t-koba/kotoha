@@ -456,6 +456,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Enter in the query field still finds the next match', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'one two one');
+    final controller = tester.widget<TextField>(source).controller!;
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    final query = find.byKey(const ValueKey('find-query'));
+    await _tapVisible(tester, query);
+    await tester.enterText(query, 'one');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(controller.selection.start, 0);
+    expect(controller.selection.end, 3);
+  });
+
+  testWidgets('replace all preserves pasted line breaks', (tester) async {
+    tester.binding.platformDispatcher.localesTestValue = [const Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    await tester.pumpWidget(const KotohaApp());
+
+    final source = find.byKey(const ValueKey('source-text'));
+    await tester.enterText(source, 'foobar\nfoo\nbar');
+    final sourceController = tester.widget<TextField>(source).controller!;
+
+    await _tapVisible(
+      tester,
+      find.byKey(const ValueKey('find-replace-toggle')),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('find-query')),
+      'foo\nbar',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('find-replacement')),
+      'x\ny',
+    );
+    await _tapVisible(tester, find.byKey(const ValueKey('replace-all')));
+
+    expect(sourceController.text, 'foobar\nx\ny');
+  });
+
   testWidgets('find fields follow their content direction and IME setting', (
     tester,
   ) async {
