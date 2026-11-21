@@ -433,7 +433,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   );
 
   // Snapshot the in-memory fields once for both output routes. Null means
-  // there is no text to copy or export.
+  // no text and no added card to copy or export.
   TextWorkspaceDraft? _nonEmptyWorkspaceDraft() {
     // Any populated field counts, matching restore's unsaved-change check:
     // a language-only workspace round-trips through the export format.

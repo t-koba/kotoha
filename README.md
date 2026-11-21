@@ -46,7 +46,8 @@ distinct success notice says Kotoha cannot restore it. Mobile builds have no exp
 
 On every platform, a v2 workspace export can be restored through the same
 explicit text-document picker (`.txt`, `.md` or `.markdown`). If the current
-workspace holds any text, a confirmation precedes replacement of all fields.
+workspace holds text or an added translation card, a confirmation precedes
+replacement of all fields.
 Cancellation is silent; an edit made after picking, a wrong file type, an
 oversized document, a malformed document and a read failure all leave the drafts
 intact, with distinct notices where the cause is known. Exports use LF line
