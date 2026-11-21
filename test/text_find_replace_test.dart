@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kotoha/editor_config.dart';
 import 'package:kotoha/main.dart';
 import 'package:kotoha/text_find_replace.dart';
 import 'package:kotoha/workspace.dart';
@@ -77,7 +78,10 @@ void main() {
 
     expect(findNext(controller, ''), isFalse);
     expect(replaceSelection(controller, '', 'x'), isFalse);
-    expect(replaceAll(controller, '', 'x'), 0);
+    expect(
+      replaceAll(controller, '', 'x', maxOutputLength: replaceAllOutputLimit),
+      0,
+    );
     expect(controller.value, before);
     expect(controller.selection.isCollapsed, isTrue);
   });
@@ -116,20 +120,37 @@ void main() {
 
   test('replace all skips overlaps and does not revisit new matches', () {
     final overlapping = TextEditingController(text: 'banana');
-    expect(replaceAll(overlapping, 'ana', 'X'), 1);
+    expect(
+      replaceAll(
+        overlapping,
+        'ana',
+        'X',
+        maxOutputLength: replaceAllOutputLimit,
+      ),
+      1,
+    );
     expect(overlapping.text, 'bXna');
 
     final repeated = TextEditingController(text: 'aaaa');
-    expect(replaceAll(repeated, 'aa', 'X'), 2);
+    expect(
+      replaceAll(repeated, 'aa', 'X', maxOutputLength: replaceAllOutputLimit),
+      2,
+    );
     expect(repeated.text, 'XX');
 
     final growing = TextEditingController(text: 'aa');
-    expect(replaceAll(growing, 'a', 'aa'), 2);
+    expect(
+      replaceAll(growing, 'a', 'aa', maxOutputLength: replaceAllOutputLimit),
+      2,
+    );
     expect(growing.text, 'aaaa');
 
     final absent = TextEditingController(text: 'abc');
     final before = absent.value;
-    expect(replaceAll(absent, 'z', 'X'), 0);
+    expect(
+      replaceAll(absent, 'z', 'X', maxOutputLength: replaceAllOutputLimit),
+      0,
+    );
     expect(absent.value, before);
   });
 
@@ -137,7 +158,10 @@ void main() {
     final controller = TextEditingController(text: 'a!');
     controller.selection = const TextSelection.collapsed(offset: 1);
 
-    expect(replaceAll(controller, 'a', '😀'), 1);
+    expect(
+      replaceAll(controller, 'a', '😀', maxOutputLength: replaceAllOutputLimit),
+      1,
+    );
     expect(controller.text, '😀!');
     expect(controller.selection.isCollapsed, isTrue);
     expect(controller.selection.baseOffset, 2);
@@ -145,12 +169,18 @@ void main() {
 
     final after = TextEditingController(text: '!a');
     after.selection = const TextSelection.collapsed(offset: 2);
-    expect(replaceAll(after, 'a', '😀'), 1);
+    expect(
+      replaceAll(after, 'a', '😀', maxOutputLength: replaceAllOutputLimit),
+      1,
+    );
     expect(after.selection.baseOffset, 3);
 
     final before = TextEditingController(text: 'a!');
     before.selection = const TextSelection.collapsed(offset: 0);
-    expect(replaceAll(before, 'a', '😀'), 1);
+    expect(
+      replaceAll(before, 'a', '😀', maxOutputLength: replaceAllOutputLimit),
+      1,
+    );
     expect(before.selection.baseOffset, 0);
   });
 
@@ -173,17 +203,40 @@ void main() {
     expect(controller.value.composing, before.composing);
   });
 
-  test('a shrinking replacement works above the output budget', () {
-    final controller = TextEditingController(text: 'a' * 20);
-    expect(replaceAll(controller, 'aa', 'b', maxOutputLength: 8), 10);
-    expect(controller.text, 'b' * 10);
+  test('a configured limit sets the boundary and shrinking stays allowed', () {
+    const testBudget = 8;
+    final refused = TextEditingController(text: 'aaaa');
+    refused.value = TextEditingValue(
+      text: 'aaaa',
+      selection: const TextSelection(baseOffset: 1, extentOffset: 3),
+      composing: const TextRange(start: 0, end: 1),
+    );
+    final before = refused.value;
+    expect(replaceAll(refused, 'a', 'aa', maxOutputLength: testBudget - 1), -1);
+    expect(refused.value, before);
+
+    final accepted = TextEditingController(text: 'aaaa');
+    expect(replaceAll(accepted, 'a', 'aa', maxOutputLength: testBudget), 4);
+    expect(accepted.text, 'aaaaaaaa');
+
+    final oversized = TextEditingController(text: 'a' * 20);
+    expect(replaceAll(oversized, 'aa', 'b', maxOutputLength: testBudget), 10);
+    expect(oversized.text, 'b' * 10);
   });
 
   test('replace all refuses a runaway expansion promptly', () {
     final controller = TextEditingController(text: 'x' * 65536);
     final before = controller.value;
     final stopwatch = Stopwatch()..start();
-    expect(replaceAll(controller, 'x', 'y' * 65536), -1);
+    expect(
+      replaceAll(
+        controller,
+        'x',
+        'y' * 65536,
+        maxOutputLength: replaceAllOutputLimit,
+      ),
+      -1,
+    );
     stopwatch.stop();
     expect(controller.value, before);
     expect(stopwatch.elapsedMilliseconds, lessThan(5000));

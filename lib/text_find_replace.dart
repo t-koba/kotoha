@@ -1,9 +1,6 @@
 import 'package:flutter/widgets.dart'
     show TextEditingController, TextSelection, TextRange;
 
-/// Default ceiling, in UTF-16 code units, for the result of [replaceAll].
-const int maxReplaceAllOutputLength = 8 * 1024 * 1024;
-
 /// Returns the half-open range of the first literal, case-sensitive [query]
 /// at or after [start], or null when [query] is empty or absent.
 TextRange? findLiteralMatch(String text, String query, int start) {
@@ -64,13 +61,14 @@ bool replaceSelection(
 /// An empty query is a no-op. New matches created by the replacement are not
 /// revisited; the scan advances past the original match in the source text.
 /// Returns -1 without changing [controller] when a growing replacement would
-/// make the result exceed [maxOutputLength] UTF-16 code units. Shrinking
-/// replacements are allowed even when the source already exceeds the limit.
+/// make the result exceed the caller-supplied [maxOutputLength] UTF-16 code
+/// units. Shrinking replacements are allowed even when the source already
+/// exceeds that limit.
 int replaceAll(
   TextEditingController controller,
   String query,
   String replacement, {
-  int maxOutputLength = maxReplaceAllOutputLength,
+  required int maxOutputLength,
 }) {
   if (query.isEmpty) return 0;
   final value = controller.value;

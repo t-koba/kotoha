@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'content_locale.dart';
 import 'document_format_support.dart';
 import 'document_outline.dart';
+import 'editor_config.dart';
 import 'first_strong_direction.dart';
 import 'text_find_replace.dart';
 import 'l10n/app_localizations.dart';
@@ -1223,6 +1224,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       controller,
       _findQuery.text,
       _findReplacement.text,
+      maxOutputLength: replaceAllOutputLimit,
     );
     setState(() {
       _findCount = count < 0 ? 0 : count;
