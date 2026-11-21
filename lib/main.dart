@@ -724,8 +724,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final currentIndex = _translations.indexOf(fields);
     if (currentIndex < 0 || _translations.length == 1) return;
     // When a following field shifts into this slot, keep keyboard focus on it
-    // so pointer removal does not drop focus back to the enclosing scope.
-    // Removing the last field keeps the existing Add-button focus behavior.
+    // so removal does not drop focus back to the enclosing scope. Removing the
+    // last field hands focus to the Add button, whose activation adds a card.
     final following = currentIndex + 1 < _translations.length
         ? _translations[currentIndex + 1]
         : null;
@@ -737,13 +737,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       }
       _translations.removeAt(currentIndex).dispose();
     });
-    if (following != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _translations.contains(following)) {
-          following.textFocusNode.requestFocus();
-        }
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (following != null && _translations.contains(following)) {
+        following.textFocusNode.requestFocus();
+      } else {
+        _addTranslationFocusNode.requestFocus();
+      }
+    });
   }
 
   @override

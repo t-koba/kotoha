@@ -708,6 +708,63 @@ void main() {
   );
 
   testWidgets(
+    'removing the last translation by keyboard focuses the Add button',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.tap(find.text('訳先を追加'));
+      await tester.pumpAndSettle();
+      final first = find.byKey(const ValueKey('translation-text-0'));
+      final firstFocus = tester
+          .widget<EditableText>(
+            find.descendant(of: first, matching: find.byType(EditableText)),
+          )
+          .focusNode;
+      firstFocus.requestFocus();
+      await tester.pumpAndSettle();
+      expect(tester.binding.focusManager.primaryFocus, same(firstFocus));
+
+      bool removeLastFocused() {
+        final context = tester.binding.focusManager.primaryFocus?.context;
+        return context?.findAncestorWidgetOfExactType<IconButton>()?.key ==
+            const ValueKey('remove-translation-1');
+      }
+
+      for (var tab = 0; tab < 10 && !removeLastFocused(); tab++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+      }
+      expect(removeLastFocused(), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(first, findsOneWidget);
+      expect(tester.widget<TextField>(first).controller!.text, isEmpty);
+      expect(find.byKey(const ValueKey('translation-text-1')), findsNothing);
+
+      final addButton = find.widgetWithText(OutlinedButton, '訳先を追加');
+      expect(addButton, findsOneWidget);
+      expect(
+        tester.widget<OutlinedButton>(addButton).focusNode,
+        same(tester.binding.focusManager.primaryFocus),
+      );
+
+      // The handed-off focus must be actionable without any further tabbing.
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      final added = find.byKey(const ValueKey('translation-text-1'));
+      expect(added, findsOneWidget);
+      expect(tester.widget<TextField>(added).controller!.text, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'canceling removal of a nonempty translation keeps it and its focus',
     (tester) async {
       tester.view.physicalSize = const Size(1000, 2400);
