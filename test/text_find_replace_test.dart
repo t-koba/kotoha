@@ -608,6 +608,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'repeated Ctrl+F brings a focused, offscreen query back into view',
+    (tester) async {
+      tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.physicalSize = const Size(800, 360);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.binding.setSurfaceSize(const Size(800, 360));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(const KotohaApp());
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      final query = find.byKey(const ValueKey('find-query'));
+      expect(_hasPrimaryFocus(tester, query), isTrue);
+      final position = tester
+          .widget<Scrollable>(find.byType(Scrollable).first)
+          .controller!
+          .position;
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+      final viewport = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final offscreen = tester.getRect(query);
+      expect(offscreen.top >= viewport.height || offscreen.bottom <= 0, isTrue);
+      expect(_hasPrimaryFocus(tester, query), isTrue);
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+
+      final back = tester.getRect(query);
+      expect(back.top, greaterThanOrEqualTo(0));
+      expect(back.bottom, lessThanOrEqualTo(viewport.height));
+      expect(_hasPrimaryFocus(tester, query), isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('find fields ignore stale input while the app is paused', (
     tester,
   ) async {

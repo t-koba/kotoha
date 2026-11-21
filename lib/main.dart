@@ -1067,6 +1067,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       baseOffset: 0,
       extentOffset: _findQuery.text.length,
     );
+    // requestFocus() scrolls a newly focused field into view, but a repeated
+    // shortcut on an already focused field produces no focus change, so scroll
+    // explicitly for that case.
+    if (_findQueryFocusNode.hasPrimaryFocus) {
+      final context = _findQueryFocusNode.context;
+      if (context != null && context.mounted) {
+        Scrollable.ensureVisible(context, alignment: 0.5);
+      }
+    }
     _findQueryFocusNode.requestFocus();
   }
 
