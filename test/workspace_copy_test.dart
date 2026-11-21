@@ -132,6 +132,35 @@ void main() {
     });
   }
 
+  testWidgets('copy survives a NUL-terminated clipboard consumer', (
+    tester,
+  ) async {
+    final calls = <MethodCall>[];
+    mockClipboard(tester, calls);
+    await pumpWorkspace(tester);
+    await tester.enterText(find.byKey(const ValueKey('source-language')), 'ja');
+    await tester.enterText(
+      find.byKey(const ValueKey('source-text')),
+      'A\u0000B',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('target-language-0')),
+      'en',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('translation-text-0')),
+      'bonjour',
+    );
+    await tapCopy(tester);
+
+    expect(calls, hasLength(1));
+    final payload = calls.single.arguments!['text'] as String;
+    // Win32 CF_UNICODETEXT consumers stop at the first NUL.
+    final delivered = payload.split('\u0000').first;
+    expect(parseWorkspaceExport(delivered).sourceText, 'A\u0000B');
+    expect(parseWorkspaceExport(delivered).translations.single.text, 'bonjour');
+  });
+
   testWidgets('an empty workspace is not copied', (tester) async {
     final calls = <MethodCall>[];
     mockClipboard(tester, calls);

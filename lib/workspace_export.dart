@@ -9,7 +9,9 @@ const String workspaceExportHeader = 'Kotoha workspace export v2';
 String _escape(String value) => value
     .replaceAll('\\', '\\\\')
     .replaceAll('\r', '\\r')
-    .replaceAll('\n', '\\n');
+    .replaceAll('\n', '\\n')
+    // A raw NUL terminates CF_UNICODETEXT on Windows, truncating the copy.
+    .replaceAll('\u0000', '\\0');
 
 String _unescape(String value) {
   final buffer = StringBuffer();
@@ -30,6 +32,8 @@ String _unescape(String value) {
         buffer.write('\r');
       case 'n':
         buffer.write('\n');
+      case '0':
+        buffer.write('\u0000');
       default:
         throw const FormatException('Unknown escape in workspace export.');
     }

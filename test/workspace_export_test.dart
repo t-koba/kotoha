@@ -198,6 +198,19 @@ void main() {
     expect(parseWorkspaceExport(output).toJson(), draft.toJson());
   });
 
+  test('keeps embedded NUL out of the portable document', () {
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: 'ja',
+      sourceText: 'A\u0000B',
+      translations: const [
+        ManualTranslationDraft(targetLanguage: 'en', text: r'\0 literal'),
+      ],
+    );
+    final output = formatWorkspaceExport(draft);
+    expect(output, isNot(contains('\u0000')));
+    expect(parseWorkspaceExport(output).toJson(), draft.toJson());
+  });
+
   test('accepts CRLF-normalized exports without changing field content', () {
     final draft = _draft();
     final output = formatWorkspaceExport(draft).replaceAll('\n', '\r\n');
