@@ -35,6 +35,15 @@ void main() {
       });
     });
 
+    test('flags addresses with valid local-part punctuation', () {
+      expect(detectDocumentReviewFlags('Contact ops!@example.com'), {
+        DocumentReviewFlag.link,
+      });
+      expect(detectDocumentReviewFlags("o'connor+tag@example.com"), {
+        DocumentReviewFlag.link,
+      });
+    });
+
     test('an address-like token without a domain dot stays responsive', () {
       final flags = detectDocumentReviewFlags('a@${'b-' * 20000}b!');
       expect(flags, isEmpty);

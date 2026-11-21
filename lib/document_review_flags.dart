@@ -14,7 +14,9 @@ final RegExp _urlPattern = RegExp(
   caseSensitive: false,
 );
 final RegExp _emailPattern = RegExp(
-  r'[\p{L}\p{M}\p{N}._%+-]+@[\p{L}\p{M}\p{N}.-]+'
+  // The local part accepts the RFC 5322 atom punctuation, not just the
+  // commonly typed subset, so a valid address is never silently unflagged.
+  r"[\p{L}\p{M}\p{N}.!#$%&'*+/=?^_`{|}~-]+@[\p{L}\p{M}\p{N}.-]+"
   r'(?:\.[\p{L}\p{M}\p{N}.-]+)+',
   unicode: true,
   caseSensitive: false,
