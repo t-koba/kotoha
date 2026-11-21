@@ -1243,12 +1243,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                     liveRegion: true,
                     label: status,
                     excludeSemantics: true,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: Text(status, key: const ValueKey('find-status')),
-                      ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Text(status, key: const ValueKey('find-status')),
                     ),
                   ),
                 ),

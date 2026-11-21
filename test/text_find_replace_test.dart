@@ -1209,6 +1209,91 @@ void main() {
     },
   );
 
+  testWidgets('find status wraps at large text on a narrow viewport', (
+    tester,
+  ) async {
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    tester.binding.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(
+      tester.binding.platformDispatcher.clearTextScaleFactorTestValue,
+    );
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const KotohaApp());
+
+    await tester.enterText(
+      find.byKey(const ValueKey('source-text')),
+      'cat dog cat',
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    final query = find.byKey(const ValueKey('find-query'));
+    await tester.enterText(query, 'cat');
+    await tester.pumpAndSettle();
+    await _tapVisible(tester, find.byKey(const ValueKey('replace-selection')));
+
+    const statusText = 'Select an exact match before replacing.';
+    final status = find.byKey(const ValueKey('find-status'));
+    expect(status, findsOneWidget);
+    expect(tester.widget<Text>(status).data, statusText);
+
+    var reachedRow = false;
+    var fittedBoxes = 0;
+    RenderBox? flexibleBox;
+    status.evaluate().single.visitAncestorElements((element) {
+      final widget = element.widget;
+      if (widget is FittedBox) fittedBoxes++;
+      if (widget is Flexible && flexibleBox == null) {
+        final renderObject = element.renderObject;
+        if (renderObject is RenderBox) flexibleBox = renderObject;
+      }
+      if (widget is Row) {
+        reachedRow = true;
+        return false;
+      }
+      return true;
+    });
+    expect(reachedRow, isTrue);
+    expect(fittedBoxes, 0, reason: 'status must wrap, not scale down');
+    final slot = flexibleBox;
+    expect(slot, isNotNull);
+
+    final paragraph = tester.renderObject<RenderParagraph>(status);
+    expect(paragraph.textScaler.scale(10), 20);
+    expect(
+      paragraph.size.width,
+      lessThanOrEqualTo(slot!.size.width - 8),
+      reason: 'status width ${paragraph.size.width}, slot ${slot.size.width}',
+    );
+    expect(
+      paragraph.size.height,
+      greaterThan(paragraph.preferredLineHeight),
+      reason:
+          'status height ${paragraph.size.height}, '
+          'one scaled line ${paragraph.preferredLineHeight}',
+    );
+
+    final handle = tester.ensureSemantics();
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel(statusText))
+          .getSemanticsData()
+          .flagsCollection
+          .isLiveRegion,
+      isTrue,
+    );
+    handle.dispose();
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('find status is exposed to semantics clients', (tester) async {
     tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
     addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
