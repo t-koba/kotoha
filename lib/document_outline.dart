@@ -167,6 +167,11 @@ class _DocumentOutlineState extends State<DocumentOutline> {
   late _OutlineData _data;
   bool _reviewOnly = false;
 
+  /// Increases whenever a new source snapshot is parsed. Encoding it in each
+  /// row's key remounts rows on a source change, so an in-progress recognizer
+  /// keeps the callback (and stale-data guard) of the generation it started in.
+  int _generation = 0;
+
   @override
   void initState() {
     super.initState();
@@ -184,6 +189,7 @@ class _DocumentOutlineState extends State<DocumentOutline> {
     final text = widget.controller.text;
     if (!identical(text, _data.text) && text != _data.text) {
       _data = _parseOutline(text);
+      _generation++;
     }
   }
 
@@ -198,7 +204,10 @@ class _DocumentOutlineState extends State<DocumentOutline> {
   void _handleControllerChanged() {
     final text = widget.controller.text;
     if (identical(text, _data.text) || text == _data.text) return;
-    setState(() => _data = _parseOutline(text));
+    setState(() {
+      _data = _parseOutline(text);
+      _generation++;
+    });
   }
 
   void _handleSearchChanged() => setState(() {});
@@ -295,23 +304,26 @@ class _DocumentOutlineState extends State<DocumentOutline> {
             itemCount: min(matches.length, maxVisibleOutlineBlocks),
             itemBuilder: (context, index) {
               final (originalIndex, block) = matches[index];
-              return _OutlineEntry(
-                label: data.labelAt(originalIndex),
-                flags: data.flagsAt(originalIndex),
-                index: originalIndex,
-                onActivate: () {
-                  // A source change since this build leaves the entry's block
-                  // offsets stale; ignore the activation instead of applying
-                  // them to different text.
-                  if (!identical(_data, data)) return;
-                  widget.controller.selection = TextSelection(
-                    baseOffset: block.start,
-                    extentOffset: block.end,
-                  );
-                  widget.sourceFocusNode.requestFocus();
-                },
-                emptyLabel: strings.documentOutlineUntitled,
-                strings: strings,
+              return KeyedSubtree(
+                key: ValueKey('outline-generation-$_generation-$index'),
+                child: _OutlineEntry(
+                  label: data.labelAt(originalIndex),
+                  flags: data.flagsAt(originalIndex),
+                  index: originalIndex,
+                  onActivate: () {
+                    // A source change since this build leaves the entry's block
+                    // offsets stale; ignore the activation instead of applying
+                    // them to different text.
+                    if (!identical(_data, data)) return;
+                    widget.controller.selection = TextSelection(
+                      baseOffset: block.start,
+                      extentOffset: block.end,
+                    );
+                    widget.sourceFocusNode.requestFocus();
+                  },
+                  emptyLabel: strings.documentOutlineUntitled,
+                  strings: strings,
+                ),
               );
             },
           ),

@@ -1181,4 +1181,42 @@ void main() {
     expect(controller.text, 'x');
     expect(controller.selection, const TextSelection.collapsed(offset: 1));
   });
+
+  testWidgets(
+    'an outline tap stays put when a same-length source change rebuilds the row',
+    (tester) async {
+      tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+      addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+      const initial = '## First\n## Second';
+      const updated = '## First\n## Other!';
+      final controller = await _pumpApp(
+        tester,
+        locale: const Locale('en'),
+        source: initial,
+      );
+
+      final entry = find.byKey(const ValueKey('document-block-1'));
+      expect(entry, findsOneWidget);
+      // The replacement keeps the length and the row index, so a recognizer
+      // retargeted by the rebuild would apply the new block's 9-18 range.
+      expect(updated.length, initial.length);
+      final gesture = await tester.startGesture(tester.getCenter(entry));
+      controller.value = TextEditingValue(
+        text: updated,
+        selection: const TextSelection.collapsed(offset: 1),
+      );
+      // Pump a frame so the new row renders while the pointer is still down:
+      // this is what updates an existing ListTile's recognizer callback.
+      await tester.pump();
+      expect(find.text('Other!'), findsOneWidget);
+      expect(entry, findsOneWidget);
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(controller.text, updated);
+      expect(controller.selection, const TextSelection.collapsed(offset: 1));
+      expect(entry, findsOneWidget);
+    },
+  );
 }
