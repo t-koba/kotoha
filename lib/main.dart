@@ -1441,6 +1441,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         readOnly: !_appResumed,
         enableIMEPersonalizedLearning: _allowImePersonalizedLearning,
         textDirection: firstStrongDirection(value.text),
+        minLines: 1,
+        maxLines: 2,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,

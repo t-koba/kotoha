@@ -158,6 +158,27 @@ void main() {
     }
   });
 
+  testWidgets('editing a restored language label keeps its line break', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final draft = restoredDraft().copyWith(sourceLanguage: 'A\nB');
+      picker.pick = () async => _File(formatWorkspaceExport(draft));
+      await open(tester);
+      await restore(tester);
+
+      expect(textOf(tester, 'source-language'), 'A\nB');
+      final language = field('source-language');
+      await tester.ensureVisible(language);
+      await tester.enterText(language, 'A\nBC');
+
+      expect(textOf(tester, 'source-language'), 'A\nBC');
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('restores a v2 document saved with CRLF line endings', (
     tester,
   ) async {
