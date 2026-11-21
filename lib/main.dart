@@ -115,6 +115,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   int _findCount = 0;
   _FindStatus _findStatus = _FindStatus.none;
   String _findStatusQuery = '';
+  // Removing a found card clears find feedback. Remember its query while the
+  // panel stays open so Escape can still hand focus to a stable widget.
+  String? _removedFoundQuery;
   String _findQueryText = '';
   bool _findSubmitWasComposing = false;
   final FocusNode _addTranslationFocusNode = FocusNode();
@@ -122,6 +125,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   final FocusNode _imePersonalizedLearningFocusNode = FocusNode();
   final FocusNode _findQueryFocusNode = FocusNode();
   final FocusNode _findTargetFocusNode = FocusNode();
+  final FocusNode _findToggleFocusNode = FocusNode();
   final FocusScopeNode _workspaceFocusNode = FocusScopeNode(
     skipTraversal: true,
   );
@@ -191,6 +195,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     _imePersonalizedLearningFocusNode.dispose();
     _findQueryFocusNode.dispose();
     _findTargetFocusNode.dispose();
+    _findToggleFocusNode.dispose();
     _workspaceFocusNode.dispose();
     for (final translation in _translations) {
       translation.dispose();
@@ -745,6 +750,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final removed = _translations[currentIndex];
     setState(() {
       if (identical(_selectedFindTarget, removed.text)) {
+        if (_findReplaceOpen &&
+            _findStatus == _FindStatus.found &&
+            _findStatusQuery == _findQuery.text) {
+          _removedFoundQuery = _findQuery.text;
+        }
         _selectedFindTarget = null;
         _clearFindFeedback();
       }
@@ -947,6 +957,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                           message: strings.findReplaceShortcut,
                           child: OutlinedButton.icon(
                             key: const ValueKey('find-replace-toggle'),
+                            focusNode: _findToggleFocusNode,
                             onPressed: _toggleFindReplace,
                             icon: const Icon(Icons.search),
                             label: Text(strings.findReplaceTitle),
@@ -1079,6 +1090,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final text = _findQuery.text;
     if (text == _findQueryText) return;
     _findQueryText = text;
+    _removedFoundQuery = null;
     if (_findStatus == _FindStatus.none &&
         _findStatusQuery.isEmpty &&
         _findCount == 0) {
@@ -1089,6 +1101,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _toggleFindReplace() {
     if (!_appResumed) return;
+    _removedFoundQuery = null;
     setState(() => _findReplaceOpen = !_findReplaceOpen);
   }
 
@@ -1124,10 +1137,31 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _closeFindReplace() {
     if (!_appResumed || !_findReplaceOpen) return;
+    final hasCurrentFind =
+        _findStatus == _FindStatus.found && _findStatusQuery == _findQuery.text;
+    final hasRemovedFind =
+        _selectedFindTarget == null &&
+        _removedFoundQuery != null &&
+        _removedFoundQuery == _findQuery.text;
+    final handOffFocus = hasCurrentFind || hasRemovedFind;
+    final foundEditor = handOffFocus
+        ? _findTargetEditorFocusNode(_findTargetController())
+        : null;
     _findQueryFocusNode.unfocus(
       disposition: UnfocusDisposition.previouslyFocusedChild,
     );
     setState(() => _findReplaceOpen = false);
+    if (!handOffFocus) return;
+    _removedFoundQuery = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _findReplaceOpen) return;
+      final context = foundEditor?.context;
+      if (context != null && context.mounted) {
+        foundEditor!.requestFocus();
+      } else {
+        _findToggleFocusNode.requestFocus();
+      }
+    });
   }
 
   TextEditingController? _currentFindTarget(TextEditingController? candidate) {
@@ -1141,6 +1175,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   TextEditingController? _findTargetController() =>
       _currentFindTarget(_selectedFindTarget);
+
+  FocusNode? _findTargetEditorFocusNode(TextEditingController? controller) {
+    if (controller == null) return null;
+    if (identical(controller, _sourceText)) return _sourceTextFocusNode;
+    for (final fields in _translations) {
+      if (identical(fields.text, controller)) return fields.textFocusNode;
+    }
+    return null;
+  }
 
   void _findOnEnter(bool composing) {
     if (composing || !_appResumed || _findQuery.text.isEmpty) return;
