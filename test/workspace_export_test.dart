@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
@@ -209,6 +210,77 @@ void main() {
     final output = formatWorkspaceExport(draft);
     expect(output, isNot(contains('\u0000')));
     expect(parseWorkspaceExport(output).toJson(), draft.toJson());
+  });
+
+  test('unpaired surrogates round-trip with identical code units', () {
+    final high = String.fromCharCode(0xD800);
+    final low = String.fromCharCode(0xDC00);
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: '$high-language',
+      sourceText: '$high A $low ${high}9 🌏',
+      translations: [
+        ManualTranslationDraft(targetLanguage: 'en', text: '$low 1$high'),
+        const ManualTranslationDraft(targetLanguage: 'fr', text: '🌏 ok'),
+      ],
+    );
+
+    final output = formatWorkspaceExport(draft);
+    final restored = parseWorkspaceExport(utf8.decode(utf8.encode(output)));
+    expect(restored.sourceLanguage.codeUnits, draft.sourceLanguage.codeUnits);
+    expect(restored.sourceText.codeUnits, draft.sourceText.codeUnits);
+    for (var index = 0; index < draft.translations.length; index++) {
+      expect(
+        restored.translations[index].targetLanguage.codeUnits,
+        draft.translations[index].targetLanguage.codeUnits,
+      );
+      expect(
+        restored.translations[index].text.codeUnits,
+        draft.translations[index].text.codeUnits,
+      );
+    }
+  });
+
+  test('unpaired surrogates are escaped as four uppercase hex digits', () {
+    final high = String.fromCharCode(0xD800);
+    final low = String.fromCharCode(0xDFFF);
+    final output = formatWorkspaceExport(
+      TextWorkspaceDraft(
+        sourceLanguage: high,
+        sourceText: '$high A $low',
+        translations: [
+          ManualTranslationDraft(targetLanguage: low, text: '$low$high'),
+        ],
+      ),
+    );
+
+    expect(output, contains(r'\uD800'));
+    expect(output, contains(r'\uDFFF'));
+    expect(output.codeUnits.every((unit) => unit < 0x80), isTrue);
+    expect(utf8.decode(utf8.encode(output)), output);
+    expect(parseWorkspaceExport(output).sourceText.codeUnits, [
+      0xD800,
+      0x20,
+      0x41,
+      0x20,
+      0xDFFF,
+    ]);
+  });
+
+  test('rejects truncated and non-hex unicode escapes', () {
+    final valid = formatWorkspaceExport(_draft());
+    final documents = <String>[
+      valid.replaceFirst('🌏', r'\u'),
+      valid.replaceFirst('🌏', r'\uD8'),
+      valid.replaceFirst('🌏', r'\uD80Z'),
+      valid.replaceFirst('🌏', r'\uZZZZ'),
+    ];
+    for (final document in documents) {
+      expect(
+        () => parseWorkspaceExport(document),
+        throwsFormatException,
+        reason: document,
+      );
+    }
   });
 
   test('accepts CRLF-normalized exports without changing field content', () {

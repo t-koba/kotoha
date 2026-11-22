@@ -6,12 +6,51 @@ const String workspaceExportHeader = 'Kotoha workspace export v2';
 // Every field is escaped onto one line, so no field can mimic a structural
 // line. This is what makes the format reversible: unlike v1, a verbatim text
 // body cannot split into extra fields when parsed.
-String _escape(String value) => value
-    .replaceAll('\\', '\\\\')
-    .replaceAll('\r', '\\r')
-    .replaceAll('\n', '\\n')
-    // A raw NUL terminates CF_UNICODETEXT on Windows, truncating the copy.
-    .replaceAll('\u0000', '\\0');
+String _escape(String value) {
+  final buffer = StringBuffer();
+  for (var index = 0; index < value.length; index++) {
+    final unit = value.codeUnitAt(index);
+    if (unit >= 0xD800 && unit <= 0xDFFF) {
+      final next = index + 1 < value.length ? value.codeUnitAt(index + 1) : 0;
+      if (unit <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) {
+        // A pair is one supplementary character: emit its units unchanged.
+        buffer
+          ..writeCharCode(unit)
+          ..writeCharCode(next);
+        index++;
+      } else {
+        // Unpaired surrogates cannot survive UTF-8 encoding, which replaces
+        // them with U+FFFD. Carry them as fixed-width ASCII escapes instead.
+        buffer.write(
+          '\\u${unit.toRadixString(16).toUpperCase().padLeft(4, '0')}',
+        );
+      }
+      continue;
+    }
+    switch (unit) {
+      case 0x5C:
+        buffer.write('\\\\');
+      case 0x0D:
+        buffer.write('\\r');
+      case 0x0A:
+        buffer.write('\\n');
+      case 0x00:
+        // A raw NUL terminates CF_UNICODETEXT on Windows, truncating the copy.
+        buffer.write('\\0');
+      default:
+        buffer.writeCharCode(unit);
+    }
+  }
+  return buffer.toString();
+}
+
+int? _hexDigit(String character) {
+  final unit = character.codeUnitAt(0);
+  if (unit >= 0x30 && unit <= 0x39) return unit - 0x30;
+  if (unit >= 0x41 && unit <= 0x46) return unit - 0x41 + 10;
+  if (unit >= 0x61 && unit <= 0x66) return unit - 0x61 + 10;
+  return null;
+}
 
 String _unescape(String value) {
   final buffer = StringBuffer();
@@ -34,6 +73,23 @@ String _unescape(String value) {
         buffer.write('\n');
       case '0':
         buffer.write('\u0000');
+      case 'u':
+        if (index + 4 >= value.length) {
+          throw const FormatException(
+            'Incomplete \\u escape in workspace export.',
+          );
+        }
+        var codeUnit = 0;
+        for (var digit = 0; digit < 4; digit++) {
+          final hex = _hexDigit(value[++index]);
+          if (hex == null) {
+            throw const FormatException(
+              'Invalid \\u escape in workspace export.',
+            );
+          }
+          codeUnit = codeUnit * 16 + hex;
+        }
+        buffer.writeCharCode(codeUnit);
       default:
         throw const FormatException('Unknown escape in workspace export.');
     }
