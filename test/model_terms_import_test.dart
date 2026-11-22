@@ -592,14 +592,17 @@ void main() {
             ..add(first)
             ..add(second);
           final resources = m['resources'] as Map<String, Object?>;
+          final size = termsFile['size_bytes'] as int;
+          // Keep the mutated manifest otherwise valid: both canonically
+          // equivalent paths are declared, hashed, covered and counted. Without
+          // the ASCII-only rule this manifest succeeds and reads both terms
+          // files, so the assertion below genuinely guards that rule.
           return {
             ...m,
             'files': files,
             'resources': {
               ...resources,
-              'storage_bytes':
-                  (resources['storage_bytes'] as int) +
-                  (termsFile['size_bytes'] as int),
+              'storage_bytes': (resources['storage_bytes'] as int) + size,
             },
             'terms': [
               {
@@ -611,6 +614,15 @@ void main() {
                 'required_attributions': ['Attribution X'],
                 'covered_files': ['weights.bin', nfc],
               },
+              {
+                'id': 'test-license-nfd',
+                'text_file': nfd,
+                'text_sha256': termsFile['sha256'],
+                'consent': 'explicit',
+                'usage_requirements': ['Use locally'],
+                'required_attributions': ['Attribution X'],
+                'covered_files': ['weights.bin', nfd],
+              },
             ],
           };
         },
@@ -618,7 +630,13 @@ void main() {
       final r = reader(manifest, {nfc: terms, nfd: terms});
       await expectLater(
         const ModelTermsImport().run(r, (_) async => true),
-        throwsA(isA<FormatException>()),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Invalid file path',
+          ),
+        ),
       );
       expect(r.requests, ['model_manifest.json']);
     },
