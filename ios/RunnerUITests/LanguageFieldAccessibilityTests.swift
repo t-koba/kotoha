@@ -178,7 +178,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   // Acceptance is keyboard focus on the target field. Software-keyboard visibility
   // is not a reliable proxy in hosted simulators: the field can hold focus and accept
   // typed text while no keyboard element appears in the XCUI tree.
-  private func assertKeyboardFocus(_ id: String) {
+  private func focusWaitResult(_ id: String, timeout: TimeInterval) -> XCTWaiter.Result {
     let focused = NSPredicate { [self] _, _ in
       // Re-resolve on each poll; Flutter can replace the semantics node when the
       // field direction changes from RTL to LTR.
@@ -186,7 +186,11 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       return current.exists && current.hasKeyboardFocus
     }
     let expectation = XCTNSPredicateExpectation(predicate: focused, object: nil)
-    let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
+    return XCTWaiter.wait(for: [expectation], timeout: timeout)
+  }
+
+  private func assertKeyboardFocus(_ id: String) {
+    let result = focusWaitResult(id, timeout: timeout)
     guard result == .completed else {
       // XCTest can stop waiting before a late focus change. Check one fresh
       // snapshot without polling again; focus on the target is the acceptance
@@ -246,10 +250,23 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     return current.label == label && actual == expected
   }
 
-  private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
-    let element = reveal(id)
+  // Locale/scroll rebuilds can replace a target field's native node between
+  // `reveal` and `tap`, leaving the first synthesized tap on a stale frame.
+  // Retry the interaction once with a freshly resolved element, then keep the
+  // same full-budget focus assertion as the acceptance condition.
+  private func focusField(_ id: String) -> XCUIElement {
+    var element = reveal(id)
     element.tap()
+    if focusWaitResult(id, timeout: min(3, timeout)) != .completed {
+      element = reveal(id)
+      element.tap()
+    }
     assertKeyboardFocus(id)
+    return element
+  }
+
+  private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
+    let element = focusField(id)
     // Use the public Paste UI for Arabic: typeText cannot synthesize every Unicode
     // character on an English software keyboard. Only synthetic text; no app test hook.
     UIPasteboard.general.string = "العربية"
@@ -269,9 +286,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     assertField(id, label: label, value: "Latin")
     // Tap the next native field and verify it receives keyboard input. Flutter widget
     // tests separately cover keyboard traversal order; iPhone XCUI has no Tab key API.
-    let destination = reveal(nextID)
-    destination.tap()
-    assertKeyboardFocus(nextID)
+    let destination = focusField(nextID)
     app.typeText("z")
     assertField(nextID, label: nextLabel, value: "z")
     assertField(id, label: label, value: "Latin")
