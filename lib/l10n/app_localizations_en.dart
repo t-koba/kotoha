@@ -316,7 +316,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String modelAllTermsVerified(int count) {
-    return 'All $count declared terms files were verified before review.';
+    return 'Declared terms files verified before review: $count.';
   }
 
   @override

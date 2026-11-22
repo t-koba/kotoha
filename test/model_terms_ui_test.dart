@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/l10n/app_localizations.dart';
+import 'package:kotoha/l10n/app_localizations_en.dart';
 import 'package:kotoha/main.dart';
 
 void main() {
@@ -166,7 +167,7 @@ void main() {
       );
       expect(
         find.textContaining(
-          'All 1 declared terms files were verified',
+          'Declared terms files verified before review: 1',
           findRichText: true,
         ),
         findsOneWidget,
@@ -247,6 +248,18 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
+  });
+
+  test('English terms-verification status uses count-neutral wording', () {
+    final strings = AppLocalizationsEn();
+    expect(
+      strings.modelAllTermsVerified(1),
+      'Declared terms files verified before review: 1.',
+    );
+    expect(
+      strings.modelAllTermsVerified(2),
+      'Declared terms files verified before review: 2.',
+    );
   });
 
   testWidgets('localized review keeps honesty notices', (tester) async {

@@ -222,7 +222,7 @@
   "modelIntegrityOnly": "SHA-256 hashes confirm the files read match the manifest. They do not prove origin, authenticity, or license approval.",
   "modelPackageId": "Package ID: {id}",
   "modelDeclaredPublisher": "Declared publisher (unverified): {publisher}",
-  "modelAllTermsVerified": "All {count} declared terms files were verified before review.",
+  "modelAllTermsVerified": "Declared terms files verified before review: {count}.",
   "modelSessionActive": "Session acceptance recorded (digests only). No model is installed and runtime is not enabled.",
   "@modelPackageId": {
     "description": "Unverified identifier declared in the selected model package.",
