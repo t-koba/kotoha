@@ -1,6 +1,14 @@
 import UIKit
 import XCTest
 
+private extension XCUIElement {
+  // XCTest exposes keyboard focus as an accessibility attribute rather than a
+  // Swift property. Use the same key the failure diagnostics already query.
+  var hasKeyboardFocus: Bool {
+    (value(forKey: "hasKeyboardFocus") as? Bool) ?? false
+  }
+}
+
 // Simulator XCUI tree and synthesized input only: no VoiceOver speech/gestures,
 // physical devices/keyboards, or OS task-switcher thumbnail validation. Widget tests
 // own direction/caret policy and the complete forward/reverse Flutter focus order.
