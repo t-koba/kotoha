@@ -107,6 +107,18 @@ The current first-party [Android Developers page-size guide](https://developer.a
 
 No AAB, `.so`, emulator or device run was inspected locally; the claims above remain external-untrusted until reproduced. The gate for any future engine, OCR or storage native is a release-like AAB-to-per-ABI APK check of every `.so` for LOAD and GNU_RELRO alignment plus `zipalign -P 16 4` and a 16 KB Android 15 emulator run of the real model-load path, recorded for the chosen library. NDK r28 defaults or a changelog's "16 KB aligned" claim do not satisfy this gate without the release artifact check. No dependency, library or model is adopted, downloaded or bundled by recording this gate.
 
+### Offline first-party ELF preflight (evidence only, no adoption)
+
+The documented first-party criteria are now executable locally against a built APK or AAB:
+
+```sh
+python3 tools/android_16kb.py PATH_TO_APK_OR_AAB
+```
+
+This stdlib-only tool opens the ZIP, checks every entry ending in `.so`, parses ELF64 little-endian headers and program headers in memory, prints one `PASS`/`FAIL` line per library with the entry path and numeric values, and exits 0 only when at least one `.so` was found and every `.so` passes. It requires every `PT_LOAD` to have `p_align >= 16384`; for `PT_GNU_RELRO` it requires the end (`p_vaddr + p_memsz`) to be 16 KB aligned only when the RELRO start lies in a writable `PT_LOAD` that has data beyond that end, and passes when RELRO is absent or no such writable LOAD contains it. Truncated, malformed or unsupported objects (including ELF32 and big-endian) and archives with no `.so` fail closed with explicit findings. AAB results are pre-upload evidence only; the release APK must still be checked. A passing report is not Android compliance, a release gate, or evidence of engine adoption; the tool has been exercised only with synthetic ELF fixtures, not a real artifact.
+
+Gates this preflight does NOT cover: zipalign verification (`zipalign -v -c -P 16 4 APK_NAME.apk`), a 16 KB emulator/model-load proof, license closure, and quality checks all remain separate unmet gates.
+
 ## Pinned llama.cpp engine candidate (evidence only, no adoption)
 
 The Android-first route narrows to an exact `ggml-org/llama.cpp` commit `31424b7cf14604ca65a9195123da1413f31c4472`. Its [`LICENSE`](https://raw.githubusercontent.com/ggml-org/llama.cpp/31424b7cf14604ca65a9195123da1413f31c4472/LICENSE) was fetched with receipt `6830a25d6df8611f346786ba376a9397131a706d328988c214c76210511f1cc4`, SHA-256 `94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d`: MIT, copyright 2023-2026 The ggml authors, with the standard include-notice and as-is terms. MIT is an acceptable permissive category under `design/specs/dependency_policy.json`; this establishes the top-level source term, not the full vendored file and transitive dependency closure.
