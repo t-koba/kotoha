@@ -435,7 +435,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String findReplacedCount(int count) {
-    return 'Replaced $count matches.';
+    return 'Replacements made: $count.';
   }
 
   @override

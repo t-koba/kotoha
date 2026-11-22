@@ -342,7 +342,7 @@
   "findMatchFound": "Match found.",
   "findNoMatch": "No match found.",
   "findSelectionMismatch": "Select an exact match before replacing.",
-  "findReplacedCount": "Replaced {count} matches.",
+  "findReplacedCount": "Replacements made: {count}.",
   "@findReplacedCount": {
     "description": "Count of occurrences replaced by the find/replace panel.",
     "placeholders": {

@@ -357,7 +357,7 @@ void main() {
     expect(sourceController.text, 'source keep');
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('find-status'))).data,
-      'Replaced 2 matches.',
+      'Replacements made: 2.',
     );
 
     await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
@@ -398,6 +398,16 @@ void main() {
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('find-status'))).data,
       'No match found.',
+    );
+
+    await _tapVisible(tester, find.byKey(const ValueKey('find-query')));
+    await tester.enterText(find.byKey(const ValueKey('find-query')), 'B');
+    await _tapVisible(tester, find.byKey(const ValueKey('find-replacement')));
+    await tester.enterText(find.byKey(const ValueKey('find-replacement')), 'b');
+    await _tapVisible(tester, find.byKey(const ValueKey('replace-all')));
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('find-status'))).data,
+      'Replacements made: 1.',
     );
     expect(tester.takeException(), isNull);
   });
