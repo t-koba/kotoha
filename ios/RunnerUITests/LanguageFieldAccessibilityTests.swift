@@ -180,7 +180,13 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     let expectation = XCTNSPredicateExpectation(predicate: focused, object: nil)
     let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
     guard result == .completed else {
+      // XCTest can stop waiting before a late focus change. Check one fresh
+      // snapshot without polling again; focus on the target is the acceptance
+      // condition, so an interrupted wait may still be a pass.
       let current = field(id)
+      if current.exists && current.hasKeyboardFocus {
+        return
+      }
       XCTFail("Expected keyboard focus on native field \(id); wait=\(result). "
         + "Post-wait observation: exists=\(current.exists), "
         + "hasKeyboardFocus=\(current.exists && current.hasKeyboardFocus)")
