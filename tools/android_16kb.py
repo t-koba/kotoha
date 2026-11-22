@@ -112,7 +112,6 @@ def check_elf(data: bytes, label: str) -> list[str]:
                 f"writable PT_LOAD[{index}] vaddr={load_start} "
                 f"memsz={load_size} end={load_end} continues past RELRO end"
             )
-        break  # One GNU_RELRO segment is enough for this first-party check.
     return findings
 
 

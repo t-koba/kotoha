@@ -99,6 +99,21 @@ class ElfFixtureTest(unittest.TestCase):
         ])
         self.assertEqual(check_elf(data, "lib/libx.so"), [])
 
+    def test_every_relro_segment_is_checked_in_both_orders(self):
+        load = _load(0, 0x50000, PAGE_SIZE)
+        aligned = _relro(0x10000, 0x4000)
+        violating = _relro(0x30000, 0x1000)
+        for name, segments in (
+            ("violating last", [load, aligned, violating]),
+            ("violating first", [load, violating, aligned]),
+        ):
+            with self.subTest(case=name):
+                findings = check_elf(_elf64(segments), "lib/arm64-v8a/libx.so")
+                self.assertEqual(len(findings), 1, findings)
+                self.assertIn("PT_GNU_RELRO", findings[0])
+                self.assertIn("end=200704", findings[0])
+                self.assertIn("0x31000", findings[0])
+
     def test_absent_relro_passes(self):
         self.assertEqual(check_elf(_elf64([_load(0, 0x20000, PAGE_SIZE)]), "x.so"), [])
 
