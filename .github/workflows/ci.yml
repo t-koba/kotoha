@@ -234,9 +234,8 @@ jobs:
         run: flutter pub get --enforce-lockfile
       - name: Build unsigned iOS app
         run: flutter build ios --debug --no-codesign --no-pub
-      # Native cover callbacks only. The software-keyboard XCUI target is kept
-      # in the sources but is not a CI gate: its keyboard-existence waits vary
-      # between identical hosted runs. Missing profiles still fail.
+      # Native cover callbacks and simulator boot coverage only. The language-field
+      # XCUI runtime gate runs in its own job below. Missing profiles still fail.
       - name: Test iOS privacy callbacks on Simulator
         timeout-minutes: 15
         env:
@@ -255,6 +254,50 @@ jobs:
             -destination "platform=iOS Simulator,OS=$IOS_SIMULATOR_OS,name=$IOS_SIMULATOR_DEVICE" \
             -destination-timeout "$IOS_DESTINATION_TIMEOUT_SECONDS" \
             -only-testing:RunnerTests/RunnerTests \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
+            -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
+            KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
+
+  ios-xcui-runtime:
+    name: iOS language-field XCUI runtime
+    runs-on: macos-latest
+    needs: [design-contracts, flutter-tests]
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+          pub-cache: true
+      - name: Resolve locked dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Build unsigned iOS app
+        run: flutter build ios --debug --no-codesign --no-pub
+      # Execute the XCUI target as a runtime gate. The keyboard-existence waits in
+      # this target were replaced by focus/value assertions on native fields.
+      - name: Run language-field accessibility XCUI tests on Simulator
+        timeout-minutes: 20
+        env:
+          IOS_SIMULATOR_OS: '26.2'
+          IOS_SIMULATOR_DEVICE: iPhone 17
+          IOS_DESTINATION_TIMEOUT_SECONDS: '60'
+          IOS_TEST_TIMEOUT_SECONDS: '120'
+          IOS_AX_TIMEOUT_SECONDS: '10'
+        run: |
+          set -euo pipefail
+          export KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS"
+          xcodebuild test -workspace ios/Runner.xcworkspace -scheme Runner \
+            -configuration Debug -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,OS=$IOS_SIMULATOR_OS,name=$IOS_SIMULATOR_DEVICE" \
+            -destination-timeout "$IOS_DESTINATION_TIMEOUT_SECONDS" \
+            -only-testing:RunnerUITests/LanguageFieldAccessibilityTests \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
             -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
