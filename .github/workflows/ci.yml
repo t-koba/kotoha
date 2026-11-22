@@ -111,6 +111,8 @@ jobs:
         run: python3 -m unittest tools/test_linux_portal_probe.py
       - name: Run Flutter tests
         run: flutter test --no-pub
+      - name: Test configured Replace All budget
+        run: flutter test --no-pub tools/replace_all_budget_test.dart --dart-define=KOTOHA_REPLACE_ALL_OUTPUT_LIMIT=16 --reporter expanded
 
   android:
     name: Android debug build
