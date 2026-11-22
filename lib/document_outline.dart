@@ -359,20 +359,20 @@ class _OutlineEntry extends StatelessWidget {
             DocumentReviewFlag.link => strings.documentReviewLink,
             DocumentReviewFlag.placeholder => strings.documentReviewPlaceholder,
           }).join(', ')}';
+    final displayLabel = label.isEmpty ? emptyLabel : label;
     return Semantics(
       identifier: identifier,
+      label: review == null ? displayLabel : '$displayLabel, $review',
       child: ListTile(
         key: ValueKey(identifier),
         dense: true,
         visualDensity: VisualDensity.compact,
         contentPadding: EdgeInsets.zero,
         title: Text(
-          label.isEmpty ? emptyLabel : label,
+          displayLabel,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          textDirection: firstStrongDirection(
-            label.isEmpty ? emptyLabel : label,
-          ),
+          textDirection: firstStrongDirection(displayLabel),
         ),
         subtitle: review == null
             ? null
