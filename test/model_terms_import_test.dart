@@ -529,6 +529,47 @@ void main() {
       expect(r.requests.contains('weights.bin'), isFalse);
     }
   });
+  test(
+    'case-colliding declared paths are rejected before any package read',
+    () async {
+      const terms = 'fixture terms';
+      final manifest = fullManifest(
+        terms,
+        mutate: (m) {
+          final files = (m['files'] as List)
+              .map((e) => Map<String, Object?>.of(e as Map<String, dynamic>))
+              .toList();
+          final termsFile = files[1];
+          final collision = Map<String, Object?>.of(termsFile);
+          collision['path'] = (termsFile['path'] as String).toUpperCase();
+          files.add(collision);
+          final resources = m['resources'] as Map<String, Object?>;
+          return {
+            ...m,
+            'files': files,
+            'resources': {
+              ...resources,
+              'storage_bytes':
+                  (resources['storage_bytes'] as int) +
+                  (termsFile['size_bytes'] as int),
+            },
+          };
+        },
+      );
+      final r = reader(manifest, {'license/terms.txt': terms});
+      await expectLater(
+        const ModelTermsImport().run(r, (_) async => true),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Duplicate file path',
+          ),
+        ),
+      );
+      expect(r.requests, ['model_manifest.json']);
+    },
+  );
   test('decline gives no approval and never reads weights', () async {
     const terms = 'terms';
     final r = reader(fullManifest(terms), {'license/terms.txt': terms});
