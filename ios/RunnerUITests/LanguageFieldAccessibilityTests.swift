@@ -24,7 +24,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       timeout = try XCTUnwrap(Double(configured), "Invalid accessibility wait budget")
     }
     XCTAssertTrue(timeout > 0 && timeout.isFinite)
-    // Keep OS edit-menu labels deterministic; change the app locale through its UI.
+    // Keep OS edit-menu labels deterministic. English tests use these launch
+    // arguments; the Japanese tests switch the interface language through the UI.
     app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
     app.launch()
   }
@@ -36,13 +37,15 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   // Keep each locale/field sequence within the existing per-test execution budget.
   func testEnglishSourceLanguageField() {
-    selectLocale("English")
+    // Launch arguments already select English. Re-opening the locale menu to
+    // choose the active language was the flaky step; checkField asserts the label.
     checkField("source-language", label: "Source language", nextID: "source-text",
                nextLabel: "Source text")
   }
 
   func testEnglishTargetLanguageField() {
-    selectLocale("English")
+    // Launch arguments already select English. Re-opening the locale menu to
+    // choose the active language was the flaky step; checkField asserts the label.
     checkField("target-language-0", label: "Target language 1", nextID: "translation-text-0",
                nextLabel: "Manual translation 1")
   }
@@ -106,14 +109,36 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     }
   }
 
+  // Only the Japanese tests switch locale through the UI; English tests use the
+  // launch arguments. A locale rebuild can replace the popup nodes between tap
+  // and lookup, so allow one re-tap and then fail with bounded diagnostics.
   private func selectLocale(_ locale: String) {
+    XCTAssertTrue(app.buttons["Interface language"].waitForExistence(timeout: timeout))
+    for _ in 1...2 {
+      // Resolve menu and choice afresh each time: either node may be recycled.
+      app.buttons["Interface language"].tap()
+      let choice = app.descendants(matching: .any).matching(
+        NSPredicate(format: "label == %@", locale)).firstMatch
+      guard choice.waitForExistence(timeout: timeout) else { continue }
+      choice.tap()
+      // Let the locale rebuild dismiss the popup before the next field lookup.
+      // The dismissal wait is short and bounded; assertions keep their full budget.
+      let dismissed = NSPredicate { [self] _, _ in
+        !app.descendants(matching: .any).matching(
+          NSPredicate(format: "label == %@", locale)).firstMatch.exists
+      }
+      _ = XCTWaiter.wait(
+        for: [XCTNSPredicateExpectation(predicate: dismissed, object: nil)],
+        timeout: min(3, timeout))
+      return
+    }
+    // One re-tap only: more attempts would inflate the per-test budget without
+    // new signal. Fail explicitly; never proceed in the wrong locale.
     let menu = app.buttons["Interface language"]
-    XCTAssertTrue(menu.waitForExistence(timeout: timeout))
-    menu.tap()
-    let choice = app.descendants(matching: .any).matching(
-      NSPredicate(format: "label == %@", locale)).firstMatch
-    XCTAssertTrue(choice.waitForExistence(timeout: timeout))
-    choice.tap()
+    let choices = app.descendants(matching: .any).matching(
+      NSPredicate(format: "label == %@", locale)).count
+    XCTFail("Locale choice unavailable; locale=\(locale), taps=2, "
+      + "menuExists=\(menu.exists), menuHittable=\(menu.isHittable), choices=\(choices)")
   }
 
   // A focused empty field can include its example hint in the label. Locate by
@@ -217,9 +242,16 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       if current.exists && current.hasKeyboardFocus {
         return
       }
+      // Scalar-only diagnostics: no UI tree, draft text or picker contents.
+      let targetExists = current.exists
+      let keyboard = app.keyboards.firstMatch
+      let focused = app.descendants(matching: .any).matching(
+        NSPredicate(format: "hasKeyboardFocus == 1")).count
       XCTFail("Expected keyboard focus on native field \(id); wait=\(result). "
-        + "Post-wait observation: exists=\(current.exists), "
-        + "hasKeyboardFocus=\(current.exists && current.hasKeyboardFocus)")
+        + "exists=\(targetExists), hittable=\(targetExists && current.isHittable), "
+        + "frame=\(targetExists ? String(describing: current.frame) : "<absent>"), "
+        + "keyboard=\(keyboard.exists), focusedElements=\(focused), "
+        + "hasKeyboardFocus=\(targetExists && current.hasKeyboardFocus)")
       return
     }
   }
@@ -270,17 +302,17 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   // Locale/scroll rebuilds can replace a target field's native node between
   // `reveal` and `tap`, leaving the first synthesized tap on a stale frame.
-  // Retry the interaction once with a freshly resolved element, then keep the
-  // same full-budget focus assertion as the acceptance condition.
+  // Resolve again immediately before each tap and retry once only: bounded taps
+  // keep the per-test budget, and the full-budget focus assertion is unchanged.
   private func focusField(_ id: String) -> XCUIElement {
-    var element = reveal(id)
-    element.tap()
+    _ = reveal(id)
+    field(id).tap()
     if focusWaitResult(id, timeout: min(3, timeout)) != .completed {
-      element = reveal(id)
-      element.tap()
+      _ = reveal(id)
+      field(id).tap()
     }
     assertKeyboardFocus(id)
-    return element
+    return field(id)
   }
 
   private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
