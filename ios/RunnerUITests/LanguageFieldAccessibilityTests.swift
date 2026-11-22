@@ -146,7 +146,12 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       guard height > 48 else { break }
 
       let midpoint = (top + bottom) / 2
-      let swipeUp = !hasUsableFrame(targetFrame) || targetFrame.midY >= midpoint
+      // A collapsed node still reports a finite origin (for example y=0 when
+      // the field is above the viewport). Use that position to choose the
+      // direction; only a genuinely absent frame defaults to scrolling up.
+      let hasFiniteFrame = targetFrame.origin.x.isFinite && targetFrame.origin.y.isFinite
+        && targetFrame.width.isFinite && targetFrame.height.isFinite
+      let swipeUp = hasFiniteFrame ? targetFrame.midY >= midpoint : true
       let distance = min(240, height * 0.6)
       // Start inside the available region, away from the status bar/window edges.
       let startY = top + height * (swipeUp ? 0.8 : 0.2)
