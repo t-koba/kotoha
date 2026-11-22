@@ -167,6 +167,27 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     return current
   }
 
+  // Acceptance is keyboard focus on the target field. Software-keyboard visibility
+  // is not a reliable proxy in hosted simulators: the field can hold focus and accept
+  // typed text while no keyboard element appears in the XCUI tree.
+  private func assertKeyboardFocus(_ id: String) {
+    let focused = NSPredicate { [self] _, _ in
+      // Re-resolve on each poll; Flutter can replace the semantics node when the
+      // field direction changes from RTL to LTR.
+      let current = field(id)
+      return current.exists && current.hasKeyboardFocus
+    }
+    let expectation = XCTNSPredicateExpectation(predicate: focused, object: nil)
+    let result = XCTWaiter.wait(for: [expectation], timeout: timeout)
+    guard result == .completed else {
+      let current = field(id)
+      XCTFail("Expected keyboard focus on native field \(id); wait=\(result). "
+        + "Post-wait observation: exists=\(current.exists), "
+        + "hasKeyboardFocus=\(current.exists && current.hasKeyboardFocus)")
+      return
+    }
+  }
+
   private func assertField(_ id: String, label: String, value: String) {
     let state = NSPredicate { [self] _, _ in
       // Resolve the identity on each poll; Flutter can replace its semantics node
@@ -214,7 +235,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   private func checkField(_ id: String, label: String, nextID: String, nextLabel: String) {
     let element = reveal(id)
     element.tap()
-    XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
+    assertKeyboardFocus(id)
     // Use the public Paste UI for Arabic: typeText cannot synthesize every Unicode
     // character on an English software keyboard. Only synthetic text; no app test hook.
     UIPasteboard.general.string = "العربية"
@@ -236,7 +257,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     // tests separately cover keyboard traversal order; iPhone XCUI has no Tab key API.
     let destination = reveal(nextID)
     destination.tap()
-    XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
+    assertKeyboardFocus(nextID)
     app.typeText("z")
     assertField(nextID, label: nextLabel, value: "z")
     assertField(id, label: label, value: "Latin")
