@@ -253,6 +253,24 @@ void main() {
     );
   }
 
+  _platformTest(
+    'an overlong ordered marker is not an outline list item',
+    TargetPlatform.macOS,
+    (tester) async {
+      const source = '1234567890. ten\n\n123456789. nine';
+      await _pumpApp(tester, locale: const Locale('en'), source: source);
+      final blocks = parseDocumentBlocks(source);
+      expect(blocks.map((b) => b.kind).toList(), <DocumentBlockKind>[
+        DocumentBlockKind.paragraph,
+        DocumentBlockKind.listItem,
+      ]);
+      expect(find.text('1234567890. ten'), findsOneWidget);
+      expect(find.text('nine'), findsOneWidget);
+      expect(find.text('ten'), findsNothing);
+      expect(find.byKey(const ValueKey('document-block-2')), findsNothing);
+    },
+  );
+
   for (final (locale, title, empty) in [
     (
       const Locale('en'),

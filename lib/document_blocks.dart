@@ -62,9 +62,11 @@ bool hasClosingFence(String source, DocumentBlock block) {
 /// LF and CRLF are line terminators; a lone CR stays in the line's content.
 /// Blank lines are skipped. A leading U+FEFF is ignored when recognizing any
 /// marker but kept in the range. Headings start at the beginning of a line and
-/// list items may be indented; a fence may be indented by at most three ASCII
-/// spaces (0x20). Fenced code swallows any marker-looking lines until its
-/// closing fence or the end of the input.
+/// list items may be indented; an ordered marker is 1..9 ASCII digits followed
+/// by `.` (CommonMark 0.31.2 6.1), and a longer digit run stays paragraph text.
+/// A fence may be indented by at most three ASCII spaces (0x20). Fenced code
+/// swallows any marker-looking lines until its closing fence or the end of the
+/// input.
 List<DocumentBlock> parseDocumentBlocks(String source) {
   final probe = source.startsWith('\uFEFF') ? source.substring(1) : source;
   if (probe.trim().isEmpty) return const <DocumentBlock>[];
@@ -246,6 +248,9 @@ _Heading? _heading(String line) {
   return _Heading(hashes, line.substring(i).trim());
 }
 
+/// Recognizes an unordered marker or an ordered marker of 1..9 ASCII digits
+/// followed by `.`; more than nine digits is not a marker (CommonMark 0.31.2
+/// 6.1). The supported subset does not accept `)` as an ordered delimiter.
 String? _listItem(String line) {
   var i = _skipIndent(line);
   if (i >= line.length) return null;
@@ -257,11 +262,14 @@ String? _listItem(String line) {
     return line.substring(i + 2).trim();
   }
   if (unit >= 0x30 && unit <= 0x39) {
+    var digits = 0;
     while (i < line.length &&
         line.codeUnitAt(i) >= 0x30 &&
         line.codeUnitAt(i) <= 0x39) {
       i++;
+      digits++;
     }
+    if (digits > 9) return null;
     if (i >= line.length || line.codeUnitAt(i) != 0x2E) return null;
     if (i + 1 >= line.length || !_isMarkerSpace(line.codeUnitAt(i + 1))) {
       return null;

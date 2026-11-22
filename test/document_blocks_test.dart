@@ -101,6 +101,31 @@ void main() {
     expect(tabMarker.single.end, 8);
   });
 
+  test('ordered markers accept 1..9 digits but not 10', () {
+    const nine = '123456789. nine';
+    final nineBlocks = parseDocumentBlocks(nine);
+    expect(nineBlocks, hasLength(1));
+    expect(nineBlocks.single.kind, DocumentBlockKind.listItem);
+    expect(nineBlocks.single.level, 0);
+    expect(nineBlocks.single.text, 'nine');
+    expect(nineBlocks.single.start, 0);
+    expect(nineBlocks.single.end, nine.length);
+    expect(
+      nine.substring(nineBlocks.single.start, nineBlocks.single.end),
+      nine,
+    );
+
+    final source = 'First line\n1234567890. ten\nlast line';
+    final blocks = parseDocumentBlocks(source);
+    expect(blocks, hasLength(1));
+    expect(blocks.single.kind, DocumentBlockKind.paragraph);
+    expect(blocks.single.level, 0);
+    expect(blocks.single.text, source);
+    expect(blocks.single.start, 0);
+    expect(blocks.single.end, source.length);
+    expect(source.substring(blocks.single.start, blocks.single.end), source);
+  });
+
   test('fenced code keeps CRLF content normalized and excludes its fences', () {
     final source = '```dart\r\nline 1\r\nline 2\r\n```\r\nAfter';
     final blocks = parseDocumentBlocks(source);
