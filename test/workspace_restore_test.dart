@@ -627,4 +627,35 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets('normalizes surrogate escapes before they reach a text field', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final high = String.fromCharCode(0xD800);
+      final draft = TextWorkspaceDraft(
+        sourceLanguage: 'x$high-y',
+        sourceText: 'body',
+        translations: const [
+          ManualTranslationDraft(targetLanguage: 'en', text: 'text'),
+        ],
+      );
+      picker.pick = () async => _File(formatWorkspaceExport(draft));
+      await open(tester);
+      await restore(tester);
+
+      expect(textOf(tester, 'source-language').codeUnits, [
+        0x78,
+        0xFFFD,
+        0x2D,
+        0x79,
+      ]);
+      expect(textOf(tester, 'source-text'), 'body');
+      expect(textOf(tester, 'target-language-0'), 'en');
+      expect(tester.takeException(), isNull);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 }

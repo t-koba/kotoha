@@ -94,6 +94,32 @@ String _unescape(String value) {
         throw const FormatException('Unknown escape in workspace export.');
     }
   }
+  return _wellFormed(buffer.toString());
+}
+
+/// Editable fields require well-formed UTF-16; Flutter's text layout rejects
+/// lone surrogates. The export format may carry them as ASCII escapes, but a
+/// restored draft replaces each unpaired code unit with U+FFFD.
+String _wellFormed(String value) {
+  final buffer = StringBuffer();
+  for (var index = 0; index < value.length; index++) {
+    final unit = value.codeUnitAt(index);
+    if (unit >= 0xD800 && unit <= 0xDBFF && index + 1 < value.length) {
+      final next = value.codeUnitAt(index + 1);
+      if (next >= 0xDC00 && next <= 0xDFFF) {
+        buffer
+          ..writeCharCode(unit)
+          ..writeCharCode(next);
+        index++;
+        continue;
+      }
+    }
+    if (unit >= 0xD800 && unit <= 0xDFFF) {
+      buffer.writeCharCode(0xFFFD);
+    } else {
+      buffer.writeCharCode(unit);
+    }
+  }
   return buffer.toString();
 }
 

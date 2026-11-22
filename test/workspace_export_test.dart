@@ -212,7 +212,7 @@ void main() {
     expect(parseWorkspaceExport(output).toJson(), draft.toJson());
   });
 
-  test('unpaired surrogates round-trip with identical code units', () {
+  test('unpaired surrogates are replaced with U+FFFD on restore', () {
     final high = String.fromCharCode(0xD800);
     final low = String.fromCharCode(0xDC00);
     final draft = TextWorkspaceDraft(
@@ -226,16 +226,35 @@ void main() {
 
     final output = formatWorkspaceExport(draft);
     final restored = parseWorkspaceExport(utf8.decode(utf8.encode(output)));
-    expect(restored.sourceLanguage.codeUnits, draft.sourceLanguage.codeUnits);
-    expect(restored.sourceText.codeUnits, draft.sourceText.codeUnits);
+    expect(restored.sourceLanguage.codeUnits, [
+      0xFFFD,
+      ...'-language'.codeUnits,
+    ]);
+    expect(restored.sourceText.codeUnits, [
+      0xFFFD,
+      0x20,
+      0x41,
+      0x20,
+      0xFFFD,
+      0x20,
+      0xFFFD,
+      0x39,
+      0x20,
+      0xD83C,
+      0xDF0F,
+    ]);
     for (var index = 0; index < draft.translations.length; index++) {
       expect(
         restored.translations[index].targetLanguage.codeUnits,
-        draft.translations[index].targetLanguage.codeUnits,
+        draft.translations[index].targetLanguage == high
+            ? [0xFFFD]
+            : draft.translations[index].targetLanguage.codeUnits,
       );
       expect(
         restored.translations[index].text.codeUnits,
-        draft.translations[index].text.codeUnits,
+        index == 0
+            ? [0xFFFD, 0x20, 0x31, 0xFFFD]
+            : draft.translations[index].text.codeUnits,
       );
     }
   });
@@ -258,11 +277,11 @@ void main() {
     expect(output.codeUnits.every((unit) => unit < 0x80), isTrue);
     expect(utf8.decode(utf8.encode(output)), output);
     expect(parseWorkspaceExport(output).sourceText.codeUnits, [
-      0xD800,
+      0xFFFD,
       0x20,
       0x41,
       0x20,
-      0xDFFF,
+      0xFFFD,
     ]);
   });
 
