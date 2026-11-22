@@ -103,15 +103,15 @@ def check_elf(data: bytes, label: str) -> list[str]:
         ]
         if not containing:
             continue  # The rule is conditional; no writable LOAD, no finding.
-        index, _, _, load_start, load_size, _ = containing[0]
-        load_end = load_start + load_size
-        if load_end > relro_end and relro_end % PAGE_SIZE:
-            findings.append(
-                f"PT_GNU_RELRO start={relro_start} memsz={relro_size} "
-                f"end={relro_end} (0x{relro_end:x}) is not {PAGE_SIZE}-aligned; "
-                f"writable PT_LOAD[{index}] vaddr={load_start} "
-                f"memsz={load_size} end={load_end} continues past RELRO end"
-            )
+        for index, _, _, load_start, load_size, _ in containing:
+            load_end = load_start + load_size
+            if load_end > relro_end and relro_end % PAGE_SIZE:
+                findings.append(
+                    f"PT_GNU_RELRO start={relro_start} memsz={relro_size} "
+                    f"end={relro_end} (0x{relro_end:x}) is not {PAGE_SIZE}-aligned; "
+                    f"writable PT_LOAD[{index}] vaddr={load_start} "
+                    f"memsz={load_size} end={load_end} continues past RELRO end"
+                )
     return findings
 
 

@@ -99,6 +99,31 @@ class ElfFixtureTest(unittest.TestCase):
         ])
         self.assertEqual(check_elf(data, "lib/libx.so"), [])
 
+    def test_every_containing_writable_load_is_checked_in_both_orders(self):
+        ending_at_relro = _load(0x10000, 0x11000, PAGE_SIZE)  # ends at 0x21000
+        continuing_past = _load(0x10000, 0x30000, PAGE_SIZE)  # ends at 0x40000
+        relro = _relro(0x20000, 0x1000)  # end 0x21000, not 16 KB-aligned
+        for name, segments, index in (
+            ("continuing load last", [ending_at_relro, continuing_past, relro], 1),
+            ("continuing load first", [continuing_past, ending_at_relro, relro], 0),
+        ):
+            with self.subTest(case=name):
+                findings = check_elf(_elf64(segments), "lib/arm64-v8a/libx.so")
+                self.assertEqual(len(findings), 1, findings)
+                self.assertIn("PT_GNU_RELRO", findings[0])
+                self.assertIn("0x21000", findings[0])
+                self.assertIn(f"PT_LOAD[{index}]", findings[0])
+                self.assertIn("memsz=196608", findings[0])
+                self.assertIn("end=262144", findings[0])
+
+    def test_overlapping_writable_loads_ending_at_aligned_relro_pass(self):
+        data = _elf64([
+            _load(0x10000, 0x14000, PAGE_SIZE),  # ends at aligned RELRO end 0x24000
+            _load(0x20000, 0x4000, PAGE_SIZE),   # same aligned end
+            _relro(0x20000, 0x4000),             # end 0x24000, 16 KB-aligned
+        ])
+        self.assertEqual(check_elf(data, "lib/libx.so"), [])
+
     def test_every_relro_segment_is_checked_in_both_orders(self):
         load = _load(0, 0x50000, PAGE_SIZE)
         aligned = _relro(0x10000, 0x4000)
@@ -199,6 +224,24 @@ class ArchivePreflightTest(unittest.TestCase):
             self.assertTrue(lines[0].startswith(f"PASS {path}::"))
             self.assertIn(f"FAIL {path}::lib/arm64-v8a/libbad.so", lines[1])
             self.assertIn("p_align=4096", lines[1])
+
+    def test_overlapping_writable_load_fails_from_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = _archive(temporary, "release.apk", {
+                "lib/arm64-v8a/libx.so": _elf64([
+                    _load(0x10000, 0x11000, PAGE_SIZE),
+                    _load(0x10000, 0x30000, PAGE_SIZE),  # continues past RELRO
+                    _relro(0x20000, 0x1000),
+                ]),
+            })
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = main([str(path)])
+            self.assertEqual(code, 1)
+            lines = output.getvalue().splitlines()
+            self.assertEqual(len(lines), 1)
+            self.assertIn(f"FAIL {path}::lib/arm64-v8a/libx.so", lines[0])
+            self.assertIn("PT_LOAD[1]", lines[0])
 
     def test_no_shared_object_fails_closed(self):
         with tempfile.TemporaryDirectory() as temporary:
