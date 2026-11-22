@@ -65,27 +65,39 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     source.tap()
     app.typeText("unsaved source")
     for round in 1...2 {
-      let importButton = app.buttons["Import text or Markdown"]
-      if !importButton.isHittable { app.swipeDown() }
-      XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
-      let beforeTap = "enabled=\(importButton.isEnabled), hittable=\(importButton.isHittable)"
-      importButton.tap()
-      let cancel = app.buttons["Cancel"]
-      guard cancel.waitForExistence(timeout: timeout) else {
+      // A scroll/locale rebuild can replace the native button node between
+      // discovery and tap. Re-resolve it on each bounded attempt; the system
+      // picker's Cancel button remains the presentation assertion.
+      var presented = false
+      var diagnostics = ""
+      for attempt in 1...2 {
+        let importButton = app.buttons["Import text or Markdown"]
+        if !importButton.isHittable { app.swipeDown() }
+        XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
+        let beforeTap = "enabled=\(importButton.isEnabled), hittable=\(importButton.isHittable)"
+        importButton.tap()
+        let cancel = app.buttons["Cancel"]
+        if cancel.waitForExistence(timeout: timeout) {
+          presented = true
+          break
+        }
         // Bounded state only: never log picker contents, UI trees or draft text.
         let importerExists = importButton.exists
         let errorNotice = app.descendants(matching: .any).matching(NSPredicate(
           format: "label == %@",
           "Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.")).firstMatch.exists
-        XCTFail("System document picker must be presented; round=\(round), "
-          + "beforeTap=[\(beforeTap)], importerExists=\(importerExists), "
+        diagnostics = "tapAttempt=\(attempt), beforeTap=[\(beforeTap)], "
+          + "importerExists=\(importerExists), "
           + "enabled=\(importerExists && importButton.isEnabled), "
           + "hittable=\(importerExists && importButton.isHittable), errorNotice=\(errorNotice), "
           + "alerts=\(app.alerts.count), cancelButtons=\(app.buttons.matching(identifier: "Cancel").count), "
-          + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count)")
+          + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count)"
+      }
+      guard presented else {
+        XCTFail("System document picker must be presented; round=\(round), \(diagnostics)")
         return
       }
-      cancel.tap()
+      app.buttons["Cancel"].tap()
       // Keep verification independent of the editor's current scroll position.
       // If XCTest has dropped the offscreen field node, reveal it before the
       // unchanged exact draft-value assertion.
@@ -146,12 +158,13 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       guard height > 48 else { break }
 
       let midpoint = (top + bottom) / 2
-      // A collapsed node still reports a finite origin (for example y=0 when
-      // the field is above the viewport). Use that position to choose the
-      // direction; only a genuinely absent frame defaults to scrolling up.
-      let hasFiniteFrame = targetFrame.origin.x.isFinite && targetFrame.origin.y.isFinite
-        && targetFrame.width.isFinite && targetFrame.height.isFinite
-      let swipeUp = hasFiniteFrame ? targetFrame.midY >= midpoint : true
+      // A usable frame tells us which way to scroll. A collapsed node reports
+      // (0, 0, 0, 0) both above and below the viewport, so its origin cannot
+      // choose a direction: alternate two-swipe blocks instead of repeatedly
+      // pushing farther past the field in one direction.
+      let swipeUp = hasUsableFrame(targetFrame)
+        ? targetFrame.midY >= midpoint
+        : (swipes / 2).isMultiple(of: 2)
       let distance = min(240, height * 0.6)
       // Start inside the available region, away from the status bar/window edges.
       let startY = top + height * (swipeUp ? 0.8 : 0.2)
