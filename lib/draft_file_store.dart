@@ -56,7 +56,12 @@ class DraftFileStore {
     try {
       final bytes = await _backend.read(_name);
       if (bytes != null) return Uint8List.fromList(bytes);
-      if (await _backend.read(_stagingName) == null) return null;
+      final staging = await _backend.read(_stagingName);
+      // A save can move staging to committed between the two observations.
+      // Recheck the destination before deciding between absence and pending.
+      final committed = await _backend.read(_name);
+      if (committed != null) return Uint8List.fromList(committed);
+      if (staging == null) return null;
     } catch (_) {
       throw const DraftFileStoreException(DraftFileFailure.read);
     }

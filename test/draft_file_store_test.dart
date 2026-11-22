@@ -24,6 +24,7 @@ class MemoryFileBackend implements DraftFileBackend {
   bool failNextWriteStagingGeneric = false;
   bool failNextRemoveStaging = false;
   int removeStagingCalls = 0;
+  Future<void> Function(String name)? beforeRead;
 
   void seed(String name, Uint8List bytes) {
     _files[name] = Uint8List.fromList(bytes);
@@ -32,6 +33,8 @@ class MemoryFileBackend implements DraftFileBackend {
   @override
   Future<Uint8List?> read(String name) async {
     if (failRead) throw StateError('synthetic read failure');
+    final hook = beforeRead;
+    if (hook != null) await hook(name);
     final bytes = _files[name];
     return bytes == null ? null : Uint8List.fromList(bytes);
   }
@@ -123,6 +126,23 @@ void main() {
       backend.seed(staging, bytesA);
 
       await expectLater(store.load(), fails(DraftFileFailure.savePending));
+    },
+  );
+
+  test(
+    'load rechecks committed bytes when staging commits during the read',
+    () async {
+      backend.seed(staging, bytesA);
+      var committed = false;
+      backend.beforeRead = (readName) async {
+        if (readName == staging && !committed) {
+          committed = true;
+          await backend.commitReplace(staging, name);
+        }
+      };
+
+      expect(await store.load(), orderedEquals(bytesA));
+      expect(await backend.read(staging), isNull);
     },
   );
 
