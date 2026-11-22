@@ -534,7 +534,10 @@ bool _safePath(String path) {
   if (path.isEmpty || path.startsWith('/') || path.contains('\\')) {
     return false;
   }
-  if (path.codeUnits.any((unit) => unit < 0x20) ||
+  // Deliberately ASCII-only: default APFS/macOS and Windows compare names
+  // case- and normalization-insensitively, so canonically equivalent Unicode
+  // spellings can collapse onto one on-disk entry.
+  if (path.codeUnits.any((unit) => unit < 0x20 || unit > 0x7e) ||
       path.contains(RegExp(r'[<>:"|?*]'))) {
     return false;
   }

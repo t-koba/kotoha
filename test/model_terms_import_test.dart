@@ -570,6 +570,59 @@ void main() {
       expect(r.requests, ['model_manifest.json']);
     },
   );
+  test(
+    'non-ASCII declared paths are rejected before any package read',
+    () async {
+      const terms = 'fixture terms';
+      final nfc = 'license/caf\u00e9.txt';
+      final nfd = 'license/cafe\u0301.txt';
+      final manifest = fullManifest(
+        terms,
+        mutate: (m) {
+          final files = (m['files'] as List)
+              .map((e) => Map<String, Object?>.of(e as Map<String, dynamic>))
+              .toList();
+          final termsFile = files[1];
+          final first = Map<String, Object?>.of(termsFile);
+          final second = Map<String, Object?>.of(termsFile);
+          first['path'] = nfc;
+          second['path'] = nfd;
+          files
+            ..removeAt(1)
+            ..add(first)
+            ..add(second);
+          final resources = m['resources'] as Map<String, Object?>;
+          return {
+            ...m,
+            'files': files,
+            'resources': {
+              ...resources,
+              'storage_bytes':
+                  (resources['storage_bytes'] as int) +
+                  (termsFile['size_bytes'] as int),
+            },
+            'terms': [
+              {
+                'id': 'test-license',
+                'text_file': nfc,
+                'text_sha256': termsFile['sha256'],
+                'consent': 'explicit',
+                'usage_requirements': ['Use locally'],
+                'required_attributions': ['Attribution X'],
+                'covered_files': ['weights.bin', nfc],
+              },
+            ],
+          };
+        },
+      );
+      final r = reader(manifest, {nfc: terms, nfd: terms});
+      await expectLater(
+        const ModelTermsImport().run(r, (_) async => true),
+        throwsA(isA<FormatException>()),
+      );
+      expect(r.requests, ['model_manifest.json']);
+    },
+  );
   test('decline gives no approval and never reads weights', () async {
     const terms = 'terms';
     final r = reader(fullManifest(terms), {'license/terms.txt': terms});

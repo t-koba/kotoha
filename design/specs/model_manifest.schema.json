@@ -25,7 +25,7 @@
           "path": {
             "type": "string",
             "minLength": 1,
-            "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+            "description": "ASCII-onlyの相対パス。区切り・大文字小文字・正規化・OS上の安全性を取り込み時に検査する。"
           },
           "role": {
             "enum": [
@@ -254,7 +254,7 @@
           "text_file": {
             "type": "string",
             "minLength": 1,
-            "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+            "description": "ASCII-onlyの相対パス。区切り・大文字小文字・正規化・OS上の安全性を取り込み時に検査する。"
           },
           "text_sha256": {
             "type": "string",
@@ -284,7 +284,7 @@
             "items": {
               "type": "string",
               "minLength": 1,
-              "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+              "description": "ASCII-onlyの相対パス。区切り・大文字小文字・正規化・OS上の安全性を取り込み時に検査する。"
             },
             "minItems": 1,
             "uniqueItems": true
