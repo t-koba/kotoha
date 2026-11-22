@@ -145,6 +145,14 @@
   "@restoreWorkspaceChangedNotice": {
     "description": "復元中に作業内容が変更されたときの案内。編集内容は保持され、再試行を促す。"
   },
+  "restoreWorkspaceSurrogatesTitle": "エクスポート内の孤立したサロゲート",
+  "@restoreWorkspaceSurrogatesTitle": {
+    "description": "編集用に対になっていないUTF-16サロゲートを正規化する前に表示する注意書きのタイトル。"
+  },
+  "restoreWorkspaceSurrogatesQuestion": "このエクスポートには対になっていないUTF-16サロゲートが含まれています。編集前にU+FFFDへ置き換えます。エクスポートしたファイルは変更されません。続けますか？",
+  "@restoreWorkspaceSurrogatesQuestion": {
+    "description": "編集時のみU+FFFDへ置き換えることと、エクスポートしたファイルは変更されないことを説明する確認文。"
+  },
   "exportWorkspace": "作業内容を書き出す",
   "@exportWorkspace": {
     "description": "テキスト作業全体を一つのファイルに書き出す操作のラベル。"

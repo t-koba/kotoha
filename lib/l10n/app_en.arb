@@ -145,6 +145,14 @@
   "@restoreWorkspaceChangedNotice": {
     "description": "Notice shown when the workspace changed during restore; edits were kept and restore must be retried."
   },
+  "restoreWorkspaceSurrogatesTitle": "Unpaired characters in export",
+  "@restoreWorkspaceSurrogatesTitle": {
+    "description": "Title of the disclosure shown before normalizing unpaired UTF-16 code units for editing."
+  },
+  "restoreWorkspaceSurrogatesQuestion": "This export contains unpaired UTF-16 code units. They will be replaced with U+FFFD before editing; the exported file is unchanged. Continue?",
+  "@restoreWorkspaceSurrogatesQuestion": {
+    "description": "Question explaining editor-only U+FFFD normalization and that the exported file is unchanged."
+  },
   "exportWorkspace": "Export workspace",
   "@exportWorkspace": {
     "description": "Label for exporting the whole text workspace to one file."

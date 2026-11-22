@@ -135,6 +135,18 @@ void main() {
     ],
   );
 
+  TextWorkspaceDraft surrogateDraft() {
+    final high = String.fromCharCode(0xD800);
+    return TextWorkspaceDraft(
+      sourceLanguage: 'x$high-y',
+      sourceText: 'first 🌏\nsecond',
+      translations: [
+        const ManualTranslationDraft(targetLanguage: 'en', text: 'plain'),
+        ManualTranslationDraft(targetLanguage: 'fr', text: '$high-tail'),
+      ],
+    );
+  }
+
   testWidgets('restores every field from a v2 document', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
@@ -628,22 +640,76 @@ void main() {
     }
   });
 
-  testWidgets('normalizes surrogate escapes before they reach a text field', (
+  for (final (locale, title, question, replaceTitle, success) in [
+    (
+      const Locale('en'),
+      'Unpaired characters in export',
+      'This export contains unpaired UTF-16 code units. They will be replaced with U+FFFD before editing; the exported file is unchanged. Continue?',
+      'Replace the current workspace?',
+      'Workspace restored.',
+    ),
+    (
+      const Locale('ja'),
+      'エクスポート内の孤立したサロゲート',
+      'このエクスポートには対になっていないUTF-16サロゲートが含まれています。編集前にU+FFFDへ置き換えます。エクスポートしたファイルは変更されません。続けますか？',
+      '現在の作業内容を置き換えますか？',
+      '作業内容を復元しました。',
+    ),
+  ]) {
+    testWidgets(
+      'discloses surrogate normalization for $locale before editing',
+      (tester) async {
+        binding.platformDispatcher.localesTestValue = [locale];
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          picker.pick = () async =>
+              _File(formatWorkspaceExport(surrogateDraft()));
+          await open(tester);
+          await tester.enterText(field('source-language'), 'keep language');
+          await tester.enterText(field('source-text'), 'keep me');
+
+          await restore(tester);
+
+          expect(find.text(title), findsOneWidget);
+          expect(find.text(question), findsOneWidget);
+          expect(find.text(replaceTitle), findsNothing);
+          expect(textOf(tester, 'source-language'), 'keep language');
+          expect(textOf(tester, 'source-text'), 'keep me');
+
+          await tester.tap(field('restore-workspace-surrogate-cancel'));
+          await tester.pumpAndSettle();
+
+          expect(find.text(title), findsNothing);
+          expect(textOf(tester, 'source-language'), 'keep language');
+          expect(textOf(tester, 'source-text'), 'keep me');
+          expect(find.text(success), findsNothing);
+          expect(tester.takeException(), isNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      },
+    );
+  }
+
+  testWidgets('confirming the disclosure normalizes only editable fields', (
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
-      final high = String.fromCharCode(0xD800);
-      final draft = TextWorkspaceDraft(
-        sourceLanguage: 'x$high-y',
-        sourceText: 'body',
-        translations: const [
-          ManualTranslationDraft(targetLanguage: 'en', text: 'text'),
-        ],
-      );
-      picker.pick = () async => _File(formatWorkspaceExport(draft));
+      picker.pick = () async => _File(formatWorkspaceExport(surrogateDraft()));
       await open(tester);
+      await tester.enterText(field('source-text'), 'old text');
+
       await restore(tester);
+      expect(find.text('Unpaired characters in export'), findsOneWidget);
+      await tester.tap(field('restore-workspace-surrogate-confirm'));
+      await tester.pumpAndSettle();
+
+      // The existing replacement consent still precedes any field mutation.
+      expect(find.text('Replace the current workspace?'), findsOneWidget);
+      expect(textOf(tester, 'source-text'), 'old text');
+      await tester.tap(field('restore-workspace-confirm'));
+      await tester.pumpAndSettle();
 
       expect(textOf(tester, 'source-language').codeUnits, [
         0x78,
@@ -651,8 +717,18 @@ void main() {
         0x2D,
         0x79,
       ]);
-      expect(textOf(tester, 'source-text'), 'body');
+      expect(textOf(tester, 'source-text'), 'first 🌏\nsecond');
       expect(textOf(tester, 'target-language-0'), 'en');
+      expect(textOf(tester, 'target-language-1'), 'fr');
+      expect(textOf(tester, 'translation-text-1').codeUnits, [
+        0xFFFD,
+        0x2D,
+        0x74,
+        0x61,
+        0x69,
+        0x6C,
+      ]);
+      expect(find.text('Workspace restored.'), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
       debugDefaultTargetPlatformOverride = null;

@@ -189,6 +189,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.';
 
   @override
+  String get restoreWorkspaceSurrogatesTitle => 'Unpaired characters in export';
+
+  @override
+  String get restoreWorkspaceSurrogatesQuestion =>
+      'This export contains unpaired UTF-16 code units. They will be replaced with U+FFFD before editing; the exported file is unchanged. Continue?';
+
+  @override
   String get exportWorkspace => 'Export workspace';
 
   @override

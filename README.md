@@ -36,19 +36,22 @@ The limit is build-time policy: deployments can change it without editing Dart s
 
 On macOS and Windows, each translation can be explicitly exported as UTF-8 text
 to a user-selected `.txt` file; that writes only that translation, not the
-workspace. The same platforms can export the whole workspace as a reversible v2
-text document containing the source language, source text and every translation;
-the earlier v1 format is no longer produced or restorable. These platforms use
-their native save panels, which retain the documented confirmation before
+workspace. The same platforms can export the whole workspace as a lossless,
+reversible v2 text document containing the source language, source text and
+every translation; even unpaired UTF-16 surrogates survive parsing and
+re-export. The earlier v1 format is no longer produced or restorable. These
+platforms use their native save panels, which retain the documented confirmation before
 replacing an existing file; hosted CI builds the adapters but does not automate
 that confirmation UI. A workspace whose UTF-8 v2 bytes exceed Restore's 8 MiB
 limit is disclosed before saving; the file can still be saved as text, but a
 distinct success notice says Kotoha cannot restore it. Mobile builds have no export action.
 
 On every platform, a v2 workspace export can be restored through the same
-explicit text-document picker (`.txt`, `.md` or `.markdown`). If the current
-workspace holds text or an added translation card, a confirmation precedes
-replacement of all fields.
+explicit text-document picker (`.txt`, `.md` or `.markdown`). If the export has
+unpaired UTF-16 code units, a disclosure explains that editable fields will get
+U+FFFD instead; the exported file is unchanged, and canceling keeps the current
+workspace. If the current workspace holds text or an added translation card, a
+further confirmation precedes replacement of all fields.
 Cancellation is silent; an edit made after picking, a wrong file type, an
 oversized document, a malformed document and a read failure all leave the drafts
 intact, with distinct notices where the cause is known. Exports use LF line

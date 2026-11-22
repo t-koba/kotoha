@@ -509,11 +509,38 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       final text = utf8.decode(await file.readAsBytes(), allowMalformed: false);
       if (!mounted) return;
       final restored = parseWorkspaceExport(text);
+      final editable = normalizeWorkspaceDraftForEditing(restored);
       bool changed() => !_sameWorkspaceDraft(_workspaceDraft(), before);
 
       if (changed()) {
         _importNotice(strings.restoreWorkspaceChangedNotice);
         return;
+      }
+      if (editable != null) {
+        final accepted = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(strings.restoreWorkspaceSurrogatesTitle),
+            content: Text(strings.restoreWorkspaceSurrogatesQuestion),
+            actions: [
+              TextButton(
+                key: const ValueKey('restore-workspace-surrogate-cancel'),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(strings.cancelImport),
+              ),
+              TextButton(
+                key: const ValueKey('restore-workspace-surrogate-confirm'),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(strings.restoreWorkspaceReplace),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || accepted != true) return;
+        if (changed()) {
+          _importNotice(strings.restoreWorkspaceChangedNotice);
+          return;
+        }
       }
       if (_workspaceHasWorkspaceContent()) {
         final replace = await showDialog<bool>(
@@ -542,15 +569,16 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         }
       }
 
+      final target = editable ?? restored;
       final fields = [
-        for (final translation in restored.translations)
+        for (final translation in target.translations)
           _TranslationFields(() => _appResumed)
             ..language.replaceText(translation.targetLanguage)
             ..text.replaceText(translation.text),
       ];
       setState(() {
-        _sourceLanguage.replaceText(restored.sourceLanguage);
-        _replaceDocumentText(_sourceText, restored.sourceText);
+        _sourceLanguage.replaceText(target.sourceLanguage);
+        _replaceDocumentText(_sourceText, target.sourceText);
         for (final old in _translations) {
           if (identical(_selectedFindTarget, old.text)) {
             _selectedFindTarget = null;

@@ -94,33 +94,66 @@ String _unescape(String value) {
         throw const FormatException('Unknown escape in workspace export.');
     }
   }
-  return _wellFormed(buffer.toString());
+  return buffer.toString();
 }
 
-/// Editable fields require well-formed UTF-16; Flutter's text layout rejects
-/// lone surrogates. The export format may carry them as ASCII escapes, but a
-/// restored draft replaces each unpaired code unit with U+FFFD.
-String _wellFormed(String value) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < value.length; index++) {
-    final unit = value.codeUnitAt(index);
-    if (unit >= 0xD800 && unit <= 0xDBFF && index + 1 < value.length) {
-      final next = value.codeUnitAt(index + 1);
-      if (next >= 0xDC00 && next <= 0xDFFF) {
-        buffer
-          ..writeCharCode(unit)
-          ..writeCharCode(next);
-        index++;
+/// Prepares a parsed draft for editable text fields.
+///
+/// The codec itself is lossless; Flutter's text layout rejects unpaired
+/// surrogates, so only this editor boundary replaces them with U+FFFD. Valid
+/// surrogate pairs are kept as-is. Returns null when no field needs repair.
+TextWorkspaceDraft? normalizeWorkspaceDraftForEditing(
+  TextWorkspaceDraft draft,
+) {
+  String normalize(String value) {
+    StringBuffer? repaired;
+    for (var index = 0; index < value.length; index++) {
+      final unit = value.codeUnitAt(index);
+      if (unit >= 0xD800 && unit <= 0xDFFF) {
+        final next = index + 1 < value.length ? value.codeUnitAt(index + 1) : 0;
+        if (unit <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) {
+          if (repaired != null) {
+            repaired
+              ..writeCharCode(unit)
+              ..writeCharCode(next);
+          }
+          index++;
+          continue;
+        }
+        repaired ??= StringBuffer(value.substring(0, index));
+        repaired.writeCharCode(0xFFFD);
         continue;
       }
+      repaired?.writeCharCode(unit);
     }
-    if (unit >= 0xD800 && unit <= 0xDFFF) {
-      buffer.writeCharCode(0xFFFD);
-    } else {
-      buffer.writeCharCode(unit);
+    return repaired?.toString() ?? value;
+  }
+
+  final sourceLanguage = normalize(draft.sourceLanguage);
+  final sourceText = normalize(draft.sourceText);
+  final translations = [
+    for (final translation in draft.translations)
+      translation.copyWith(
+        targetLanguage: normalize(translation.targetLanguage),
+        text: normalize(translation.text),
+      ),
+  ];
+  var changed =
+      sourceLanguage != draft.sourceLanguage || sourceText != draft.sourceText;
+  for (var index = 0; index < translations.length; index++) {
+    if (translations[index].targetLanguage !=
+            draft.translations[index].targetLanguage ||
+        translations[index].text != draft.translations[index].text) {
+      changed = true;
+      break;
     }
   }
-  return buffer.toString();
+  if (!changed) return null;
+  return draft.copyWith(
+    sourceLanguage: sourceLanguage,
+    sourceText: sourceText,
+    translations: translations,
+  );
 }
 
 String _field(String line, String prefix) {

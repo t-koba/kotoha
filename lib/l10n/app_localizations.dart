@@ -398,6 +398,18 @@ abstract class AppLocalizations {
   /// **'復元中に作業内容が変更されました。編集内容は保持されています。もう一度「作業内容を復元」を選んで再試行してください。'**
   String get restoreWorkspaceChangedNotice;
 
+  /// 編集用に対になっていないUTF-16サロゲートを正規化する前に表示する注意書きのタイトル。
+  ///
+  /// In ja, this message translates to:
+  /// **'エクスポート内の孤立したサロゲート'**
+  String get restoreWorkspaceSurrogatesTitle;
+
+  /// 編集時のみU+FFFDへ置き換えることと、エクスポートしたファイルは変更されないことを説明する確認文。
+  ///
+  /// In ja, this message translates to:
+  /// **'このエクスポートには対になっていないUTF-16サロゲートが含まれています。編集前にU+FFFDへ置き換えます。エクスポートしたファイルは変更されません。続けますか？'**
+  String get restoreWorkspaceSurrogatesQuestion;
+
   /// テキスト作業全体を一つのファイルに書き出す操作のラベル。
   ///
   /// In ja, this message translates to:

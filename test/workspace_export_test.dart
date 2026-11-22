@@ -212,7 +212,7 @@ void main() {
     expect(parseWorkspaceExport(output).toJson(), draft.toJson());
   });
 
-  test('unpaired surrogates are replaced with U+FFFD on restore', () {
+  test('unpaired surrogates survive parse and re-export', () {
     final high = String.fromCharCode(0xD800);
     final low = String.fromCharCode(0xDC00);
     final draft = TextWorkspaceDraft(
@@ -226,37 +226,49 @@ void main() {
 
     final output = formatWorkspaceExport(draft);
     final restored = parseWorkspaceExport(utf8.decode(utf8.encode(output)));
-    expect(restored.sourceLanguage.codeUnits, [
-      0xFFFD,
-      ...'-language'.codeUnits,
-    ]);
-    expect(restored.sourceText.codeUnits, [
-      0xFFFD,
+    expect(restored.sourceLanguage.codeUnits, draft.sourceLanguage.codeUnits);
+    expect(restored.sourceText.codeUnits, draft.sourceText.codeUnits);
+    for (var index = 0; index < draft.translations.length; index++) {
+      expect(
+        restored.translations[index].targetLanguage.codeUnits,
+        draft.translations[index].targetLanguage.codeUnits,
+      );
+      expect(
+        restored.translations[index].text.codeUnits,
+        draft.translations[index].text.codeUnits,
+      );
+    }
+    expect(formatWorkspaceExport(restored), output);
+  });
+
+  test('editor normalization replaces only unpaired surrogates', () {
+    final high = String.fromCharCode(0xD800);
+    final low = String.fromCharCode(0xDC00);
+    expect(normalizeWorkspaceDraftForEditing(_draft()), isNull);
+
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: 'x$high-y',
+      sourceText: '$high$low A $high 🌏',
+      translations: [ManualTranslationDraft(targetLanguage: low, text: 'body')],
+    );
+    final normalized = normalizeWorkspaceDraftForEditing(draft);
+    expect(normalized, isNotNull);
+    expect(normalized!.sourceLanguage.codeUnits, [0x78, 0xFFFD, 0x2D, 0x79]);
+    expect(normalized.sourceText.codeUnits, [
+      0xD800,
+      0xDC00,
       0x20,
       0x41,
       0x20,
       0xFFFD,
       0x20,
-      0xFFFD,
-      0x39,
-      0x20,
       0xD83C,
       0xDF0F,
     ]);
-    for (var index = 0; index < draft.translations.length; index++) {
-      expect(
-        restored.translations[index].targetLanguage.codeUnits,
-        draft.translations[index].targetLanguage == high
-            ? [0xFFFD]
-            : draft.translations[index].targetLanguage.codeUnits,
-      );
-      expect(
-        restored.translations[index].text.codeUnits,
-        index == 0
-            ? [0xFFFD, 0x20, 0x31, 0xFFFD]
-            : draft.translations[index].text.codeUnits,
-      );
-    }
+    expect(normalized.translations.single.targetLanguage.codeUnits, [0xFFFD]);
+    expect(normalized.translations.single.text, 'body');
+    expect(draft.sourceText.codeUnits.first, 0xD800);
+    expect(normalizeWorkspaceDraftForEditing(normalized), isNull);
   });
 
   test('unpaired surrogates are escaped as four uppercase hex digits', () {
@@ -276,13 +288,9 @@ void main() {
     expect(output, contains(r'\uDFFF'));
     expect(output.codeUnits.every((unit) => unit < 0x80), isTrue);
     expect(utf8.decode(utf8.encode(output)), output);
-    expect(parseWorkspaceExport(output).sourceText.codeUnits, [
-      0xFFFD,
-      0x20,
-      0x41,
-      0x20,
-      0xFFFD,
-    ]);
+    final parsed = parseWorkspaceExport(output);
+    expect(parsed.sourceText.codeUnits, [0xD800, 0x20, 0x41, 0x20, 0xDFFF]);
+    expect(formatWorkspaceExport(parsed), output);
   });
 
   test('rejects truncated and non-hex unicode escapes', () {

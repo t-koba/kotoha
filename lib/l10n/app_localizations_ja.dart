@@ -182,6 +182,13 @@ class AppLocalizationsJa extends AppLocalizations {
       '復元中に作業内容が変更されました。編集内容は保持されています。もう一度「作業内容を復元」を選んで再試行してください。';
 
   @override
+  String get restoreWorkspaceSurrogatesTitle => 'エクスポート内の孤立したサロゲート';
+
+  @override
+  String get restoreWorkspaceSurrogatesQuestion =>
+      'このエクスポートには対になっていないUTF-16サロゲートが含まれています。編集前にU+FFFDへ置き換えます。エクスポートしたファイルは変更されません。続けますか？';
+
+  @override
   String get exportWorkspace => '作業内容を書き出す';
 
   @override
