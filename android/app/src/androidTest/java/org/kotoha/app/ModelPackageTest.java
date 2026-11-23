@@ -878,6 +878,19 @@ public final class ModelPackageTest extends ActivityInstrumentationTestCase2<Mai
         assertEquals("detached", afterDetach.error);
     }
 
+    /**
+     * A closed descriptor reports fd < 0 on older Android but throws on newer
+     * SDKs; treat both as closed so the assertion tests plugin behavior, not
+     * the platform's getFd() convention.
+     */
+    private static boolean descriptorClosed(ParcelFileDescriptor descriptor) {
+        try {
+            return descriptor.getFd() < 0;
+        } catch (IllegalStateException alreadyClosed) {
+            return true;
+        }
+    }
+
     /** Release/detach stop an in-flight stream, close it, and keep the slot busy. */
     public void testVerifyFilesReleaseAndDetachCancelInFlightStream() throws Throwable {
         for (boolean detach : new boolean[] {false, true}) {
@@ -927,10 +940,10 @@ public final class ModelPackageTest extends ActivityInstrumentationTestCase2<Mai
                     if (descriptor == null) Thread.sleep(20);
                 }
                 assertNotNull("fixture descriptor was opened", descriptor);
-                while (descriptor.getFd() >= 0 && SystemClock.uptimeMillis() < deadline) {
+                while (!descriptorClosed(descriptor) && SystemClock.uptimeMillis() < deadline) {
                     Thread.sleep(20);
                 }
-                assertEquals("late cancelled stream is closed", -1, descriptor.getFd());
+                assertTrue("late cancelled stream is closed", descriptorClosed(descriptor));
             } finally {
                 provider.releaseOpen.countDown();
                 runTestOnUiThread(plugin::onDetachedFromActivity);
