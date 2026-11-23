@@ -37,6 +37,15 @@ void main() {
     final invalid = TextWorkspaceDraft.empty().toJson()..['format_version'] = 2;
     expect(() => TextWorkspaceDraft.fromJson(invalid), throwsFormatException);
 
+    // A double that compares numerically equal to the int version is not a
+    // supported format version; every other scalar field is strictly typed.
+    final doubleVersion = TextWorkspaceDraft.empty().toJson()
+      ..['format_version'] = 1.0;
+    expect(
+      () => TextWorkspaceDraft.fromJson(doubleVersion),
+      throwsFormatException,
+    );
+
     final noTranslations = TextWorkspaceDraft.empty().toJson()
       ..['translations'] = [];
     expect(

@@ -93,6 +93,7 @@ class TextWorkspaceDraft {
           'translations',
         }).isNotEmpty ||
         value.keys.toSet().length != 4 ||
+        value['format_version'] is! int ||
         value['format_version'] != currentFormatVersion ||
         value['source_language'] is! String ||
         value['source_text'] is! String ||
