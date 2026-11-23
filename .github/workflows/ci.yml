@@ -283,12 +283,16 @@ jobs:
       # Execute the XCUI target as a runtime gate. The keyboard-existence waits in
       # this target were replaced by focus/value assertions on native fields.
       - name: Run language-field accessibility XCUI tests on Simulator
-        timeout-minutes: 20
+        timeout-minutes: 30
         env:
           IOS_SIMULATOR_OS: '26.2'
           IOS_SIMULATOR_DEVICE: iPhone 17
           IOS_DESTINATION_TIMEOUT_SECONDS: '60'
           IOS_TEST_TIMEOUT_SECONDS: '120'
+          # The suite requests executionTimeAllowance = 300 on a slow hosted
+          # runner; the maximum flag is an absolute ceiling, so it must cover
+          # that request while the default stays 120 for other tests.
+          IOS_TEST_MAX_TIMEOUT_SECONDS: '300'
           IOS_AX_TIMEOUT_SECONDS: '10'
         run: |
           set -euo pipefail
@@ -300,7 +304,7 @@ jobs:
             -only-testing:RunnerUITests/LanguageFieldAccessibilityTests \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
             -default-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
-            -maximum-test-execution-time-allowance "$IOS_TEST_TIMEOUT_SECONDS" \
+            -maximum-test-execution-time-allowance "$IOS_TEST_MAX_TIMEOUT_SECONDS" \
             KOTOHA_AX_TIMEOUT_SECONDS="$IOS_AX_TIMEOUT_SECONDS" CODE_SIGNING_ALLOWED=NO
 
   macos-export-permissions:
