@@ -86,7 +86,16 @@ def check_elf(data: bytes, label: str) -> list[str]:
 
     findings = []
     for index, p_type, _, _, _, p_align in segments:
-        if p_type == PT_LOAD and p_align < PAGE_SIZE:
+        if p_type != PT_LOAD:
+            continue
+        # ELF requires p_align to be 0, 1 or a positive power of two; a larger
+        # but malformed value must not pass the page-size threshold.
+        if p_align > 1 and p_align & (p_align - 1):
+            findings.append(
+                f"PT_LOAD[{index}] p_align={p_align} (0x{p_align:x}) "
+                "is not 0, 1 or a power of two"
+            )
+        elif p_align < PAGE_SIZE:
             findings.append(
                 f"PT_LOAD[{index}] p_align={p_align} (0x{p_align:x}) "
                 f"< {PAGE_SIZE}"

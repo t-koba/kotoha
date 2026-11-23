@@ -72,6 +72,18 @@ class ElfFixtureTest(unittest.TestCase):
         self.assertIn("p_align=4096", findings[0])
         self.assertIn("16384", findings[0])
 
+    def test_non_power_of_two_load_alignment_fails(self):
+        data = _elf64([_load(0, 0x20000, PAGE_SIZE + 1)])
+        findings = check_elf(data, "lib/arm64-v8a/libx.so")
+        self.assertEqual(len(findings), 1, findings)
+        self.assertIn("PT_LOAD[0]", findings[0])
+        self.assertIn("p_align=16385", findings[0])
+        self.assertIn("power of two", findings[0])
+
+    def test_larger_power_of_two_load_alignment_passes(self):
+        data = _elf64([_load(0, 0x20000, 2 * PAGE_SIZE)])
+        self.assertEqual(check_elf(data, "lib/arm64-v8a/libx.so"), [])
+
     def test_relro_overlap_with_unaligned_end_fails(self):
         data = _elf64([
             _load(0, 0x30000, PAGE_SIZE),
