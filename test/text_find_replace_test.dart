@@ -537,9 +537,20 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pumpAndSettle();
     expect(
+      _hasPrimaryFocus(
+        tester,
+        find.byKey(const ValueKey('structured-json-panel')),
+      ),
+      isTrue,
+      reason: 'Tab from the outline reaches the structured JSON panel',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    expect(
       _hasPrimaryFocus(tester, toggle),
       isTrue,
-      reason: 'Tab from the outline reaches the find and replace toggle',
+      reason: 'Tab from the structured JSON panel reaches find and replace',
     );
 
     await tester.sendKeyEvent(LogicalKeyboardKey.space);

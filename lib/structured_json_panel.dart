@@ -29,7 +29,6 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
   final List<TextEditingController> _fields = <TextEditingController>[];
   bool _applied = false;
   bool _writing = false;
-  bool _expanded = false;
 
   @override
   void initState() {
@@ -138,47 +137,42 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
     final style = Theme.of(context).textTheme.bodySmall;
-    // A collapsed tile stays out of the editor's keyboard traversal; opening
-    // it makes the header and its translation fields focusable again.
-    return Focus(
-      canRequestFocus: false,
-      skipTraversal: true,
-      descendantsAreFocusable: _expanded,
-      child: ExpansionTile(
-        key: const ValueKey('structured-json-panel'),
-        initiallyExpanded: false,
-        onExpansionChanged: (expanded) => setState(() => _expanded = expanded),
-        // A compact header keeps existing short-viewport geometry and focus
-        // order intact while the panel stays visible and tappable.
-        dense: true,
-        visualDensity: VisualDensity.compact,
-        minTileHeight: 0,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-        title: Text(
-          strings.structuredJsonTitle,
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: switch (_panelState) {
-                _PanelState.tooLarge => [
-                  Text(strings.structuredJsonTooLarge, style: style),
-                ],
-                _PanelState.tooMany => [
-                  Text(strings.structuredJsonTooMany, style: style),
-                ],
-                _PanelState.invalid => [
-                  Text(strings.structuredJsonInvalid, style: style),
-                ],
-                _PanelState.valid => _validChildren(strings),
-              },
-            ),
-          ),
-        ],
+    // The collapsed header stays in normal keyboard traversal so it can be
+    // reached and activated without a pointer. ExpansionTile only builds its
+    // body while open, so no additional focus exclusion is needed.
+    return ExpansionTile(
+      key: const ValueKey('structured-json-panel'),
+      initiallyExpanded: false,
+      // A compact header keeps existing short-viewport geometry and focus
+      // order intact while the panel stays visible and tappable.
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      minTileHeight: 0,
+      tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      title: Text(
+        strings.structuredJsonTitle,
+        style: Theme.of(context).textTheme.labelSmall,
       ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: switch (_panelState) {
+              _PanelState.tooLarge => [
+                Text(strings.structuredJsonTooLarge, style: style),
+              ],
+              _PanelState.tooMany => [
+                Text(strings.structuredJsonTooMany, style: style),
+              ],
+              _PanelState.invalid => [
+                Text(strings.structuredJsonInvalid, style: style),
+              ],
+              _PanelState.valid => _validChildren(strings),
+            },
+          ),
+        ),
+      ],
     );
   }
 

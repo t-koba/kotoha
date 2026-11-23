@@ -423,7 +423,35 @@ void main() {
           await tester.pump();
         }
 
-        void expectFocused(Finder finder, String label) {
+        void expectFocused(
+          Finder finder,
+          String label, {
+          bool primaryOnly = false,
+        }) {
+          if (primaryOnly) {
+            final focused = tester.binding.focusManager.primaryFocus?.context;
+            final elements = finder.evaluate();
+            var matched = false;
+            if (focused != null && elements.length == 1) {
+              if (focused == elements.single) {
+                matched = true;
+              } else {
+                focused.visitAncestorElements((ancestor) {
+                  if (ancestor == elements.single) {
+                    matched = true;
+                    return false;
+                  }
+                  return true;
+                });
+              }
+            }
+            expect(
+              matched,
+              isTrue,
+              reason: 'Keyboard focus should be on $label.',
+            );
+            return;
+          }
           expect(
             tester
                 .getSemantics(finder)
@@ -501,6 +529,7 @@ void main() {
           find.byKey(const ValueKey('document-outline-search')),
           find.byKey(const ValueKey('document-outline-review-only')),
           find.byKey(const ValueKey('document-block-0')),
+          find.byKey(const ValueKey('structured-json-panel')),
           find.byKey(const ValueKey('find-replace-toggle')),
           find.byKey(const ValueKey('copy-workspace')),
           find.byKey(const ValueKey('restore-workspace')),
@@ -511,7 +540,11 @@ void main() {
         ];
         for (var index = 0; index < firstCardOrder.length; index++) {
           await pressTab();
-          expectFocused(firstCardOrder[index], 'initial control $index');
+          expectFocused(
+            firstCardOrder[index],
+            'initial control $index',
+            primaryOnly: index == 10,
+          );
           if (index == 2) {
             await tester.sendKeyEvent(LogicalKeyboardKey.space);
             await tester.pumpAndSettle();
@@ -578,7 +611,8 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[10],
-              'find and replace toggle after outline entry',
+              'JSON panel after outline entry',
+              primaryOnly: true,
             );
             await pressShiftTab();
             expectFocused(firstCardOrder[9], 'outline entry after reverse tab');
@@ -586,55 +620,67 @@ void main() {
             await pressTab();
             expectFocused(
               firstCardOrder[11],
-              'copy workspace after find and replace toggle',
+              'find and replace toggle after JSON panel',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[10],
-              'find and replace toggle after reverse tab',
+              'JSON panel after reverse tab',
+              primaryOnly: true,
             );
           } else if (index == 11) {
             await pressTab();
             expectFocused(
               firstCardOrder[12],
-              'restore workspace after copy workspace',
+              'copy workspace after find and replace toggle',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[11],
-              'copy workspace after reverse tab',
+              'find and replace toggle after reverse tab',
             );
           } else if (index == 12) {
             await pressTab();
             expectFocused(
               firstCardOrder[13],
-              'target language after restore workspace',
+              'restore workspace after copy workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[12],
-              'restore workspace after reverse tab',
+              'copy workspace after reverse tab',
             );
           } else if (index == 13) {
             await pressTab();
             expectFocused(
               firstCardOrder[14],
-              'copy action after RTL target language',
+              'target language after restore workspace',
             );
             await pressShiftTab();
             expectFocused(
               firstCardOrder[13],
-              'target language after reverse tab',
+              'restore workspace after reverse tab',
             );
-          } else if (index == 15) {
+          } else if (index == 14) {
             await pressTab();
             expectFocused(
-              firstCardOrder[16],
+              firstCardOrder[15],
+              'copy action after RTL target language',
+            );
+            await pressShiftTab();
+            expectFocused(
+              firstCardOrder[14],
+              'target language after reverse tab',
+            );
+          } else if (index == 16) {
+            await pressTab();
+            expectFocused(
+              firstCardOrder[17],
               'Add translation after RTL translation text',
             );
             await pressShiftTab();
             expectFocused(
-              firstCardOrder[15],
+              firstCardOrder[16],
               'RTL translation text after reverse tab',
             );
           }
@@ -664,6 +710,7 @@ void main() {
           find.byKey(const ValueKey('document-outline-search')),
           find.byKey(const ValueKey('document-outline-review-only')),
           find.byKey(const ValueKey('document-block-0')),
+          find.byKey(const ValueKey('structured-json-panel')),
           find.byKey(const ValueKey('find-replace-toggle')),
           find.byKey(const ValueKey('copy-workspace')),
           find.byKey(const ValueKey('restore-workspace')),
@@ -681,7 +728,11 @@ void main() {
         expectFocused(twoCardOrder.first, 'first control after adding a card');
         for (var index = 1; index < twoCardOrder.length; index++) {
           await pressTab();
-          expectFocused(twoCardOrder[index], 'two-card control $index');
+          expectFocused(
+            twoCardOrder[index],
+            'two-card control $index',
+            primaryOnly: index == 10,
+          );
         }
         await pressShiftTab();
         expectFocused(

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kotoha/l10n/app_localizations.dart';
 import 'package:kotoha/structured_json_panel.dart';
@@ -33,10 +34,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Focus focusWrapper(WidgetTester tester, Finder panel) => tester.widget<Focus>(
-    find.ancestor(of: panel, matching: find.byType(Focus)).first,
-  );
-
   testWidgets('panel starts collapsed and exposes structured-json-panel', (
     tester,
   ) async {
@@ -47,11 +44,50 @@ void main() {
     final panel = find.byKey(panelKey);
     expect(panel, findsOneWidget);
     expect(tester.widget<ExpansionTile>(panel).initiallyExpanded, isFalse);
-    expect(focusWrapper(tester, panel).descendantsAreFocusable, isFalse);
     expect(find.text(title), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('structured-json-field-0')),
       findsNothing,
+    );
+  });
+
+  testWidgets('collapsed header is reachable by Tab and opens with Enter', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: '{"a":"x"}');
+    addTearDown(controller.dispose);
+    final previousFocus = FocusNode(debugLabel: 'before-json-panel');
+    addTearDown(previousFocus.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Scaffold(
+          body: Column(
+            children: [
+              Focus(focusNode: previousFocus, child: const Text('before')),
+              StructuredJsonPanel(controller: controller),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final headerNode = Focus.of(tester.element(find.text(title)));
+    previousFocus.requestFocus();
+    await tester.pump();
+    expect(previousFocus.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(headerNode.hasFocus, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      findsOneWidget,
     );
   });
 
@@ -65,10 +101,6 @@ void main() {
     await tester.pumpWidget(panelFor(controller));
     await expand(tester);
 
-    expect(
-      focusWrapper(tester, find.byKey(panelKey)).descendantsAreFocusable,
-      isTrue,
-    );
     expect(find.text('2 string values found.'), findsOneWidget);
     expect(find.text(r'$.greeting'), findsOneWidget);
     expect(find.text(r'$.nested.keep'), findsOneWidget);
