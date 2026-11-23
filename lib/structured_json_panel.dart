@@ -104,7 +104,7 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
     final translations = <int, String>{};
     for (final segment in segments.values) {
       final translation = _fields[segment.id].text;
-      if (translation.trim().isEmpty || translation == segment.value) continue;
+      if (translation.isEmpty || translation == segment.value) continue;
       translations[segment.id] = translation;
     }
     final rewritten = segments.apply(translations);

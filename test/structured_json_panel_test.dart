@@ -133,7 +133,7 @@ void main() {
 
     await tester.enterText(
       find.byKey(const ValueKey<String>('structured-json-field-0')),
-      '   ',
+      '',
     );
     await tester.enterText(
       find.byKey(const ValueKey<String>('structured-json-field-1')),
@@ -145,6 +145,32 @@ void main() {
     expect(jsonDecode(controller.text), <String, dynamic>{
       'one': 'first',
       'two': 'second changed',
+    });
+    expect(find.text(appliedMessage), findsOneWidget);
+  });
+
+  testWidgets('nonempty whitespace replacement is applied while an empty '
+      'sibling is unchanged', (tester) async {
+    final controller = TextEditingController(
+      text: '{"one":"first","two":"second"}',
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    // U+3000 IDEOGRAPHIC SPACE is a nonempty, intentional value; trim() would
+    // erase it and silently skip the replacement.
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      '\u3000',
+    );
+    // Field 1 stays genuinely empty, so "two" must keep its original value.
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(jsonDecode(controller.text), <String, dynamic>{
+      'one': '\u3000',
+      'two': 'second',
     });
     expect(find.text(appliedMessage), findsOneWidget);
   });
