@@ -136,8 +136,16 @@ class ConsentStore {
 
   /// Stores or replaces by [receipt.id]. Another active receipt with the same
   /// purpose, scope and digests is superseded (marked revoked), so at most one
-  /// active record exists for that binding.
+  /// active record exists for that binding. A revoked [receipt] is rejected:
+  /// use [revoke] to withdraw consent instead.
   void grant(ConsentReceipt receipt) {
+    if (receipt.revoked) {
+      throw ArgumentError.value(
+        receipt,
+        'receipt',
+        'cannot grant an already-revoked receipt',
+      );
+    }
     final superseded = _records.entries
         .where(
           (entry) =>

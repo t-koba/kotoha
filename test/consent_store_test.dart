@@ -271,6 +271,34 @@ void main() {
     },
   );
 
+  test(
+    'grant rejects an already-revoked receipt without losing active consent',
+    () {
+      final store = ConsentStore()..grant(_receipt(id: 'receipt-1'));
+
+      expect(
+        () => store.grant(_receipt(id: 'receipt-2', revoked: true)),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // The existing active receipt is untouched: no silent revocation and no
+      // new record stored.
+      expect(
+        store
+            .activeFor(
+              _manifestDigest,
+              _termsDigest,
+              ConsentPurpose.translation,
+              'translation.text',
+            )
+            ?.id,
+        'receipt-1',
+      );
+      expect(store.receipts, hasLength(1));
+      expect(store.receipts.single.revoked, isFalse);
+    },
+  );
+
   test('overlapping active scopes fail closed on ambiguity', () {
     final store = ConsentStore()
       ..grant(_receipt(id: 'narrow'))
