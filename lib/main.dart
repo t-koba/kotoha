@@ -577,7 +577,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       );
 
   Future<void> _restoreWorkspace() async {
-    if (_importing || _reviewingModel) return;
+    if (_importing || _reviewingModel || _verifyingModel) return;
     final strings = AppLocalizations.of(context)!;
     setState(() => _importing = true);
     final before = _workspaceDraft();
@@ -1121,7 +1121,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                         alignment: Alignment.centerLeft,
                         child: OutlinedButton.icon(
                           key: const ValueKey('restore-workspace'),
-                          onPressed: _restoreWorkspace,
+                          onPressed:
+                              _importing || _reviewingModel || _verifyingModel
+                              ? null
+                              : _restoreWorkspace,
                           icon: const Icon(Icons.restore_outlined),
                           label: Text(strings.restoreWorkspace),
                         ),

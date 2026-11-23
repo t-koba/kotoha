@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -22,6 +23,7 @@ void main() {
   late bool verifyReplies;
   late bool selectReplies;
   late List<Map<String, Object?>> verifyRequests;
+  Completer<Object?>? verifyGate;
 
   Map<String, Object?> fixtureManifest(
     String terms, {
@@ -113,6 +115,8 @@ void main() {
           return selectReplies;
         case 'verifyFiles':
           verifyRequests.add((call.arguments as Map).cast<String, Object?>());
+          final gate = verifyGate;
+          if (gate != null) return gate.future;
           return verifyReplies;
         case 'readFile':
           final args = (call.arguments as Map).cast<String, Object?>();
@@ -344,6 +348,52 @@ void main() {
         findsOneWidget,
       );
     } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('workspace restore is disabled while file verification runs', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      installFixture('Synthetic license body');
+      verifyGate = Completer<Object?>();
+      await openAndroid(tester);
+      await acceptTerms(tester);
+
+      final restore = find.byKey(const ValueKey('restore-workspace'));
+      await tester.ensureVisible(restore);
+      expect(tester.widget<OutlinedButton>(restore).onPressed, isNotNull);
+
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pump();
+
+      expect(verifyRequests.length, 1);
+      expect(tester.widget<OutlinedButton>(restore).onPressed, isNull);
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const ValueKey('review-model-terms')),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      verifyGate!.complete(true);
+      verifyGate = null;
+      await tester.pumpAndSettle();
+      expect(tester.widget<OutlinedButton>(restore).onPressed, isNotNull);
+    } finally {
+      verifyGate = null;
       debugDefaultTargetPlatformOverride = null;
     }
   });

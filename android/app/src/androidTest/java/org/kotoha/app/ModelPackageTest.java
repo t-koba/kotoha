@@ -787,22 +787,25 @@ public final class ModelPackageTest extends ActivityInstrumentationTestCase2<Mai
             Reply shortReply = new Reply();
             call(plugin, "verifyFiles", verifyArgs(tooShort), shortReply);
             await(shortReply);
-            assertFalse(Boolean.TRUE.equals(shortReply.value));
+            assertNull("a length mismatch replies false, not an error", shortReply.error);
+            assertEquals(Boolean.FALSE, shortReply.value);
 
             List<Map<String, Object>> tooLong = new ArrayList<>();
             tooLong.add(declaration("weights/model.gguf", 8193, digest(exact)));
             Reply longReply = new Reply();
             call(plugin, "verifyFiles", verifyArgs(tooLong), longReply);
             await(longReply);
-            assertFalse(Boolean.TRUE.equals(longReply.value));
+            assertNull("a length mismatch replies false, not an error", longReply.error);
+            assertEquals(Boolean.FALSE, longReply.value);
 
             List<Map<String, Object>> extraByte = new ArrayList<>();
             extraByte.add(declaration("weights/extra.gguf", 8192, digest(extra)));
             Reply extraReply = new Reply();
             call(plugin, "verifyFiles", verifyArgs(extraByte), extraReply);
             await(extraReply);
-            assertFalse("extra byte past declared length is detected",
-                    Boolean.TRUE.equals(extraReply.value));
+            assertNull("an extra byte replies false, not an error", extraReply.error);
+            assertEquals("extra byte past declared length is detected",
+                    Boolean.FALSE, extraReply.value);
         } finally {
             runTestOnUiThread(plugin::onDetachedFromActivity);
         }

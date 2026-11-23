@@ -215,6 +215,9 @@ class ModelPackagePlugin :
 
     private class Declaration(val path: String, val size: Long, val sha256: String)
 
+    /** Declared length differs from the stream: reported as success(false). */
+    private class IntegrityMismatch : IllegalArgumentException("integrity mismatch")
+
     /** Metadata-only argument validation; no file bytes cross this boundary. */
     private fun parseDeclarations(call: MethodCall): List<Declaration>? {
         val entries = call.argument<List<*>>("files") ?: return null
@@ -268,6 +271,9 @@ class ModelPackagePlugin :
                     if (request.cancelled) throw IllegalStateException("cancelled")
                     verifyOne(resolver, selectedRoot, declaration, request)
                 }
+            } catch (_: IntegrityMismatch) {
+                // A length mismatch is a normal false result, not a platform error.
+                matched = false
             } catch (e: IllegalStateException) {
                 error = if (e.message == "cancelled") "cancelled" else "verify_failed"
             } catch (_: Exception) {
@@ -301,20 +307,20 @@ class ModelPackagePlugin :
                     // Include one sentinel byte in the last read to detect extra data.
                     val wanted = minOf(buffer.size.toLong(), declaration.size - total + 1).toInt()
                     val count = input.read(buffer, 0, wanted)
-                    if (count < 0) throw IllegalArgumentException("truncated")
+                    if (count < 0) throw IntegrityMismatch()
                     if (count == 0) {
                         val single = input.read()
-                        if (single < 0) throw IllegalArgumentException("truncated")
+                        if (single < 0) throw IntegrityMismatch()
                         digest.update(single.toByte())
                         total++
                     } else {
                         digest.update(buffer, 0, count)
                         total += count
                     }
-                    if (total > declaration.size) throw IllegalArgumentException("extra data")
+                    if (total > declaration.size) throw IntegrityMismatch()
                 }
                 if (request.cancelled) throw IllegalStateException("cancelled")
-                if (input.read() >= 0) throw IllegalArgumentException("extra data")
+                if (input.read() >= 0) throw IntegrityMismatch()
             }
             val hex = digest.digest().joinToString("") {
                 (it.toInt() and 0xff).toString(16).padStart(2, '0')
