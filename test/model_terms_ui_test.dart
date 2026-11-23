@@ -19,6 +19,9 @@ void main() {
   late Map<String, Uint8List> package;
   late List<String> requests;
   late List<String> methods;
+  late bool verifyReplies;
+  late bool selectReplies;
+  late List<Map<String, Object?>> verifyRequests;
 
   Map<String, Object?> fixtureManifest(
     String terms, {
@@ -85,7 +88,15 @@ void main() {
     };
   }
 
-  void installFixture(String terms, {String displayName = 'Test model'}) {
+  void installFixture(
+    String terms, {
+    String displayName = 'Test model',
+    bool verify = true,
+    bool select = true,
+  }) {
+    verifyReplies = verify;
+    selectReplies = select;
+    verifyRequests = [];
     final manifest = fixtureManifest(terms, displayName: displayName);
     package = {
       'model_manifest.json': bytes(jsonEncode(manifest)),
@@ -99,7 +110,10 @@ void main() {
       methods.add(call.method);
       switch (call.method) {
         case 'selectDirectory':
-          return true;
+          return selectReplies;
+        case 'verifyFiles':
+          verifyRequests.add((call.arguments as Map).cast<String, Object?>());
+          return verifyReplies;
         case 'readFile':
           final args = (call.arguments as Map).cast<String, Object?>();
           final path = args['path'] as String;
@@ -128,6 +142,17 @@ void main() {
   }
 
   Finder reviewButton() => find.byKey(const ValueKey('review-model-terms'));
+
+  Future<void> acceptTerms(WidgetTester tester) async {
+    await tester.tap(reviewButton());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('accept-model-terms')));
+    await tester.pumpAndSettle();
+    // Clear the terms snackbar so the integrity result is not queued behind it.
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first))
+        .clearSnackBars();
+    await tester.pumpAndSettle();
+  }
 
   testWidgets('terms review shows complete terms and session acceptance', (
     tester,
@@ -189,6 +214,167 @@ void main() {
       expect(requests, ['model_manifest.json', 'license/terms.txt']);
       expect(requests.contains('weights.bin'), isFalse);
       expect(methods.contains('release'), isTrue);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('integrity check needs distinct consent and reports success', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      expect(find.byKey(const ValueKey('verify-model-files')), findsNothing);
+      await acceptTerms(tester);
+
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      expect(verifyButton, findsOneWidget);
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+
+      // Separate, session-only consent; no terms text or approval copy here.
+      expect(
+        find.byKey(const ValueKey('model-integrity-consent-dialog')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'stream the declared files in place',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'No file bytes or text are copied',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('No engine is enabled', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'do not prove origin, authenticity',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(terms), findsNothing);
+      expect(verifyRequests, isEmpty);
+
+      await tester.tap(find.byKey(const ValueKey('decline-model-integrity')));
+      await tester.pumpAndSettle();
+      expect(verifyRequests, isEmpty);
+      expect(
+        find.byKey(const ValueKey('model-integrity-success')),
+        findsNothing,
+      );
+
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pumpAndSettle();
+
+      expect(verifyRequests.length, 1);
+      final declared = (verifyRequests.single['files'] as List).single;
+      expect(declared, {
+        'path': 'weights.bin',
+        'sizeBytes': 8,
+        'sha256': 'a' * 64,
+      });
+      expect(
+        find.byKey(const ValueKey('model-integrity-success')),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Declared model files matched', findRichText: true),
+        findsOneWidget,
+      );
+      // Only metadata was requested from Dart; weight bytes never crossed.
+      expect(requests, ['model_manifest.json', 'license/terms.txt']);
+      expect(methods.where((method) => method == 'verifyFiles').length, 1);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('integrity failure and cancelled selection fail closed', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms, verify: false);
+      await openAndroid(tester);
+      await acceptTerms(tester);
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pumpAndSettle();
+      expect(verifyRequests.length, 1);
+      expect(
+        find.byKey(const ValueKey('model-integrity-failure')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('model-integrity-success')),
+        findsNothing,
+      );
+      // Acceptance stays session-only and no runtime control appears.
+      expect(
+        find.byKey(const ValueKey('model-session-active')),
+        findsOneWidget,
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('integrity check without a folder selection reports failure', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      await acceptTerms(tester);
+      // The temporary grant is released after review; a declined re-selection
+      // fails closed without invoking the verifier.
+      selectReplies = false;
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pumpAndSettle();
+      expect(verifyRequests, isEmpty);
+      expect(
+        find.byKey(const ValueKey('model-integrity-failure')),
+        findsOneWidget,
+      );
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

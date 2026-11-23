@@ -324,6 +324,31 @@ class AppLocalizationsEn extends AppLocalizations {
       'Session acceptance recorded (digests only). No model is installed and runtime is not enabled.';
 
   @override
+  String get verifyModelFiles => 'Verify model files';
+
+  @override
+  String get modelIntegrityConsentTitle =>
+      'Stream and hash declared model files?';
+
+  @override
+  String get modelIntegrityConsent =>
+      'Kotoha will ask you to select the package folder again, then stream the declared files in place and compute SHA-256 hashes. No file bytes or text are copied into the app or stored. No engine is enabled. Matching hashes do not prove origin, authenticity, or licensing rights.';
+
+  @override
+  String get modelIntegrityConfirm => 'Stream and hash';
+
+  @override
+  String get modelIntegrityCancel => 'Cancel';
+
+  @override
+  String get modelIntegritySuccess =>
+      'Declared model files matched their manifest digests. No engine was enabled.';
+
+  @override
+  String get modelIntegrityFailure =>
+      'Model-file integrity check failed or was cancelled. No engine was enabled.';
+
+  @override
   String get documentOutline => 'Document outline';
 
   @override

@@ -314,6 +314,30 @@ class AppLocalizationsJa extends AppLocalizations {
       'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。';
 
   @override
+  String get verifyModelFiles => 'モデルファイルを検証';
+
+  @override
+  String get modelIntegrityConsentTitle => '宣言されたモデルファイルを読み取ってハッシュ化しますか？';
+
+  @override
+  String get modelIntegrityConsent =>
+      'パッケージのフォルダーをもう一度選択していただき、宣言されたファイルをその場でストリーム読み取りしてSHA-256ハッシュを計算します。ファイルのバイトやテキストはアプリへコピーされず、保存もされません。実行機能は有効になりません。ハッシュの一致は出所・真正性・ライセンス上の権利を証明するものではありません。';
+
+  @override
+  String get modelIntegrityConfirm => '読み取ってハッシュ化';
+
+  @override
+  String get modelIntegrityCancel => 'キャンセル';
+
+  @override
+  String get modelIntegritySuccess =>
+      '宣言されたモデルファイルはマニフェストのダイジェストと一致しました。実行機能は有効ではありません。';
+
+  @override
+  String get modelIntegrityFailure =>
+      'モデルファイルの検証に失敗するかキャンセルされました。実行機能は有効ではありません。';
+
+  @override
   String get documentOutline => '原文の構成';
 
   @override

@@ -15,11 +15,14 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.PluginRegistry.ActivityResultListener
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.security.MessageDigest
 
 /**
- * Temporary SAF directory grant; only bounded manifest/terms metadata is exposed.
- * Picks share the activity-result pool with text import, and detached picks leave
- * late-result tombstones. This plugin never requests or takes persistable grants.
+ * Temporary SAF directory grant: bounded metadata reads plus an explicit,
+ * fail-closed streaming SHA-256 check of declared non-terms files. Picks share
+ * the activity-result pool with text import, and detached picks leave
+ * late-result tombstones. This plugin never requests or takes persistable
+ * grants, copies file bytes into Dart, persists URIs, or starts an engine.
  */
 class ModelPackagePlugin :
     FlutterPlugin,
@@ -29,14 +32,15 @@ class ModelPackagePlugin :
     private var channel: MethodChannel? = null
     private var binding: ActivityPluginBinding? = null
     private var pendingSelection: SelectRequest? = null
-    private var pendingRead: ReadRequest? = null
+    // One volatile slot shared by metadata reads and explicit integrity checks.
+    private var pendingOperation: PendingOperation? = null
     // Only a volatile reference to the current non-persistable SAF selection.
     private var root: Uri? = null
     private val main = Handler(Looper.getMainLooper())
 
     private class SelectRequest(val code: Int, var result: MethodChannel.Result?)
 
-    private class ReadRequest(val result: MethodChannel.Result) {
+    private class PendingOperation(val result: MethodChannel.Result) {
         @Volatile var cancelled = false
         @Volatile var stream: InputStream? = null
         var replied = false
@@ -71,7 +75,7 @@ class ModelPackagePlugin :
         pendingSelection?.let {
             finishSelection(it, error = "detached", preserveLateResult = true)
         }
-        cancelRead("detached")
+        cancelOperation("detached")
         root = null
         binding = null
     }
@@ -106,18 +110,19 @@ class ModelPackagePlugin :
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "release" -> {
-                cancelRead("released")
+                cancelOperation("released")
                 root = null
                 result.success(null)
             }
             "selectDirectory" -> selectDirectory(result)
             "readFile" -> readFile(call, result)
+            "verifyFiles" -> verifyFiles(call, result)
             else -> result.notImplemented()
         }
     }
 
     private fun selectDirectory(result: MethodChannel.Result) {
-        if (pendingSelection != null || pendingRead != null) {
+        if (pendingSelection != null || pendingOperation != null) {
             result.error("busy", "A model-package operation is already active.", null)
             return
         }
@@ -158,13 +163,13 @@ class ModelPackagePlugin :
             return
         }
         val resolver = activity.contentResolver
-        if (pendingRead != null || pendingSelection != null) {
+        if (pendingOperation != null || pendingSelection != null) {
             result.error("busy", "A model-package operation is already active.", null)
             return
         }
 
-        val request = ReadRequest(result)
-        pendingRead = request
+        val request = PendingOperation(result)
+        pendingOperation = request
         Thread({
             var bytes: ByteArray? = null
             var error: String? = null
@@ -203,27 +208,140 @@ class ModelPackagePlugin :
                 error = "read_failed"
             } finally {
                 request.stream = null
-                main.post { completeRead(request, bytes = bytes, error = error) }
+                main.post { completeOperation(request, value = bytes, error = error) }
             }
         }, "kotoha-model-metadata-read").start()
     }
 
-    private fun completeRead(
-        request: ReadRequest,
-        bytes: ByteArray? = null,
+    private class Declaration(val path: String, val size: Long, val sha256: String)
+
+    /** Metadata-only argument validation; no file bytes cross this boundary. */
+    private fun parseDeclarations(call: MethodCall): List<Declaration>? {
+        val entries = call.argument<List<*>>("files") ?: return null
+        if (entries.isEmpty() || entries.size > MAX_VERIFY_FILES) return null
+        val declarations = mutableListOf<Declaration>()
+        var total = 0L
+        for (item in entries) {
+            if (item !is Map<*, *>) return null
+            val path = item["path"] as? String ?: return null
+            val sizeValue = item["sizeBytes"] as? Number ?: return null
+            val sha256 = item["sha256"] as? String ?: return null
+            if (sizeValue is Float || sizeValue is Double) return null
+            val size = sizeValue.toLong()
+            if (!isSafePath(path) || size < 1 || size > MAX_VERIFY_FILE_BYTES ||
+                !HEX_SHA256.matches(sha256) || declarations.any { it.path == path }) return null
+            if (total > MAX_VERIFY_TOTAL_BYTES - size) return null
+            total += size
+            declarations.add(Declaration(path, size, sha256))
+        }
+        return declarations
+    }
+
+    /**
+     * Explicit integrity check: declared files are streamed in place and only
+     * a boolean is returned. No bytes, text, or URIs leave this process.
+     */
+    private fun verifyFiles(call: MethodCall, result: MethodChannel.Result) {
+        val selectedRoot = root
+        val activity = binding?.activity
+        if (selectedRoot == null || activity == null) {
+            result.error("cancelled", "No model package is selected for this session.", null)
+            return
+        }
+        if (pendingOperation != null || pendingSelection != null) {
+            result.error("busy", "A model-package operation is already active.", null)
+            return
+        }
+        val declarations = parseDeclarations(call)
+        if (declarations == null) {
+            result.error("invalid", "Invalid model-file declarations.", null)
+            return
+        }
+        val resolver = activity.contentResolver
+        val request = PendingOperation(result)
+        pendingOperation = request
+        Thread({
+            var matched = false
+            var error: String? = null
+            try {
+                matched = declarations.all { declaration ->
+                    if (request.cancelled) throw IllegalStateException("cancelled")
+                    verifyOne(resolver, selectedRoot, declaration, request)
+                }
+            } catch (e: IllegalStateException) {
+                error = if (e.message == "cancelled") "cancelled" else "verify_failed"
+            } catch (_: Exception) {
+                error = "verify_failed"
+            } finally {
+                request.stream = null
+                main.post { completeOperation(request, value = matched, error = error) }
+            }
+        }, "kotoha-model-integrity").start()
+    }
+
+    private fun verifyOne(
+        resolver: ContentResolver,
+        root: Uri,
+        declaration: Declaration,
+        request: PendingOperation,
+    ): Boolean {
+        val file = resolveDocument(resolver, root, declaration.path) { request.cancelled }
+        if (request.cancelled) throw IllegalStateException("cancelled")
+        val opened = resolver.openInputStream(file)
+            ?: throw IllegalArgumentException("missing stream")
+        request.stream = opened
+        try {
+            if (request.cancelled) throw IllegalStateException("cancelled")
+            val digest = MessageDigest.getInstance("SHA-256")
+            val buffer = ByteArray(BUFFER_BYTES)
+            var total = 0L
+            opened.use { input ->
+                while (total < declaration.size) {
+                    if (request.cancelled) throw IllegalStateException("cancelled")
+                    // Include one sentinel byte in the last read to detect extra data.
+                    val wanted = minOf(buffer.size.toLong(), declaration.size - total + 1).toInt()
+                    val count = input.read(buffer, 0, wanted)
+                    if (count < 0) throw IllegalArgumentException("truncated")
+                    if (count == 0) {
+                        val single = input.read()
+                        if (single < 0) throw IllegalArgumentException("truncated")
+                        digest.update(single.toByte())
+                        total++
+                    } else {
+                        digest.update(buffer, 0, count)
+                        total += count
+                    }
+                    if (total > declaration.size) throw IllegalArgumentException("extra data")
+                }
+                if (request.cancelled) throw IllegalStateException("cancelled")
+                if (input.read() >= 0) throw IllegalArgumentException("extra data")
+            }
+            val hex = digest.digest().joinToString("") {
+                (it.toInt() and 0xff).toString(16).padStart(2, '0')
+            }
+            return total == declaration.size && hex == declaration.sha256
+        } finally {
+            request.stream = null
+            try { opened.close() } catch (_: Exception) { }
+        }
+    }
+
+    private fun completeOperation(
+        request: PendingOperation,
+        value: Any? = null,
         error: String? = null,
     ) {
-        if (pendingRead !== request) return
-        pendingRead = null
+        if (pendingOperation !== request) return
+        pendingOperation = null
         request.stream = null
         if (request.cancelled || request.replied) return
         request.replied = true
-        if (error == null) request.result.success(bytes)
-        else request.result.error(error, "Could not safely read package metadata.", null)
+        if (error == null) request.result.success(value)
+        else request.result.error(error, "Could not safely access the model package.", null)
     }
 
-    private fun cancelRead(error: String) {
-        val request = pendingRead ?: return
+    private fun cancelOperation(error: String) {
+        val request = pendingOperation ?: return
         request.cancelled = true
         try {
             request.stream?.close()
@@ -233,7 +351,7 @@ class ModelPackagePlugin :
         request.stream = null
         if (!request.replied) {
             request.replied = true
-            request.result.error(error, "Model-package read was cancelled.", null)
+            request.result.error(error, "Model-package operation was cancelled.", null)
         }
     }
 
@@ -255,6 +373,12 @@ class ModelPackagePlugin :
 
     companion object {
         const val MAX_REQUEST_BYTES = 4 * 1024 * 1024
+        // Bounds for the explicit integrity check: large enough for a ~1.2 GiB
+        // GGUF while keeping a single request finite.
+        const val MAX_VERIFY_FILE_BYTES = 2L * 1024 * 1024 * 1024
+        const val MAX_VERIFY_TOTAL_BYTES = 4L * 1024 * 1024 * 1024
+        const val MAX_VERIFY_FILES = 64
+        private val HEX_SHA256 = Regex("^[0-9a-f]{64}$")
         private const val BUFFER_BYTES = 8192
         private const val CHANNEL = "org.kotoha/model_package"
 

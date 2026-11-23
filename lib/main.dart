@@ -21,6 +21,7 @@ import 'text_document_picker.dart';
 import 'workspace.dart';
 import 'workspace_export.dart';
 import 'model_terms_import.dart';
+import 'model_file_integrity.dart';
 import 'model_package_android.dart';
 
 void main() {
@@ -139,6 +140,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   String? _sourceImportNotice;
   Timer? _sourceImportNoticeTimer;
   bool _reviewingModel = false;
+  bool _verifyingModel = false;
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
@@ -213,7 +215,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   Future<void> _importSource() async {
-    if (_importing || _reviewingModel) return;
+    if (_importing || _reviewingModel || _verifyingModel) {
+      return;
+    }
     _clearSourceImportNotice();
     setState(() => _importing = true);
     // Watch text edits, not selection/focus changes caused by the OS dialog.
@@ -352,7 +356,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   Future<void> _importModelTerms() async {
-    if (_reviewingModel || _importing) return;
+    if (_reviewingModel || _importing || _verifyingModel) {
+      return;
+    }
     setState(() {
       _reviewingModel = true;
       // A new review invalidates any prior session binding.
@@ -394,6 +400,81 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         if (mounted) setState(() => _sessionModelAuthorization = null);
       } finally {
         if (mounted) setState(() => _reviewingModel = false);
+      }
+    }
+  }
+
+  Future<bool> _confirmModelFileIntegrity() async {
+    final strings = AppLocalizations.of(context)!;
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            key: const ValueKey('model-integrity-consent-dialog'),
+            title: Text(strings.modelIntegrityConsentTitle),
+            content: Text(strings.modelIntegrityConsent),
+            actions: [
+              TextButton(
+                key: const ValueKey('decline-model-integrity'),
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(strings.modelIntegrityCancel),
+              ),
+              FilledButton(
+                key: const ValueKey('confirm-model-integrity'),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(strings.modelIntegrityConfirm),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  void _showModelIntegrityResult(bool matched) {
+    final strings = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: ValueKey(
+          matched ? 'model-integrity-success' : 'model-integrity-failure',
+        ),
+        content: Text(
+          matched
+              ? strings.modelIntegritySuccess
+              : strings.modelIntegrityFailure,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _verifyModelFiles() async {
+    final authorization = _sessionModelAuthorization;
+    if (authorization == null ||
+        _verifyingModel ||
+        _reviewingModel ||
+        _importing) {
+      return;
+    }
+    if (!await _confirmModelFileIntegrity() || !mounted) return;
+    setState(() => _verifyingModel = true);
+    try {
+      // The grant from terms review was released; ask for a fresh temporary,
+      // non-persistable selection for this one streaming check.
+      if (!await AndroidPackageReader.select()) {
+        if (mounted) _showModelIntegrityResult(false);
+        return;
+      }
+      final matched = await const ModelFileIntegrity().verify(
+        authorization.declaredFiles,
+      );
+      if (mounted) _showModelIntegrityResult(matched);
+    } on Exception {
+      if (mounted) _showModelIntegrityResult(false);
+    } finally {
+      try {
+        await AndroidPackageReader.release();
+      } on Exception {
+        // Nothing is stored or changed by an integrity check.
+      } finally {
+        if (mounted) setState(() => _verifyingModel = false);
       }
     }
   }
@@ -920,7 +1001,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                           alignment: Alignment.centerLeft,
                           child: OutlinedButton.icon(
                             key: const ValueKey('import-source'),
-                            onPressed: _importing || _reviewingModel
+                            onPressed:
+                                _importing || _reviewingModel || _verifyingModel
                                 ? null
                                 : _importSource,
                             icon: const Icon(Icons.file_open_outlined),
@@ -946,7 +1028,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                           alignment: Alignment.centerLeft,
                           child: OutlinedButton.icon(
                             key: const ValueKey('review-model-terms'),
-                            onPressed: _reviewingModel || _importing
+                            onPressed:
+                                _reviewingModel || _importing || _verifyingModel
                                 ? null
                                 : _importModelTerms,
                             icon: const Icon(Icons.policy_outlined),
@@ -959,6 +1042,24 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                             child: Text(
                               strings.modelSessionActive,
                               key: const ValueKey('model-session-active'),
+                            ),
+                          ),
+                        if (_sessionModelAuthorization != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                key: const ValueKey('verify-model-files'),
+                                onPressed:
+                                    _verifyingModel ||
+                                        _reviewingModel ||
+                                        _importing
+                                    ? null
+                                    : _verifyModelFiles,
+                                icon: const Icon(Icons.fingerprint_outlined),
+                                label: Text(strings.verifyModelFiles),
+                              ),
                             ),
                           ),
                       ],

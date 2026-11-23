@@ -139,6 +139,29 @@ void main() {
       expect(a.termsDigest, isNotEmpty);
     },
   );
+  test('authorization exposes only declared non-terms metadata', () async {
+    const terms = 'Synthetic license';
+    final r = reader(fullManifest(terms), {'license/terms.txt': terms});
+    VerifiedTerms? seen;
+    final authorization = await const ModelTermsImport().run(r, (v) async {
+      seen = v;
+      return true;
+    });
+
+    final declared = seen!.declaredFiles.single;
+    expect(declared.path, 'weights.bin');
+    expect(declared.role, 'weights');
+    expect(declared.sizeBytes, 8);
+    expect(declared.sha256, 'a' * 64);
+    expect(authorization!.declaredFiles.single.path, 'weights.bin');
+    expect(authorization.declaredFiles.single.sizeBytes, 8);
+    expect(seen!.declaredFiles.map((file) => file.toPlatformArguments()), [
+      {'path': 'weights.bin', 'sizeBytes': 8, 'sha256': 'a' * 64},
+    ]);
+    // Declaring files never opens them during terms review.
+    expect(r.requests, ['model_manifest.json', 'license/terms.txt']);
+  });
+
   test(
     'reviewer runs only after every declared terms file is verified',
     () async {

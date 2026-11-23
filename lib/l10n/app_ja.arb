@@ -216,6 +216,13 @@
   "modelDeclaredPublisher": "申告された発行者（未検証）: {publisher}",
   "modelAllTermsVerified": "宣言された利用条件ファイル{count}件すべてを検証してから表示しています。",
   "modelSessionActive": "セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。",
+  "verifyModelFiles": "モデルファイルを検証",
+  "modelIntegrityConsentTitle": "宣言されたモデルファイルを読み取ってハッシュ化しますか？",
+  "modelIntegrityConsent": "パッケージのフォルダーをもう一度選択していただき、宣言されたファイルをその場でストリーム読み取りしてSHA-256ハッシュを計算します。ファイルのバイトやテキストはアプリへコピーされず、保存もされません。実行機能は有効になりません。ハッシュの一致は出所・真正性・ライセンス上の権利を証明するものではありません。",
+  "modelIntegrityConfirm": "読み取ってハッシュ化",
+  "modelIntegrityCancel": "キャンセル",
+  "modelIntegritySuccess": "宣言されたモデルファイルはマニフェストのダイジェストと一致しました。実行機能は有効ではありません。",
+  "modelIntegrityFailure": "モデルファイルの検証に失敗するかキャンセルされました。実行機能は有効ではありません。",
   "@modelTermsTitle": {
     "description": "確認するモデル利用条件のタイトル。",
     "placeholders": {

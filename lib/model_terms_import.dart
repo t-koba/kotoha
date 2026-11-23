@@ -11,6 +11,25 @@ abstract interface class PackageReader {
 
 typedef TermsReviewer = Future<bool> Function(VerifiedTerms review);
 
+/// A non-terms file declared in the manifest. Only metadata crosses the
+/// platform boundary; the native side streams the bytes in place when asked.
+class DeclaredModelFile {
+  const DeclaredModelFile({
+    required this.path,
+    required this.role,
+    required this.sizeBytes,
+    required this.sha256,
+  });
+  final String path, role, sha256;
+  final int sizeBytes;
+
+  Map<String, Object> toPlatformArguments() => {
+    'path': path,
+    'sizeBytes': sizeBytes,
+    'sha256': sha256,
+  };
+}
+
 class VerifiedTerms {
   const VerifiedTerms({
     required this.modelId,
@@ -20,9 +39,11 @@ class VerifiedTerms {
     required this.verifiedTermsFileCount,
     required this.manifestDigest,
     required this.termsDigest,
+    required this.declaredFiles,
   });
   final String modelId, modelName, publisher;
   final List<TermsDocument> documents;
+  final List<DeclaredModelFile> declaredFiles;
   final int verifiedTermsFileCount;
   final String manifestDigest, termsDigest;
 }
@@ -43,8 +64,16 @@ class TermsDocument {
 /// hold only this digest binding in volatile state, clear it on a new,
 /// declined, or failed review, and never persist it.
 class EphemeralModelAuthorization {
-  const EphemeralModelAuthorization(this.manifestDigest, this.termsDigest);
+  const EphemeralModelAuthorization(
+    this.manifestDigest,
+    this.termsDigest, [
+    this.declaredFiles = const <DeclaredModelFile>[],
+  ]);
   final String manifestDigest, termsDigest;
+
+  /// Declared non-terms files, in manifest order. An integrity check is a
+  /// separate explicit action; acceptance alone never opens these files.
+  final List<DeclaredModelFile> declaredFiles;
 }
 
 /// Strict terms-review contract.
@@ -57,7 +86,9 @@ class EphemeralModelAuthorization {
 ///
 /// Hashes prove only that the bytes read match the manifest. They do not
 /// prove origin, authenticity, signature/provenance, or license approval,
-/// and acceptance never enables an engine. No weight file is read.
+/// and acceptance never enables an engine. This review itself opens only the
+/// manifest and terms files; a separate, explicit integrity action is required
+/// before any declared non-terms file is streamed.
 class ModelTermsImport {
   const ModelTermsImport({
     this.maxManifestBytes = 1024 * 1024,
@@ -145,6 +176,18 @@ class ModelTermsImport {
       final digest = files[path]!['sha256'] as String;
       return '$path:$digest:${sha256.convert(utf8.encode(verifiedText[path]!))}';
     });
+    final declaredFiles = <DeclaredModelFile>[];
+    for (final entry in files.entries) {
+      if (entry.value['role'] == 'terms') continue;
+      declaredFiles.add(
+        DeclaredModelFile(
+          path: entry.key,
+          role: entry.value['role'] as String,
+          sizeBytes: entry.value['size_bytes'] as int,
+          sha256: entry.value['sha256'] as String,
+        ),
+      );
+    }
     final review = VerifiedTerms(
       modelId: decoded['id'] as String,
       modelName: decoded['display_name'] as String,
@@ -155,11 +198,13 @@ class ModelTermsImport {
       termsDigest: sha256
           .convert(utf8.encode(digestEntries.join('\n')))
           .toString(),
+      declaredFiles: List.unmodifiable(declaredFiles),
     );
     if (!await reviewer(review)) return null;
     return EphemeralModelAuthorization(
       review.manifestDigest,
       review.termsDigest,
+      review.declaredFiles,
     );
   }
 }

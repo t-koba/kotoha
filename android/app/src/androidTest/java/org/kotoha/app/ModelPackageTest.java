@@ -19,10 +19,16 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.StandardMethodCodec;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.lang.reflect.Proxy;
+import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -556,5 +562,357 @@ public final class ModelPackageTest extends ActivityInstrumentationTestCase2<Mai
         await(after);
         assertEquals(Boolean.FALSE, after.value);
         runTestOnUiThread(plugin::onDetachedFromActivity);
+    }
+
+
+    /** Synthetic provider that serves fixed bytes for explicit integrity checks. */
+    private static final class IntegrityPackageProvider extends ContentProvider {
+        final Map<String, byte[]> contents = new HashMap<>();
+        final AtomicInteger opens = new AtomicInteger();
+        final AtomicReference<ParcelFileDescriptor> lastDescriptor =
+                new AtomicReference<>();
+        volatile CountDownLatch openEntered;
+        volatile CountDownLatch releaseOpen;
+
+        @Override
+        public boolean onCreate() {
+            return true;
+        }
+
+        @Override
+        public Cursor query(
+                Uri uri,
+                String[] projection,
+                String selection,
+                String[] selectionArgs,
+                String sortOrder) {
+            MatrixCursor cursor = new MatrixCursor(projection);
+            if ("root".equals(DocumentsContract.getDocumentId(uri))) {
+                for (String name : contents.keySet()) {
+                    addRow(cursor, projection, "root/" + name, name,
+                            "application/octet-stream");
+                }
+            }
+            return cursor;
+        }
+
+        private static void addRow(
+                MatrixCursor cursor,
+                String[] projection,
+                String id,
+                String name,
+                String mimeType) {
+            Object[] values = new Object[projection.length];
+            for (int i = 0; i < projection.length; i++) {
+                if (DocumentsContract.Document.COLUMN_DOCUMENT_ID.equals(projection[i])) {
+                    values[i] = id;
+                } else if (DocumentsContract.Document.COLUMN_DISPLAY_NAME.equals(projection[i])) {
+                    values[i] = name;
+                } else if (DocumentsContract.Document.COLUMN_MIME_TYPE.equals(projection[i])) {
+                    values[i] = mimeType;
+                }
+            }
+            cursor.addRow(values);
+        }
+
+        @Override
+        public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
+            opens.incrementAndGet();
+            CountDownLatch entered = openEntered;
+            if (entered != null) {
+                entered.countDown();
+                CountDownLatch release = releaseOpen;
+                if (release != null) {
+                    try {
+                        // Bounded block so a cancellation test cannot hang the runner.
+                        release.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+            String id = DocumentsContract.getDocumentId(uri);
+            String name = id.startsWith("root/") ? id.substring("root/".length()) : "";
+            byte[] data = contents.get(name);
+            if (data == null) throw new FileNotFoundException("synthetic file missing");
+            try {
+                File file = File.createTempFile("kotoha-integrity", ".bin",
+                        getContext().getCacheDir());
+                file.deleteOnExit();
+                FileOutputStream out = new FileOutputStream(file);
+                try {
+                    out.write(data);
+                } finally {
+                    out.close();
+                }
+                ParcelFileDescriptor descriptor =
+                        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY);
+                lastDescriptor.set(descriptor);
+                return descriptor;
+            } catch (Exception e) {
+                throw new FileNotFoundException("synthetic fixture: " + e);
+            }
+        }
+
+        @Override
+        public String getType(Uri uri) {
+            return null;
+        }
+
+        @Override
+        public Uri insert(Uri uri, ContentValues values) {
+            return null;
+        }
+
+        @Override
+        public int delete(Uri uri, String selection, String[] selectionArgs) {
+            return 0;
+        }
+
+        @Override
+        public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
+            return 0;
+        }
+    }
+
+    private static byte[] knownBytes(int length) {
+        byte[] data = new byte[length];
+        for (int i = 0; i < length; i++) {
+            data[i] = (byte) ((i * 31 + 7) & 0xff);
+        }
+        return data;
+    }
+
+    private static String digest(byte[] data) throws Exception {
+        byte[] hash = MessageDigest.getInstance("SHA-256").digest(data);
+        StringBuilder out = new StringBuilder();
+        for (byte value : hash) {
+            out.append(String.format("%02x", value & 0xff));
+        }
+        return out.toString();
+    }
+
+    private static Map<String, Object> declaration(String path, long size, String sha256) {
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("path", path);
+        entry.put("sizeBytes", size);
+        entry.put("sha256", sha256);
+        return entry;
+    }
+
+    private static Map<String, Object> declaration(String path, byte[] data) throws Exception {
+        return declaration(path, data.length, digest(data));
+    }
+
+    private static Map<String, Object> verifyArgs(List<Map<String, Object>> files) {
+        Map<String, Object> args = new HashMap<>();
+        args.put("files", files);
+        return args;
+    }
+
+    private IntegrityPackageProvider installIntegrityProvider() {
+        IntegrityPackageProvider provider = new IntegrityPackageProvider();
+        ProviderInfo info = new ProviderInfo();
+        info.authority = AUTHORITY;
+        provider.attachInfo(getInstrumentation().getTargetContext(), info);
+        return provider;
+    }
+
+    private ModelPackagePlugin selectedPlugin(
+            CapturingActivity activity,
+            ContentResolver resolver) throws Throwable {
+        activity.testResolver = resolver;
+        ModelPackagePlugin plugin = new ModelPackagePlugin();
+        runTestOnUiThread(() -> plugin.onAttachedToActivity(binding(activity)));
+        Reply select = new Reply();
+        call(plugin, "selectDirectory", null, select);
+        Uri tree = DocumentsContract.buildTreeDocumentUri(AUTHORITY, "root");
+        Intent data = new Intent().setData(tree)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        final int code = activity.requestCode;
+        runTestOnUiThread(() -> plugin.onActivityResult(code, Activity.RESULT_OK, data));
+        await(select);
+        assertEquals(Boolean.TRUE, select.value);
+        return plugin;
+    }
+
+    /** Success requires exact declared length and digest on every declared file. */
+    public void testVerifyFilesSucceedsOnlyForExactSizeAndDigest() throws Throwable {
+        IntegrityPackageProvider provider = installIntegrityProvider();
+        byte[] weights = knownBytes(9000); // crosses the fixed streaming buffer
+        byte[] config = knownBytes(5);
+        provider.contents.put("weights/model.gguf", weights);
+        provider.contents.put("config.json", config);
+        ContentResolver resolver = ContentResolver.wrap(provider);
+        CapturingActivity activity = new CapturingActivity();
+        ModelPackagePlugin plugin = selectedPlugin(activity, resolver);
+        try {
+            List<Map<String, Object>> files = new ArrayList<>();
+            files.add(declaration("weights/model.gguf", weights));
+            files.add(declaration("config.json", config));
+            Reply reply = new Reply();
+            call(plugin, "verifyFiles", verifyArgs(files), reply);
+            await(reply);
+            assertNull(reply.error);
+            assertEquals(Boolean.TRUE, reply.value);
+            assertTrue("reply is status only, never file bytes",
+                    reply.value instanceof Boolean);
+            assertEquals(2, provider.opens.get());
+
+            List<Map<String, Object>> wrong = new ArrayList<>(files);
+            wrong.set(1, declaration("config.json", config.length, "0".repeat(64)));
+            Reply mismatch = new Reply();
+            call(plugin, "verifyFiles", verifyArgs(wrong), mismatch);
+            await(mismatch);
+            assertNull(mismatch.error);
+            assertEquals(Boolean.FALSE, mismatch.value);
+        } finally {
+            runTestOnUiThread(plugin::onDetachedFromActivity);
+        }
+    }
+
+    /** Oversized and truncated streams are rejected even with a matching prefix. */
+    public void testVerifyFilesRejectsSizeMismatchAndExtraBytes() throws Throwable {
+        IntegrityPackageProvider provider = installIntegrityProvider();
+        byte[] exact = knownBytes(8192);
+        byte[] extra = knownBytes(8193); // exact declared length plus one byte
+        provider.contents.put("weights/model.gguf", exact);
+        provider.contents.put("weights/extra.gguf", extra);
+        ContentResolver resolver = ContentResolver.wrap(provider);
+        CapturingActivity activity = new CapturingActivity();
+        ModelPackagePlugin plugin = selectedPlugin(activity, resolver);
+        try {
+            List<Map<String, Object>> tooShort = new ArrayList<>();
+            tooShort.add(declaration("weights/model.gguf", 8191, digest(exact)));
+            Reply shortReply = new Reply();
+            call(plugin, "verifyFiles", verifyArgs(tooShort), shortReply);
+            await(shortReply);
+            assertFalse(Boolean.TRUE.equals(shortReply.value));
+
+            List<Map<String, Object>> tooLong = new ArrayList<>();
+            tooLong.add(declaration("weights/model.gguf", 8193, digest(exact)));
+            Reply longReply = new Reply();
+            call(plugin, "verifyFiles", verifyArgs(tooLong), longReply);
+            await(longReply);
+            assertFalse(Boolean.TRUE.equals(longReply.value));
+
+            List<Map<String, Object>> extraByte = new ArrayList<>();
+            extraByte.add(declaration("weights/extra.gguf", 8192, digest(extra)));
+            Reply extraReply = new Reply();
+            call(plugin, "verifyFiles", verifyArgs(extraByte), extraReply);
+            await(extraReply);
+            assertFalse("extra byte past declared length is detected",
+                    Boolean.TRUE.equals(extraReply.value));
+        } finally {
+            runTestOnUiThread(plugin::onDetachedFromActivity);
+        }
+    }
+
+    /** No selection, invalid declarations, and detach all fail closed. */
+    public void testVerifyFilesFailsClosedWithoutSelectionOnInvalidInputAndAfterDetach()
+            throws Throwable {
+        IntegrityPackageProvider provider = installIntegrityProvider();
+        provider.contents.put("weights/model.gguf", knownBytes(16));
+        ContentResolver resolver = ContentResolver.wrap(provider);
+        CapturingActivity activity = new CapturingActivity();
+        ModelPackagePlugin plugin = new ModelPackagePlugin();
+        runTestOnUiThread(() -> plugin.onAttachedToActivity(binding(activity)));
+        List<Map<String, Object>> files = new ArrayList<>();
+        files.add(declaration("weights/model.gguf", 16, digest(knownBytes(16))));
+        Reply noSelection = new Reply();
+        call(plugin, "verifyFiles", verifyArgs(files), noSelection);
+        await(noSelection);
+        assertEquals("cancelled", noSelection.error);
+
+        runTestOnUiThread(() -> plugin.onDetachedFromActivity());
+        ModelPackagePlugin selected = selectedPlugin(activity, resolver);
+        try {
+            for (Map<String, Object> bad : new Map[] {
+                    declaration("../weights/model.gguf", 16, digest(knownBytes(16))),
+                    declaration("weights/model.gguf", 0, digest(knownBytes(16))),
+                    declaration("weights/model.gguf", 16, "A".repeat(64)),
+                    declaration("weights/model.gguf", 16, "abc"),
+                    declaration("weights/model.gguf",
+                            ModelPackagePlugin.MAX_VERIFY_FILE_BYTES + 1,
+                            digest(knownBytes(16))),
+            }) {
+                List<Map<String, Object>> invalid = new ArrayList<>();
+                invalid.add(bad);
+                Reply reply = new Reply();
+                call(selected, "verifyFiles", verifyArgs(invalid), reply);
+                await(reply);
+                assertEquals("invalid declaration fails closed", "invalid", reply.error);
+            }
+            Reply empty = new Reply();
+            call(selected, "verifyFiles", verifyArgs(new ArrayList<>()), empty);
+            await(empty);
+            assertEquals("invalid", empty.error);
+        } finally {
+            runTestOnUiThread(selected::onDetachedFromActivity);
+        }
+        Reply afterDetach = new Reply();
+        call(selected, "verifyFiles", verifyArgs(files), afterDetach);
+        await(afterDetach);
+        assertEquals("detached", afterDetach.error);
+    }
+
+    /** Release/detach stop an in-flight stream, close it, and keep the slot busy. */
+    public void testVerifyFilesReleaseAndDetachCancelInFlightStream() throws Throwable {
+        for (boolean detach : new boolean[] {false, true}) {
+            IntegrityPackageProvider provider = installIntegrityProvider();
+            provider.contents.put("weights/model.gguf", knownBytes(9000));
+            provider.openEntered = new CountDownLatch(1);
+            provider.releaseOpen = new CountDownLatch(1);
+            ContentResolver resolver = ContentResolver.wrap(provider);
+            CapturingActivity activity = new CapturingActivity();
+            ModelPackagePlugin plugin = selectedPlugin(activity, resolver);
+            Reply verify = new Reply();
+            List<Map<String, Object>> files = new ArrayList<>();
+            files.add(declaration("weights/model.gguf", knownBytes(9000)));
+            try {
+                call(plugin, "verifyFiles", verifyArgs(files), verify);
+                assertTrue("provider open started",
+                        provider.openEntered.await(10, TimeUnit.SECONDS));
+                if (detach) {
+                    runTestOnUiThread(plugin::onDetachedFromActivity);
+                } else {
+                    Reply release = new Reply();
+                    call(plugin, "release", null, release);
+                    await(release);
+                    assertNull(release.error);
+                }
+                Bundle args = ((android.test.InstrumentationTestRunner) getInstrumentation())
+                        .getArguments();
+                long limit = Math.min(1000L,
+                        Long.parseLong(args.getString("axTimeoutMillis", "10000")));
+                assertTrue("cancellation replies promptly while provider is held",
+                        verify.done.await(limit, TimeUnit.MILLISECONDS));
+                assertEquals(detach ? "detached" : "released", verify.error);
+                assertEquals(1, verify.completions.get());
+
+                Reply busy = new Reply();
+                call(plugin, "selectDirectory", null, busy);
+                await(busy);
+                assertEquals("busy", busy.error);
+
+                // The fixture publishes its descriptor only after the blocked
+                // open returns; release it and confirm the late stream is closed.
+                provider.releaseOpen.countDown();
+                ParcelFileDescriptor descriptor = null;
+                long deadline = SystemClock.uptimeMillis() + 5000;
+                while (descriptor == null && SystemClock.uptimeMillis() < deadline) {
+                    descriptor = provider.lastDescriptor.get();
+                    if (descriptor == null) Thread.sleep(20);
+                }
+                assertNotNull("fixture descriptor was opened", descriptor);
+                while (descriptor.getFd() >= 0 && SystemClock.uptimeMillis() < deadline) {
+                    Thread.sleep(20);
+                }
+                assertEquals("late cancelled stream is closed", -1, descriptor.getFd());
+            } finally {
+                provider.releaseOpen.countDown();
+                runTestOnUiThread(plugin::onDetachedFromActivity);
+            }
+        }
     }
 }

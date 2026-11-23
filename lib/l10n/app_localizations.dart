@@ -626,6 +626,48 @@ abstract class AppLocalizations {
   /// **'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。'**
   String get modelSessionActive;
 
+  /// No description provided for @verifyModelFiles.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルファイルを検証'**
+  String get verifyModelFiles;
+
+  /// No description provided for @modelIntegrityConsentTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'宣言されたモデルファイルを読み取ってハッシュ化しますか？'**
+  String get modelIntegrityConsentTitle;
+
+  /// No description provided for @modelIntegrityConsent.
+  ///
+  /// In ja, this message translates to:
+  /// **'パッケージのフォルダーをもう一度選択していただき、宣言されたファイルをその場でストリーム読み取りしてSHA-256ハッシュを計算します。ファイルのバイトやテキストはアプリへコピーされず、保存もされません。実行機能は有効になりません。ハッシュの一致は出所・真正性・ライセンス上の権利を証明するものではありません。'**
+  String get modelIntegrityConsent;
+
+  /// No description provided for @modelIntegrityConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'読み取ってハッシュ化'**
+  String get modelIntegrityConfirm;
+
+  /// No description provided for @modelIntegrityCancel.
+  ///
+  /// In ja, this message translates to:
+  /// **'キャンセル'**
+  String get modelIntegrityCancel;
+
+  /// No description provided for @modelIntegritySuccess.
+  ///
+  /// In ja, this message translates to:
+  /// **'宣言されたモデルファイルはマニフェストのダイジェストと一致しました。実行機能は有効ではありません。'**
+  String get modelIntegritySuccess;
+
+  /// No description provided for @modelIntegrityFailure.
+  ///
+  /// In ja, this message translates to:
+  /// **'モデルファイルの検証に失敗するかキャンセルされました。実行機能は有効ではありません。'**
+  String get modelIntegrityFailure;
+
   /// 原文から解析したブロック一覧の見出し。
   ///
   /// In ja, this message translates to:
