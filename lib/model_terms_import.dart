@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+import 'model_capabilities.dart';
+
 /// Metadata-only, read-in-place package access. Implementations must never follow
 /// paths outside the selected package root or persist provider permissions.
 abstract interface class PackageReader {
@@ -40,12 +42,31 @@ class VerifiedTerms {
     required this.manifestDigest,
     required this.termsDigest,
     required this.declaredFiles,
+    this.capabilities = const DeclaredModelCapabilities(
+      modelId: '',
+      engineId: '',
+      adapterId: '',
+      tasks: [],
+      requiredCapabilities: [],
+      resources: DeclaredResourceNeeds(
+        storageBytes: 0,
+        peakHostBytes: 0,
+        peakAcceleratorBytes: 0,
+        basis: 'declared',
+        conditions: '',
+      ),
+    ),
   });
   final String modelId, modelName, publisher;
   final List<TermsDocument> documents;
   final List<DeclaredModelFile> declaredFiles;
   final int verifiedTermsFileCount;
   final String manifestDigest, termsDigest;
+
+  /// Manifest-DECLARED capability snapshot from the reviewed manifest: not
+  /// verified support, availability or quality. A matching digest or declared
+  /// route proves nothing about origin or runtime capability.
+  final DeclaredModelCapabilities capabilities;
 }
 
 class TermsDocument {
@@ -118,6 +139,9 @@ class ModelTermsImport {
       throw const FormatException('Invalid manifest');
     }
     final files = _validateManifest(decoded);
+    // The validated declarations are reported as declared data only, never as
+    // verified support or runtime capability.
+    final capabilities = _buildDeclaredCapabilities(decoded);
     final docs = <TermsDocument>[];
     final verifiedText = <String, String>{};
     final terms = decoded['terms'] as List;
@@ -199,6 +223,7 @@ class ModelTermsImport {
           .convert(utf8.encode(digestEntries.join('\n')))
           .toString(),
       declaredFiles: List.unmodifiable(declaredFiles),
+      capabilities: capabilities,
     );
     if (!await reviewer(review)) return null;
     return EphemeralModelAuthorization(
@@ -206,6 +231,80 @@ class ModelTermsImport {
       review.termsDigest,
       review.declaredFiles,
     );
+  }
+}
+
+/// Copies the already-validated manifest capability declarations into a typed
+/// snapshot. Any unexpected shape fails closed before the reviewer runs.
+/// The snapshot reports manifest-DECLARED values only: not verified support,
+/// availability or quality; a matching digest or declared route proves nothing
+/// about origin or runtime capability.
+DeclaredModelCapabilities _buildDeclaredCapabilities(
+  Map<String, dynamic> manifest,
+) {
+  try {
+    final executor = manifest['executor'] as Map<String, dynamic>;
+    final resources = manifest['resources'] as Map<String, dynamic>;
+    final tasks = (manifest['tasks'] as List).map((item) {
+      final task = item as Map<String, dynamic>;
+      final languages = task['languages'] as Map<String, dynamic>;
+      final routes = (languages['routes'] as List).map((item) {
+        final route = item as Map<String, dynamic>;
+        final evidence = parseDeclaredRouteEvidence(
+          route['evidence'] as String,
+        );
+        if (evidence == null) {
+          throw const FormatException('Invalid capability declarations');
+        }
+        return DeclaredRoute(
+          source: (route['source'] as String).toLowerCase(),
+          target: (route['target'] as String).toLowerCase(),
+          evidence: evidence,
+          evidenceRef: route['evidence_ref'] as String?,
+        );
+      }).toList();
+      return DeclaredTaskCapability(
+        id: task['capability'] as String,
+        inputTypes: List<String>.unmodifiable(
+          (task['input_types'] as List).cast<String>(),
+        ),
+        outputTypes: List<String>.unmodifiable(
+          (task['output_types'] as List).cast<String>(),
+        ),
+        sourceLanguages: List<String>.unmodifiable(
+          (languages['source'] as List).map(
+            (tag) => (tag as String).toLowerCase(),
+          ),
+        ),
+        targetLanguages: List<String>.unmodifiable(
+          (languages['target'] as List).map(
+            (tag) => (tag as String).toLowerCase(),
+          ),
+        ),
+        scripts: List<String>.unmodifiable(
+          (languages['scripts'] as List).cast<String>(),
+        ),
+        routes: List<DeclaredRoute>.unmodifiable(routes),
+      );
+    }).toList();
+    return DeclaredModelCapabilities(
+      modelId: manifest['id'] as String,
+      engineId: executor['engine_id'] as String,
+      adapterId: executor['adapter_id'] as String,
+      tasks: List<DeclaredTaskCapability>.unmodifiable(tasks),
+      requiredCapabilities: List<String>.unmodifiable(
+        (executor['required_capabilities'] as List).cast<String>(),
+      ),
+      resources: DeclaredResourceNeeds(
+        storageBytes: resources['storage_bytes'] as int,
+        peakHostBytes: resources['peak_host_bytes'] as int,
+        peakAcceleratorBytes: resources['peak_accelerator_bytes'] as int,
+        basis: resources['basis'] as String,
+        conditions: resources['conditions'] as String,
+      ),
+    );
+  } catch (_) {
+    throw const FormatException('Invalid capability declarations');
   }
 }
 
