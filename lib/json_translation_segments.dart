@@ -85,19 +85,98 @@ JsonStringSegments parseJsonStringSegments(String source) {
 
 final RegExp _simpleKey = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$');
 
-String _memberPath(String path, String key) =>
-    _simpleKey.hasMatch(key) ? '$path.$key' : '$path[${jsonEncode(key)}]';
+String _pathComponent(String key) =>
+    _simpleKey.hasMatch(key) ? '.$key' : '[${jsonEncode(key)}]';
 
-/// Recursive descent over already-validated JSON, tracking raw offsets.
+enum _FrameKind { object, array }
+
+class _Frame {
+  _Frame.object() : kind = _FrameKind.object, index = 0;
+  _Frame.array() : kind = _FrameKind.array, index = 0;
+
+  final _FrameKind kind;
+  int index;
+}
+
+/// Iterative traversal over already-validated JSON, tracking raw offsets.
+///
+/// Containers live on an explicit stack so deeply nested but bounded documents
+/// cannot exhaust the Dart call stack. Each path is assembled only when a
+/// string value is emitted.
 class _JsonScanner {
   _JsonScanner(this.source);
 
   final String source;
   final List<JsonStringSegment> _segments = <JsonStringSegment>[];
+  final List<_Frame> _stack = <_Frame>[];
+  final List<String> _path = <String>[];
   int _at = 0;
 
   List<JsonStringSegment> scan() {
-    _value(r'$');
+    var expectingValue = true;
+    while (true) {
+      if (expectingValue) {
+        _space();
+        if (_at >= source.length) throw _bad('expected value');
+        final unit = source.codeUnitAt(_at);
+        if (unit == 0x22) {
+          _emitString();
+          expectingValue = false;
+        } else if (unit == 0x7B) {
+          _at++;
+          _space();
+          if (_take(0x7D)) {
+            expectingValue = false;
+          } else {
+            final frame = _Frame.object();
+            _stack.add(frame);
+            _readObjectKey(frame);
+          }
+        } else if (unit == 0x5B) {
+          _at++;
+          _space();
+          if (_take(0x5D)) {
+            expectingValue = false;
+          } else {
+            _stack.add(_Frame.array());
+            _path.add('[0]');
+          }
+        } else if (_literal('true') || _literal('false') || _literal('null')) {
+          expectingValue = false;
+        } else {
+          _number();
+          expectingValue = false;
+        }
+        continue;
+      }
+
+      if (_stack.isEmpty) break;
+      final frame = _stack.last;
+      _space();
+      if (_take(0x2C)) {
+        _path.removeLast();
+        if (frame.kind == _FrameKind.object) {
+          _readObjectKey(frame);
+        } else {
+          frame.index++;
+          _path.add('[${frame.index}]');
+        }
+        expectingValue = true;
+        continue;
+      }
+      final closing = frame.kind == _FrameKind.object ? 0x7D : 0x5D;
+      if (_take(closing)) {
+        _stack.removeLast();
+        _path.removeLast();
+        continue;
+      }
+      throw _bad(
+        frame.kind == _FrameKind.object
+            ? 'expected comma or closing brace'
+            : 'expected comma or closing bracket',
+      );
+    }
+
     _space();
     if (_at != source.length) throw _bad('trailing content');
     return _segments;
@@ -119,21 +198,6 @@ class _JsonScanner {
       final unit = source.codeUnitAt(_at);
       if (unit != 0x20 && unit != 0x09 && unit != 0x0A && unit != 0x0D) break;
       _at++;
-    }
-  }
-
-  void _value(String path) {
-    _space();
-    if (_at >= source.length) throw _bad('expected value');
-    final unit = source.codeUnitAt(_at);
-    if (unit == 0x22) {
-      _string(path);
-    } else if (unit == 0x7B) {
-      _object(path);
-    } else if (unit == 0x5B) {
-      _array(path);
-    } else if (!_literal('true') && !_literal('false') && !_literal('null')) {
-      _number();
     }
   }
 
@@ -183,49 +247,25 @@ class _JsonScanner {
   String _decoded(int start, int end) =>
       jsonDecode(source.substring(start - 1, end + 1)) as String;
 
-  void _string(String path) {
+  void _readObjectKey(_Frame frame) {
+    _space();
+    final (keyStart, keyEnd) = _quoted();
+    final key = _decoded(keyStart, keyEnd);
+    _space();
+    if (!_take(0x3A)) throw _bad('expected colon');
+    _path.add(_pathComponent(key));
+  }
+
+  void _emitString() {
     final (start, end) = _quoted();
     _segments.add(
       JsonStringSegment(
         id: _segments.length,
-        path: path,
+        path: '\$${_path.join()}',
         value: _decoded(start, end),
         start: start,
         end: end,
       ),
     );
-  }
-
-  void _object(String path) {
-    _at++; // '{'
-    _space();
-    if (_take(0x7D)) return;
-    while (true) {
-      _space();
-      final (keyStart, keyEnd) = _quoted();
-      final key = _decoded(keyStart, keyEnd);
-      _space();
-      if (!_take(0x3A)) throw _bad('expected colon');
-      _value(_memberPath(path, key));
-      _space();
-      if (_take(0x2C)) continue;
-      if (_take(0x7D)) return;
-      throw _bad('expected comma or closing brace');
-    }
-  }
-
-  void _array(String path) {
-    _at++; // '['
-    _space();
-    if (_take(0x5D)) return;
-    var index = 0;
-    while (true) {
-      _value('$path[$index]');
-      index++;
-      _space();
-      if (_take(0x2C)) continue;
-      if (_take(0x5D)) return;
-      throw _bad('expected comma or closing bracket');
-    }
   }
 }

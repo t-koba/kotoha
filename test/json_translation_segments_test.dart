@@ -177,4 +177,20 @@ void main() {
       );
     },
   );
+  test(
+    'deeply nested JSON within panel limits does not overflow the scanner',
+    () {
+      const depth = 10000;
+      final source = '${'[' * depth}"deep"${']' * depth}';
+      final parts = parseJsonStringSegments(source);
+
+      expect(parts.source, source);
+      expect(parts.values, hasLength(1));
+      expect(parts.values.single.value, 'deep');
+      expect(parts.values.single.path, r'$' + '[0]' * depth);
+      final rewritten = parts.apply({0: 'changed'});
+      expect(jsonDecode(rewritten), isNotNull);
+      expect(rewritten, '${'[' * depth}"changed"${']' * depth}');
+    },
+  );
 }
