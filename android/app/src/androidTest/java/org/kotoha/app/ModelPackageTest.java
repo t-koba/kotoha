@@ -586,12 +586,31 @@ public final class ModelPackageTest extends ActivityInstrumentationTestCase2<Mai
                 String selection,
                 String[] selectionArgs,
                 String sortOrder) {
+            String parent = DocumentsContract.getDocumentId(uri);
             MatrixCursor cursor = new MatrixCursor(projection);
-            if ("root".equals(DocumentsContract.getDocumentId(uri))) {
-                for (String name : contents.keySet()) {
-                    addRow(cursor, projection, "root/" + name, name,
-                            "application/octet-stream");
+            String prefix;
+            if ("root".equals(parent)) {
+                prefix = "";
+            } else if (parent.startsWith("root/")) {
+                prefix = parent.substring("root/".length()) + "/";
+            } else {
+                return cursor;
+            }
+            Map<String, String> children = new HashMap<>();
+            for (String path : contents.keySet()) {
+                if (!path.startsWith(prefix)) continue;
+                String remainder = path.substring(prefix.length());
+                int slash = remainder.indexOf('/');
+                String name = slash < 0 ? remainder : remainder.substring(0, slash);
+                if (!name.isEmpty()) {
+                    children.put(name, slash < 0
+                            ? "application/octet-stream"
+                            : DocumentsContract.Document.MIME_TYPE_DIR);
                 }
+            }
+            for (Map.Entry<String, String> child : children.entrySet()) {
+                addRow(cursor, projection, parent + "/" + child.getKey(), child.getKey(),
+                        child.getValue());
             }
             return cursor;
         }

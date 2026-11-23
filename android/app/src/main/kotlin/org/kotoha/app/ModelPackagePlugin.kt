@@ -247,7 +247,11 @@ class ModelPackagePlugin :
     private fun verifyFiles(call: MethodCall, result: MethodChannel.Result) {
         val selectedRoot = root
         val activity = binding?.activity
-        if (selectedRoot == null || activity == null) {
+        if (activity == null) {
+            result.error("detached", "No active activity.", null)
+            return
+        }
+        if (selectedRoot == null) {
             result.error("cancelled", "No model package is selected for this session.", null)
             return
         }
