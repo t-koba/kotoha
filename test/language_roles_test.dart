@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kotoha/content_locale.dart' show parseContentLocale;
 import 'package:kotoha/language_roles.dart';
 
 void main() {
@@ -28,28 +27,63 @@ void main() {
       expect(tag, isNotNull);
       expect(tag!.script, isNull);
       expect(tag.region, isNull);
+      expect(tag.subtags, ['fr']);
       expect(tag.canonical, 'fr');
     });
+
+    test('preserves BCP-47 extensions and variants (design §2.1)', () {
+      final calendar = LanguageTag.parse('ja-JP-u-ca-japanese');
+      expect(calendar, isNotNull);
+      expect(calendar!.language, 'ja');
+      expect(calendar.region, 'JP');
+      expect(calendar.canonical, 'ja-JP-u-ca-japanese');
+      expect(calendar.subtags, ['ja', 'JP', 'u', 'ca', 'japanese']);
+
+      final numerals = LanguageTag.parse('sr-Latn-RS-u-nu-latn');
+      expect(numerals, isNotNull);
+      expect(numerals!.script, 'Latn');
+      expect(numerals.region, 'RS');
+      expect(numerals.canonical, 'sr-Latn-RS-u-nu-latn');
+      expect(numerals.subtags, ['sr', 'Latn', 'RS', 'u', 'nu', 'latn']);
+
+      final variant = LanguageTag.parse('de-DE-1996');
+      expect(variant, isNotNull);
+      expect(variant!.canonical, 'de-DE-1996');
+      expect(variant.subtags, ['de', 'DE', '1996']);
+
+      final private = LanguageTag.parse('en-US-x-private');
+      expect(private, isNotNull);
+      expect(private!.canonical, 'en-US-x-private');
+      expect(private.subtags, ['en', 'US', 'x', 'private']);
+    });
+
+    test(
+      'accepts private-use and longer primary subtags from the spec pattern',
+      () {
+        final private = LanguageTag.parse('x-private');
+        expect(private, isNotNull);
+        expect(private!.language, 'x');
+        expect(private.subtags, ['x', 'private']);
+
+        final longPrimary = LanguageTag.parse('qaa-Qaaa-QM-x-southern');
+        expect(longPrimary, isNotNull);
+        expect(longPrimary!.canonical, 'qaa-Qaaa-QM-x-southern');
+      },
+    );
 
     test('rejects malformed entries fail-closed', () {
       for (final bad in <String>[
         '',
         '   ',
-        'english',
-        'e',
-        '123',
-        'en-US-Latn', // script after region is malformed
-        'en-QQQ', // three-letter region
-        'en-Latn-US-extra', // too many subtags
+        'e', // primary shorter than two letters
+        '123', // primary is not alphabetic
+        'en-', // empty subtag
+        'en--US', // empty subtag
+        'en-!!!', // non-alphanumeric subtag
+        'en-US-abcdefghi', // subtag longer than eight characters
+        'x', // private-use primary needs at least one subtag
       ]) {
         expect(LanguageTag.parse(bad), isNull, reason: bad);
-      }
-    });
-
-    test('acceptance matches the reused fail-closed validator', () {
-      for (final entry in <String>['ja', 'zh-Hans-CN', 'pt-BR', 'de']) {
-        expect(parseContentLocale(entry), isNotNull, reason: entry);
-        expect(LanguageTag.parse(entry), isNotNull, reason: entry);
       }
     });
   });
@@ -98,6 +132,22 @@ void main() {
       expect(cleared.tag(LanguageRole.uiDisplay), ja);
       expect(cleared.tag(LanguageRole.voice), isNull);
     });
+
+    test(
+      'from() defensively copies so a caller map cannot mutate a profile',
+      () {
+        final ja = LanguageTag.parse('ja')!;
+        final en = LanguageTag.parse('en')!;
+        final backing = <LanguageRole, LanguageTag>{LanguageRole.uiDisplay: ja};
+        final profile = LanguageProfile.from(backing);
+        expect(profile.tag(LanguageRole.uiDisplay), ja);
+
+        backing[LanguageRole.uiDisplay] = en;
+        backing[LanguageRole.input] = en;
+        expect(profile.tag(LanguageRole.uiDisplay), ja);
+        expect(profile.tag(LanguageRole.input), isNull);
+      },
+    );
   });
 
   group('LanguageEstimate', () {
