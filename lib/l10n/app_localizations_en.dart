@@ -441,4 +441,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get findLimitExceeded =>
       'The replacement would exceed the editor limit. No text was changed.';
+
+  @override
+  String get structuredJsonTitle => 'Structured JSON values';
+
+  @override
+  String structuredJsonAvailable(int count) {
+    return '$count string values found.';
+  }
+
+  @override
+  String get structuredJsonInvalid =>
+      'The source is not valid JSON. Fix the source text before editing values.';
+
+  @override
+  String get structuredJsonTooLarge =>
+      'This source is too large for the JSON editor. Shorten it before editing values.';
+
+  @override
+  String get structuredJsonTooMany =>
+      'This JSON has too many string values to edit here. Shorten the source before editing values.';
+
+  @override
+  String get structuredJsonEmptyHint =>
+      'Translation (leave empty to keep the original)';
+
+  @override
+  String get structuredJsonApply => 'Apply translations';
+
+  @override
+  String get structuredJsonApplied =>
+      'Translations applied to the source text.';
 }

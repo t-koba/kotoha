@@ -354,5 +354,42 @@
   "findLimitExceeded": "The replacement would exceed the editor limit. No text was changed.",
   "@findLimitExceeded": {
     "description": "Find-status message shown when replace all is refused because the result would exceed the editor size limit."
+  },
+  "structuredJsonTitle": "Structured JSON values",
+  "@structuredJsonTitle": {
+    "description": "Title of the collapsed panel for editing string values in JSON source text."
+  },
+  "structuredJsonAvailable": "{count} string values found.",
+  "@structuredJsonAvailable": {
+    "description": "Status showing how many string values the JSON source contains.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "structuredJsonInvalid": "The source is not valid JSON. Fix the source text before editing values.",
+  "@structuredJsonInvalid": {
+    "description": "Notice shown when the JSON source cannot be parsed for editing."
+  },
+  "structuredJsonTooLarge": "This source is too large for the JSON editor. Shorten it before editing values.",
+  "@structuredJsonTooLarge": {
+    "description": "Notice shown when the JSON source exceeds the editor size limit and is not parsed."
+  },
+  "structuredJsonTooMany": "This JSON has too many string values to edit here. Shorten the source before editing values.",
+  "@structuredJsonTooMany": {
+    "description": "Notice shown when the JSON source has more string values than the panel can display."
+  },
+  "structuredJsonEmptyHint": "Translation (leave empty to keep the original)",
+  "@structuredJsonEmptyHint": {
+    "description": "Hint on a per-value field explaining that an empty translation keeps the original value."
+  },
+  "structuredJsonApply": "Apply translations",
+  "@structuredJsonApply": {
+    "description": "Label of the button that writes non-empty translations back to the source text."
+  },
+  "structuredJsonApplied": "Translations applied to the source text.",
+  "@structuredJsonApplied": {
+    "description": "Status shown after translations were written back to the source text."
   }
 }

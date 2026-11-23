@@ -13,6 +13,7 @@ import 'document_format_support.dart';
 import 'document_outline.dart';
 import 'editor_config.dart';
 import 'first_strong_direction.dart';
+import 'structured_json_panel.dart';
 import 'text_find_replace.dart';
 import 'l10n/app_localizations.dart';
 import 'text_document_exporter.dart';
@@ -977,6 +978,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                             _allowImePersonalizedLearning,
                       ),
                       const DocumentFormatSupport(),
+                      StructuredJsonPanel(controller: _sourceText),
                       const SizedBox(height: 12),
                       // Keep the toggle in normal Tab order; Ctrl/⌘+F is an
                       // additional way to reach the same action.

@@ -425,4 +425,30 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get findLimitExceeded =>
       '置換後のテキストがエディターの上限を超えるため、置換しませんでした。テキストは変更されていません。';
+
+  @override
+  String get structuredJsonTitle => 'JSONの文字列値';
+
+  @override
+  String structuredJsonAvailable(int count) {
+    return '$count件の文字列値が見つかりました。';
+  }
+
+  @override
+  String get structuredJsonInvalid => '原文は有効なJSONではありません。値を編集する前に原文を修正してください。';
+
+  @override
+  String get structuredJsonTooLarge => '原文が大きすぎてJSONエディターで編集できません。短くしてください。';
+
+  @override
+  String get structuredJsonTooMany => '文字列値が多すぎるため、ここでは編集できません。原文を短くしてください。';
+
+  @override
+  String get structuredJsonEmptyHint => '訳文（空欄の場合は元の値を保持）';
+
+  @override
+  String get structuredJsonApply => '訳文を反映';
+
+  @override
+  String get structuredJsonApplied => '訳文を原文に反映しました。';
 }

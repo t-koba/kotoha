@@ -354,5 +354,42 @@
   "findLimitExceeded": "置換後のテキストがエディターの上限を超えるため、置換しませんでした。テキストは変更されていません。",
   "@findLimitExceeded": {
     "description": "置換結果がエディターの上限を超えるためすべて置換を拒否したときに表示する検索ステータスのメッセージ。"
+  },
+  "structuredJsonTitle": "JSONの文字列値",
+  "@structuredJsonTitle": {
+    "description": "JSON原文の文字列値を編集する折りたたみパネルのタイトル。"
+  },
+  "structuredJsonAvailable": "{count}件の文字列値が見つかりました。",
+  "@structuredJsonAvailable": {
+    "description": "JSON原文に含まれる文字列値の件数を示すステータス。",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "structuredJsonInvalid": "原文は有効なJSONではありません。値を編集する前に原文を修正してください。",
+  "@structuredJsonInvalid": {
+    "description": "JSON原文を編集用に解析できないときの案内。"
+  },
+  "structuredJsonTooLarge": "原文が大きすぎてJSONエディターで編集できません。短くしてください。",
+  "@structuredJsonTooLarge": {
+    "description": "原文がサイズ上限を超えたため解析せずに表示する案内。"
+  },
+  "structuredJsonTooMany": "文字列値が多すぎるため、ここでは編集できません。原文を短くしてください。",
+  "@structuredJsonTooMany": {
+    "description": "文字列値が表示上限を超えたときに表示する案内。"
+  },
+  "structuredJsonEmptyHint": "訳文（空欄の場合は元の値を保持）",
+  "@structuredJsonEmptyHint": {
+    "description": "各値の入力欄のヒント。空欄なら元の値を保持することを説明する。"
+  },
+  "structuredJsonApply": "訳文を反映",
+  "@structuredJsonApply": {
+    "description": "入力済みの訳文を原文へ書き戻すボタンのラベル。"
+  },
+  "structuredJsonApplied": "訳文を原文に反映しました。",
+  "@structuredJsonApplied": {
+    "description": "訳文を原文へ書き戻した後に表示するステータス。"
   }
 }

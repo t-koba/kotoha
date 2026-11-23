@@ -835,6 +835,54 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'置換後のテキストがエディターの上限を超えるため、置換しませんでした。テキストは変更されていません。'**
   String get findLimitExceeded;
+
+  /// JSON原文の文字列値を編集する折りたたみパネルのタイトル。
+  ///
+  /// In ja, this message translates to:
+  /// **'JSONの文字列値'**
+  String get structuredJsonTitle;
+
+  /// JSON原文に含まれる文字列値の件数を示すステータス。
+  ///
+  /// In ja, this message translates to:
+  /// **'{count}件の文字列値が見つかりました。'**
+  String structuredJsonAvailable(int count);
+
+  /// JSON原文を編集用に解析できないときの案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'原文は有効なJSONではありません。値を編集する前に原文を修正してください。'**
+  String get structuredJsonInvalid;
+
+  /// 原文がサイズ上限を超えたため解析せずに表示する案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'原文が大きすぎてJSONエディターで編集できません。短くしてください。'**
+  String get structuredJsonTooLarge;
+
+  /// 文字列値が表示上限を超えたときに表示する案内。
+  ///
+  /// In ja, this message translates to:
+  /// **'文字列値が多すぎるため、ここでは編集できません。原文を短くしてください。'**
+  String get structuredJsonTooMany;
+
+  /// 各値の入力欄のヒント。空欄なら元の値を保持することを説明する。
+  ///
+  /// In ja, this message translates to:
+  /// **'訳文（空欄の場合は元の値を保持）'**
+  String get structuredJsonEmptyHint;
+
+  /// 入力済みの訳文を原文へ書き戻すボタンのラベル。
+  ///
+  /// In ja, this message translates to:
+  /// **'訳文を反映'**
+  String get structuredJsonApply;
+
+  /// 訳文を原文へ書き戻した後に表示するステータス。
+  ///
+  /// In ja, this message translates to:
+  /// **'訳文を原文に反映しました。'**
+  String get structuredJsonApplied;
 }
 
 class _AppLocalizationsDelegate
