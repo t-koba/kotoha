@@ -19,6 +19,11 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
 
   override func setUpWithError() throws {
     continueAfterFailure = false
+    // A hosted arm64 simulator exceeded XCTest's default two-minute allowance
+    // on this suite (CI run 45123648861, vcs-read/6682f4b4); the assertions
+    // then passed after the allowance-triggered relaunch. Keep every assertion
+    // and the element timeout below unchanged; only give the slow runner room.
+    executionTimeAllowance = 300
     let configured = ProcessInfo.processInfo.environment["KOTOHA_AX_TIMEOUT_SECONDS"] ?? ""
     if !configured.isEmpty {
       timeout = try XCTUnwrap(Double(configured), "Invalid accessibility wait budget")
