@@ -26,20 +26,30 @@ class ModelRegistryException implements Exception {
 /// These digests are not verified support, availability or quality claims.
 /// Hashes prove identity only: they prove nothing about origin, authenticity,
 /// signature/provenance or license approval. Only a registry constructs
-/// records; the declared files are an unmodifiable snapshot and are never
-/// opened here.
+/// records; each declared file is copied into a plain record whose fields are
+/// read once at install time, and those files are never opened here.
 class InstalledModel {
   InstalledModel._(
     this.manifestDigest,
     this.termsDigest,
     List<DeclaredModelFile> declaredFiles,
-  ) : _declaredFiles = List<DeclaredModelFile>.unmodifiable(declaredFiles);
+  ) : _declaredFiles = List<DeclaredModelFile>.unmodifiable(
+        declaredFiles.map(
+          (file) => DeclaredModelFile(
+            path: file.path,
+            role: file.role,
+            sizeBytes: file.sizeBytes,
+            sha256: file.sha256,
+          ),
+        ),
+      );
 
   final String manifestDigest;
   final String termsDigest;
   final List<DeclaredModelFile> _declaredFiles;
 
-  /// Declared non-terms files, in manifest order, as an unmodifiable snapshot.
+  /// Declared non-terms files, in manifest order, as an unmodifiable list of
+  /// plain records frozen at install time.
   List<DeclaredModelFile> get declaredFiles => _declaredFiles;
 }
 

@@ -4,6 +4,48 @@ import 'package:kotoha/model_terms_import.dart';
 
 String digest(String digit) => digit * 64;
 
+class _MutableDeclaredModelFile extends DeclaredModelFile {
+  _MutableDeclaredModelFile(
+    String path,
+    String role,
+    int sizeBytes,
+    String sha256,
+  ) : _path = path,
+      _role = role,
+      _sizeBytes = sizeBytes,
+      _sha256 = sha256,
+      super(path: path, role: role, sizeBytes: sizeBytes, sha256: sha256);
+
+  String _path;
+  String _role;
+  int _sizeBytes;
+  String _sha256;
+
+  @override
+  String get path => _path;
+
+  @override
+  String get role => _role;
+
+  @override
+  int get sizeBytes => _sizeBytes;
+
+  @override
+  String get sha256 => _sha256;
+
+  void changeAll({
+    required String path,
+    required String role,
+    required int sizeBytes,
+    required String sha256,
+  }) {
+    _path = path;
+    _role = role;
+    _sizeBytes = sizeBytes;
+    _sha256 = sha256;
+  }
+}
+
 void expectFailure(ModelRegistryFailure failure, void Function() action) {
   expect(
     action,
@@ -87,6 +129,42 @@ void main() {
     expect(stored.single.path, 'weights.bin');
     expect(() => stored.add(stored.single), throwsUnsupportedError);
     expect(() => stored.clear(), throwsUnsupportedError);
+  });
+
+  test('install freezes declared files against mutable subclasses', () {
+    final registry = ModelRegistry();
+    final source = _MutableDeclaredModelFile(
+      'weights.bin',
+      'weights',
+      8,
+      digest('1'),
+    );
+    registry.install(
+      EphemeralModelAuthorization(digest('a'), digest('2'), [source]),
+    );
+    final stored = registry.lookup(digest('a'))!.declaredFiles.single;
+    expect(stored.runtimeType, DeclaredModelFile);
+    final argumentsAtInstall = stored.toPlatformArguments();
+    expect(argumentsAtInstall, {
+      'path': 'weights.bin',
+      'sizeBytes': 8,
+      'sha256': digest('1'),
+    });
+
+    source.changeAll(
+      path: 'changed.bin',
+      role: 'terms',
+      sizeBytes: 1,
+      sha256: digest('3'),
+    );
+
+    expect(source.path, 'changed.bin');
+    expect(stored.path, 'weights.bin');
+    expect(stored.role, 'weights');
+    expect(stored.sizeBytes, 8);
+    expect(stored.sha256, digest('1'));
+    expect(stored.toPlatformArguments(), argumentsAtInstall);
+    expect(stored.runtimeType, DeclaredModelFile);
   });
 
   test(
