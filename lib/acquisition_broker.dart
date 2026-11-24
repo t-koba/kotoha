@@ -31,6 +31,11 @@ String _requireDigest(String value, String name) {
 Set<String> _requireFilePaths(Set<String> value) =>
     Set<String>.unmodifiable(value.toSet());
 
+/// Policy configuration is snapshotted at construction: later mutation of a
+/// caller-owned set must never widen the broker's allow-list.
+Set<String> _snapshotDestinations(Set<String> value) =>
+    Set<String>.unmodifiable(value.toSet());
+
 /// Classification of a refused authorization decision. Deliberately carries
 /// no path, destination, purpose, digest, content, engine or provider detail.
 enum AcquisitionFailure {
@@ -120,11 +125,13 @@ class AcquisitionPermission {
 /// verified last, so no permission exists without an active matching receipt.
 /// A refusal throws before any permission is created.
 class AcquisitionBroker {
-  const AcquisitionBroker({this.allowedDestinations = const <String>{}});
+  AcquisitionBroker({Set<String> allowedDestinations = const <String>{}})
+    : allowedDestinations = _snapshotDestinations(allowedDestinations);
 
-  /// Configured destinations this broker may authorize. Ids must be lowercase
-  /// ids; invalid entries fail closed rather than permitting a transfer. Not a
-  /// network address resolution, availability or trust claim.
+  /// Immutable snapshot of configured destinations this broker may authorize.
+  /// Ids must be lowercase ids; invalid entries fail closed rather than
+  /// permitting a transfer. Later mutation of a caller-owned set cannot widen
+  /// this policy. Not a network address resolution, availability or trust claim.
   final Set<String> allowedDestinations;
 
   /// Decide whether [request] is permitted at [now].

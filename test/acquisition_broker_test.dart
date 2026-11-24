@@ -344,7 +344,7 @@ void main() {
   test('default broker with an empty allow-list refuses every request', () {
     expectRefusal(
       AcquisitionFailure.destinationNotAllowed,
-      broker: const AcquisitionBroker(),
+      broker: AcquisitionBroker(),
       request: _request(),
       authorization: _authorization(),
       consents: _consented(),
@@ -402,6 +402,25 @@ void main() {
     expect(
       () => _request(termsDigest: _termsDigest.toUpperCase()),
       throwsArgumentError,
+    );
+  });
+
+  test('allow-list is frozen against caller and getter mutation', () {
+    final allowed = <String>{_destinationId};
+    final broker = AcquisitionBroker(allowedDestinations: allowed);
+    allowed.add('other.example');
+
+    expectRefusal(
+      AcquisitionFailure.destinationNotAllowed,
+      broker: broker,
+      request: _request(destinationId: 'other.example'),
+      authorization: _authorization(),
+      consents: _consented(),
+      now: _now,
+    );
+    expect(
+      () => broker.allowedDestinations.add('other.example'),
+      throwsUnsupportedError,
     );
   });
 
