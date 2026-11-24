@@ -17,17 +17,18 @@ enum ConsentPurpose { translation, ocr, asr, tts }
 
 final RegExp _idPattern = RegExp(r'^[a-z][a-z0-9._-]*$');
 final RegExp _digestPattern = RegExp(r'^[a-f0-9]{64}$');
+const String _rejectedValue = '<rejected>';
 
 String _requireId(String value, String name) {
   if (!_idPattern.hasMatch(value)) {
-    throw ArgumentError.value(value, name, 'invalid lowercase id');
+    throw ArgumentError.value(_rejectedValue, name, 'invalid lowercase id');
   }
   return value;
 }
 
 String _requireDigest(String value, String name) {
   if (!_digestPattern.hasMatch(value)) {
-    throw ArgumentError.value(value, name, 'invalid sha-256 digest');
+    throw ArgumentError.value(_rejectedValue, name, 'invalid sha-256 digest');
   }
   return value;
 }

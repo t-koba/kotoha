@@ -468,6 +468,41 @@ void main() {
     );
   });
 
+  test('validation errors do not echo rejected caller content', () {
+    const rejected = '/private/user/secret\u202E';
+    String errorFrom(void Function() body) {
+      try {
+        body();
+      } on ArgumentError catch (error) {
+        return error.toString();
+      }
+      throw StateError('expected ArgumentError');
+    }
+
+    void expectSafe(String error, String field, String reason) {
+      expect(error, contains(field));
+      expect(error, contains(reason));
+      expect(error, contains('<rejected>'));
+      expect(error, isNot(contains(rejected)));
+    }
+
+    expectSafe(
+      errorFrom(() => _receipt(id: rejected)),
+      'id',
+      'invalid lowercase id',
+    );
+    expectSafe(
+      errorFrom(() => _receipt(manifestDigest: rejected)),
+      'manifestDigest',
+      'invalid sha-256 digest',
+    );
+    expectSafe(
+      errorFrom(() => _receipt(termsDigest: rejected)),
+      'termsDigest',
+      'invalid sha-256 digest',
+    );
+  });
+
   test('unchanged conditions require no new consent', () {
     final unchanged = _classify();
 
