@@ -29,6 +29,29 @@ class _FlipScope extends ConsentScope {
   bool covers(String capabilityId) => widened || super.covers(capabilityId);
 }
 
+class _FlipReceipt extends ConsentReceipt {
+  _FlipReceipt()
+    : super(
+        id: 'receipt-1',
+        manifestDigest: _manifestDigest,
+        termsDigest: _termsDigest,
+        purpose: ConsentPurpose.translation,
+        scope: _scope(),
+        grantedAt: _grantedAt,
+      );
+
+  bool flipped = false;
+
+  @override
+  String get manifestDigest => flipped ? _otherDigest : super.manifestDigest;
+
+  @override
+  ConsentPurpose get purpose => flipped ? ConsentPurpose.ocr : super.purpose;
+
+  @override
+  ConsentScope get scope => flipped ? _scope({'ocr.text'}) : super.scope;
+}
+
 ConsentReceipt _receipt({
   String id = 'receipt-1',
   String manifestDigest = _manifestDigest,
@@ -642,5 +665,36 @@ void main() {
       receipt,
     );
     expect(receipt.revoke().scope, receipt.scope);
+  });
+
+  test('grant snapshots the receipt against later caller mutation', () {
+    final receipt = _FlipReceipt();
+    final store = ConsentStore()..grant(receipt);
+
+    bool active(String manifest, ConsentPurpose purpose, String capability) =>
+        store.activeFor(manifest, _termsDigest, purpose, capability) != null;
+
+    expect(
+      active(_manifestDigest, ConsentPurpose.translation, 'translation.text'),
+      isTrue,
+    );
+    expect(active(_otherDigest, ConsentPurpose.ocr, 'ocr.text'), isFalse);
+
+    receipt.flipped = true;
+    expect(
+      active(_manifestDigest, ConsentPurpose.translation, 'translation.text'),
+      isTrue,
+    );
+    expect(active(_otherDigest, ConsentPurpose.ocr, 'ocr.text'), isFalse);
+    expect(store.receipts.single.runtimeType, ConsentReceipt);
+    expect(
+      store.activeFor(
+        _manifestDigest,
+        _termsDigest,
+        ConsentPurpose.translation,
+        'translation.text',
+      ),
+      isNotNull,
+    );
   });
 }

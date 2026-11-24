@@ -42,6 +42,19 @@ DateTime _requireGrantedAt(DateTime? value) {
 ConsentScope _freezeScope(ConsentScope scope) =>
     ConsentScope(modelId: scope.modelId, capabilityIds: scope.capabilityIds);
 
+// ConsentReceipt is open and every getter is virtual. The store owns its
+// records, so read each declared value once and keep a plain receipt instead
+// of a caller object that could change after the record was granted.
+ConsentReceipt _freezeReceipt(ConsentReceipt receipt) => ConsentReceipt(
+  id: receipt.id,
+  manifestDigest: receipt.manifestDigest,
+  termsDigest: receipt.termsDigest,
+  purpose: receipt.purpose,
+  scope: receipt.scope,
+  grantedAt: receipt.grantedAt,
+  revoked: receipt.revoked,
+);
+
 Set<String> _requireCapabilities(Set<String> value) {
   if (value.isEmpty) {
     throw ArgumentError('capabilityIds must not be empty');
@@ -235,12 +248,14 @@ ConsentChangeReport classifyConsentChange({
 class ConsentStore {
   final Map<String, ConsentReceipt> _records = <String, ConsentReceipt>{};
 
-  /// Stores or replaces by [receipt.id]. Another active receipt with the same
-  /// purpose, scope and digests is superseded (marked revoked), so at most one
-  /// active record exists for that binding. A revoked [receipt] is rejected:
-  /// use [revoke] to withdraw consent instead.
+  /// Stores or replaces by [receipt.id]. The receipt is copied into a plain
+  /// record, so later caller changes cannot alter a granted binding. Another
+  /// active receipt with the same purpose, scope and digests is superseded
+  /// (marked revoked), so at most one active record exists for that binding.
+  /// A revoked [receipt] is rejected: use [revoke] to withdraw consent.
   void grant(ConsentReceipt receipt) {
-    if (receipt.revoked) {
+    final stored = _freezeReceipt(receipt);
+    if (stored.revoked) {
       throw ArgumentError.value(
         receipt,
         'receipt',
@@ -250,16 +265,16 @@ class ConsentStore {
     final superseded = _records.entries
         .where(
           (entry) =>
-              entry.key != receipt.id &&
+              entry.key != stored.id &&
               !entry.value.revoked &&
-              _sameBinding(entry.value, receipt),
+              _sameBinding(entry.value, stored),
         )
         .map((entry) => entry.key)
         .toList();
     for (final id in superseded) {
       _records[id] = _records[id]!.revoke();
     }
-    _records[receipt.id] = receipt;
+    _records[stored.id] = stored;
   }
 
   /// Marks a stored active receipt revoked; false if unknown or already
