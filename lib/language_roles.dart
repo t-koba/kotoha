@@ -30,13 +30,22 @@ enum LanguageRole {
   voice,
 }
 
-/// A canonical, immutable BCP-47-like language tag.
+/// An immutable language tag parsed as an RFC 5646 structural subset.
 ///
-/// Parsing is fail-closed and follows the same shape as the product's spec
-/// schemas (`^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$`):
-/// a two-to-eight letter primary (or the `x` private-use marker) followed by
-/// one-to-eight alphanumeric subtags. Every subtag is retained, including
-/// script, region, variants and extensions, so a tag such as
+/// [LanguageTag.parse] accepts the well-formed `langtag` structure of RFC 5646
+/// §2.1: a language (optionally with extended language subtags), followed by
+/// an optional script, region, variants, extensions and private use, or a
+/// private-use tag beginning with `x`. It also enforces RFC 5646 §2.2.5 rule 5
+/// (no repeated variant subtags, compared case-insensitively) and §2.2.6
+/// rule 3 (no repeated extension singletons, compared case-insensitively).
+/// Repeating a singleton inside private use is not an extension repeat.
+///
+/// This is structure only: no registry lookup, no subtag membership or prefix
+/// checks, and no full canonicalization claim. The canonical form is a
+/// deterministic case normalization: lowercase the primary, extended language,
+/// variants, extensions and private use; title-case a four-letter script;
+/// uppercase a two-letter region (numeric regions are unchanged). Every
+/// subtag is retained, including extensions, so a tag such as
 /// `sr-Latn-RS-u-nu-latn` is preserved rather than discarded. A `dart:ui`
 /// Locale cannot carry extensions, so this parser deliberately does not reuse
 /// `parseContentLocale`; content_locale.dart is left untouched.
@@ -47,44 +56,101 @@ class LanguageTag {
 
   static final RegExp _primary = RegExp(r'^[A-Za-z]{2,8}$');
   static final RegExp _privatePrimary = RegExp(r'^[xX]$');
-  static final RegExp _subtag = RegExp(r'^[A-Za-z0-9]{1,8}$');
-  static final RegExp _letters = RegExp(r'^[A-Za-z]+$');
-  static final RegExp _digits = RegExp(r'^[0-9]+$');
+  static final RegExp _extlang = RegExp(r'^[A-Za-z]{3}$');
+  static final RegExp _script = RegExp(r'^[A-Za-z]{4}$');
+  static final RegExp _regionAlpha = RegExp(r'^[A-Za-z]{2}$');
+  static final RegExp _regionDigit = RegExp(r'^[0-9]{3}$');
+  static final RegExp _variantLong = RegExp(r'^[A-Za-z0-9]{5,8}$');
+  static final RegExp _variantNumeric = RegExp(r'^[0-9][A-Za-z0-9]{3}$');
+  static final RegExp _singleton = RegExp(r'^[0-9A-WY-Za-wy-z]$');
+  static final RegExp _extensionValue = RegExp(r'^[A-Za-z0-9]{2,8}$');
+  static final RegExp _privateValue = RegExp(r'^[A-Za-z0-9]{1,8}$');
 
   /// Parses [entry] fail-closed; returns null when it is not a well-formed
-  /// language tag. The input is trimmed; canonical form lowercases the primary
-  /// and any trailing subtags, title-cases a four-letter script immediately
-  /// after the primary, and uppercases a following two-letter region.
+  /// tag in the supported RFC 5646 structural subset. The input is trimmed;
+  /// canonical casing is applied per subtag as described on [LanguageTag].
   static LanguageTag? parse(String entry) {
-    final tag = entry.trim();
-    if (tag.isEmpty) return null;
-    final parts = tag.split('-');
+    final parts = entry.trim().split('-');
     final primary = parts.first;
     final privatePrimary = _privatePrimary.hasMatch(primary);
     if (!privatePrimary && !_primary.hasMatch(primary)) return null;
-    for (final part in parts.skip(1)) {
-      if (!_subtag.hasMatch(part)) return null;
+    for (final part in parts) {
+      if (part.isEmpty) return null;
     }
-    if (privatePrimary && parts.length < 2) return null;
 
     final canonical = <String>[primary.toLowerCase()];
     var index = 1;
     String? script;
     String? region;
+    if (privatePrimary) {
+      if (index == parts.length) return null;
+      for (; index < parts.length; index++) {
+        if (!_privateValue.hasMatch(parts[index])) return null;
+        canonical.add(parts[index].toLowerCase());
+      }
+      return LanguageTag._(List<String>.unmodifiable(canonical), null, null);
+    }
+
+    // language = 2*3ALPHA ["-" extlang] / 4ALPHA / 5*8ALPHA
+    // extlang = 3ALPHA *2("-" 3ALPHA)
+    if (primary.length <= 3) {
+      for (
+        var seen = 0;
+        seen < 3 && index < parts.length && _extlang.hasMatch(parts[index]);
+        seen++, index++
+      ) {
+        canonical.add(parts[index].toLowerCase());
+      }
+    }
     if (index < parts.length && _isScript(parts[index])) {
       script = _titleCase(parts[index]);
       canonical.add(script);
       index++;
     }
     if (index < parts.length && _isRegion(parts[index])) {
-      region = _digits.hasMatch(parts[index])
+      region = _regionDigit.hasMatch(parts[index])
           ? parts[index]
           : parts[index].toUpperCase();
       canonical.add(region);
       index++;
     }
-    for (; index < parts.length; index++) {
-      canonical.add(parts[index].toLowerCase());
+
+    // variant = 5*8alphanum / (DIGIT 3alphanum), with no case-insensitive
+    // repeats (RFC 5646 §2.2.5 rule 5).
+    final variants = <String>{};
+    for (; index < parts.length && _isVariant(parts[index]); index++) {
+      final variant = parts[index].toLowerCase();
+      if (!variants.add(variant)) return null;
+      canonical.add(variant);
+    }
+
+    // extension = singleton 1*("-" 2*8alphanum), with no case-insensitive
+    // repeated singleton (RFC 5646 §2.2.6 rule 3).
+    final singletons = <String>{};
+    while (index < parts.length && !_privatePrimary.hasMatch(parts[index])) {
+      final singleton = parts[index].toLowerCase();
+      if (!_singleton.hasMatch(singleton)) return null;
+      if (!singletons.add(singleton)) return null;
+      canonical.add(singleton);
+      index++;
+      var values = 0;
+      while (index < parts.length && _extensionValue.hasMatch(parts[index])) {
+        canonical.add(parts[index].toLowerCase());
+        index++;
+        values++;
+      }
+      if (values == 0) return null;
+    }
+
+    // privateuse = "x" 1*("-" 1*8alphanum)
+    if (index < parts.length) {
+      canonical.add('x');
+      index++;
+      if (index == parts.length) return null;
+      for (; index < parts.length; index++) {
+        if (!_privateValue.hasMatch(parts[index])) return null;
+        canonical.add(parts[index].toLowerCase());
+      }
     }
     return LanguageTag._(List<String>.unmodifiable(canonical), script, region);
   }
@@ -103,16 +169,17 @@ class LanguageTag {
 
   final List<String> _subtags;
 
-  /// All canonical subtags in order, including extensions and variants;
-  /// unmodifiable.
+  /// All canonical subtags in order, including extended language, variants,
+  /// extensions and private use; unmodifiable.
   List<String> get subtags => _subtags;
 
-  static bool _isScript(String part) =>
-      part.length == 4 && _letters.hasMatch(part);
+  static bool _isScript(String part) => _script.hasMatch(part);
 
   static bool _isRegion(String part) =>
-      (part.length == 2 && _letters.hasMatch(part)) ||
-      (part.length == 3 && _digits.hasMatch(part));
+      _regionAlpha.hasMatch(part) || _regionDigit.hasMatch(part);
+
+  static bool _isVariant(String part) =>
+      _variantLong.hasMatch(part) || _variantNumeric.hasMatch(part);
 
   static String _titleCase(String part) =>
       part[0].toUpperCase() + part.substring(1).toLowerCase();

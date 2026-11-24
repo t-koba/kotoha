@@ -71,6 +71,15 @@ void main() {
       },
     );
 
+    test('accepts up to three extended language subtags', () {
+      final tag = LanguageTag.parse('zh-cmn-hak-dng-Hans-CN');
+      expect(tag, isNotNull);
+      expect(tag!.subtags, ['zh', 'cmn', 'hak', 'dng', 'Hans', 'CN']);
+      expect(tag.script, 'Hans');
+      expect(tag.region, 'CN');
+      expect(tag.canonical, 'zh-cmn-hak-dng-Hans-CN');
+    });
+
     test('rejects malformed entries fail-closed', () {
       for (final bad in <String>[
         '',
@@ -82,9 +91,58 @@ void main() {
         'en-!!!', // non-alphanumeric subtag
         'en-US-abcdefghi', // subtag longer than eight characters
         'x', // private-use primary needs at least one subtag
+        'en-x', // private use needs at least one subtag
+        'en-u-abcdefghi', // extension subtag longer than eight characters
+        'en-a-bbb-a-ccc', // repeated singleton without private use
       ]) {
         expect(LanguageTag.parse(bad), isNull, reason: bad);
       }
+    });
+
+    test('rejects bare singletons and duplicate variants or singletons', () {
+      for (final bad in <String>[
+        'en-u', // singleton with no following subtag
+        'de-1996-1996', // duplicate variant
+        'en-u-ca-gregory-u-nu-latn', // duplicate extension singleton
+        'de-1996-1996-x-a', // duplicate variant before private use
+        'de-1996-1996-abcde', // duplicate variant among other variants
+        'en-u-ca-gregory-U-nu-latn', // singleton repeat ignores case
+      ]) {
+        expect(LanguageTag.parse(bad), isNull, reason: bad);
+      }
+    });
+
+    test('keeps the well-formed structural controls accepted', () {
+      for (final good in <String>[
+        'sr-Latn-RS-u-nu-latn',
+        'ja-JP-u-ca-japanese',
+        'de-DE-1996',
+        'en-CA-x-ca',
+        'en-a-bbb-x-a-ccc',
+        'ja-Jpan-JP',
+        'en-latn-us',
+        'EN-Latn-US',
+        'fr',
+        'en-US-x-private',
+        'x-private',
+        'qaa-Qaaa-QM-x-southern',
+      ]) {
+        expect(LanguageTag.parse(good), isNotNull, reason: good);
+      }
+
+      final repeatedInPrivate = LanguageTag.parse('en-a-bbb-x-a-ccc')!;
+      expect(repeatedInPrivate.canonical, 'en-a-bbb-x-a-ccc');
+      expect(repeatedInPrivate.subtags, ['en', 'a', 'bbb', 'x', 'a', 'ccc']);
+      expect(repeatedInPrivate.script, isNull);
+      expect(repeatedInPrivate.region, isNull);
+    });
+
+    test('parses extended language subtags before script and region', () {
+      final tag = LanguageTag.parse('zh-min-nan-Hant-TW')!;
+      expect(tag.canonical, 'zh-min-nan-Hant-TW');
+      expect(tag.subtags, ['zh', 'min', 'nan', 'Hant', 'TW']);
+      expect(tag.script, 'Hant');
+      expect(tag.region, 'TW');
     });
   });
 
