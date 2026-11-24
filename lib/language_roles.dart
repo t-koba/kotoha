@@ -242,13 +242,23 @@ class LanguageProfile {
 /// supplies [confirmed]. The [resolved] tag is available only when the caller
 /// has confirmed the evidence and exactly one candidate remains.
 class LanguageEstimate {
-  const LanguageEstimate(
+  factory LanguageEstimate(
+    Iterable<LanguageTag> candidates, {
+    String? evidenceRef,
+    bool confirmed = false,
+  }) => LanguageEstimate._(
+    List<LanguageTag>.unmodifiable(candidates),
+    evidenceRef: evidenceRef,
+    confirmed: confirmed,
+  );
+
+  LanguageEstimate._(
     this.candidates, {
     this.evidenceRef,
     this.confirmed = false,
   });
 
-  /// Candidate tags in the caller's order.
+  /// Candidate tags in the caller's order; unmodifiable snapshot.
   final List<LanguageTag> candidates;
 
   /// Caller-supplied evidence provenance, when present.

@@ -229,8 +229,29 @@ void main() {
       expect(determined.resolved, ja);
     });
 
+    test('confirmed candidates are frozen against caller mutation', () {
+      final ar = LanguageTag.parse('ar')!;
+      final source = <LanguageTag>[ja];
+      final estimate = LanguageEstimate(
+        source,
+        evidenceRef: 'sample-1',
+        confirmed: true,
+      );
+      expect(estimate.resolved, ja);
+
+      source[0] = ar;
+      source.add(en);
+      expect(estimate.resolved, ja);
+      expect(estimate.evidenceRef, 'sample-1');
+      expect(estimate.candidates.toList(), <LanguageTag>[ja]);
+
+      expect(() => estimate.candidates[0] = ar, throwsUnsupportedError);
+      expect(() => estimate.candidates.add(ar), throwsUnsupportedError);
+      expect(estimate.resolved, ja);
+    });
+
     test('empty candidates never resolve', () {
-      const empty = LanguageEstimate(<LanguageTag>[], confirmed: true);
+      final empty = LanguageEstimate(<LanguageTag>[], confirmed: true);
       expect(empty.isDetermined, isFalse);
       expect(empty.resolved, isNull);
     });
