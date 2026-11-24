@@ -1,6 +1,6 @@
 {
-  "checks": 99,
-  "passed": 99,
+  "checks": 100,
+  "passed": 100,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -459,6 +459,11 @@
     },
     {
       "name": "HTML acceptance mirror",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Language validation contract",
       "status": "pass",
       "case": "compatible"
     },

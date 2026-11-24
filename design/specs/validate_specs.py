@@ -385,6 +385,30 @@ def validate_html_acceptance_mirror() -> None:
             require(cell in html, f"HTML mirror missing {cells[0]}: {cell}")
 
 
+LANGUAGE_TAG_DESCRIPTION = "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
+LANGUAGE_TAG_CLAIM = "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+LANGUAGE_CONTRACT_SENTENCE = "言語タグのBCP 47構造検査（§2.1のABNF、重複 variant/singleton なし）は言語アダプターが担当する。登録情報と正規形の照合は日付付きIANAレジストリを同梱するまでは行わない。付属検査はフィールドの構文と参照整合を扱う。個別言語の翻訳品質は評価プロファイルで測定する。"
+
+
+def validate_language_validation_contract() -> None:
+    """Keep the model-manifest language contract honest across its three copies."""
+    languages = SCHEMAS["model_manifest"]["properties"]["tasks"]["items"]["properties"]["languages"]["properties"]
+    descriptions = [languages["source"]["items"]["description"], languages["target"]["items"]["description"],
+                    languages["routes"]["items"]["properties"]["source"]["description"],
+                    languages["routes"]["items"]["properties"]["target"]["description"]]
+    for description in descriptions:
+        require(description == LANGUAGE_TAG_DESCRIPTION, "model language description")
+        require(not any(claim in description for claim in ("正規形の言語タグ", "構文・登録情報と照合する")),
+                "registry validation claim")
+    readme = (ROOT / "specs/README.md").read_text(encoding="utf-8")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    model_html = html.split('<p class="filepath">specs/model_manifest.schema.json</p>', 1)[1].split("</code></pre>", 1)[0]
+    require(model_html.count(f'"description": "{LANGUAGE_TAG_DESCRIPTION}"') == 4, "HTML model language descriptions")
+    require(LANGUAGE_TAG_CLAIM not in model_html, "HTML model registry validation claim")
+    require(readme.count(LANGUAGE_CONTRACT_SENTENCE) == 1, "specs README language contract")
+    require(f"<p>{LANGUAGE_CONTRACT_SENTENCE}</p>" in html, "HTML README language contract")
+
+
 def locale_parity(
     english: dict[str, Any],
     japanese: dict[str, Any],
@@ -557,6 +581,7 @@ def main() -> int:
     expected={f"F{i:02}" for i in range(1,39)}
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
     check("HTML acceptance mirror", validate_html_acceptance_mirror)
+    check("Language validation contract", validate_language_validation_contract)
     check("Locale parity", validate_locale_parity)
     check("Locale parity rejects token drift", lambda case="token": locale_parity_drift(case), True)
     check("Locale parity rejects declaration drift", lambda case="declaration": locale_parity_drift(case), True)
