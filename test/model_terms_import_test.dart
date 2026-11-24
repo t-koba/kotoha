@@ -614,6 +614,59 @@ void main() {
       expect(called, isFalse, reason: 'case $i');
     }
   });
+  test(
+    'unexpected manifest keys are rejected without echoing caller content',
+    () async {
+      const secret = 'private-draft-secret';
+      final topLevel = reader(
+        fullManifest('terms', mutate: (m) => {...m, secret: 1}),
+        {'license/terms.txt': 'terms'},
+      );
+      await expectLater(
+        const ModelTermsImport().run(topLevel, (_) async => true),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Unexpected manifest.<rejected>',
+          ),
+        ),
+      );
+      final route = reader(
+        fullManifest(
+          'terms',
+          mutate: (m) {
+            final tasks = (m['tasks'] as List)
+                .map((e) => Map<String, Object?>.of(e as Map<String, dynamic>))
+                .toList();
+            final task = Map<String, Object?>.of(tasks[0]);
+            final languages = Map<String, Object?>.of(
+              task['languages'] as Map<String, dynamic>,
+            );
+            final routes = (languages['routes'] as List)
+                .map((e) => Map<String, Object?>.of(e as Map<String, dynamic>))
+                .toList();
+            routes[0][secret] = 1;
+            languages['routes'] = routes;
+            task['languages'] = languages;
+            tasks[0] = task;
+            return {...m, 'tasks': tasks};
+          },
+        ),
+        {'license/terms.txt': 'terms'},
+      );
+      await expectLater(
+        const ModelTermsImport().run(route, (_) async => true),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            'Unexpected route.<rejected>',
+          ),
+        ),
+      );
+    },
+  );
   test('hash size and unsafe binding failures never invoke reviewer', () async {
     for (final m in [
       fullManifest('terms', hash: 'b' * 64),

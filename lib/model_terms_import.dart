@@ -350,7 +350,7 @@ void _requireKeys(
     if (!map.containsKey(key)) _invalid('Missing $context.$key');
   }
   for (final key in map.keys) {
-    if (!allowed.contains(key)) _invalid('Unexpected $context.$key');
+    if (!allowed.contains(key)) _invalid('Unexpected $context.<rejected>');
   }
 }
 
@@ -531,19 +531,12 @@ Map<String, Map<String, dynamic>> _validateManifest(
     final pairs = <String>{};
     for (final route in routes) {
       if (route is! Map<String, dynamic>) _invalid('Invalid route');
-      for (final key in ['source', 'target', 'evidence']) {
-        if (!route.containsKey(key)) _invalid('Missing route.$key');
-      }
-      for (final key in route.keys) {
-        if (!const {
-          'source',
-          'target',
-          'evidence',
-          'evidence_ref',
-        }.contains(key)) {
-          _invalid('Unexpected route.$key');
-        }
-      }
+      _requireKeys(
+        route,
+        const {'source', 'target', 'evidence'},
+        const {'source', 'target', 'evidence', 'evidence_ref'},
+        'route',
+      );
       if (route['source'] is! String) _invalid('Invalid route source');
       if (route['target'] is! String) _invalid('Invalid route target');
       final routeSource = _requireLanguageTag(
