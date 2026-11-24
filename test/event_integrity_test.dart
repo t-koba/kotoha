@@ -23,6 +23,41 @@ ExecutionEvent _event({
 );
 
 void main() {
+  test('validation errors do not echo rejected caller content', () {
+    const rejected = '/private/user/secret\u202E';
+    String errorFrom(void Function() body) {
+      try {
+        body();
+      } on ArgumentError catch (error) {
+        return error.toString();
+      }
+      throw StateError('expected ArgumentError');
+    }
+
+    void expectSafe(String error, String field, String reason) {
+      expect(error, contains(field));
+      expect(error, contains(reason));
+      expect(error, contains('<rejected>'));
+      expect(error, isNot(contains(rejected)));
+    }
+
+    expectSafe(
+      errorFrom(() => _identity(jobId: rejected)),
+      'jobId',
+      'invalid lowercase id',
+    );
+    expectSafe(
+      errorFrom(() => _identity(executionId: rejected)),
+      'executionId',
+      'invalid lowercase id',
+    );
+    expectSafe(
+      errorFrom(() => _identity(inputSnapshotDigest: rejected)),
+      'inputSnapshotDigest',
+      'invalid sha-256 digest',
+    );
+  });
+
   test(
     'increasing zero-based sequences are applied and the state tracks them',
     () {

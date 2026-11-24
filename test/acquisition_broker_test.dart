@@ -112,6 +112,46 @@ void expectRefusal(
 // imports only the consent and model-terms contracts. These tests exercise the
 // authorization decision and its fail-closed ordering (design §4.1, §18).
 void main() {
+  test('validation errors do not echo rejected caller content', () {
+    const rejected = '/private/user/secret\u202E';
+    String errorFrom(void Function() body) {
+      try {
+        body();
+      } on ArgumentError catch (error) {
+        return error.toString();
+      }
+      throw StateError('expected ArgumentError');
+    }
+
+    void expectSafe(String error, String field, String reason) {
+      expect(error, contains(field));
+      expect(error, contains(reason));
+      expect(error, contains('<rejected>'));
+      expect(error, isNot(contains(rejected)));
+    }
+
+    expectSafe(
+      errorFrom(() => _request(capabilityId: rejected)),
+      'capabilityId',
+      'invalid lowercase id',
+    );
+    expectSafe(
+      errorFrom(() => _request(destinationId: rejected)),
+      'destinationId',
+      'invalid lowercase id',
+    );
+    expectSafe(
+      errorFrom(() => _request(manifestDigest: rejected)),
+      'manifestDigest',
+      'invalid sha-256 digest',
+    );
+    expectSafe(
+      errorFrom(() => _request(termsDigest: rejected)),
+      'termsDigest',
+      'invalid sha-256 digest',
+    );
+  });
+
   test(
     'allowed request returns a time-limited permission echoing the request',
     () {
