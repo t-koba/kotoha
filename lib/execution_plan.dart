@@ -149,10 +149,8 @@ final RegExp _tokenPattern = RegExp(r'[A-Za-z0-9._-]+');
 String _token(String value, String name) {
   final match = _tokenPattern.matchAsPrefix(value);
   if (match == null || match.end != value.length) {
-    throw ArgumentError.value(
-      value,
-      name,
-      'must be a non-empty ASCII token of letters, digits, ., _ or -',
+    throw ArgumentError(
+      '$name must be a non-empty ASCII token of letters, digits, ., _ or -',
     );
   }
   return value.toLowerCase();
@@ -160,7 +158,7 @@ String _token(String value, String name) {
 
 int _budget(int value, String name) {
   if (value < 0) {
-    throw ArgumentError.value(value, name, 'must be non-negative');
+    throw ArgumentError('$name must be non-negative');
   }
   return value;
 }

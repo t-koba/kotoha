@@ -293,6 +293,39 @@ void main() {
     expect(() => _request(acceleratorBudgetBytes: -1), throwsArgumentError);
   });
 
+  test('malformed tokens are rejected without echoing caller content', () {
+    const rejected = '/private/user/secret\u202E';
+    for (final attempt in <void Function()>[
+      () => _request(inputType: rejected),
+      () => _request(sourceLanguage: rejected),
+    ]) {
+      try {
+        attempt();
+        fail('expected an ArgumentError');
+      } on ArgumentError catch (error) {
+        final message = error.toString();
+        expect(message, isNot(contains(rejected)));
+        expect(message, contains('must be a non-empty ASCII token'));
+        expect(
+          message,
+          anyOf(contains('inputType'), contains('sourceLanguage')),
+        );
+      }
+    }
+  });
+
+  test('negative budget error states only the field and static reason', () {
+    try {
+      _request(storageBudgetBytes: -1);
+      fail('expected an ArgumentError');
+    } on ArgumentError catch (error) {
+      expect(
+        error.toString(),
+        'Invalid argument(s): storageBudgetBytes must be non-negative',
+      );
+    }
+  });
+
   test('negative declared resources are ineligible', () {
     for (final capabilities in [
       _capabilities(storageBytes: -1),
