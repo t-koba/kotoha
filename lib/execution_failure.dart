@@ -35,6 +35,7 @@ class ExecutionFailure implements Exception {
   static const int _maxUserExplanationLength = 300;
   static const int _maxRequiredActionLength = 200;
   static const int _maxDeveloperDiagnosticLength = 2000;
+  static const String _rejectedValue = '<rejected>';
 
   ExecutionFailure({
     required this.cause,
@@ -84,7 +85,7 @@ class ExecutionFailure implements Exception {
   static Set<String> _validatedArtifacts(Set<String> labels) {
     if (labels.isEmpty) {
       throw ArgumentError.value(
-        labels,
+        _rejectedValue,
         'affectedArtifacts',
         'must not be empty',
       );
@@ -93,7 +94,7 @@ class ExecutionFailure implements Exception {
       if (!_artifactLabelPattern.hasMatch(label) ||
           _digestPattern.hasMatch(label)) {
         throw ArgumentError.value(
-          labels,
+          _rejectedValue,
           'affectedArtifacts',
           'must contain only stable lowercase artifact labels',
         );
@@ -111,7 +112,7 @@ class ExecutionFailure implements Exception {
     final text = _validatedText(value, name, maxLength);
     if (_pathLikePattern.hasMatch(text) || _digestPattern.hasMatch(text)) {
       throw ArgumentError.value(
-        value,
+        _rejectedValue,
         name,
         'must not contain paths, URLs or digests',
       );
@@ -127,7 +128,7 @@ class ExecutionFailure implements Exception {
     );
     if (_digestPattern.hasMatch(text)) {
       throw ArgumentError.value(
-        value,
+        _rejectedValue,
         'developerDiagnostic',
         'must not contain digests',
       );
@@ -138,18 +139,18 @@ class ExecutionFailure implements Exception {
   static String _validatedText(String value, String name, int maxLength) {
     if (_controlCharacterPattern.hasMatch(value)) {
       throw ArgumentError.value(
-        value,
+        _rejectedValue,
         name,
         'must not contain control characters',
       );
     }
     final text = value.trim();
     if (text.isEmpty) {
-      throw ArgumentError.value(value, name, 'must not be empty');
+      throw ArgumentError.value(_rejectedValue, name, 'must not be empty');
     }
     if (text.runes.length > maxLength) {
       throw ArgumentError.value(
-        value,
+        _rejectedValue,
         name,
         'must be at most $maxLength characters',
       );

@@ -19,11 +19,25 @@ ExecutionFailure failure({
   );
 }
 
-void expectFieldRejected(String field, ExecutionFailure Function() build) {
-  expect(
-    build,
-    throwsA(isA<ArgumentError>().having((e) => e.name, 'name', field)),
-  );
+void expectFieldRejected(
+  String field,
+  ExecutionFailure Function() build, {
+  String? reason,
+  Iterable<String> forbidden = const <String>[],
+}) {
+  try {
+    build();
+    fail('Expected $field to be rejected');
+  } on ArgumentError catch (error) {
+    expect(error.name, field);
+    if (reason != null) {
+      expect(error.message, reason);
+    }
+    for (final content in forbidden) {
+      expect(error.toString(), isNot(contains(content)));
+      expect(error.invalidValue?.toString(), isNot(contains(content)));
+    }
+  }
 }
 
 void main() {
@@ -105,6 +119,43 @@ void main() {
         () => failureByField(field, 'before\u202Cafter'),
       );
     }
+  });
+
+  test('rejection errors keep field and reason without caller content', () {
+    const privatePath = 'reinstall from /home/alice/Private/secret.gguf';
+    const pathReason = 'must not contain paths, URLs or digests';
+    for (final field in <String>['requiredAction', 'userExplanation']) {
+      expectFieldRejected(
+        field,
+        () => failureByField(field, privatePath),
+        reason: pathReason,
+        forbidden: <String>[privatePath, 'secret.gguf', '/home/alice/Private'],
+      );
+    }
+
+    final digest = 'a' * 64;
+    expectFieldRejected(
+      'developerDiagnostic',
+      () => failure(developerDiagnostic: 'hash $digest'),
+      reason: 'must not contain digests',
+      forbidden: <String>[digest],
+    );
+
+    final labels = <String>{'output.document', 'private.output/secret'};
+    expectFieldRejected(
+      'affectedArtifacts',
+      () => failure(affectedArtifacts: labels),
+      reason: 'must contain only stable lowercase artifact labels',
+      forbidden: labels,
+    );
+
+    const bidi = 'before\u202Eafter';
+    expectFieldRejected(
+      'userExplanation',
+      () => failure(userExplanation: bidi),
+      reason: 'must not contain control characters',
+      forbidden: <String>[bidi, '\u202E'],
+    );
   });
 
   test('artifact labels must be lowercase stable labels', () {
