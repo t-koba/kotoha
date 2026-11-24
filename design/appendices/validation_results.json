@@ -1,6 +1,6 @@
 {
-  "checks": 100,
-  "passed": 100,
+  "checks": 101,
+  "passed": 101,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -464,6 +464,11 @@
     },
     {
       "name": "Language validation contract",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Engine event language contract",
       "status": "pass",
       "case": "compatible"
     },

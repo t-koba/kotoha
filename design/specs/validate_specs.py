@@ -390,6 +390,21 @@ LANGUAGE_TAG_CLAIM = "正規形の言語タグ。実行時にBCP 47の構文・�
 LANGUAGE_CONTRACT_SENTENCE = "言語タグのBCP 47構造検査（§2.1のABNF、重複 variant/singleton なし）は言語アダプターが担当する。登録情報と正規形の照合は日付付きIANAレジストリを同梱するまでは行わない。付属検査はフィールドの構文と参照整合を扱う。個別言語の翻訳品質は評価プロファイルで測定する。"
 
 
+def validate_engine_event_language_contract() -> None:
+    """Keep the engine-event language descriptions honest in schema and HTML."""
+    payload = SCHEMAS["engine_event"]["allOf"][0]["then"]["properties"]["payload"]["properties"]
+    descriptions = [payload["source_language"]["description"],
+                    payload["outputs"]["items"]["properties"]["language"]["description"]]
+    for description in descriptions:
+        require(description == LANGUAGE_TAG_DESCRIPTION, "engine language description")
+        require(LANGUAGE_TAG_CLAIM not in description, "engine registry validation claim")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    engine_html = html.split('<p class="filepath">specs/engine_event.schema.json</p>', 1)[1].split("</code></pre>", 1)[0]
+    require(engine_html.count(f'"description": "{LANGUAGE_TAG_DESCRIPTION}"') == 2,
+            "HTML engine language descriptions")
+    require(LANGUAGE_TAG_CLAIM not in engine_html, "HTML engine registry validation claim")
+
+
 def validate_language_validation_contract() -> None:
     """Keep the model-manifest language contract honest across its three copies."""
     languages = SCHEMAS["model_manifest"]["properties"]["tasks"]["items"]["properties"]["languages"]["properties"]
@@ -582,6 +597,7 @@ def main() -> int:
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
     check("HTML acceptance mirror", validate_html_acceptance_mirror)
     check("Language validation contract", validate_language_validation_contract)
+    check("Engine event language contract", validate_engine_event_language_contract)
     check("Locale parity", validate_locale_parity)
     check("Locale parity rejects token drift", lambda case="token": locale_parity_drift(case), True)
     check("Locale parity rejects declaration drift", lambda case="declaration": locale_parity_drift(case), True)

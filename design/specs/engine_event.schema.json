@@ -71,7 +71,7 @@
               "source_language": {
                 "type": "string",
                 "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
-                "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
               },
               "outputs": {
                 "type": "array",
@@ -81,7 +81,7 @@
                     "language": {
                       "type": "string",
                       "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
-                      "description": "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+                      "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
                     },
                     "text": {
                       "type": "string"
