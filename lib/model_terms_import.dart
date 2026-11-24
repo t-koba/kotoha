@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
+import 'language_roles.dart';
 import 'model_capabilities.dart';
 
 /// Metadata-only, read-in-place package access. Implementations must never follow
@@ -257,8 +258,14 @@ DeclaredModelCapabilities _buildDeclaredCapabilities(
           throw const FormatException('Invalid capability declarations');
         }
         return DeclaredRoute(
-          source: (route['source'] as String).toLowerCase(),
-          target: (route['target'] as String).toLowerCase(),
+          source: _requireLanguageTag(
+            route['source'] as String,
+            'route source',
+          ),
+          target: _requireLanguageTag(
+            route['target'] as String,
+            'route target',
+          ),
           evidence: evidence,
           evidenceRef: route['evidence_ref'] as String?,
         );
@@ -273,12 +280,12 @@ DeclaredModelCapabilities _buildDeclaredCapabilities(
         ),
         sourceLanguages: List<String>.unmodifiable(
           (languages['source'] as List).map(
-            (tag) => (tag as String).toLowerCase(),
+            (tag) => _requireLanguageTag(tag as String, 'language tag'),
           ),
         ),
         targetLanguages: List<String>.unmodifiable(
           (languages['target'] as List).map(
-            (tag) => (tag as String).toLowerCase(),
+            (tag) => _requireLanguageTag(tag as String, 'language tag'),
           ),
         ),
         scripts: List<String>.unmodifiable(
@@ -310,9 +317,6 @@ DeclaredModelCapabilities _buildDeclaredCapabilities(
 
 final RegExp _idPattern = RegExp(r'^[a-z][a-z0-9._-]*$');
 final RegExp _shaPattern = RegExp(r'^[a-f0-9]{64}$');
-final RegExp _langPattern = RegExp(
-  r'^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$',
-);
 const Set<String> _fileRoles = {
   'weights',
   'tokenizer',
@@ -324,6 +328,16 @@ const Set<String> _fileRoles = {
 
 Never _invalid(String detail) {
   throw FormatException(detail);
+}
+
+/// Validates a manifest language tag with the same structural parser the
+/// application uses and returns its lowercase canonical form. Registry checks
+/// are deliberately not performed here.
+String _requireLanguageTag(String entry, String context) {
+  if (entry.trim() != entry) _invalid('Invalid $context');
+  final tag = LanguageTag.parse(entry);
+  if (tag == null) _invalid('Invalid $context');
+  return tag.canonical.toLowerCase();
 }
 
 void _requireKeys(
@@ -491,11 +505,11 @@ Map<String, Map<String, dynamic>> _validateManifest(
       if (languages[side] is! List) _invalid('Invalid languages.$side');
       final tags = languages[side] as List;
       for (final tag in tags) {
-        if (tag is! String || !_langPattern.hasMatch(tag)) {
-          _invalid('Invalid language tag');
-        }
+        if (tag is! String) _invalid('Invalid language tag');
       }
-      final folded = tags.map((t) => (t as String).toLowerCase()).toList();
+      final folded = tags
+          .map((tag) => _requireLanguageTag(tag as String, 'language tag'))
+          .toList();
       if (folded.toSet().length != folded.length) {
         _invalid('Duplicate language tag');
       }
@@ -509,10 +523,10 @@ Map<String, Map<String, dynamic>> _validateManifest(
     if (languages['routes'] is! List) _invalid('Invalid routes');
     final routes = languages['routes'] as List;
     final sources = (languages['source'] as List)
-        .map((e) => (e as String).toLowerCase())
+        .map((tag) => _requireLanguageTag(tag as String, 'language tag'))
         .toSet();
     final targets = (languages['target'] as List)
-        .map((e) => (e as String).toLowerCase())
+        .map((tag) => _requireLanguageTag(tag as String, 'language tag'))
         .toSet();
     final pairs = <String>{};
     for (final route in routes) {
@@ -530,14 +544,16 @@ Map<String, Map<String, dynamic>> _validateManifest(
           _invalid('Unexpected route.$key');
         }
       }
-      if (route['source'] is! String ||
-          !_langPattern.hasMatch(route['source'] as String)) {
-        _invalid('Invalid route source');
-      }
-      if (route['target'] is! String ||
-          !_langPattern.hasMatch(route['target'] as String)) {
-        _invalid('Invalid route target');
-      }
+      if (route['source'] is! String) _invalid('Invalid route source');
+      if (route['target'] is! String) _invalid('Invalid route target');
+      final routeSource = _requireLanguageTag(
+        route['source'] as String,
+        'route source',
+      );
+      final routeTarget = _requireLanguageTag(
+        route['target'] as String,
+        'route target',
+      );
       if (route['evidence'] is! String ||
           !const {
             'provider',
@@ -546,15 +562,10 @@ Map<String, Map<String, dynamic>> _validateManifest(
           }.contains(route['evidence'])) {
         _invalid('Invalid route evidence');
       }
-      final pair =
-          '${(route['source'] as String).toLowerCase()}→${(route['target'] as String).toLowerCase()}';
+      final pair = '$routeSource→$routeTarget';
       if (!pairs.add(pair)) _invalid('Duplicate language route');
-      if (!(sources.contains((route['source'] as String).toLowerCase()))) {
-        _invalid('Unknown route source');
-      }
-      if (!(targets.contains((route['target'] as String).toLowerCase()))) {
-        _invalid('Unknown route target');
-      }
+      if (!sources.contains(routeSource)) _invalid('Unknown route source');
+      if (!targets.contains(routeTarget)) _invalid('Unknown route target');
       if (route['evidence'] == 'evaluation') {
         _requireNonEmptyString(route['evidence_ref'], 'route.evidence_ref');
       } else if (route.containsKey('evidence_ref')) {

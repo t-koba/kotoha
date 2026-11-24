@@ -9,6 +9,7 @@
 /// of their `basis`; they are not measured or verified here.
 library;
 
+import 'language_roles.dart';
 import 'model_capabilities.dart';
 
 /// A processing request to check against declared capabilities.
@@ -26,8 +27,8 @@ class PlanRequest {
     required int acceleratorBudgetBytes,
   }) : inputType = _token(inputType, 'inputType'),
        outputType = _token(outputType, 'outputType'),
-       sourceLanguage = _token(sourceLanguage, 'sourceLanguage'),
-       targetLanguage = _token(targetLanguage, 'targetLanguage'),
+       sourceLanguage = _language(sourceLanguage, 'sourceLanguage'),
+       targetLanguage = _language(targetLanguage, 'targetLanguage'),
        storageBudgetBytes = _budget(storageBudgetBytes, 'storageBudgetBytes'),
        hostBudgetBytes = _budget(hostBudgetBytes, 'hostBudgetBytes'),
        acceleratorBudgetBytes = _budget(
@@ -154,6 +155,17 @@ String _token(String value, String name) {
     );
   }
   return value.toLowerCase();
+}
+
+String _language(String value, String name) {
+  if (value.trim() != value) {
+    throw ArgumentError('$name must be a well-formed language tag');
+  }
+  final tag = LanguageTag.parse(value);
+  if (tag == null) {
+    throw ArgumentError('$name must be a well-formed language tag');
+  }
+  return tag.canonical.toLowerCase();
 }
 
 int _budget(int value, String name) {

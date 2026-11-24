@@ -113,6 +113,87 @@ MemoryReader reader(Map<String, Object?> m, Map<String, String> termsByPath) {
 }
 
 void main() {
+  test('manifest language routes use the app structural parser', () async {
+    const rejected = <String>[
+      'en-u',
+      'de-1996-1996',
+      'en-u-ca-gregory-u-nu-latn',
+    ];
+    for (final tag in rejected) {
+      final reviewed = <VerifiedTerms>[];
+      final manifest = fullManifest(
+        'Synthetic license',
+        mutate: (m) {
+          final task = (m['tasks'] as List).first as Map<String, Object?>;
+          final languages = task['languages'] as Map<String, Object?>;
+          languages['source'] = [tag];
+          languages['target'] = [tag];
+          languages['routes'] = [
+            {'source': tag, 'target': tag, 'evidence': 'user'},
+          ];
+          return m;
+        },
+      );
+      await expectLater(
+        const ModelTermsImport().run(
+          reader(manifest, {'license/terms.txt': 'Synthetic license'}),
+          (terms) async {
+            reviewed.add(terms);
+            return true;
+          },
+        ),
+        throwsA(isA<FormatException>()),
+      );
+      expect(reviewed, isEmpty);
+    }
+  });
+
+  test(
+    'valid structural language tags stay importable and canonicalize',
+    () async {
+      const accepted = <String, String>{
+        'en': 'en',
+        'sr-Latn-RS-u-nu-latn': 'sr-latn-rs-u-nu-latn',
+        'ja-JP-u-ca-japanese': 'ja-jp-u-ca-japanese',
+        'de-DE-1996': 'de-de-1996',
+        'en-CA-x-ca': 'en-ca-x-ca',
+        'en-a-bbb-x-a-ccc': 'en-a-bbb-x-a-ccc',
+      };
+      for (final entry in accepted.entries) {
+        VerifiedTerms? reviewed;
+        final manifest = fullManifest(
+          'Synthetic license',
+          mutate: (m) {
+            final task = (m['tasks'] as List).first as Map<String, Object?>;
+            final languages = task['languages'] as Map<String, Object?>;
+            languages['source'] = [entry.key];
+            languages['target'] = [entry.key];
+            languages['routes'] = [
+              {'source': entry.key, 'target': entry.key, 'evidence': 'user'},
+            ];
+            return m;
+          },
+        );
+        final authorization = await const ModelTermsImport().run(
+          reader(manifest, {'license/terms.txt': 'Synthetic license'}),
+          (terms) async {
+            reviewed = terms;
+            return true;
+          },
+        );
+        expect(authorization, isNotNull);
+        expect(
+          reviewed!.capabilities.tasks.single.sourceLanguages.single,
+          entry.value,
+        );
+        expect(
+          reviewed!.capabilities.tasks.single.routes.single.source,
+          entry.value,
+        );
+      }
+    },
+  );
+
   test(
     'review only after verified manifest and terms; approval is digest-bound',
     () async {

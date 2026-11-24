@@ -287,6 +287,12 @@ void main() {
     expect(() => _request(targetLanguage: 'ar\n'), throwsArgumentError);
     expect(() => _request(inputType: 'te xt'), throwsArgumentError);
     expect(() => _request(sourceLanguage: '日本語'), throwsArgumentError);
+    expect(() => _request(sourceLanguage: 'en-u'), throwsArgumentError);
+    expect(() => _request(targetLanguage: 'de-1996-1996'), throwsArgumentError);
+    expect(
+      () => _request(sourceLanguage: 'en-u-ca-gregory-u-nu-latn'),
+      throwsArgumentError,
+    );
     expect(() => _request(inputType: 'text/raw'), throwsArgumentError);
     expect(() => _request(storageBudgetBytes: -1), throwsArgumentError);
     expect(() => _request(hostBudgetBytes: -1), throwsArgumentError);
@@ -295,23 +301,34 @@ void main() {
 
   test('malformed tokens are rejected without echoing caller content', () {
     const rejected = '/private/user/secret\u202E';
-    for (final attempt in <void Function()>[
-      () => _request(inputType: rejected),
-      () => _request(sourceLanguage: rejected),
-    ]) {
+    void expectSafe(void Function() attempt, String reason) {
       try {
         attempt();
         fail('expected an ArgumentError');
       } on ArgumentError catch (error) {
         final message = error.toString();
         expect(message, isNot(contains(rejected)));
-        expect(message, contains('must be a non-empty ASCII token'));
-        expect(
-          message,
-          anyOf(contains('inputType'), contains('sourceLanguage')),
-        );
+        expect(message, contains(reason));
       }
     }
+
+    expectSafe(
+      () => _request(inputType: rejected),
+      'must be a non-empty ASCII token',
+    );
+    expectSafe(
+      () => _request(sourceLanguage: rejected),
+      'must be a well-formed language tag',
+    );
+  });
+
+  test('structural language tags are normalized once', () {
+    final request = _request(
+      sourceLanguage: 'sr-Latn-RS-u-nu-latn',
+      targetLanguage: 'JA-JP-u-ca-japanese',
+    );
+    expect(request.sourceLanguage, 'sr-latn-rs-u-nu-latn');
+    expect(request.targetLanguage, 'ja-jp-u-ca-japanese');
   });
 
   test('negative budget error states only the field and static reason', () {
