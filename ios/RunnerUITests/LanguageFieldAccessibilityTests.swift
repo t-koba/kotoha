@@ -76,30 +76,39 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       // A scroll/locale rebuild can replace the native button node between
       // discovery and tap. Re-resolve it on each bounded attempt; the system
       // picker's Cancel button remains the presentation assertion.
+      // A disabled importer can be a pending presentation, not a missed tap.
       var presented = false
       var diagnostics = ""
       for attempt in 1...2 {
         let importButton = app.buttons["Import text or Markdown"]
         if !importButton.isHittable { app.swipeDown() }
         XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
-        let beforeTap = "enabled=\(importButton.isEnabled), hittable=\(importButton.isHittable)"
-        importButton.tap()
-        let cancel = app.buttons["Cancel"]
-        if cancel.waitForExistence(timeout: timeout) {
-          presented = true
-          break
-        }
+        let enabledBeforeTap = importButton.isEnabled
+        let hittableBeforeTap = importButton.isHittable
+        let beforeTap = "enabled=\(enabledBeforeTap), hittable=\(hittableBeforeTap)"
+        if enabledBeforeTap && hittableBeforeTap { importButton.tap() }
+        // Always allow the full wait: a presentation may already be opening.
+        let didPresent = app.buttons["Cancel"].waitForExistence(timeout: timeout)
+        // Collect bounded state before deciding on a re-tap: a disabled importer
+        // means a re-tap would auto-fail and hide why no Cancel was observed.
         // Bounded state only: never log picker contents, UI trees or draft text.
         let importerExists = importButton.exists
         let errorNotice = app.descendants(matching: .any).matching(NSPredicate(
           format: "label == %@",
           "Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.")).firstMatch.exists
         diagnostics = "tapAttempt=\(attempt), beforeTap=[\(beforeTap)], "
+          + "tapped=\(enabledBeforeTap && hittableBeforeTap), "
           + "importerExists=\(importerExists), "
           + "enabled=\(importerExists && importButton.isEnabled), "
           + "hittable=\(importerExists && importButton.isHittable), errorNotice=\(errorNotice), "
           + "alerts=\(app.alerts.count), cancelButtons=\(app.buttons.matching(identifier: "Cancel").count), "
           + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count)"
+        if didPresent {
+          presented = true
+          break
+        }
+        // Only an enabled, hittable importer is eligible for the bounded re-tap.
+        guard importerExists, importButton.isEnabled, importButton.isHittable else { break }
       }
       guard presented else {
         XCTFail("System document picker must be presented; round=\(round), \(diagnostics)")
