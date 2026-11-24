@@ -90,6 +90,23 @@ void main() {
     }
   });
 
+  test('bidi format controls are rejected in every text field', () {
+    for (final field in <String>[
+      'requiredAction',
+      'userExplanation',
+      'developerDiagnostic',
+    ]) {
+      expectFieldRejected(
+        field,
+        () => failureByField(field, 'before\u202Eafter'),
+      );
+      expectFieldRejected(
+        field,
+        () => failureByField(field, 'before\u202Cafter'),
+      );
+    }
+  });
+
   test('artifact labels must be lowercase stable labels', () {
     for (final labels in <Set<String>>[
       <String>{'Output.Document'},
@@ -127,6 +144,26 @@ void main() {
       expectFieldRejected(
         'userExplanation',
         () => failure(userExplanation: text),
+      );
+    }
+  });
+
+  test('required action rejects paths, schemes and digests', () {
+    for (final text in <String>[
+      'see /tmp/file',
+      r'use C:\temp',
+      'file://host/path',
+      'http://example.test',
+      'https://example.test',
+      'digest ${'a' * 64}',
+      'digest ${'A' * 64}',
+      'edit /tmp/secret.txt then retry',
+      'visit https://internal.example/token',
+      'verify ${'a' * 64}',
+    ]) {
+      expectFieldRejected(
+        'requiredAction',
+        () => failure(requiredAction: text),
       );
     }
   });

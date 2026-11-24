@@ -44,12 +44,16 @@ class ExecutionFailure implements Exception {
     required String userExplanation,
     required String developerDiagnostic,
   }) : affectedArtifacts = _validatedArtifacts(affectedArtifacts),
-       requiredAction = _validatedText(
+       requiredAction = _validatedUserFacingText(
          requiredAction,
          'requiredAction',
          _maxRequiredActionLength,
        ),
-       userExplanation = _validatedUserExplanation(userExplanation),
+       userExplanation = _validatedUserFacingText(
+         userExplanation,
+         'userExplanation',
+         _maxUserExplanationLength,
+       ),
        developerDiagnostic = _validatedDeveloperDiagnostic(developerDiagnostic);
 
   final FailureCause cause;
@@ -99,16 +103,16 @@ class ExecutionFailure implements Exception {
     return Set<String>.unmodifiable(sorted);
   }
 
-  static String _validatedUserExplanation(String value) {
-    final text = _validatedText(
-      value,
-      'userExplanation',
-      _maxUserExplanationLength,
-    );
+  static String _validatedUserFacingText(
+    String value,
+    String name,
+    int maxLength,
+  ) {
+    final text = _validatedText(value, name, maxLength);
     if (_pathLikePattern.hasMatch(text) || _digestPattern.hasMatch(text)) {
       throw ArgumentError.value(
         value,
-        'userExplanation',
+        name,
         'must not contain paths, URLs or digests',
       );
     }
@@ -160,4 +164,7 @@ final RegExp _pathLikePattern = RegExp(
   r'[/\\]|(?:file|https?)://',
   caseSensitive: false,
 );
-final RegExp _controlCharacterPattern = RegExp(r'\p{Cc}', unicode: true);
+final RegExp _controlCharacterPattern = RegExp(
+  r'[\p{Cc}\p{Cf}]',
+  unicode: true,
+);
