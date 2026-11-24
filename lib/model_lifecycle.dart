@@ -50,8 +50,11 @@ class ModelLifecycleException implements Exception {
 /// the released [ModelState.installed] state, so a loaded model must first be
 /// released. A changed-terms re-consent that is declined or fails returns an
 /// already-installed model to [ModelState.installed], keeping [requestDeletion]
-/// reachable; only a never-registered candidate is discarded. No state here is
-/// a support, availability or quality claim.
+/// and [requestConsent] reachable; only a never-registered candidate is
+/// discarded. Such a fallback keeps the registered bytes but is not loadable:
+/// [beginLoad] fails closed until a full consent, acquisition and inspection
+/// cycle succeeds again. No state here is a support, availability or quality
+/// claim.
 class ModelLifecycle {
   ModelLifecycle(this.manifestDigest);
 
@@ -69,16 +72,25 @@ class ModelLifecycle {
   /// discarding it as a never-registered candidate.
   bool _registered = false;
 
+  /// Whether current consent has passed acquisition and inspection. A consent
+  /// cycle revokes this; registration alone never authorizes a load after
+  /// changed terms or a failed or declined re-consent.
+  bool _loadEligible = false;
+
   ModelState get state => _state;
 
   bool get isTerminal => _state.isTerminal;
 
-  /// Present the terms and request explicit consent.
-  void requestConsent() => _transition(
-    ModelState.awaitingConsent,
-    'requestConsent',
-    const <ModelState>{ModelState.candidate},
-  );
+  /// Present the terms and request explicit consent. Starting a cycle revokes
+  /// load eligibility until acquisition and inspection succeed again.
+  void requestConsent() {
+    _transition(
+      ModelState.awaitingConsent,
+      'requestConsent',
+      const <ModelState>{ModelState.candidate, ModelState.installed},
+    );
+    _loadEligible = false;
+  }
 
   /// Explicit consent was granted; acquisition or local import may begin.
   void grantConsent() => _transition(
@@ -116,6 +128,7 @@ class ModelLifecycle {
       ModelState.inspecting,
     });
     _registered = true;
+    _loadEligible = true;
   }
 
   /// Inspection rejected the content. A never-registered candidate is
@@ -128,18 +141,27 @@ class ModelLifecycle {
 
   /// Changed terms or revocation require the conditions to be presented and
   /// consent obtained again. The model must be released (installed) first.
-  void termsChanged() => _transition(
-    ModelState.awaitingConsent,
-    'termsChanged',
-    const <ModelState>{ModelState.installed},
-  );
+  void termsChanged() {
+    _transition(ModelState.awaitingConsent, 'termsChanged', const <ModelState>{
+      ModelState.installed,
+    });
+    _loadEligible = false;
+  }
 
-  /// Begin loading the installed model into the runtime.
-  void beginLoad() => _transition(
-    ModelState.loading,
-    'beginLoad',
-    const <ModelState>{ModelState.installed},
-  );
+  /// Begin loading the installed model into the runtime. A new or changed
+  /// consent must pass acquisition and inspection again before a load.
+  void beginLoad() {
+    if (_state == ModelState.installed && !_loadEligible) {
+      throw ModelLifecycleException(
+        ModelLifecycleFailure.invalidTransition,
+        _state,
+        'beginLoad',
+      );
+    }
+    _transition(ModelState.loading, 'beginLoad', const <ModelState>{
+      ModelState.installed,
+    });
+  }
 
   /// Load succeeded; the model is available for jobs.
   void loadSucceeded() => _transition(

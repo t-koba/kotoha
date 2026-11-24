@@ -27,6 +27,65 @@ ModelLifecycle installedModel() => ModelLifecycle(id)
   ..acquisitionSucceeded()
   ..inspectionSucceeded();
 
+/// Drive an installed model through changed terms and one of the three
+/// abandoned/failed consent outcomes. The bytes stay registered.
+ModelLifecycle fallbackModel(void Function(ModelLifecycle) failConsent) {
+  final model = installedModel()..termsChanged();
+  failConsent(model);
+  expect(model.state, ModelState.installed);
+  return model;
+}
+
+/// A fallback to installed is not load-eligible, and its refusal is a plain
+/// invalidTransition naming only the state and operation.
+void expectLoadRefused(ModelLifecycle model) {
+  try {
+    model.beginLoad();
+    fail('expected beginLoad to be refused');
+  } on ModelLifecycleException catch (e) {
+    expect(e.failure, ModelLifecycleFailure.invalidTransition);
+    expect(e.from, ModelState.installed);
+    expect(e.attempted, 'beginLoad');
+    const message =
+        'ModelLifecycleException(invalidTransition: beginLoad from installed)';
+    expect(e.toString(), message);
+    expect(e.toString(), isNot(contains(id)));
+    expect(
+      e.toString().codeUnits.any((code) => code < 0x20 || code == 0x7f),
+      isFalse,
+    );
+  }
+  expect(model.state, ModelState.installed);
+}
+
+/// Offline controls of a fallback model must not be lost with load eligibility.
+void expectFallbackControlsReachable(
+  void Function(ModelLifecycle) failConsent,
+) {
+  final deletable = fallbackModel(failConsent);
+  deletable.requestDeletion();
+  expect(deletable.state, ModelState.pendingDeletion);
+
+  final reconsent = fallbackModel(failConsent);
+  reconsent.requestConsent();
+  expect(reconsent.state, ModelState.awaitingConsent);
+}
+
+/// Only a new consent followed by successful acquisition and inspection
+/// restores loading; consent alone is not enough.
+void expectFreshCycleRestoresLoad(ModelLifecycle model) {
+  model
+    ..requestConsent()
+    ..grantConsent()
+    ..acquisitionSucceeded()
+    ..inspectionSucceeded();
+  expect(model.state, ModelState.installed);
+  model
+    ..beginLoad()
+    ..loadSucceeded();
+  expect(model.state, ModelState.available);
+}
+
 // Design §10.3 states and §7.2 flow. That this module never reads a file,
 // invokes an engine, uses networking/persistence or wires UI cannot be probed
 // in pure Dart; it is enforced structurally: lib/model_lifecycle.dart has no
@@ -243,6 +302,49 @@ void main() {
     expect(model.state, ModelState.installed);
     model.requestDeletion();
     expect(model.state, ModelState.pendingDeletion);
+  });
+
+  test('declined re-consent keeps bytes installed but refuses load', () {
+    void failConsent(ModelLifecycle model) => model.declineConsent();
+    final model = fallbackModel(failConsent);
+    expectLoadRefused(model);
+    expectFallbackControlsReachable(failConsent);
+    expectFreshCycleRestoresLoad(model);
+  });
+
+  test('failed re-acquisition keeps bytes installed but refuses load', () {
+    void failConsent(ModelLifecycle model) {
+      model
+        ..grantConsent()
+        ..acquisitionFailed();
+    }
+
+    final model = fallbackModel(failConsent);
+    expectLoadRefused(model);
+    expectFallbackControlsReachable(failConsent);
+    expectFreshCycleRestoresLoad(model);
+  });
+
+  test('failed re-inspection keeps bytes installed but refuses load', () {
+    void failConsent(ModelLifecycle model) {
+      model
+        ..grantConsent()
+        ..acquisitionSucceeded()
+        ..inspectionFailed();
+    }
+
+    final model = fallbackModel(failConsent);
+    expectLoadRefused(model);
+    expectFallbackControlsReachable(failConsent);
+    expectFreshCycleRestoresLoad(model);
+  });
+
+  test('a new consent cycle on an installed model also suspends loading', () {
+    final model = installedModel()
+      ..requestConsent()
+      ..declineConsent();
+    expectLoadRefused(model);
+    expectFreshCycleRestoresLoad(model);
   });
 
   test('first-consent failures still discard an unregistered candidate', () {
