@@ -34,6 +34,25 @@ ConsentReceipt _receipt({
   revoked: revoked,
 );
 
+ConsentChangeReport _classify({
+  ConsentReceipt? priorReceipt,
+  String? manifestDigest,
+  String? termsDigest,
+  ConsentPurpose? purpose,
+  String? modelId,
+  String? capabilityId,
+}) {
+  final prior = priorReceipt ?? _receipt();
+  return classifyConsentChange(
+    priorReceipt: prior,
+    manifestDigest: manifestDigest ?? prior.manifestDigest,
+    termsDigest: termsDigest ?? prior.termsDigest,
+    purpose: purpose ?? prior.purpose,
+    modelId: modelId ?? prior.scope.modelId,
+    capabilityId: capabilityId ?? prior.scope.capabilityIds.first,
+  );
+}
+
 void main() {
   test(
     'grant exposes a scoped active receipt and authorizes a digest binding',
@@ -402,6 +421,166 @@ void main() {
         scope: scope,
         grantedAt: null,
       ),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('unchanged conditions require no new consent', () {
+    final unchanged = _classify();
+
+    expect(unchanged.changedBindings, isEmpty);
+    expect(unchanged.requiresNewConsent, isFalse);
+    expect(unchanged.manifestChanged, isFalse);
+    expect(unchanged.termsChanged, isFalse);
+    expect(unchanged.purposeChanged, isFalse);
+    expect(unchanged.modelChanged, isFalse);
+    expect(unchanged.capabilityChanged, isFalse);
+
+    // A wider prior scope still covers either of its declared capabilities.
+    final wide = _receipt(capabilityIds: {'translation.text', 'ocr.text'});
+    for (final capability in wide.scope.capabilityIds) {
+      final report = _classify(priorReceipt: wide, capabilityId: capability);
+      expect(report.changedBindings, isEmpty);
+      expect(report.requiresNewConsent, isFalse);
+    }
+  });
+
+  test(
+    'each changed binding is reported separately and requires new consent',
+    () {
+      final cases = <(String, ConsentBindingChange, ConsentChangeReport)>[
+        (
+          'manifest',
+          ConsentBindingChange.manifest,
+          _classify(manifestDigest: _otherDigest),
+        ),
+        (
+          'terms',
+          ConsentBindingChange.terms,
+          _classify(termsDigest: _otherDigest),
+        ),
+        (
+          'purpose',
+          ConsentBindingChange.purpose,
+          _classify(purpose: ConsentPurpose.ocr),
+        ),
+        (
+          'model',
+          ConsentBindingChange.model,
+          _classify(modelId: 'other-model'),
+        ),
+        (
+          'capability',
+          ConsentBindingChange.capability,
+          _classify(capabilityId: 'ocr.text'),
+        ),
+      ];
+      final getters =
+          <ConsentBindingChange, bool Function(ConsentChangeReport)>{
+            ConsentBindingChange.manifest: (report) => report.manifestChanged,
+            ConsentBindingChange.terms: (report) => report.termsChanged,
+            ConsentBindingChange.purpose: (report) => report.purposeChanged,
+            ConsentBindingChange.model: (report) => report.modelChanged,
+            ConsentBindingChange.capability: (report) =>
+                report.capabilityChanged,
+          };
+
+      for (final (label, expected, report) in cases) {
+        expect(report.changedBindings, {expected}, reason: label);
+        expect(report.requiresNewConsent, isTrue, reason: label);
+        for (final entry in getters.entries) {
+          expect(
+            entry.value(report),
+            entry.key == expected,
+            reason: '$label / ${entry.key.name}',
+          );
+        }
+      }
+    },
+  );
+
+  test('multiple simultaneous changes are all reported', () {
+    final report = _classify(
+      manifestDigest: _otherDigest,
+      termsDigest: _otherDigest,
+      purpose: ConsentPurpose.asr,
+      modelId: 'other-model',
+      capabilityId: 'ocr.text',
+    );
+
+    expect(report.changedBindings, ConsentBindingChange.values.toSet());
+    expect(report.requiresNewConsent, isTrue);
+  });
+
+  test('a revoked prior receipt fails closed', () {
+    final prior = _receipt().revoke();
+
+    expect(() => _classify(priorReceipt: prior), throwsA(isA<ArgumentError>()));
+    expect(
+      () => _classify(priorReceipt: prior, manifestDigest: _otherDigest),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(prior.revoked, isTrue);
+  });
+
+  test('malformed current declarations fail closed', () {
+    expect(
+      () => _classify(manifestDigest: 'A' * 64),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => _classify(manifestDigest: 'aaaa'),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => _classify(termsDigest: 'z' * 64),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => _classify(modelId: 'Synthetic-Translation'),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(() => _classify(modelId: '1model'), throwsA(isA<ArgumentError>()));
+    expect(
+      () => _classify(capabilityId: 'Translation.text'),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(() => _classify(capabilityId: ''), throwsA(isA<ArgumentError>()));
+  });
+
+  test('classification grants nothing and changes no consent state', () {
+    final receipt = _receipt();
+    final store = ConsentStore()..grant(receipt);
+    final changed = _classify(manifestDigest: _otherDigest);
+
+    expect(changed.requiresNewConsent, isTrue);
+    expect(
+      () => changed.changedBindings.add(ConsentBindingChange.terms),
+      throwsA(isA<UnsupportedError>()),
+    );
+    expect(store.receipts, [receipt]);
+    expect(
+      store.activeFor(
+        _manifestDigest,
+        _termsDigest,
+        ConsentPurpose.translation,
+        'translation.text',
+      ),
+      receipt,
+    );
+    expect(
+      store.activeFor(
+        _otherDigest,
+        _termsDigest,
+        ConsentPurpose.translation,
+        'translation.text',
+      ),
+      isNull,
+    );
+
+    expect(store.revoke('receipt-1'), isTrue);
+    expect(
+      () => _classify(priorReceipt: store.receipts.single),
       throwsA(isA<ArgumentError>()),
     );
   });

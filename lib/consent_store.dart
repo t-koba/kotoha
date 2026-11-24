@@ -1,9 +1,12 @@
 /// In-memory consent records scoped to a purpose, a capability range and the
-/// digests of reviewed terms.
+/// digests of reviewed terms, plus classification of changed conditions.
 ///
 /// These records are not engine authorization and do not verify origin,
 /// authenticity, licensing or runtime capability. Nothing is persisted: every
 /// record is explicit, revocable, and cleared with the in-memory review state.
+/// Change classification is digest/declaration-level decision data for
+/// presenting changed conditions (design §7.4); it grants nothing and performs
+/// no I/O.
 library;
 
 import 'package:kotoha/model_terms_import.dart';
@@ -127,6 +130,95 @@ class ConsentReceipt {
     grantedAt,
     revoked,
   );
+}
+
+/// One declared condition bound by a [ConsentReceipt] that can change.
+enum ConsentBindingChange { manifest, terms, purpose, model, capability }
+
+/// Decision data from comparing a prior receipt with current declarations.
+///
+/// This is digest/declaration-level data for presenting affected conditions
+/// and deciding whether fresh explicit consent is needed. It grants no
+/// consent, authorizes no engine use, verifies no origin or licence, and has no
+/// UI, I/O or persistence. Empty [changedBindings] means every compared
+/// binding matched; it is not a claim that the model is safe, available or
+/// licensed.
+class ConsentChangeReport {
+  ConsentChangeReport._(Set<ConsentBindingChange> changed)
+    : changedBindings = Set<ConsentBindingChange>.unmodifiable(changed);
+
+  /// Each changed binding, reported separately; empty when none changed.
+  final Set<ConsentBindingChange> changedBindings;
+
+  bool get manifestChanged =>
+      changedBindings.contains(ConsentBindingChange.manifest);
+
+  bool get termsChanged => changedBindings.contains(ConsentBindingChange.terms);
+
+  bool get purposeChanged =>
+      changedBindings.contains(ConsentBindingChange.purpose);
+
+  bool get modelChanged => changedBindings.contains(ConsentBindingChange.model);
+
+  /// True when the current capability is outside the prior receipt's scope.
+  bool get capabilityChanged =>
+      changedBindings.contains(ConsentBindingChange.capability);
+
+  /// Whether changed conditions must be presented and confirmation obtained
+  /// before continuing. A single changed binding is enough; an empty report
+  /// never extends the receipt to other conditions.
+  bool get requiresNewConsent => changedBindings.isNotEmpty;
+}
+
+/// Compares [priorReceipt] with the current declared bindings (design §7.4).
+///
+/// [manifestDigest], [termsDigest], [modelId] and [capabilityId] are the
+/// current declared values, [purpose] the declared purpose. Capability change
+/// means the current capability is not covered by the prior scope; it says
+/// nothing about route support or licensing. Malformed declarations and a
+/// revoked [priorReceipt] throw [ArgumentError], which callers must treat as
+/// requiring fresh consent: no report that could be read as "no change" is
+/// produced. Receipts, stores and engine state are not touched.
+ConsentChangeReport classifyConsentChange({
+  required ConsentReceipt priorReceipt,
+  required String manifestDigest,
+  required String termsDigest,
+  required ConsentPurpose purpose,
+  required String modelId,
+  required String capabilityId,
+}) {
+  if (priorReceipt.revoked) {
+    throw ArgumentError.value(
+      priorReceipt,
+      'priorReceipt',
+      'revoked receipt requires new consent',
+    );
+  }
+  final currentManifestDigest = _requireDigest(
+    manifestDigest,
+    'manifestDigest',
+  );
+  final currentTermsDigest = _requireDigest(termsDigest, 'termsDigest');
+  final currentModelId = _requireId(modelId, 'modelId');
+  final currentCapabilityId = _requireId(capabilityId, 'capabilityId');
+
+  final changed = <ConsentBindingChange>{};
+  if (priorReceipt.manifestDigest != currentManifestDigest) {
+    changed.add(ConsentBindingChange.manifest);
+  }
+  if (priorReceipt.termsDigest != currentTermsDigest) {
+    changed.add(ConsentBindingChange.terms);
+  }
+  if (priorReceipt.purpose != purpose) {
+    changed.add(ConsentBindingChange.purpose);
+  }
+  if (priorReceipt.scope.modelId != currentModelId) {
+    changed.add(ConsentBindingChange.model);
+  }
+  if (!priorReceipt.scope.covers(currentCapabilityId)) {
+    changed.add(ConsentBindingChange.capability);
+  }
+  return ConsentChangeReport._(changed);
 }
 
 /// Purely in-memory consent records with explicit revocation. No I/O, no
