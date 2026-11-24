@@ -158,6 +158,61 @@ void main() {
     }
   });
 
+  test('a request dated after now is refused with no permission', () {
+    AcquisitionPermission? permission;
+    try {
+      permission = _broker().authorize(
+        request: _request(requestedAt: _now.add(const Duration(minutes: 1))),
+        authorization: _authorization(),
+        consents: _consented(),
+        now: _now,
+      );
+      fail('expected a refusal');
+    } on AcquisitionException catch (e) {
+      expect(e.failure, AcquisitionFailure.notYetValid);
+      expect(e.operation, 'authorize');
+      expect(e.toString(), 'AcquisitionException(notYetValid: authorize)');
+    }
+    expect(permission, isNull);
+  });
+
+  test('a consent granted after now is refused with no permission', () {
+    final consents = ConsentStore()
+      ..grant(_receipt(grantedAt: _now.add(const Duration(minutes: 1))));
+    AcquisitionPermission? permission;
+    try {
+      permission = _broker().authorize(
+        request: _request(),
+        authorization: _authorization(),
+        consents: consents,
+        now: _now,
+      );
+      fail('expected a refusal');
+    } on AcquisitionException catch (e) {
+      expect(e.failure, AcquisitionFailure.notYetValid);
+      expect(e.operation, 'authorize');
+      expect(e.toString(), 'AcquisitionException(notYetValid: authorize)');
+    }
+    expect(permission, isNull);
+  });
+
+  test('requestedAt and grantedAt equal to now remain valid', () {
+    final permission = _broker().authorize(
+      request: _request(requestedAt: _now),
+      authorization: _authorization(),
+      consents: ConsentStore()..grant(_receipt(grantedAt: _now)),
+      now: _now,
+    );
+
+    expect(permission.grantedAt, _now);
+    expect(permission.expiresAt, _expiresAt);
+    expect(permission.isActiveAt(_now), isTrue);
+    expect(
+      permission.isActiveAt(_now.subtract(const Duration(microseconds: 1))),
+      isFalse,
+    );
+  });
+
   test('inverted lifetime is refused before expiry or identity checks', () {
     for (final expiresAt in <DateTime>[
       _requestedAt,

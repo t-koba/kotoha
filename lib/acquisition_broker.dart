@@ -35,6 +35,7 @@ Set<String> _requireFilePaths(Set<String> value) =>
 /// no path, destination, purpose, digest, content, engine or provider detail.
 enum AcquisitionFailure {
   expired,
+  notYetValid,
   invertedLifetime,
   destinationNotAllowed,
   identityMismatch,
@@ -151,6 +152,12 @@ class AcquisitionBroker {
     if (!now.isBefore(request.expiresAt)) {
       throw const AcquisitionException(AcquisitionFailure.expired, 'authorize');
     }
+    if (now.isBefore(request.requestedAt)) {
+      throw const AcquisitionException(
+        AcquisitionFailure.notYetValid,
+        'authorize',
+      );
+    }
     if (request.manifestDigest != authorization.manifestDigest ||
         request.termsDigest != authorization.termsDigest) {
       throw const AcquisitionException(
@@ -179,15 +186,21 @@ class AcquisitionBroker {
         'authorize',
       );
     }
-    if (consents.activeFor(
-          request.manifestDigest,
-          request.termsDigest,
-          request.purpose,
-          request.capabilityId,
-        ) ==
-        null) {
+    final consent = consents.activeFor(
+      request.manifestDigest,
+      request.termsDigest,
+      request.purpose,
+      request.capabilityId,
+    );
+    if (consent == null) {
       throw const AcquisitionException(
         AcquisitionFailure.noActiveConsent,
+        'authorize',
+      );
+    }
+    if (consent.grantedAt.isAfter(now)) {
+      throw const AcquisitionException(
+        AcquisitionFailure.notYetValid,
         'authorize',
       );
     }
