@@ -46,10 +46,17 @@ class _FlipReceipt extends ConsentReceipt {
   String get manifestDigest => flipped ? _otherDigest : super.manifestDigest;
 
   @override
+  String get termsDigest => flipped ? _otherDigest : super.termsDigest;
+
+  @override
   ConsentPurpose get purpose => flipped ? ConsentPurpose.ocr : super.purpose;
 
   @override
   ConsentScope get scope => flipped ? _scope({'ocr.text'}) : super.scope;
+
+  @override
+  DateTime get grantedAt =>
+      flipped ? DateTime.utc(2030, 1, 1) : super.grantedAt;
 }
 
 ConsentReceipt _receipt({
@@ -681,12 +688,14 @@ void main() {
     expect(active(_otherDigest, ConsentPurpose.ocr, 'ocr.text'), isFalse);
 
     receipt.flipped = true;
+    expect(store.receipts.single.termsDigest, _termsDigest);
+    expect(store.receipts.single.grantedAt, _grantedAt);
+    expect(store.receipts.single.runtimeType, ConsentReceipt);
     expect(
       active(_manifestDigest, ConsentPurpose.translation, 'translation.text'),
       isTrue,
     );
     expect(active(_otherDigest, ConsentPurpose.ocr, 'ocr.text'), isFalse);
-    expect(store.receipts.single.runtimeType, ConsentReceipt);
     expect(
       store.activeFor(
         _manifestDigest,
