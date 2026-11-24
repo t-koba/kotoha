@@ -60,6 +60,44 @@ DeclaredModelCapabilities _capabilities({
   ),
 );
 
+/// A caller-owned capabilities object whose resource getter changes after
+/// the resolver has frozen it. Eligibility must use the same frozen snapshot
+/// for the resource budget as for the task and route checks.
+class _ChangingResourcesCapabilities extends DeclaredModelCapabilities {
+  _ChangingResourcesCapabilities({required this.small, required this.large})
+    : super(
+        modelId: 'synthetic-model',
+        engineId: 'synthetic-engine',
+        adapterId: 'synthetic-adapter',
+        tasks: [
+          DeclaredTaskCapability(
+            id: 'translation.text',
+            inputTypes: const ['text'],
+            outputTypes: const ['translations'],
+            sourceLanguages: const ['de'],
+            targetLanguages: const ['ar'],
+            scripts: const [],
+            routes: const [
+              DeclaredRoute(
+                source: 'de',
+                target: 'ar',
+                evidence: DeclaredRouteEvidence.user,
+              ),
+            ],
+          ),
+        ],
+        requiredCapabilities: const ['translation.text'],
+        resources: small,
+      );
+
+  final DeclaredResourceNeeds small;
+  final DeclaredResourceNeeds large;
+  int reads = 0;
+
+  @override
+  DeclaredResourceNeeds get resources => reads++ < 5 ? small : large;
+}
+
 void main() {
   test('matching declaration with declared basis is eligible', () {
     final result = evaluateDeclaredEligibility(
@@ -282,5 +320,35 @@ void main() {
       throwsUnsupportedError,
     );
     expect(() => eligibility.reasons.clear(), throwsUnsupportedError);
+  });
+
+  test('resource budgets use the frozen capability snapshot', () {
+    final small = DeclaredResourceNeeds(
+      storageBytes: 32,
+      peakHostBytes: 0,
+      peakAcceleratorBytes: 0,
+      basis: 'declared',
+      conditions: 'synthetic declaration',
+    );
+    final large = DeclaredResourceNeeds(
+      storageBytes: 1024,
+      peakHostBytes: 0,
+      peakAcceleratorBytes: 0,
+      basis: 'declared',
+      conditions: 'synthetic declaration',
+    );
+    final capabilities = _ChangingResourcesCapabilities(
+      small: small,
+      large: large,
+    );
+    final result = evaluateDeclaredEligibility(
+      _request(storageBudgetBytes: 100),
+      capabilities,
+      'translation.text',
+    );
+    // The resolver freezes the declaration once; a later caller-side getter
+    // value cannot enter the budget decision within this evaluation.
+    expect(result.reasons, isEmpty);
+    expect(result.eligible, isTrue);
   });
 }

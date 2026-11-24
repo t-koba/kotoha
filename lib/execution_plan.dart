@@ -132,7 +132,7 @@ PlanEligibility evaluateDeclaredEligibility(
     reasons.add(PlanIneligibility.route);
   }
 
-  final resources = capabilities.resources;
+  final resources = resolver.capabilities.resources;
   if (resources.storageBytes < 0 ||
       resources.storageBytes > request.storageBudgetBytes ||
       resources.peakHostBytes < 0 ||
