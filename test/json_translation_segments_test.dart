@@ -228,6 +228,34 @@ void main() {
       expect(rewritten, '${'[' * depth}"changed"${']' * depth}');
     },
   );
+
+  test('invalid JSON rejection never echoes the rejected document', () {
+    const secret = 'private-draft-secret';
+    String? rendered;
+    try {
+      parseJsonStringSegments('{"note":"$secret",}');
+    } on FormatException catch (error) {
+      rendered = error.toString();
+    }
+
+    expect(rendered, contains('Invalid JSON source.'));
+    expect(rendered, isNot(contains(secret)));
+  });
+
+  test('unknown segment id rejection never echoes the caller value', () {
+    final parts = parseJsonStringSegments('{"a":"x"}');
+
+    String? rendered;
+    try {
+      parts.apply(const {42: 'y'});
+    } on ArgumentError catch (error) {
+      rendered = error.toString();
+    }
+
+    expect(rendered, contains('unknown segment id'));
+    expect(rendered, contains('<rejected>'));
+    expect(rendered, isNot(contains('42')));
+  });
 }
 
 class _MutableSegment extends JsonStringSegment {

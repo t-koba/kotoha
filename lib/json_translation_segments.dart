@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+/// Validation errors carry a fixed placeholder instead of the rejected caller
+/// value: translated drafts and JSON documents may contain private text.
+const String _rejectedValue = '<rejected>';
+
 /// A translatable string value in a JSON source document.
 ///
 /// [start] and [end] are UTF-16 offsets into the original source and cover
@@ -57,11 +61,15 @@ class JsonStringSegments {
       final Object id = entry.key;
       final Object replacement = entry.value;
       if (id is! int || id < 0 || id >= values.length) {
-        throw ArgumentError.value(id, 'translation id', 'unknown segment id');
+        throw ArgumentError.value(
+          _rejectedValue,
+          'translation id',
+          'unknown segment id',
+        );
       }
       if (replacement is! String) {
         throw ArgumentError.value(
-          replacement,
+          _rejectedValue,
           'translation',
           'must be a String',
         );
@@ -94,7 +102,12 @@ class JsonStringSegments {
 /// Validates [source] as JSON, then locates its string values without
 /// re-serializing any part of the document.
 JsonStringSegments parseJsonStringSegments(String source) {
-  jsonDecode(source);
+  try {
+    jsonDecode(source);
+  } on FormatException {
+    // dart:convert's exception carries the rejected document; never expose it.
+    throw const FormatException('Invalid JSON source.');
+  }
   return JsonStringSegments(source, _JsonScanner(source).scan());
 }
 
@@ -198,7 +211,7 @@ class _JsonScanner {
   }
 
   FormatException _bad(String reason) =>
-      FormatException('$reason at offset $_at', source, _at);
+      FormatException('$reason at offset $_at');
 
   bool _take(int codeUnit) {
     if (_at >= source.length || source.codeUnitAt(_at) != codeUnit) {
