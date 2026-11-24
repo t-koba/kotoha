@@ -14,7 +14,7 @@ ExecutionIdentity _identity({
 
 ExecutionEvent _event({
   ExecutionIdentity? identity,
-  int sequence = 1,
+  int sequence = 0,
   EventKind kind = EventKind.partial,
 }) => ExecutionEvent(
   identity: identity ?? _identity(),
@@ -23,23 +23,47 @@ ExecutionEvent _event({
 );
 
 void main() {
-  test('increasing sequences are applied and the state tracks them', () {
-    final gate = ExecutionEventGate(_identity());
-    final first = _event(sequence: 1);
-    final second = _event(sequence: 2);
-    final terminal = _event(sequence: 3, kind: EventKind.terminal);
+  test(
+    'increasing zero-based sequences are applied and the state tracks them',
+    () {
+      final gate = ExecutionEventGate(_identity());
+      final first = _event(sequence: 0);
+      final second = _event(sequence: 1);
+      final terminal = _event(sequence: 2, kind: EventKind.terminal);
 
-    expect(gate.lastAppliedSequence, 0);
-    expect(gate.terminalApplied, isFalse);
-    expect(gate.admit(first), EventDisposition.applied);
-    expect(gate.lastAppliedSequence, 1);
-    expect(gate.terminalApplied, isFalse);
-    expect(gate.admit(second), EventDisposition.applied);
-    expect(gate.lastAppliedSequence, 2);
-    expect(gate.admit(terminal), EventDisposition.applied);
-    expect(gate.lastAppliedSequence, 3);
-    expect(gate.terminalApplied, isTrue);
-  });
+      expect(gate.lastAppliedSequence, -1);
+      expect(gate.terminalApplied, isFalse);
+      expect(gate.admit(first), EventDisposition.applied);
+      expect(gate.lastAppliedSequence, 0);
+      expect(gate.terminalApplied, isFalse);
+      expect(gate.admit(second), EventDisposition.applied);
+      expect(gate.lastAppliedSequence, 1);
+      expect(gate.admit(terminal), EventDisposition.applied);
+      expect(gate.lastAppliedSequence, 2);
+      expect(gate.terminalApplied, isTrue);
+    },
+  );
+
+  test(
+    'zero-based first events and terminals from the contract are admitted',
+    () {
+      final gate = ExecutionEventGate(_identity());
+      final first = _event(sequence: 0);
+
+      expect(gate.admit(first), EventDisposition.applied);
+      expect(gate.lastAppliedSequence, 0);
+      expect(gate.admit(_event(sequence: 0)), EventDisposition.outOfOrder);
+
+      // A job whose only event is a zero-based terminal is representable too.
+      final terminalGate = ExecutionEventGate(_identity());
+      final terminal = _event(sequence: 0, kind: EventKind.terminal);
+
+      expect(terminalGate.admit(terminal), EventDisposition.applied);
+      expect(terminalGate.admit(terminal), EventDisposition.duplicate);
+      expect(terminalGate.lastAppliedSequence, 0);
+      expect(terminalGate.terminalApplied, isTrue);
+    },
+  );
 
   test(
     'each identity component mismatch is stale, including old snapshots',
@@ -47,11 +71,11 @@ void main() {
       final current = _identity();
       final gate = ExecutionEventGate(current);
       final events = <ExecutionEvent>[
-        _event(identity: _identity(jobId: 'job-2'), sequence: 1),
-        _event(identity: _identity(executionId: 'exec-2'), sequence: 1),
+        _event(identity: _identity(jobId: 'job-2'), sequence: 0),
+        _event(identity: _identity(executionId: 'exec-2'), sequence: 0),
         _event(
           identity: _identity(inputSnapshotDigest: _otherSnapshot),
-          sequence: 1,
+          sequence: 0,
         ),
       ];
 
@@ -59,7 +83,7 @@ void main() {
         expect(event.identity == current, isFalse);
         expect(gate.admit(event), EventDisposition.stale);
       }
-      expect(gate.lastAppliedSequence, 0);
+      expect(gate.lastAppliedSequence, -1);
       expect(gate.terminalApplied, isFalse);
 
       // A new snapshot gate cannot admit an event from the previous snapshot,
@@ -67,12 +91,12 @@ void main() {
       final nextGate = ExecutionEventGate(
         _identity(inputSnapshotDigest: _otherSnapshot),
       );
-      expect(nextGate.admit(_event(sequence: 1)), EventDisposition.stale);
+      expect(nextGate.admit(_event(sequence: 0)), EventDisposition.stale);
       expect(
         nextGate.admit(
           _event(
             identity: _identity(inputSnapshotDigest: _otherSnapshot),
-            sequence: 1,
+            sequence: 0,
           ),
         ),
         EventDisposition.applied,
@@ -80,70 +104,73 @@ void main() {
     },
   );
 
-  test('equal and lower sequences are outOfOrder before a terminal', () {
-    final gate = ExecutionEventGate(_identity())..admit(_event(sequence: 3));
+  test(
+    'equal and lower zero-based sequences are outOfOrder before a terminal',
+    () {
+      final gate = ExecutionEventGate(_identity())..admit(_event(sequence: 2));
 
-    expect(gate.admit(_event(sequence: 3)), EventDisposition.outOfOrder);
-    expect(gate.admit(_event(sequence: 2)), EventDisposition.outOfOrder);
-    expect(gate.admit(_event(sequence: 1)), EventDisposition.outOfOrder);
-    expect(gate.lastAppliedSequence, 3);
-    expect(gate.terminalApplied, isFalse);
-  });
+      expect(gate.admit(_event(sequence: 2)), EventDisposition.outOfOrder);
+      expect(gate.admit(_event(sequence: 1)), EventDisposition.outOfOrder);
+      expect(gate.admit(_event(sequence: 0)), EventDisposition.outOfOrder);
+      expect(gate.lastAppliedSequence, 2);
+      expect(gate.terminalApplied, isFalse);
+    },
+  );
 
   test('the terminal is admitted once and an exact replay is duplicate', () {
     final gate = ExecutionEventGate(_identity());
-    final terminal = _event(sequence: 3, kind: EventKind.terminal);
+    final terminal = _event(sequence: 2, kind: EventKind.terminal);
 
     expect(gate.admit(terminal), EventDisposition.applied);
     expect(gate.admit(terminal), EventDisposition.duplicate);
     expect(gate.admit(terminal), EventDisposition.duplicate);
     expect(
-      gate.admit(_event(sequence: 4, kind: EventKind.terminal)),
+      gate.admit(_event(sequence: 3, kind: EventKind.terminal)),
       EventDisposition.afterTerminal,
     );
     expect(
-      gate.admit(_event(sequence: 2, kind: EventKind.terminal)),
+      gate.admit(_event(sequence: 1, kind: EventKind.terminal)),
       EventDisposition.afterTerminal,
     );
     expect(
-      gate.admit(_event(sequence: 4, kind: EventKind.partial)),
+      gate.admit(_event(sequence: 3, kind: EventKind.partial)),
       EventDisposition.afterTerminal,
     );
-    expect(gate.lastAppliedSequence, 3);
+    expect(gate.lastAppliedSequence, 2);
     expect(gate.terminalApplied, isTrue);
   });
 
   test('a higher partial after a terminal is afterTerminal', () {
     final gate = ExecutionEventGate(_identity())
-      ..admit(_event(sequence: 1))
-      ..admit(_event(sequence: 9, kind: EventKind.terminal));
+      ..admit(_event(sequence: 0))
+      ..admit(_event(sequence: 8, kind: EventKind.terminal));
 
     expect(
-      gate.admit(_event(sequence: 10, kind: EventKind.partial)),
+      gate.admit(_event(sequence: 9, kind: EventKind.partial)),
       EventDisposition.afterTerminal,
     );
     expect(
       gate.admit(_event(sequence: 100, kind: EventKind.partial)),
       EventDisposition.afterTerminal,
     );
-    expect(gate.lastAppliedSequence, 9);
+    expect(gate.lastAppliedSequence, 8);
     expect(gate.terminalApplied, isTrue);
   });
 
   test('a stale event after a terminal is stale, not duplicate', () {
     final gate = ExecutionEventGate(_identity())
-      ..admit(_event(sequence: 1, kind: EventKind.terminal));
+      ..admit(_event(sequence: 0, kind: EventKind.terminal));
 
     final staleTerminal = _event(
       identity: _identity(executionId: 'exec-2'),
-      sequence: 1,
+      sequence: 0,
       kind: EventKind.terminal,
     );
     expect(gate.admit(staleTerminal), EventDisposition.stale);
-    expect(gate.lastAppliedSequence, 1);
+    expect(gate.lastAppliedSequence, 0);
   });
 
-  test('invalid ids, digests and sequences fail closed', () {
+  test('invalid ids, digests and negative sequences fail closed', () {
     for (final jobId in <String>['Job-1', '', '1job']) {
       expect(
         () => _identity(jobId: jobId),
@@ -164,7 +191,7 @@ void main() {
         throwsA(isA<ArgumentError>()),
       );
     }
-    for (final sequence in <int>[0, -1, -100]) {
+    for (final sequence in <int>[-1, -2, -100]) {
       expect(
         () => _event(sequence: sequence),
         throwsA(isA<ArgumentError>()),
@@ -172,11 +199,12 @@ void main() {
       );
     }
     expect(
-      () => _event(sequence: 0),
+      () => _event(sequence: -1),
       throwsA(
-        isA<ArgumentError>().having((e) => e.invalidValue, 'invalidValue', 0),
+        isA<ArgumentError>().having((e) => e.invalidValue, 'invalidValue', -1),
       ),
     );
+    expect(() => _event(sequence: 0), returnsNormally);
   });
 
   test('identity equality and hashCode cover every field', () {

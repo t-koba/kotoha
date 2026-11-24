@@ -30,8 +30,12 @@ String _requireDigest(String value, String name) {
 }
 
 int _requireSequence(int value) {
-  if (value < 1) {
-    throw ArgumentError.value(value, 'sequence', 'sequence must be positive');
+  if (value < 0) {
+    throw ArgumentError.value(
+      value,
+      'sequence',
+      'sequence must be non-negative',
+    );
   }
   return value;
 }
@@ -88,7 +92,11 @@ class ExecutionEvent {
   }) : sequence = _requireSequence(sequence);
 
   final ExecutionIdentity identity;
+
+  /// Zero-based order within the execution. The first event uses 0, matching
+  /// the engine event contract in design/specs/engine_event.schema.json.
   final int sequence;
+
   final EventKind kind;
 
   @override
@@ -124,9 +132,11 @@ class ExecutionEventGate {
   final ExecutionIdentity current;
 
   ExecutionEvent? _terminal;
-  int _lastAppliedSequence = 0;
 
-  /// Highest sequence admitted by this gate, or zero before any admission.
+  // Mirrors the validator's initial `last: -1` so sequence 0 is admissible.
+  int _lastAppliedSequence = -1;
+
+  /// Highest sequence admitted by this gate, or -1 before any admission.
   int get lastAppliedSequence => _lastAppliedSequence;
 
   /// Whether a terminal event has been admitted by this gate.
