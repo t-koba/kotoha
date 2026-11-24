@@ -177,6 +177,41 @@ void main() {
       );
     },
   );
+  test('constructor freezes supplied segments into plain snapshots', () {
+    const source = '{"a":"b"}';
+    final supplied = _MutableSegment(
+      id: 0,
+      path: r'$.a',
+      value: 'b',
+      start: 6,
+      end: 7,
+    );
+    final parts = JsonStringSegments(source, <JsonStringSegment>[supplied]);
+
+    void expectFrozenSnapshot() {
+      final segment = parts.values.single;
+      expect(segment.runtimeType, same(JsonStringSegment));
+      expect(segment.id, 0);
+      expect(segment.path, r'$.a');
+      expect(segment.value, 'b');
+      expect(segment.start, 6);
+      expect(segment.end, 7);
+      expect(parts.apply(const <int, String>{0: 'X'}), '{"a":"X"}');
+    }
+
+    expectFrozenSnapshot();
+    supplied.mutate(
+      id: 1,
+      path: r'$.other',
+      value: 'changed',
+      start: 0,
+      end: 1,
+    );
+    expect(supplied.id, 1);
+    expect(supplied.value, 'changed');
+    expectFrozenSnapshot();
+  });
+
   test(
     'deeply nested JSON within panel limits does not overflow the scanner',
     () {
@@ -193,4 +228,53 @@ void main() {
       expect(rewritten, '${'[' * depth}"changed"${']' * depth}');
     },
   );
+}
+
+class _MutableSegment extends JsonStringSegment {
+  _MutableSegment({
+    required super.id,
+    required super.path,
+    required super.value,
+    required super.start,
+    required super.end,
+  }) : _id = id,
+       _path = path,
+       _value = value,
+       _start = start,
+       _end = end;
+
+  int _id;
+  String _path;
+  String _value;
+  int _start;
+  int _end;
+
+  @override
+  int get id => _id;
+
+  @override
+  String get path => _path;
+
+  @override
+  String get value => _value;
+
+  @override
+  int get start => _start;
+
+  @override
+  int get end => _end;
+
+  void mutate({
+    required int id,
+    required String path,
+    required String value,
+    required int start,
+    required int end,
+  }) {
+    _id = id;
+    _path = path;
+    _value = value;
+    _start = start;
+    _end = end;
+  }
 }

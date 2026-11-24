@@ -22,11 +22,26 @@ class JsonStringSegment {
 }
 
 /// Source-ordered string values of a JSON document and a raw-range rewriter.
+///
+/// [values] is a frozen snapshot: every supplied segment is copied into a
+/// plain [JsonStringSegment] once at construction.
 class JsonStringSegments {
   JsonStringSegments(this.source, List<JsonStringSegment> values)
-    : values = List<JsonStringSegment>.unmodifiable(values);
+    : values = List<JsonStringSegment>.unmodifiable(
+        values.map(
+          (segment) => JsonStringSegment(
+            id: segment.id,
+            path: segment.path,
+            value: segment.value,
+            start: segment.start,
+            end: segment.end,
+          ),
+        ),
+      );
 
   final String source;
+
+  /// Frozen, source-ordered copy of the segments supplied at construction.
   final List<JsonStringSegment> values;
 
   /// Replaces the raw inner content of each segment named by [translations].
