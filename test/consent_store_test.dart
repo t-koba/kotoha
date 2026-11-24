@@ -16,6 +16,19 @@ ConsentScope _scope([Set<String>? capabilityIds]) => ConsentScope(
   capabilityIds: capabilityIds ?? {'translation.text'},
 );
 
+class _FlipScope extends ConsentScope {
+  _FlipScope()
+    : super(
+        modelId: 'synthetic-translation',
+        capabilityIds: const {'translation.text'},
+      );
+
+  bool widened = false;
+
+  @override
+  bool covers(String capabilityId) => widened || super.covers(capabilityId);
+}
+
 ConsentReceipt _receipt({
   String id = 'receipt-1',
   String manifestDigest = _manifestDigest,
@@ -583,5 +596,51 @@ void main() {
       () => _classify(priorReceipt: store.receipts.single),
       throwsA(isA<ArgumentError>()),
     );
+  });
+
+  test('a receipt freezes its scope against later caller mutation', () {
+    final scope = _FlipScope();
+    final receipt = ConsentReceipt(
+      id: 'receipt-1',
+      manifestDigest: _manifestDigest,
+      termsDigest: _termsDigest,
+      purpose: ConsentPurpose.translation,
+      scope: scope,
+      grantedAt: _grantedAt,
+    );
+    final store = ConsentStore()..grant(receipt);
+
+    expect(
+      store.activeFor(
+        _manifestDigest,
+        _termsDigest,
+        ConsentPurpose.translation,
+        'ocr.text',
+      ),
+      isNull,
+    );
+
+    scope.widened = true;
+    expect(
+      store.activeFor(
+        _manifestDigest,
+        _termsDigest,
+        ConsentPurpose.translation,
+        'ocr.text',
+      ),
+      isNull,
+    );
+    expect(receipt.scope, isA<ConsentScope>());
+    expect(receipt.scope.runtimeType, ConsentScope);
+    expect(
+      store.activeFor(
+        _manifestDigest,
+        _termsDigest,
+        ConsentPurpose.translation,
+        'translation.text',
+      ),
+      receipt,
+    );
+    expect(receipt.revoke().scope, receipt.scope);
   });
 }

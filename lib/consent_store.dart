@@ -37,6 +37,11 @@ DateTime _requireGrantedAt(DateTime? value) {
   return value;
 }
 
+// ConsentScope is an open class and covers() is virtual. Rebuild it from the
+// declared scalars so a receipt's coverage cannot change after it is granted.
+ConsentScope _freezeScope(ConsentScope scope) =>
+    ConsentScope(modelId: scope.modelId, capabilityIds: scope.capabilityIds);
+
 Set<String> _requireCapabilities(Set<String> value) {
   if (value.isEmpty) {
     throw ArgumentError('capabilityIds must not be empty');
@@ -82,18 +87,22 @@ class ConsentReceipt {
     required String manifestDigest,
     required String termsDigest,
     required this.purpose,
-    required this.scope,
+    required ConsentScope scope,
     DateTime? grantedAt,
     this.revoked = false,
   }) : id = _requireId(id, 'id'),
        manifestDigest = _requireDigest(manifestDigest, 'manifestDigest'),
        termsDigest = _requireDigest(termsDigest, 'termsDigest'),
+       scope = _freezeScope(scope),
        grantedAt = _requireGrantedAt(grantedAt);
 
   final String id;
   final String manifestDigest;
   final String termsDigest;
   final ConsentPurpose purpose;
+
+  /// Plain scope snapshot read once at construction. A caller-owned subclass
+  /// cannot later widen or move the coverage of a granted receipt.
   final ConsentScope scope;
   final DateTime grantedAt;
   final bool revoked;
