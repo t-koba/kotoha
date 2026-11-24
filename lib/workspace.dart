@@ -38,12 +38,21 @@ class ManualTranslationDraft {
 }
 
 /// The editable, model-independent text workspace; every translation is manual.
+/// Copies each manual translation into a plain record at construction, so
+/// later caller-side changes cannot alter this workspace's serialized content.
 class TextWorkspaceDraft {
   TextWorkspaceDraft({
     required this.sourceLanguage,
     required this.sourceText,
     required List<ManualTranslationDraft> translations,
-  }) : translations = List.unmodifiable(translations) {
+  }) : translations = List.unmodifiable(
+         translations.map(
+           (translation) => ManualTranslationDraft(
+             targetLanguage: translation.targetLanguage,
+             text: translation.text,
+           ),
+         ),
+       ) {
     if (this.translations.isEmpty) {
       throw ArgumentError.value(
         translations,

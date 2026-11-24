@@ -76,4 +76,48 @@ void main() {
       throwsUnsupportedError,
     );
   });
+
+  test('freezes supplied translations against caller mutation', () {
+    final supplied = _MutableTranslationDraft(
+      targetLanguage: 'en',
+      text: 'Hello',
+    );
+    final draft = TextWorkspaceDraft(
+      sourceLanguage: 'ja',
+      sourceText: 'こんにちは',
+      translations: [supplied],
+    );
+    final before = draft.toJson();
+
+    supplied.language = 'ja';
+    supplied.body = 'Goodbye';
+
+    expect(draft.toJson(), before);
+    expect(draft.translations.single.runtimeType, ManualTranslationDraft);
+    final restored = TextWorkspaceDraft.fromJson(before);
+    expect(restored.toJson(), before);
+  });
+}
+
+class _MutableTranslationDraft extends ManualTranslationDraft {
+  _MutableTranslationDraft({
+    required super.targetLanguage,
+    required super.text,
+  });
+
+  String language = 'en';
+  String body = 'Hello';
+
+  @override
+  String get targetLanguage => language;
+
+  @override
+  String get text => body;
+
+  @override
+  Map<String, Object> toJson() => {
+    'target_language': targetLanguage,
+    'text': text,
+    'unexpected': 'caller content',
+  };
 }
