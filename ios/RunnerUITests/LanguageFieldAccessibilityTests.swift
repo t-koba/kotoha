@@ -77,6 +77,12 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
       // discovery and tap. Re-resolve it on each bounded attempt; the system
       // picker's Cancel button remains the presentation assertion.
       // A disabled importer can be a pending presentation, not a missed tap.
+      // The hosted arm64 runner can need longer than the shared element budget
+      // to initialize UIKit's Files picker (CI 45418969661, job 138535780162:
+      // an enabled importer was tapped, but no Cancel appeared within 10 s).
+      // Give only this OS presentation a bounded 30 s floor; the presentation,
+      // Cancel and draft assertions stay unchanged.
+      let pickerTimeout = max(timeout, 30)
       var presented = false
       var diagnostics = ""
       for attempt in 1...2 {
@@ -88,7 +94,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
         let beforeTap = "enabled=\(enabledBeforeTap), hittable=\(hittableBeforeTap)"
         if enabledBeforeTap && hittableBeforeTap { importButton.tap() }
         // Always allow the full wait: a presentation may already be opening.
-        let didPresent = app.buttons["Cancel"].waitForExistence(timeout: timeout)
+        let didPresent = app.buttons["Cancel"].waitForExistence(timeout: pickerTimeout)
         // Collect bounded state before deciding on a re-tap: a disabled importer
         // means a re-tap would auto-fail and hide why no Cancel was observed.
         // Bounded state only: never log picker contents, UI trees or draft text.
