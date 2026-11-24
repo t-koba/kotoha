@@ -121,6 +121,22 @@ void main() {
     expect(find.text(appliedMessage), findsOneWidget);
   });
 
+  testWidgets('apply without translations leaves source and status unchanged', (
+    tester,
+  ) async {
+    const source = '{"one":"first","two":"second"}';
+    final controller = TextEditingController(text: source);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, source);
+    expect(find.text(appliedMessage), findsNothing);
+  });
+
   testWidgets('empty translations leave original values unchanged', (
     tester,
   ) async {

@@ -107,6 +107,7 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
       if (translation.isEmpty || translation == segment.value) continue;
       translations[segment.id] = translation;
     }
+    if (translations.isEmpty) return;
     final rewritten = segments.apply(translations);
     final selection = widget.controller.selection;
     final base = _clamp(selection.baseOffset, rewritten.length);
