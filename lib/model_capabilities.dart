@@ -105,9 +105,52 @@ class DeclaredModelCapabilities {
 
 /// Pure queries over declared capability data; no runtime lookup or inference.
 class CapabilityResolver {
-  const CapabilityResolver(this.capabilities);
+  CapabilityResolver(DeclaredModelCapabilities capabilities)
+    : capabilities = _freeze(capabilities);
 
+  /// Frozen snapshot of the declarations supplied at construction, so later
+  /// caller-side mutation cannot change a decision already made.
   final DeclaredModelCapabilities capabilities;
+
+  static DeclaredModelCapabilities _freeze(DeclaredModelCapabilities value) =>
+      DeclaredModelCapabilities(
+        modelId: value.modelId,
+        engineId: value.engineId,
+        adapterId: value.adapterId,
+        tasks: List<DeclaredTaskCapability>.unmodifiable(
+          value.tasks.map(_freezeTask),
+        ),
+        requiredCapabilities: List<String>.unmodifiable(
+          value.requiredCapabilities,
+        ),
+        resources: DeclaredResourceNeeds(
+          storageBytes: value.resources.storageBytes,
+          peakHostBytes: value.resources.peakHostBytes,
+          peakAcceleratorBytes: value.resources.peakAcceleratorBytes,
+          basis: value.resources.basis,
+          conditions: value.resources.conditions,
+        ),
+      );
+
+  static DeclaredTaskCapability _freezeTask(DeclaredTaskCapability value) =>
+      DeclaredTaskCapability(
+        id: value.id,
+        inputTypes: List<String>.unmodifiable(value.inputTypes),
+        outputTypes: List<String>.unmodifiable(value.outputTypes),
+        sourceLanguages: List<String>.unmodifiable(value.sourceLanguages),
+        targetLanguages: List<String>.unmodifiable(value.targetLanguages),
+        scripts: List<String>.unmodifiable(value.scripts),
+        routes: List<DeclaredRoute>.unmodifiable(
+          value.routes.map(
+            (route) => DeclaredRoute(
+              source: route.source,
+              target: route.target,
+              evidence: route.evidence,
+              evidenceRef: route.evidenceRef,
+            ),
+          ),
+        ),
+      );
 
   /// Ids of declared tasks (unmodifiable).
   List<String> get capabilityIds =>
