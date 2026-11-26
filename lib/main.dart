@@ -364,25 +364,23 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       // A new review invalidates any prior session binding.
       _sessionModelAuthorization = null;
     });
+    var reviewed = false;
+    var accepted = false;
+    var failed = false;
+    var releaseFailed = false;
     try {
       if (!await AndroidPackageReader.select() || !mounted) return;
+      reviewed = true;
       final authorization = await const ModelTermsImport().run(
         AndroidPackageReader(),
         _reviewModelTerms,
       );
       if (!mounted) return;
       // Hold only the digest binding in volatile state; never persist it.
+      accepted = authorization != null;
       setState(() => _sessionModelAuthorization = authorization);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            authorization == null
-                ? AppLocalizations.of(context)!.modelTermsDeclined
-                : AppLocalizations.of(context)!.modelConsentSessionOnly,
-          ),
-        ),
-      );
     } on Exception {
+      failed = true;
       if (mounted) {
         setState(() => _sessionModelAuthorization = null);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -392,14 +390,27 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         );
       }
     } finally {
-      // Releasing the temporary directory grant does not persist or revoke the
-      // accepted digest binding; it remains only in volatile session state.
+      // A successful release leaves the volatile digest binding unchanged.
+      // If release fails, the binding is revoked and the fixed notice below
+      // reports only that state change; no exception detail is echoed.
       try {
         await AndroidPackageReader.release();
       } on Exception {
+        releaseFailed = true;
         if (mounted) setState(() => _sessionModelAuthorization = null);
-      } finally {
-        if (mounted) setState(() => _reviewingModel = false);
+      }
+      if (mounted) {
+        setState(() => _reviewingModel = false);
+        if (reviewed && !failed) {
+          final strings = AppLocalizations.of(context)!;
+          final message = releaseFailed && accepted
+              ? strings.modelReleaseFailure
+              : accepted
+              ? strings.modelConsentSessionOnly
+              : strings.modelTermsDeclined;
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(message)));
+        }
       }
     }
   }

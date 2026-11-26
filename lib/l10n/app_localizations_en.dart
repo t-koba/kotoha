@@ -331,6 +331,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Session acceptance cleared. No approval is retained.';
 
   @override
+  String get modelReleaseFailure =>
+      'Temporary folder access could not be released. Session acceptance was cleared.';
+
+  @override
   String get verifyModelFiles => 'Verify model files';
 
   @override

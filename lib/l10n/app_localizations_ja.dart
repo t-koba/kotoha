@@ -320,6 +320,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get modelConsentCleared => 'セッションの同意を解除しました。承認は保持されていません。';
 
   @override
+  String get modelReleaseFailure => '一時フォルダーのアクセスを解除できませんでした。セッションの同意を解除しました。';
+
+  @override
   String get verifyModelFiles => 'モデルファイルを検証';
 
   @override

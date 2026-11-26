@@ -95,6 +95,7 @@ void main() {
     String displayName = 'Test model',
     bool verify = true,
     bool select = true,
+    bool releaseFails = false,
   }) {
     verifyReplies = verify;
     selectReplies = select;
@@ -124,6 +125,12 @@ void main() {
           requests.add(path);
           return package[path];
         case 'release':
+          if (releaseFails) {
+            throw PlatformException(
+              code: 'release-failed',
+              message: 'synthetic failure',
+            );
+          }
           return null;
       }
       return null;
@@ -553,6 +560,38 @@ void main() {
         findsOneWidget,
       );
       expect(requests, requestsAfterAccept);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('release failure clears consent and explains why', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms, releaseFails: true);
+      await openAndroid(tester);
+
+      await tester.tap(reviewButton());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('accept-model-terms')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+      expect(find.byKey(const ValueKey('verify-model-files')), findsNothing);
+      expect(
+        find.text(
+          'Temporary folder access could not be released. '
+          'Session acceptance was cleared.',
+        ),
+        findsOneWidget,
+      );
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

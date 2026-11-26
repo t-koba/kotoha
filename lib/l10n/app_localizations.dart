@@ -638,6 +638,12 @@ abstract class AppLocalizations {
   /// **'セッションの同意を解除しました。承認は保持されていません。'**
   String get modelConsentCleared;
 
+  /// No description provided for @modelReleaseFailure.
+  ///
+  /// In ja, this message translates to:
+  /// **'一時フォルダーのアクセスを解除できませんでした。セッションの同意を解除しました。'**
+  String get modelReleaseFailure;
+
   /// No description provided for @verifyModelFiles.
   ///
   /// In ja, this message translates to:

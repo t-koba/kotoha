@@ -226,6 +226,7 @@
   "modelSessionActive": "Session acceptance recorded (digests only). No model is installed and runtime is not enabled.",
   "clearModelConsent": "Clear session consent",
   "modelConsentCleared": "Session acceptance cleared. No approval is retained.",
+  "modelReleaseFailure": "Temporary folder access could not be released. Session acceptance was cleared.",
   "verifyModelFiles": "Verify model files",
   "modelIntegrityConsentTitle": "Stream and hash declared model files?",
   "modelIntegrityConsent": "Kotoha will ask you to select the package folder again, then stream the declared files in place and compute SHA-256 hashes. No file bytes or text are copied into the app or stored. No engine is enabled. Matching hashes do not prove origin, authenticity, or licensing rights.",
