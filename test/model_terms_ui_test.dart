@@ -781,4 +781,51 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets(
+    'a cancelled review during snackbar exit does not show stale consent',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      try {
+        installFixture('Synthetic license body');
+        await openAndroid(tester);
+        final strings = AppLocalizationsEn();
+
+        // An ordinary notice is visible before the consent notice is queued.
+        final copyButton = find.byKey(const ValueKey('copy-workspace'));
+        final copyPosition = Scrollable.of(tester.element(copyButton)).position;
+        copyPosition.jumpTo(copyPosition.maxScrollExtent);
+        await tester.pumpAndSettle();
+        await tester.tap(copyButton);
+        await tester.pumpAndSettle();
+        expect(find.text(strings.emptyWorkspaceCopyNotice), findsOneWidget);
+
+        final review = reviewButton();
+        Scrollable.of(tester.element(review)).position.jumpTo(0);
+        await tester.pumpAndSettle();
+        await tester.tap(review);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('accept-model-terms')));
+        // Leave the notice exit animation in flight: the short pump is
+        // essential to catch stale text after the binding is invalidated.
+        await tester.pump(const Duration(milliseconds: 200));
+
+        selectReplies = false;
+        await tester.tap(review);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('model-session-active')),
+          findsNothing,
+        );
+        expect(find.text(strings.modelConsentSessionOnly), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
 }
