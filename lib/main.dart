@@ -39,14 +39,26 @@ final Set<ValueKey<String>> _modelStatusKeys = {
   _modelIntegrityFailureKey,
 };
 
-void _showModelConsentStatus(BuildContext context, SnackBar status) {
-  final messenger = ScaffoldMessenger.of(context);
-  // All model status notices share one queue: any new status supersedes the
-  // visible one instead of leaving stale text on screen.
-  if (_modelStatusKeys.contains(status.key)) {
-    messenger.removeCurrentSnackBar();
+ValueKey<String>? _visibleModelStatusKey;
+
+void _removeCurrentModelStatus(BuildContext context) {
+  // Only a visible model notice is superseded; unrelated ones stay queued.
+  if (_modelStatusKeys.contains(_visibleModelStatusKey)) {
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
   }
-  messenger.showSnackBar(status);
+}
+
+void _showModelConsentStatus(BuildContext context, SnackBar status) {
+  final key = status.key;
+  if (key is ValueKey<String> && _modelStatusKeys.contains(key)) {
+    _removeCurrentModelStatus(context);
+    _visibleModelStatusKey = key;
+    ScaffoldMessenger.of(context).showSnackBar(status).closed.whenComplete(() {
+      if (_visibleModelStatusKey == key) _visibleModelStatusKey = null;
+    });
+    return;
+  }
+  ScaffoldMessenger.of(context).showSnackBar(status);
 }
 
 void main() {
@@ -387,6 +399,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (_reviewingModel || _importing || _verifyingModel) {
       return;
     }
+    // The old binding's status no longer applies as soon as a new review starts.
+    _removeCurrentModelStatus(context);
     setState(() {
       _reviewingModel = true;
       // A new review invalidates any prior session binding.

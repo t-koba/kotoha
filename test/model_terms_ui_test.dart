@@ -614,6 +614,55 @@ void main() {
     }
   });
 
+  testWidgets(
+    'restarting review after integrity success removes the stale status',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      try {
+        const terms = 'Synthetic license body';
+        installFixture(terms);
+        await openAndroid(tester);
+        await acceptTerms(tester, clearStatus: false);
+        expect(
+          find.byKey(const ValueKey('model-session-active')),
+          findsOneWidget,
+        );
+
+        final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+        await tester.ensureVisible(verifyButton);
+        await tester.tap(verifyButton);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+        await tester.pumpAndSettle();
+
+        final strings = AppLocalizationsEn();
+        final success = find.text(strings.modelIntegritySuccess);
+        expect(success, findsOneWidget);
+
+        // Cancelling the new folder selection issues no review notice, so the
+        // invalidated binding must not leave its old status on screen.
+        selectReplies = false;
+        final review = reviewButton();
+        Scrollable.of(tester.element(review)).position.jumpTo(0);
+        await tester.pumpAndSettle();
+        await tester.tap(review);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('model-session-active')),
+          findsNothing,
+        );
+        expect(success, findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
   testWidgets('release failure clears consent and explains why', (
     tester,
   ) async {
