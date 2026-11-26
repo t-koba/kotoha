@@ -837,13 +837,23 @@ Map<String, _Operation>? _readRegistry(Object? value, _Issues issues) {
     );
     final inputs = _ports(declaration['inputs'], '$path.inputs', issues);
     final outputs = _ports(declaration['outputs'], '$path.outputs', issues);
+    // The registry is a developer-provided contract map, not a JSON-schema
+    // document: validate_recipe compares these fields as sets, so repeated
+    // tokens carry no meaning and must not reject an otherwise valid recipe.
     final capabilities = _tokenSet(
       declaration,
       'required_capabilities',
       path,
       issues,
+      unique: false,
     );
-    final permissions = _tokenSet(declaration, 'permissions', path, issues);
+    final permissions = _tokenSet(
+      declaration,
+      'permissions',
+      path,
+      issues,
+      unique: false,
+    );
     if (role != null &&
         inputs != null &&
         outputs != null &&
@@ -959,8 +969,9 @@ Set<String>? _tokenSet(
   Map<String, dynamic> map,
   String key,
   String path,
-  _Issues issues,
-) {
+  _Issues issues, {
+  bool unique = true,
+}) {
   final value = map[key];
   if (value is! List) {
     _bad(issues, '$path.$key');
@@ -969,8 +980,12 @@ Set<String>? _tokenSet(
   final result = <String>{};
   for (var i = 0; i < value.length; i++) {
     final item = value[i];
-    if (!_isToken(item) || !result.add(item as String)) {
+    if (!_isToken(item)) {
       _bad(issues, '$path.$key[$i]');
+    } else if (unique && !result.add(item as String)) {
+      _bad(issues, '$path.$key[$i]');
+    } else {
+      result.add(item as String);
     }
   }
   return result;

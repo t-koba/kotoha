@@ -216,6 +216,31 @@ void main() {
     expect(result.requiredCapabilities, {'translation.text'});
   });
 
+  test('repeated registry capability and permission tokens agree with Python set semantics', () {
+    final registry = _registry();
+    final operation = registry['translation.text'] as Map<String, dynamic>;
+    operation['required_capabilities'] = <dynamic>[
+      'translation.text',
+      'translation.text',
+    ];
+    operation['permissions'] = <dynamic>['io.clipboard', 'io.clipboard'];
+    final recipe = _recipe();
+    (recipe['permissions'] as List<dynamic>).add('io.clipboard');
+    final result = _check(recipe, registry: registry);
+    expect(result.valid, isTrue, reason: result.issues.toString());
+    expect(result.requiredCapabilities, {'translation.text'});
+
+    final duplicateRecipe = _recipe();
+    _node(duplicateRecipe, 1)['required_capabilities'] = <dynamic>[
+      'translation.text',
+      'translation.text',
+    ];
+    expect(
+      _kinds(_check(duplicateRecipe)),
+      contains(ModeRecipeViolation.invalidShape),
+    );
+  });
+
   test('edge to unknown node is rejected', () {
     final recipe = _recipe();
     _edge(recipe, 1)['to_node'] = 'missing';
