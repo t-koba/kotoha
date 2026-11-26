@@ -208,9 +208,20 @@ entries (74 directories) under `crypto/` (response SHA-256
 under `providers/` (3 directories; response SHA-256
 `4385a708fa9008b8140fe38040a98fa85102424f7d8d926b5f6b8dbd4143cb36`). A scan
 of those immediate names found none matching `license`, `notice`, `copyright`,
-`copying`, `acknowledgements` or `third-party`. The nested implementation
-directories were not recursively inventoried, so this is not evidence that the
-source closure has no further notices.
+`copying`, `acknowledgements` or `third-party`. The complete recursive tree at
+that commit (response SHA-256
+`eb2bb472d36ea7b8fa2f06ea7f7031b6bcb3f78ee13442a884d7bbbcb32aa794`, 6,456
+entries, `truncated: false`) has six blob paths matching those patterns:
+`ACKNOWLEDGEMENTS.md`, `LICENSE.txt`, `crypto/x509/v3_usernotice.c`,
+`external/perl/Text-Template-1.56/LICENSE`, `test/certs/ext-userNotice.pem`, and
+`util/perl/OpenSSL/copyright.pm`. The nested
+`external/perl/Text-Template-1.56/LICENSE` first-party bytes (receipt
+`9c0bf477a27eb25a059ef643e2279111693623dad5b66f87559f90efc706b32b`, SHA-256
+`9837f05336ef3cbacb6a96e1672a0426d81ad01191f214b8d48e22ca62338181`) place
+Text::Template under Perl's dual GPL-1.0-or-later/Artistic-1.0 terms. That is a
+Perl package in the source tree, not evidence that GPL-family code is embedded
+in the candidate `libcrypto`; no generated-member mapping was established. The
+path inventory does not read every file's contents.
 
 The fetched [`crypto/build.info`](https://github.com/openssl/openssl/blob/2f4e3a5fec05394068cfa7379890ab552483a8a6/crypto/build.info)
 (SHA-256 `7fe0a2309baab3dc4201271d5e47d47f664ff15dc694905bb6849aae2ff7d50e`)
