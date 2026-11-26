@@ -154,15 +154,20 @@ void main() {
 
   Finder reviewButton() => find.byKey(const ValueKey('review-model-terms'));
 
-  Future<void> acceptTerms(WidgetTester tester) async {
+  Future<void> acceptTerms(
+    WidgetTester tester, {
+    bool clearStatus = true,
+  }) async {
     await tester.tap(reviewButton());
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('accept-model-terms')));
     await tester.pumpAndSettle();
-    // Clear the terms snackbar so the integrity result is not queued behind it.
-    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first))
-        .clearSnackBars();
-    await tester.pumpAndSettle();
+    if (clearStatus) {
+      // Clear the terms snackbar so the integrity result is not queued behind it.
+      ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first))
+          .clearSnackBars();
+      await tester.pumpAndSettle();
+    }
   }
 
   testWidgets('terms review shows complete terms and session acceptance', (
@@ -540,7 +545,7 @@ void main() {
       await openAndroid(tester);
       expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
 
-      await acceptTerms(tester);
+      await acceptTerms(tester, clearStatus: false);
       expect(
         find.byKey(const ValueKey('model-session-active')),
         findsOneWidget,
@@ -555,6 +560,12 @@ void main() {
 
       expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
       expect(clearButton, findsNothing);
+      expect(
+        find.text(
+          'Terms accepted for this session only. Runtime is not enabled.',
+        ),
+        findsNothing,
+      );
       expect(
         find.text('Session acceptance cleared. No approval is retained.'),
         findsOneWidget,

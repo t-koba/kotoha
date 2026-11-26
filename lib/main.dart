@@ -24,6 +24,20 @@ import 'model_terms_import.dart';
 import 'model_file_integrity.dart';
 import 'model_package_android.dart';
 
+const ValueKey<String> _modelConsentStatusKey = ValueKey(
+  'model-consent-status',
+);
+
+void _showModelConsentStatus(BuildContext context, SnackBar status) {
+  final messenger = ScaffoldMessenger.of(context);
+  // Status notices share one key: a new status supersedes the visible one
+  // instead of queueing stale text ahead of the newest fixed notice.
+  if (status.key == _modelConsentStatusKey) {
+    messenger.removeCurrentSnackBar();
+  }
+  messenger.showSnackBar(status);
+}
+
 void main() {
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
@@ -383,8 +397,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       failed = true;
       if (mounted) {
         setState(() => _sessionModelAuthorization = null);
-        ScaffoldMessenger.of(context).showSnackBar(
+        _showModelConsentStatus(
+          context,
           SnackBar(
+            key: _modelConsentStatusKey,
             content: Text(AppLocalizations.of(context)!.modelPackageFailure),
           ),
         );
@@ -408,8 +424,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               : accepted
               ? strings.modelConsentSessionOnly
               : strings.modelTermsDeclined;
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(message)));
+          _showModelConsentStatus(
+            context,
+            SnackBar(key: _modelConsentStatusKey, content: Text(message)),
+          );
         }
       }
     }
@@ -421,8 +439,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void _clearModelConsent() {
     if (_reviewingModel || _verifyingModel || _importing) return;
     setState(() => _sessionModelAuthorization = null);
-    ScaffoldMessenger.of(context).showSnackBar(
+    _showModelConsentStatus(
+      context,
       SnackBar(
+        key: _modelConsentStatusKey,
         content: Text(AppLocalizations.of(context)!.modelConsentCleared),
       ),
     );
