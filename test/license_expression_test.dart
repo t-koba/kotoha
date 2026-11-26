@@ -81,6 +81,15 @@ void main() {
       expectTerms('MIT OR GPL-3.0-only AND Apache-2.0', <String>{'MIT'});
     });
 
+    test('matches canonical Unicode whitespace membership', () {
+      expectTerms('\u0085MIT', <String>{'MIT'});
+      expectTerms('\u001CMIT', <String>{'MIT'});
+      expectTerms('\u00A0MIT', <String>{'MIT'});
+      expectTerms('\u2028MIT', <String>{'MIT'});
+      expectTerms('\uFEFFMIT', null);
+      expectTerms('MIT\uFEFFOR\uFEFFCC0-1.0', null);
+    });
+
     test('rejects malformed expressions and trailing tokens', () {
       expectTerms('MIT AND', null);
       expectTerms('MIT & Apache-2.0', null);

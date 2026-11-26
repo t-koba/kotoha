@@ -25,8 +25,23 @@ class _Node {
   final _Node? right;
 }
 
-bool _isWhitespace(String character) =>
-    RegExp(r'^\s$', unicode: true).hasMatch(character);
+// Exact Unicode whitespace set accepted by Python's `re.sub(r'\s+', '', ...)`
+// in validate_specs.py: U+0009..U+000D, U+001C..U+0020, U+0085, U+00A0,
+// U+1680, U+2000..U+200A, U+2028..U+2029, U+202F, U+205F and U+3000.
+// Dart's ECMAScript `\s` differs in both directions (it adds U+FEFF and omits
+// U+001C..U+001F and U+0085), so this explicit set is used for both token
+// separation and the compacted-expression check.
+bool _isWhitespace(int unit) =>
+    (unit >= 0x09 && unit <= 0x0D) ||
+    (unit >= 0x1C && unit <= 0x20) ||
+    unit == 0x85 ||
+    unit == 0xA0 ||
+    unit == 0x1680 ||
+    (unit >= 0x2000 && unit <= 0x200A) ||
+    (unit >= 0x2028 && unit <= 0x2029) ||
+    unit == 0x202F ||
+    unit == 0x205F ||
+    unit == 0x3000;
 
 bool _isIdentifierCharacter(int unit) =>
     (unit >= 0x41 && unit <= 0x5A) ||
@@ -50,7 +65,8 @@ List<String>? _tokenize(String expression) {
 
   for (var i = 0; i < expression.length; i++) {
     final character = expression[i];
-    if (_isWhitespace(character)) {
+    final unit = expression.codeUnitAt(i);
+    if (_isWhitespace(unit)) {
       flush();
       continue;
     }
@@ -59,7 +75,7 @@ List<String>? _tokenize(String expression) {
       tokens.add(character);
       continue;
     }
-    if (_isIdentifierCharacter(expression.codeUnitAt(i))) {
+    if (_isIdentifierCharacter(unit)) {
       buffer.write(character);
       continue;
     }
@@ -67,8 +83,12 @@ List<String>? _tokenize(String expression) {
   }
   flush();
 
-  final compacted = expression.replaceAll(RegExp(r'\s+', unicode: true), '');
-  if (tokens.join() != compacted) return null;
+  final compacted = StringBuffer();
+  for (var i = 0; i < expression.length; i++) {
+    final unit = expression.codeUnitAt(i);
+    if (!_isWhitespace(unit)) compacted.writeCharCode(unit);
+  }
+  if (tokens.join() != compacted.toString()) return null;
   return tokens;
 }
 
