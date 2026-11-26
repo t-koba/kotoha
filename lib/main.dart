@@ -39,28 +39,6 @@ final Set<ValueKey<String>> _modelStatusKeys = {
   _modelIntegrityFailureKey,
 };
 
-ValueKey<String>? _visibleModelStatusKey;
-
-void _removeCurrentModelStatus(BuildContext context) {
-  // Only a visible model notice is superseded; unrelated ones stay queued.
-  if (_modelStatusKeys.contains(_visibleModelStatusKey)) {
-    ScaffoldMessenger.of(context).removeCurrentSnackBar();
-  }
-}
-
-void _showModelConsentStatus(BuildContext context, SnackBar status) {
-  final key = status.key;
-  if (key is ValueKey<String> && _modelStatusKeys.contains(key)) {
-    _removeCurrentModelStatus(context);
-    _visibleModelStatusKey = key;
-    ScaffoldMessenger.of(context).showSnackBar(status).closed.whenComplete(() {
-      if (_visibleModelStatusKey == key) _visibleModelStatusKey = null;
-    });
-    return;
-  }
-  ScaffoldMessenger.of(context).showSnackBar(status);
-}
-
 void main() {
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
@@ -184,6 +162,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
+  // Tracks the model status currently shown so a new one can replace it.
+  ValueKey<String>? _visibleModelStatusKey;
   late List<_TranslationFields> _translations = [
     _TranslationFields(() => _appResumed),
   ];
@@ -395,12 +375,35 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         false;
   }
 
+  void _removeCurrentModelStatus() {
+    // Only a visible model notice is superseded; unrelated ones stay queued.
+    if (_modelStatusKeys.contains(_visibleModelStatusKey)) {
+      ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    }
+  }
+
+  void _showModelConsentStatus(SnackBar status) {
+    final key = status.key;
+    if (key is ValueKey<String> && _modelStatusKeys.contains(key)) {
+      _removeCurrentModelStatus();
+      _visibleModelStatusKey = key;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(status)
+          .closed
+          .whenComplete(() {
+            if (_visibleModelStatusKey == key) _visibleModelStatusKey = null;
+          });
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(status);
+  }
+
   Future<void> _importModelTerms() async {
     if (_reviewingModel || _importing || _verifyingModel) {
       return;
     }
     // The old binding's status no longer applies as soon as a new review starts.
-    _removeCurrentModelStatus(context);
+    _removeCurrentModelStatus();
     setState(() {
       _reviewingModel = true;
       // A new review invalidates any prior session binding.
@@ -426,7 +429,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       if (mounted) {
         setState(() => _sessionModelAuthorization = null);
         _showModelConsentStatus(
-          context,
           SnackBar(
             key: _modelConsentStatusKey,
             content: Text(AppLocalizations.of(context)!.modelPackageFailure),
@@ -453,7 +455,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               ? strings.modelConsentSessionOnly
               : strings.modelTermsDeclined;
           _showModelConsentStatus(
-            context,
             SnackBar(key: _modelConsentStatusKey, content: Text(message)),
           );
         }
@@ -468,7 +469,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (_reviewingModel || _verifyingModel || _importing) return;
     setState(() => _sessionModelAuthorization = null);
     _showModelConsentStatus(
-      context,
       SnackBar(
         key: _modelConsentStatusKey,
         content: Text(AppLocalizations.of(context)!.modelConsentCleared),
@@ -504,7 +504,6 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   void _showModelIntegrityResult(bool matched) {
     final strings = AppLocalizations.of(context)!;
     _showModelConsentStatus(
-      context,
       SnackBar(
         key: matched ? _modelIntegritySuccessKey : _modelIntegrityFailureKey,
         content: Text(
