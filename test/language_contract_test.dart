@@ -129,4 +129,90 @@ void main() {
       );
     });
   });
+
+  group('validateEngineEventLanguageContract', () {
+    EngineLanguageContractInput validEngine() => EngineLanguageContractInput(
+      descriptions: List<String>.filled(2, languageTagDescription),
+      engineHtml: List<String>.filled(
+        2,
+        '"description": "$languageTagDescription"\n',
+      ).join(),
+    );
+
+    test('accepts the declared text copies', () {
+      expect(validateEngineEventLanguageContract(validEngine()), isNull);
+    });
+
+    test('requires two language descriptions', () {
+      final input = validEngine();
+      expect(
+        validateEngineEventLanguageContract(
+          EngineLanguageContractInput(
+            descriptions: input.descriptions.sublist(0, 1),
+            engineHtml: input.engineHtml,
+          ),
+        ),
+        LanguageContractViolation.engineDescriptionCount,
+      );
+    });
+
+    test('rejects a registry-validation claim in a description', () {
+      final input = validEngine();
+      final descriptions = List<String>.from(input.descriptions);
+      descriptions[1] = '$languageTagDescription $languageTagClaim';
+      expect(
+        validateEngineEventLanguageContract(
+          EngineLanguageContractInput(
+            descriptions: descriptions,
+            engineHtml: input.engineHtml,
+          ),
+        ),
+        LanguageContractViolation.engineRegistryValidationClaim,
+      );
+    });
+
+    test('rejects a non-canonical description', () {
+      final input = validEngine();
+      final descriptions = List<String>.from(input.descriptions);
+      descriptions[0] = 'another description';
+      expect(
+        validateEngineEventLanguageContract(
+          EngineLanguageContractInput(
+            descriptions: descriptions,
+            engineHtml: input.engineHtml,
+          ),
+        ),
+        LanguageContractViolation.engineCanonicalDescription,
+      );
+    });
+
+    test('requires two canonical descriptions in the HTML engine section', () {
+      final input = validEngine();
+      expect(
+        validateEngineEventLanguageContract(
+          EngineLanguageContractInput(
+            descriptions: input.descriptions,
+            engineHtml: input.engineHtml.replaceFirst(
+              '"description": "$languageTagDescription"\n',
+              '',
+            ),
+          ),
+        ),
+        LanguageContractViolation.engineHtmlDescriptionCount,
+      );
+    });
+
+    test('rejects a registry-validation claim in the HTML engine section', () {
+      final input = validEngine();
+      expect(
+        validateEngineEventLanguageContract(
+          EngineLanguageContractInput(
+            descriptions: input.descriptions,
+            engineHtml: '$languageTagClaim ${input.engineHtml}',
+          ),
+        ),
+        LanguageContractViolation.engineHtmlRegistryValidationClaim,
+      );
+    });
+  });
 }

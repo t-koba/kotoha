@@ -1,5 +1,5 @@
-/// Developer-facing mirror of the model-manifest language-text contract
-/// checked by design/specs/validate_specs.py.
+/// Developer-facing mirror of the model-manifest and engine-event
+/// language-text contracts checked by design/specs/validate_specs.py.
 ///
 /// Pure in-memory string check: the caller supplies already-decoded text and
 /// this library performs no file I/O, JSON parsing, network, engine or model
@@ -42,6 +42,36 @@ enum LanguageContractViolation {
 
   /// The HTML does not contain the contract sentence as a paragraph.
   htmlContractSentence,
+
+  /// The two engine-event language descriptions are not both present.
+  engineDescriptionCount,
+
+  /// An engine-event description contains the registry-validation claim.
+  engineRegistryValidationClaim,
+
+  /// An engine-event description differs from the canonical text.
+  engineCanonicalDescription,
+
+  /// The engine-schema HTML excerpt does not contain two canonical texts.
+  engineHtmlDescriptionCount,
+
+  /// The engine-schema HTML excerpt contains the registry-validation claim.
+  engineHtmlRegistryValidationClaim,
+}
+
+/// Already-decoded engine-event strings to check against the contract.
+class EngineLanguageContractInput {
+  /// Creates an immutable input set.
+  const EngineLanguageContractInput({
+    required this.descriptions,
+    required this.engineHtml,
+  });
+
+  /// The `source_language` and output `language` schema descriptions.
+  final List<String> descriptions;
+
+  /// The extracted engine-event schema section of the HTML mirror.
+  final String engineHtml;
 }
 
 /// Already-decoded strings to check against the language contract.
@@ -105,6 +135,30 @@ LanguageContractViolation? validateLanguageContract(
   }
   if (!input.html.contains('<p>$languageContractSentence</p>')) {
     return LanguageContractViolation.htmlContractSentence;
+  }
+  return null;
+}
+
+/// Returns the first engine-event violation, or `null` when the supplied text
+/// agrees with the declared language contract.
+LanguageContractViolation? validateEngineEventLanguageContract(
+  EngineLanguageContractInput input,
+) {
+  if (input.descriptions.length != 2) {
+    return LanguageContractViolation.engineDescriptionCount;
+  }
+  if (input.descriptions.any((d) => d.contains(languageTagClaim))) {
+    return LanguageContractViolation.engineRegistryValidationClaim;
+  }
+  if (input.descriptions.any((d) => d != languageTagDescription)) {
+    return LanguageContractViolation.engineCanonicalDescription;
+  }
+  if (_count(input.engineHtml, '"description": "$languageTagDescription"') !=
+      2) {
+    return LanguageContractViolation.engineHtmlDescriptionCount;
+  }
+  if (input.engineHtml.contains(languageTagClaim)) {
+    return LanguageContractViolation.engineHtmlRegistryValidationClaim;
   }
   return null;
 }
