@@ -209,9 +209,10 @@ under `providers/` (3 directories; response SHA-256
 `4385a708fa9008b8140fe38040a98fa85102424f7d8d926b5f6b8dbd4143cb36`). A scan
 of those immediate names found none matching `license`, `notice`, `copyright`,
 `copying`, `acknowledgements` or `third-party`. The complete recursive tree at
-that commit (response SHA-256
-`eb2bb472d36ea7b8fa2f06ea7f7031b6bcb3f78ee13442a884d7bbbcb32aa794`, 6,456
-entries, `truncated: false`) has six blob paths matching those patterns:
+that commit (first-party fetch receipt
+`9264df279f48f40ac4be3ba311d59a64b1505a7f2a5c6b38371b7fb241724730`, response
+SHA-256 `eb2bb472d36ea7b8fa2f06ea7f7031b6bcb3f78ee13442a884d7bbbcb32aa794`,
+6,456 entries, `truncated: false`) has six blob paths matching those patterns:
 `ACKNOWLEDGEMENTS.md`, `LICENSE.txt`, `crypto/x509/v3_usernotice.c`,
 `external/perl/Text-Template-1.56/LICENSE`, `test/certs/ext-userNotice.pem`, and
 `util/perl/OpenSSL/copyright.pm`. The nested
