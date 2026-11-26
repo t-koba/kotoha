@@ -9,9 +9,14 @@ import 'l10n/app_localizations.dart';
 /// to locate raw value ranges and writes the rewritten text back to the
 /// supplied source [controller]. Empty translation fields leave values alone.
 class StructuredJsonPanel extends StatefulWidget {
-  const StructuredJsonPanel({super.key, required this.controller});
+  const StructuredJsonPanel({
+    super.key,
+    required this.controller,
+    this.enableIMEPersonalizedLearning = false,
+  });
 
   final TextEditingController controller;
+  final bool enableIMEPersonalizedLearning;
 
   @override
   State<StructuredJsonPanel> createState() => _StructuredJsonPanelState();
@@ -222,6 +227,8 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
             TextField(
               key: ValueKey<String>('structured-json-field-${segment.id}'),
               controller: _fields[segment.id],
+              enableIMEPersonalizedLearning:
+                  widget.enableIMEPersonalizedLearning,
               minLines: 1,
               maxLines: 3,
               decoration: InputDecoration(

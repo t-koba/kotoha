@@ -209,6 +209,28 @@ void main() {
           expect(sourceField.enableIMEPersonalizedLearning, isFalse);
           expect(translationField.enableIMEPersonalizedLearning, isFalse);
 
+          // The structured JSON editor writes private source values, so its
+          // fields must follow the same opt-in as the ordinary text fields.
+          sourceField.controller!.text = '{"a":"one"}';
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const ValueKey('structured-json-panel')));
+          await tester.pumpAndSettle();
+          final jsonField = find.byKey(
+            const ValueKey<String>('structured-json-field-0'),
+          );
+          expect(jsonField, findsOneWidget);
+          expect(
+            tester.widget<TextField>(jsonField).enableIMEPersonalizedLearning,
+            isFalse,
+          );
+          await tester.showKeyboard(jsonField);
+          expect(
+            tester
+                .testTextInput
+                .setClientArgs!['enableIMEPersonalizedLearning'],
+            isFalse,
+          );
+
           final sourceFinder = find.byKey(const ValueKey('source-text'));
           await tester.showKeyboard(sourceFinder);
           expect(
@@ -234,6 +256,17 @@ void main() {
                 .enableIMEPersonalizedLearning,
             isTrue,
           );
+          expect(
+            tester.widget<TextField>(jsonField).enableIMEPersonalizedLearning,
+            isTrue,
+          );
+          await tester.showKeyboard(jsonField);
+          expect(
+            tester
+                .testTextInput
+                .setClientArgs!['enableIMEPersonalizedLearning'],
+            isTrue,
+          );
           await tester.showKeyboard(sourceFinder);
           expect(
             tester
@@ -241,6 +274,23 @@ void main() {
                 .setClientArgs!['enableIMEPersonalizedLearning'],
             isTrue,
           );
+
+          // Withdrawing consent must also remove the request for JSON fields.
+          await tester.tap(setting);
+          await tester.pumpAndSettle();
+          for (final field in [sourceFinder, jsonField]) {
+            expect(
+              tester.widget<TextField>(field).enableIMEPersonalizedLearning,
+              isFalse,
+            );
+            await tester.showKeyboard(field);
+            expect(
+              tester
+                  .testTextInput
+                  .setClientArgs!['enableIMEPersonalizedLearning'],
+              isFalse,
+            );
+          }
         }
       } finally {
         debugDefaultTargetPlatformOverride = null;

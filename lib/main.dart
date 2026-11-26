@@ -1141,7 +1141,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                             _allowImePersonalizedLearning,
                       ),
                       const DocumentFormatSupport(),
-                      StructuredJsonPanel(controller: _sourceText),
+                      StructuredJsonPanel(
+                        controller: _sourceText,
+                        enableIMEPersonalizedLearning:
+                            _allowImePersonalizedLearning,
+                      ),
                       const SizedBox(height: 12),
                       // Keep the toggle in normal Tab order; Ctrl/⌘+F is an
                       // additional way to reach the same action.
