@@ -8,14 +8,19 @@ import 'l10n/app_localizations.dart';
 /// The panel never re-serializes the source: it uses [parseJsonStringSegments]
 /// to locate raw value ranges and writes the rewritten text back to the
 /// supplied source [controller]. Empty translation fields leave values alone.
+/// A changed [sourceRevision] means a different source document was loaded in
+/// the same controller, so pending fields and status are discarded. Formatting
+/// edits to the same document leave pending fields intact.
 class StructuredJsonPanel extends StatefulWidget {
   const StructuredJsonPanel({
     super.key,
     required this.controller,
+    this.sourceRevision = 0,
     this.enableIMEPersonalizedLearning = false,
   });
 
   final TextEditingController controller;
+  final int sourceRevision;
   final bool enableIMEPersonalizedLearning;
 
   @override
@@ -46,13 +51,22 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
   @override
   void didUpdateWidget(covariant StructuredJsonPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.controller, widget.controller)) {
+    final controllerChanged = !identical(
+      oldWidget.controller,
+      widget.controller,
+    );
+    final sourceReplaced = oldWidget.sourceRevision != widget.sourceRevision;
+    if (!controllerChanged && !sourceReplaced) return;
+    if (controllerChanged) {
       oldWidget.controller.removeListener(_onSourceChanged);
       widget.controller.addListener(_onSourceChanged);
-      _source = null;
-      _identities = null;
-      _recompute();
     }
+    // Identical controller text and identical parsed identities are not
+    // evidence of the same document: loading another file can produce the
+    // same bytes. Discard fields, identities and status before reparsing, so a
+    // pending edit never survives into the replacement document.
+    _clearFields();
+    _recompute();
   }
 
   @override

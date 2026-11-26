@@ -373,6 +373,38 @@ void main() {
     });
   }
 
+  importTest(
+    'confirming a different document clears pending JSON translations',
+    (tester) async {
+      const first = '{"id":1,"name":"one"}';
+      const second = '{"id":2,"name":"one"}';
+      await open(tester, source: first);
+
+      const jsonField = ValueKey<String>('structured-json-field-0');
+      final panel = find.byKey(const ValueKey('structured-json-panel'));
+      await tester.ensureVisible(panel);
+      await tester.tap(panel);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(jsonField));
+      await tester.enterText(find.byKey(jsonField), 'un');
+      expect(controller(tester, 'structured-json-field-0').text, 'un');
+
+      picker.pick = () async => textFile('second.txt', second);
+      await import(tester);
+      await tester.tap(find.text('Replace'));
+      await tester.pumpAndSettle();
+
+      expect(controller(tester, 'source-text').text, second);
+      expect(controller(tester, 'structured-json-field-0').text, isEmpty);
+
+      final apply = find.byKey(const ValueKey('structured-json-apply'));
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      expect(controller(tester, 'source-text').text, second);
+    },
+  );
+
   importTest('Japanese import controls and errors are localized', (
     tester,
   ) async {

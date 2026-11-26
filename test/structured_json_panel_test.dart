@@ -18,16 +18,20 @@ void main() {
       'This JSON has too many string values to edit here. Shorten the source before editing values.';
   const appliedMessage = 'Translations applied to the source text.';
 
-  Widget panelFor(TextEditingController controller) => MaterialApp(
-    locale: const Locale('en'),
-    supportedLocales: AppLocalizations.supportedLocales,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    home: Scaffold(
-      body: SingleChildScrollView(
-        child: StructuredJsonPanel(controller: controller),
-      ),
-    ),
-  );
+  Widget panelFor(TextEditingController controller, {int sourceRevision = 0}) =>
+      MaterialApp(
+        locale: const Locale('en'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: StructuredJsonPanel(
+              controller: controller,
+              sourceRevision: sourceRevision,
+            ),
+          ),
+        ),
+      );
 
   Future<void> expand(WidgetTester tester) async {
     await tester.tap(find.byKey(panelKey));
@@ -231,7 +235,7 @@ void main() {
       const field = ValueKey<String>('structured-json-field-0');
       final controller = TextEditingController(text: '{"a":"one"}');
       addTearDown(controller.dispose);
-      await tester.pumpWidget(panelFor(controller));
+      await tester.pumpWidget(panelFor(controller, sourceRevision: 3));
       await expand(tester);
 
       await tester.enterText(find.byKey(field), 'un');
@@ -241,6 +245,7 @@ void main() {
       );
 
       controller.text = '{\n  "a": "one"\n}';
+      await tester.pumpWidget(panelFor(controller, sourceRevision: 3));
       await tester.pumpAndSettle();
 
       expect(
@@ -338,6 +343,58 @@ void main() {
     await tester.tap(find.byKey(applyKey));
     await tester.pumpAndSettle();
     expect(second.text, secondSource);
+  });
+
+  testWidgets(
+    'a new source revision clears pending edits with identical source bytes',
+    (tester) async {
+      const source = '{"id":1,"name":"one"}';
+      const field = ValueKey<String>('structured-json-field-0');
+      final controller = TextEditingController(text: source);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(panelFor(controller));
+      await expand(tester);
+
+      await tester.enterText(find.byKey(field), 'un');
+      expect(
+        tester.widget<TextField>(find.byKey(field)).controller!.text,
+        'un',
+      );
+
+      // Same controller object and same bytes, but a different document.
+      await tester.pumpWidget(panelFor(controller, sourceRevision: 1));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byKey(field)).controller!.text,
+        isEmpty,
+      );
+      await tester.tap(find.byKey(applyKey));
+      await tester.pumpAndSettle();
+      expect(controller.text, source);
+      expect(find.text(appliedMessage), findsNothing);
+    },
+  );
+
+  testWidgets('a new source revision clears the applied status', (
+    tester,
+  ) async {
+    const field = ValueKey<String>('structured-json-field-0');
+    final controller = TextEditingController(text: '{"a":"one"}');
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(find.byKey(field), 'un');
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+    expect(find.text(appliedMessage), findsOneWidget);
+
+    await tester.pumpWidget(panelFor(controller, sourceRevision: 2));
+    await tester.pumpAndSettle();
+
+    expect(find.text(appliedMessage), findsNothing);
+    expect(controller.text, '{"a":"un"}');
   });
 
   testWidgets('changing the source refreshes parsed rows', (tester) async {

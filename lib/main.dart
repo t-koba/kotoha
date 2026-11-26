@@ -149,6 +149,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
+  // Increment only for whole-source replacements: the JSON editor uses this
+  // to discard pending edits when another document has identical bytes.
+  int _documentRevision = 0;
   // Import feedback lives in the source panel so it never joins the
   // ScaffoldMessenger queue behind another visible notice.
   String? _sourceImportNotice;
@@ -1143,6 +1146,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                       const DocumentFormatSupport(),
                       StructuredJsonPanel(
                         controller: _sourceText,
+                        sourceRevision: _documentRevision,
                         enableIMEPersonalizedLearning:
                             _allowImePersonalizedLearning,
                       ),
@@ -1275,6 +1279,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   /// must clear find feedback itself. Callers own the surrounding setState.
   void _replaceDocumentText(_DraftController controller, String text) {
     controller.replaceText(text);
+    _documentRevision++;
     _clearFindFeedback();
   }
 

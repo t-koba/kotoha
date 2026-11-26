@@ -282,6 +282,57 @@ void main() {
     }
   });
 
+  testWidgets(
+    'confirming a restore of a different document clears pending JSON edits',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        const first = '{"id":1,"name":"one"}';
+        const second = '{"id":2,"name":"one"}';
+        picker.pick = () async => _File(
+          formatWorkspaceExport(
+            TextWorkspaceDraft(
+              sourceLanguage: 'en',
+              sourceText: second,
+              translations: [
+                const ManualTranslationDraft(
+                  targetLanguage: 'fr',
+                  text: 'bonjour',
+                ),
+              ],
+            ),
+          ),
+        );
+        await open(tester);
+        await tester.enterText(field('source-text'), first);
+
+        const jsonField = ValueKey<String>('structured-json-field-0');
+        final panel = find.byKey(const ValueKey('structured-json-panel'));
+        await tester.ensureVisible(panel);
+        await tester.tap(panel);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(jsonField));
+        await tester.enterText(find.byKey(jsonField), 'un');
+        expect(textOf(tester, 'structured-json-field-0'), 'un');
+
+        await restore(tester);
+        await tester.tap(field('restore-workspace-confirm'));
+        await tester.pumpAndSettle();
+
+        expect(textOf(tester, 'source-text'), second);
+        expect(textOf(tester, 'structured-json-field-0'), isEmpty);
+
+        final apply = find.byKey(const ValueKey('structured-json-apply'));
+        await tester.ensureVisible(apply);
+        await tester.tap(apply);
+        await tester.pumpAndSettle();
+        expect(textOf(tester, 'source-text'), second);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
   testWidgets('an edit during confirmation aborts replacement', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     try {
