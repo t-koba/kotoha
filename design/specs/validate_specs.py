@@ -373,13 +373,15 @@ def validate_html_acceptance_mirror() -> None:
     """Keep the HTML viewing mirror of the acceptance matrix in sync."""
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
     acceptance = (ROOT / "appendices/acceptance_matrix.md").read_text(encoding="utf-8")
+    cross_cutting = acceptance.split("## 横断する受入項目", 1)[1]
     for line in acceptance.splitlines():
         if not line.startswith("| "):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if not cells or not (
-            re.fullmatch(r"F\d{2}", cells[0]) or cells[0] == "モバイルのタスク切替"
-        ):
+        if not cells or (re.fullmatch(r"F\d{2}", cells[0]) is None
+                         and line not in cross_cutting.splitlines()):
+            continue
+        if cells[0] == "項目":
             continue
         for cell in cells:
             require(cell in html, f"HTML mirror missing {cells[0]}: {cell}")
