@@ -324,6 +324,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Session acceptance recorded (digests only). No model is installed and runtime is not enabled.';
 
   @override
+  String get clearModelConsent => 'Clear session consent';
+
+  @override
+  String get modelConsentCleared =>
+      'Session acceptance cleared. No approval is retained.';
+
+  @override
   String get verifyModelFiles => 'Verify model files';
 
   @override

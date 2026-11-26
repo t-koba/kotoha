@@ -314,6 +314,12 @@ class AppLocalizationsJa extends AppLocalizations {
       'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。';
 
   @override
+  String get clearModelConsent => 'セッションの同意を解除';
+
+  @override
+  String get modelConsentCleared => 'セッションの同意を解除しました。承認は保持されていません。';
+
+  @override
   String get verifyModelFiles => 'モデルファイルを検証';
 
   @override

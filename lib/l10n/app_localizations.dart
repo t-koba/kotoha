@@ -626,6 +626,18 @@ abstract class AppLocalizations {
   /// **'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。'**
   String get modelSessionActive;
 
+  /// No description provided for @clearModelConsent.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションの同意を解除'**
+  String get clearModelConsent;
+
+  /// No description provided for @modelConsentCleared.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションの同意を解除しました。承認は保持されていません。'**
+  String get modelConsentCleared;
+
   /// No description provided for @verifyModelFiles.
   ///
   /// In ja, this message translates to:

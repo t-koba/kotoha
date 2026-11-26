@@ -404,6 +404,19 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     }
   }
 
+  /// Withdraws the volatile digest binding after explicit user action. Only
+  /// in-memory session state changes; no engine, file, network or persisted
+  /// authorization is involved.
+  void _clearModelConsent() {
+    if (_reviewingModel || _verifyingModel || _importing) return;
+    setState(() => _sessionModelAuthorization = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.modelConsentCleared),
+      ),
+    );
+  }
+
   Future<bool> _confirmModelFileIntegrity() async {
     final strings = AppLocalizations.of(context)!;
     return await showDialog<bool>(
@@ -1042,6 +1055,24 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                             child: Text(
                               strings.modelSessionActive,
                               key: const ValueKey('model-session-active'),
+                            ),
+                          ),
+                        if (_sessionModelAuthorization != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: OutlinedButton.icon(
+                                key: const ValueKey('clear-model-consent'),
+                                onPressed:
+                                    _reviewingModel ||
+                                        _verifyingModel ||
+                                        _importing
+                                    ? null
+                                    : _clearModelConsent,
+                                icon: const Icon(Icons.delete_outline),
+                                label: Text(strings.clearModelConsent),
+                              ),
                             ),
                           ),
                         if (_sessionModelAuthorization != null)

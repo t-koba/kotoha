@@ -519,4 +519,42 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+  testWidgets('clearing session consent removes the volatile binding', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+
+      await acceptTerms(tester);
+      expect(
+        find.byKey(const ValueKey('model-session-active')),
+        findsOneWidget,
+      );
+      final clearButton = find.byKey(const ValueKey('clear-model-consent'));
+      expect(clearButton, findsOneWidget);
+      await tester.ensureVisible(clearButton);
+      final requestsAfterAccept = List<String>.from(requests);
+
+      await tester.tap(clearButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+      expect(clearButton, findsNothing);
+      expect(
+        find.text('Session acceptance cleared. No approval is retained.'),
+        findsOneWidget,
+      );
+      expect(requests, requestsAfterAccept);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 }
