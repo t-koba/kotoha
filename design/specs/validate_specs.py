@@ -420,12 +420,14 @@ def validate_html_acceptance_mirror_drift() -> None:
         "| 項目 | 適用する確認 |\n|---|---|\n| 多言語 | 書字方向 |\n"
     )
     row = "<tr><td>F99</td><td>試験機能</td><td>条件</td><td>証拠</td></tr>"
+    cross_row = "<tr><td>多言語</td><td>書字方向</td></tr>"
     hidden = (
         "<details><summary>受入マトリクス</summary><table><thead><tr>"
         "<th>ID</th><th>機能</th><th>操作・条件</th><th>確認する証拠</th>"
-        "</tr></thead><tbody><!-- " + row + " --></tbody></table></details>"
+        "</tr></thead><tbody>" + row + "<!-- " + cross_row + " -->"
+        "</tbody></table></details>"
     )
-    shortened = hidden.replace("<!-- " + row + " -->",
+    shortened = hidden.replace(row,
                                "<tr><td>F99</td><td>試験機能</td><td>条件</td></tr>")
     for html in (hidden, shortened):
         expected, rendered = acceptance_matrix_rows(markdown, html)
