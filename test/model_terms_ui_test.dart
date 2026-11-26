@@ -576,6 +576,44 @@ void main() {
     }
   });
 
+  testWidgets('clearing consent replaces a visible model integrity status', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      await acceptTerms(tester, clearStatus: false);
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pumpAndSettle();
+
+      final strings = AppLocalizationsEn();
+      final success = find.text(strings.modelIntegritySuccess);
+      expect(success, findsOneWidget);
+
+      final clearButton = find.byKey(const ValueKey('clear-model-consent'));
+      await tester.ensureVisible(clearButton);
+      expect(success, findsOneWidget);
+      await tester.tap(clearButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+      expect(find.text(strings.modelConsentCleared), findsOneWidget);
+      expect(success, findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('release failure clears consent and explains why', (
     tester,
   ) async {

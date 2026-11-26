@@ -27,12 +27,23 @@ import 'model_package_android.dart';
 const ValueKey<String> _modelConsentStatusKey = ValueKey(
   'model-consent-status',
 );
+const ValueKey<String> _modelIntegritySuccessKey = ValueKey(
+  'model-integrity-success',
+);
+const ValueKey<String> _modelIntegrityFailureKey = ValueKey(
+  'model-integrity-failure',
+);
+final Set<ValueKey<String>> _modelStatusKeys = {
+  _modelConsentStatusKey,
+  _modelIntegritySuccessKey,
+  _modelIntegrityFailureKey,
+};
 
 void _showModelConsentStatus(BuildContext context, SnackBar status) {
   final messenger = ScaffoldMessenger.of(context);
-  // Status notices share one key: a new status supersedes the visible one
-  // instead of queueing stale text ahead of the newest fixed notice.
-  if (status.key == _modelConsentStatusKey) {
+  // All model status notices share one queue: any new status supersedes the
+  // visible one instead of leaving stale text on screen.
+  if (_modelStatusKeys.contains(status.key)) {
     messenger.removeCurrentSnackBar();
   }
   messenger.showSnackBar(status);
@@ -478,11 +489,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
 
   void _showModelIntegrityResult(bool matched) {
     final strings = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
+    _showModelConsentStatus(
+      context,
       SnackBar(
-        key: ValueKey(
-          matched ? 'model-integrity-success' : 'model-integrity-failure',
-        ),
+        key: matched ? _modelIntegritySuccessKey : _modelIntegrityFailureKey,
         content: Text(
           matched
               ? strings.modelIntegritySuccess
