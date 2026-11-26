@@ -33,6 +33,24 @@ void main() {
       );
     });
 
+    test('rejects a missing cross-cutting cell with all F rows mirrored', () {
+      expect(
+        htmlAcceptanceMirrorComplete(
+          _baseAcceptance,
+          '<p>F01</p><p>翻訳</p><p>F02</p><p>保存</p><p>共通</p>',
+        ),
+        isFalse,
+      );
+    });
+
+    test('skips a header row inside the cross-cutting section', () {
+      const acceptance = '| F01 | 翻訳 |\n$_marker\n| 項目 | 判定 |\n';
+      expect(
+        htmlAcceptanceMirrorComplete(acceptance, '<p>F01</p><p>翻訳</p>'),
+        isTrue,
+      );
+    });
+
     test('fails closed when the cross-cutting marker is absent', () {
       expect(
         htmlAcceptanceMirrorComplete(
