@@ -27,6 +27,7 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
   JsonStringSegments? _segments;
   _PanelState _panelState = _PanelState.invalid;
   final List<TextEditingController> _fields = <TextEditingController>[];
+  List<({String path, String value})>? _identities;
   bool _applied = false;
   bool _writing = false;
 
@@ -44,6 +45,7 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
       oldWidget.controller.removeListener(_onSourceChanged);
       widget.controller.addListener(_onSourceChanged);
       _source = null;
+      _identities = null;
       _recompute();
     }
   }
@@ -51,15 +53,16 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
   @override
   void dispose() {
     widget.controller.removeListener(_onSourceChanged);
-    _disposeFields();
+    _clearFields();
     super.dispose();
   }
 
-  void _disposeFields() {
+  void _clearFields() {
     for (final field in _fields) {
       field.dispose();
     }
     _fields.clear();
+    _identities = null;
   }
 
   void _onSourceChanged() {
@@ -69,32 +72,59 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
     setState(() => _recompute(clearStatus: !_writing));
   }
 
-  /// Parses only when the source text differs from the cached text.
+  /// Keeps translation fields only when every parsed path and decoded source
+  /// value still appears in the same order; any other change starts fresh.
   void _recompute({bool clearStatus = true}) {
     final source = widget.controller.text;
     _source = source;
-    _disposeFields();
     _segments = null;
     if (clearStatus) _applied = false;
 
     if (source.length > sourceLimit) {
+      _clearFields();
       _panelState = _PanelState.tooLarge;
       return;
     }
+    late final JsonStringSegments parsed;
     try {
-      final parsed = parseJsonStringSegments(source);
-      if (parsed.values.length > rowLimit) {
-        _panelState = _PanelState.tooMany;
-        return;
-      }
-      _segments = parsed;
-      _panelState = _PanelState.valid;
-      for (var index = 0; index < parsed.values.length; index++) {
+      parsed = parseJsonStringSegments(source);
+    } on FormatException {
+      _clearFields();
+      _panelState = _PanelState.invalid;
+      return;
+    }
+    if (parsed.values.length > rowLimit) {
+      _clearFields();
+      _panelState = _PanelState.tooMany;
+      return;
+    }
+
+    final identities = [
+      for (final segment in parsed.values)
+        (path: segment.path, value: segment.value),
+    ];
+    final previous = _identities;
+    final reuse = previous != null && _sameIdentities(previous, identities);
+    if (!reuse) {
+      _clearFields();
+      for (var index = 0; index < identities.length; index++) {
         _fields.add(TextEditingController());
       }
-    } on FormatException {
-      _panelState = _PanelState.invalid;
     }
+    _identities = identities;
+    _segments = parsed;
+    _panelState = _PanelState.valid;
+  }
+
+  bool _sameIdentities(
+    List<({String path, String value})> previous,
+    List<({String path, String value})> current,
+  ) {
+    if (previous.length != current.length) return false;
+    for (var index = 0; index < previous.length; index++) {
+      if (previous[index] != current[index]) return false;
+    }
+    return true;
   }
 
   void _apply() {

@@ -225,6 +225,121 @@ void main() {
     );
   });
 
+  testWidgets(
+    'whitespace-only source change keeps pending edits and applies them',
+    (tester) async {
+      const field = ValueKey<String>('structured-json-field-0');
+      final controller = TextEditingController(text: '{"a":"one"}');
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(panelFor(controller));
+      await expand(tester);
+
+      await tester.enterText(find.byKey(field), 'un');
+      expect(
+        tester.widget<TextField>(find.byKey(field)).controller!.text,
+        'un',
+      );
+
+      controller.text = '{\n  "a": "one"\n}';
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byKey(field)).controller!.text,
+        'un',
+      );
+      await tester.tap(find.byKey(applyKey));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, '{\n  "a": "un"\n}');
+      expect(jsonDecode(controller.text), <String, dynamic>{'a': 'un'});
+      expect(find.text(appliedMessage), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a different value with the same row count clears pending edits',
+    (tester) async {
+      const field = ValueKey<String>('structured-json-field-0');
+      const source = '{"a":"one"}';
+      final controller = TextEditingController(text: source);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(panelFor(controller));
+      await expand(tester);
+
+      await tester.enterText(find.byKey(field), 'un');
+      controller.text = '{"a":"two"}';
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byKey(field)).controller!.text,
+        isEmpty,
+      );
+      await tester.tap(find.byKey(applyKey));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, '{"a":"two"}');
+      expect(find.text(appliedMessage), findsNothing);
+    },
+  );
+
+  testWidgets('reordered entries do not reuse pending edits', (tester) async {
+    const source = '{"a":"one","b":"two"}';
+    const reordered = '{"b":"two","a":"one"}';
+    final controller = TextEditingController(text: source);
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'changed',
+    );
+    controller.text = reordered;
+    await tester.pumpAndSettle();
+
+    for (final id in <String>['0', '1']) {
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(ValueKey<String>('structured-json-field-$id')),
+            )
+            .controller!
+            .text,
+        isEmpty,
+      );
+    }
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, reordered);
+    expect(find.text(appliedMessage), findsNothing);
+  });
+
+  testWidgets('swapping the controller discards cached field identities', (
+    tester,
+  ) async {
+    const field = ValueKey<String>('structured-json-field-0');
+    const secondSource = '{\n  "a": "one"\n}';
+    final first = TextEditingController(text: '{"a":"one"}');
+    addTearDown(first.dispose);
+    await tester.pumpWidget(panelFor(first));
+    await expand(tester);
+
+    await tester.enterText(find.byKey(field), 'un');
+    final second = TextEditingController(text: secondSource);
+    addTearDown(second.dispose);
+    await tester.pumpWidget(panelFor(second));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(find.byKey(field)).controller!.text,
+      isEmpty,
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+    expect(second.text, secondSource);
+  });
+
   testWidgets('changing the source refreshes parsed rows', (tester) async {
     final controller = TextEditingController(text: '{"a":"one","b":"two"}');
     addTearDown(controller.dispose);
