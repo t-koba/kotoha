@@ -377,10 +377,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   void _removeCurrentModelStatus() {
-    // A new review invalidates the tracked status only. Remove the current
-    // notice without dropping unrelated notices waiting in the queue.
+    // Invalidating a model binding flushes the shared snack-bar queue: Flutter
+    // drops every notice, so neither a stale status nor a queued notice can
+    // surface once the binding is gone.
     if (_modelStatusKeys.contains(_visibleModelStatusKey)) {
-      ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      ScaffoldMessenger.of(context).clearSnackBars();
       _visibleModelStatusKey = null;
     }
   }

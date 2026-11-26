@@ -739,7 +739,7 @@ void main() {
     }
   });
 
-  testWidgets('a queued ordinary notice survives a cancelled new review', (
+  testWidgets('a new review flushes a stale status and any queued notice', (
     tester,
   ) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -776,7 +776,7 @@ void main() {
 
       expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
       expect(consentStatus, findsNothing);
-      expect(find.text(strings.emptyWorkspaceCopyNotice), findsOneWidget);
+      expect(find.text(strings.emptyWorkspaceCopyNotice), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
