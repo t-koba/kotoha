@@ -694,4 +694,91 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets('clearing consent supersedes a real queued workspace notice', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      await acceptTerms(tester, clearStatus: false);
+
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pumpAndSettle();
+
+      final strings = AppLocalizationsEn();
+      final success = find.text(strings.modelIntegritySuccess);
+      expect(success, findsOneWidget);
+
+      // A real ordinary notice queues behind the visible integrity result.
+      final copyButton = find.byKey(const ValueKey('copy-workspace'));
+      await tester.ensureVisible(copyButton);
+      await tester.tap(copyButton);
+      await tester.pumpAndSettle();
+
+      final clearButton = find.byKey(const ValueKey('clear-model-consent'));
+      await tester.ensureVisible(clearButton);
+      await tester.tap(clearButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text(strings.modelConsentCleared), findsOneWidget);
+      expect(success, findsNothing);
+      expect(find.text(strings.emptyWorkspaceCopyNotice), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('a queued ordinary notice survives a cancelled new review', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      await acceptTerms(tester, clearStatus: false);
+
+      final strings = AppLocalizationsEn();
+      final consentStatus = find.text(strings.modelConsentSessionOnly);
+      expect(consentStatus, findsOneWidget);
+
+      // Queue a real unrelated notice behind the visible consent status.
+      final copyButton = find.byKey(const ValueKey('copy-workspace'));
+      final position = Scrollable.of(tester.element(copyButton)).position;
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      await tester.tap(copyButton);
+      await tester.pumpAndSettle();
+      expect(find.text(strings.emptyWorkspaceCopyNotice), findsNothing);
+
+      // Cancel the new selection: no review notice replaces the old status.
+      selectReplies = false;
+      final review = reviewButton();
+      Scrollable.of(tester.element(review)).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.tap(review);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+      expect(consentStatus, findsNothing);
+      expect(find.text(strings.emptyWorkspaceCopyNotice), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 }

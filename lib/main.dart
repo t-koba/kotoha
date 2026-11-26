@@ -162,7 +162,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
-  // Tracks the model status currently shown so a new one can replace it.
+  // Tracks the model status at the front of the messenger. Model statuses
+  // clear the queue before being shown, so the tracked one is never queued.
   ValueKey<String>? _visibleModelStatusKey;
   late List<_TranslationFields> _translations = [
     _TranslationFields(() => _appResumed),
@@ -376,16 +377,20 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   void _removeCurrentModelStatus() {
-    // Only a visible model notice is superseded; unrelated ones stay queued.
+    // A new review invalidates the tracked status only. Remove the current
+    // notice without dropping unrelated notices waiting in the queue.
     if (_modelStatusKeys.contains(_visibleModelStatusKey)) {
       ScaffoldMessenger.of(context).removeCurrentSnackBar();
+      _visibleModelStatusKey = null;
     }
   }
 
   void _showModelConsentStatus(SnackBar status) {
     final key = status.key;
     if (key is ValueKey<String> && _modelStatusKeys.contains(key)) {
-      _removeCurrentModelStatus();
+      // Model statuses own the messenger: clearing first keeps a newer status
+      // (or withdrawal confirmation) from queued behind another notice.
+      ScaffoldMessenger.of(context).clearSnackBars();
       _visibleModelStatusKey = key;
       ScaffoldMessenger.of(context)
           .showSnackBar(status)
