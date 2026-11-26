@@ -3,6 +3,7 @@
 from __future__ import annotations
 import copy
 import hashlib
+import html as html_text
 import json
 import plistlib
 import re
@@ -369,22 +370,66 @@ def validate_apple_bundle_metadata() -> None:
 
 
 
+def acceptance_matrix_rows(markdown: str, html: str) -> tuple[list[tuple[str, ...]], list[tuple[str, ...]]]:
+    """Return ordered Markdown rows and rendered HTML rows of the acceptance matrix."""
+    cross_cutting = markdown.split("## 横断する受入項目", 1)[1].splitlines()
+    expected: list[tuple[str, ...]] = []
+    for line in markdown.splitlines():
+        if not line.startswith("| "):
+            continue
+        cells = tuple(cell.strip() for cell in line.strip().strip("|").split("|"))
+        if not cells or (re.fullmatch(r"F\d{2}", cells[0]) is None
+                         and line not in cross_cutting):
+            continue
+        if cells[0] in {"ID", "項目"} or all(re.fullmatch(r":?-+:?", cell) for cell in cells):
+            continue
+        expected.append(cells)
+
+    visible = re.sub(r"<!--.*?-->", "", html, flags=re.DOTALL)
+    section = visible.split("<details><summary>受入マトリクス</summary>", 1)[1]
+    section = section.split("</details>", 1)[0]
+    rendered: list[tuple[str, ...]] = []
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", section, flags=re.DOTALL):
+        cells = tuple(
+            html_text.unescape(re.sub(r"<[^>]+>", "", cell)).strip()
+            for cell in re.findall(r"<td\b[^>]*>(.*?)</td>", row, flags=re.DOTALL)
+        )
+        if cells:
+            rendered.append(cells)
+    return expected, rendered
+
+
 def validate_html_acceptance_mirror() -> None:
     """Keep the HTML viewing mirror of the acceptance matrix in sync."""
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
     acceptance = (ROOT / "appendices/acceptance_matrix.md").read_text(encoding="utf-8")
-    cross_cutting = acceptance.split("## 横断する受入項目", 1)[1]
-    for line in acceptance.splitlines():
-        if not line.startswith("| "):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if not cells or (re.fullmatch(r"F\d{2}", cells[0]) is None
-                         and line not in cross_cutting.splitlines()):
-            continue
-        if cells[0] == "項目":
-            continue
-        for cell in cells:
-            require(cell in html, f"HTML mirror missing {cells[0]}: {cell}")
+    expected, rendered = acceptance_matrix_rows(acceptance, html)
+    require(len(expected) == len(rendered),
+            f"HTML mirror row count: expected {len(expected)}, rendered {len(rendered)}")
+    for index, (source, mirror) in enumerate(zip(expected, rendered)):
+        require(source == mirror, f"HTML mirror row {index}: {source[0]}")
+
+
+def validate_html_acceptance_mirror_drift() -> None:
+    """Reject hidden rows and rows whose cells no longer match the source."""
+    markdown = (
+        "| ID | 機能 | 操作・条件 | 確認する証拠 |\n"
+        "|---|---|---|---|\n"
+        "| F99 | 試験機能 | 条件 | 証拠 |\n"
+        "\n## 横断する受入項目\n\n"
+        "| 項目 | 適用する確認 |\n|---|---|\n| 多言語 | 書字方向 |\n"
+    )
+    row = "<tr><td>F99</td><td>試験機能</td><td>条件</td><td>証拠</td></tr>"
+    hidden = (
+        "<details><summary>受入マトリクス</summary><table><thead><tr>"
+        "<th>ID</th><th>機能</th><th>操作・条件</th><th>確認する証拠</th>"
+        "</tr></thead><tbody><!-- " + row + " --></tbody></table></details>"
+    )
+    shortened = hidden.replace("<!-- " + row + " -->",
+                               "<tr><td>F99</td><td>試験機能</td><td>条件</td></tr>")
+    for html in (hidden, shortened):
+        expected, rendered = acceptance_matrix_rows(markdown, html)
+        require(rendered != expected, "acceptance mirror drift was not detected")
 
 
 LANGUAGE_TAG_DESCRIPTION = "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
@@ -598,6 +643,7 @@ def main() -> int:
     expected={f"F{i:02}" for i in range(1,39)}
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
     check("HTML acceptance mirror", validate_html_acceptance_mirror)
+    check("HTML acceptance mirror drift detection", validate_html_acceptance_mirror_drift)
     check("Language validation contract", validate_language_validation_contract)
     check("Engine event language contract", validate_engine_event_language_contract)
     check("Locale parity", validate_locale_parity)

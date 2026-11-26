@@ -1,6 +1,6 @@
 {
-  "checks": 101,
-  "passed": 101,
+  "checks": 102,
+  "passed": 102,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -459,6 +459,11 @@
     },
     {
       "name": "HTML acceptance mirror",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "HTML acceptance mirror drift detection",
       "status": "pass",
       "case": "compatible"
     },
