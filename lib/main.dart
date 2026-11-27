@@ -949,8 +949,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     }
     final disclosedOverLimit = tooLarge;
     await _exportToFile(
-      contentBuilder: () =>
-          formatWorkspaceExport(_nonEmptyWorkspaceDraft() ?? draft),
+      contentBuilder: () {
+        // The workspace can be cleared while the save picker is open. Write
+        // only what exists at write time; an empty workspace writes nothing.
+        final current = _nonEmptyWorkspaceDraft();
+        return current == null ? '' : formatWorkspaceExport(current);
+      },
       confirmBeforeWrite: (written) async {
         if (disclosedOverLimit ||
             utf8.encode(written).length <= maxTextImportBytes) {

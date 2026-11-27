@@ -429,6 +429,46 @@ void main() {
     });
   });
 
+  testWidgets('workspace cleared while the picker is pending writes nothing', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.macOS, () async {
+      final writer = _Writer();
+      final picker = Completer<FileSaveLocation?>();
+      selector.pending = picker;
+      await pumpWorkspace(tester, writer);
+      await tester.enterText(field('source-language'), 'ja');
+      await tester.enterText(field('source-text'), '原文');
+      await tester.enterText(field('target-language-0'), 'en');
+      await tester.enterText(field('translation-text-0'), 'Bonjour');
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      for (final key in [
+        'source-language',
+        'source-text',
+        'target-language-0',
+        'translation-text-0',
+      ]) {
+        tester.widget<TextField>(field(key)).controller!.text = '';
+      }
+      await tester.pump();
+
+      picker.complete(FileSaveLocation('/user/chosen/workspace.txt'));
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, isEmpty);
+      expect(
+        find.text('Enter source text or a translation to export.'),
+        findsOneWidget,
+      );
+      expect(find.text('Workspace exported.'), findsNothing);
+    });
+  });
+
   testWidgets('workspace export grown past the cap while the picker is pending '
       'reports a non-restorable notice', (tester) async {
     await withPlatform(TargetPlatform.macOS, () async {
