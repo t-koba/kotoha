@@ -472,4 +472,113 @@ void main() {
     expect(controller.selection.isCollapsed, isTrue);
     expect(controller.selection.baseOffset, controller.text.length);
   });
+
+  const twoValueSource = '{"a":"Hello","b":"World"}';
+
+  TextEditingController selectedController(
+    String text,
+    TextSelection selection,
+  ) {
+    final controller = TextEditingController();
+    controller.value = TextEditingValue(text: text, selection: selection);
+    return controller;
+  }
+
+  testWidgets('apply shifts a caret after a longer rewritten value', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf(',')),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Good morning',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Good morning","b":"World"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 19);
+  });
+
+  testWidgets('apply shifts a caret after a shorter rewritten value', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf(',')),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Hi',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Hi","b":"World"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 9);
+  });
+
+  testWidgets('apply clamps a caret inside a rewritten value', (tester) async {
+    // The caret is inside "Hello"; a plain delta shift would leave it
+    // outside the shorter replacement "Hi".
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf('ll') + 1),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Hi',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Hi","b":"World"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 8);
+  });
+
+  testWidgets('apply maps base and extent independently and keeps direction', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection(
+        baseOffset: twoValueSource.indexOf(','),
+        extentOffset: twoValueSource.indexOf('ll') + 1,
+        affinity: TextAffinity.upstream,
+        isDirectional: true,
+      ),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Good morning',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.selection.baseOffset, 19);
+    expect(controller.selection.extentOffset, 9);
+    expect(controller.selection.isDirectional, isTrue);
+    expect(controller.selection.affinity, TextAffinity.upstream);
+  });
 }

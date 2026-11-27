@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import 'json_translation_segments.dart';
@@ -28,6 +30,33 @@ class StructuredJsonPanel extends StatefulWidget {
 }
 
 enum _PanelState { valid, invalid, tooLarge, tooMany }
+
+/// Maps an old UTF-16 selection offset through source-ordered [edits].
+///
+/// An offset in or at a replaced raw range is clamped into the rewritten
+/// value; later offsets shift by the accumulated length delta.
+int _mapOffset(
+  int offset,
+  List<({int start, int end, int newLength})> edits,
+  int rewrittenLength,
+) {
+  var shift = 0;
+  for (final edit in edits) {
+    if (offset < edit.start) break;
+    if (offset <= edit.end) {
+      final inner = offset - edit.start;
+      return _clamp(
+        edit.start + shift + (inner < edit.newLength ? inner : edit.newLength),
+        rewrittenLength,
+      );
+    }
+    shift += edit.newLength - (edit.end - edit.start);
+  }
+  return _clamp(offset + shift, rewrittenLength);
+}
+
+int _clamp(int offset, int length) =>
+    offset < 0 ? 0 : (offset > length ? length : offset);
 
 class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
   static const int sourceLimit = 128 * 1024;
@@ -151,16 +180,23 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
     if (segments == null) return;
 
     final translations = <int, String>{};
+    final edits = <({int start, int end, int newLength})>[];
     for (final segment in segments.values) {
       final translation = _fields[segment.id].text;
       if (translation.isEmpty || translation == segment.value) continue;
       translations[segment.id] = translation;
+      final encoded = jsonEncode(translation);
+      edits.add((
+        start: segment.start,
+        end: segment.end,
+        newLength: encoded.length - 2,
+      ));
     }
     if (translations.isEmpty) return;
     final rewritten = segments.apply(translations);
     final selection = widget.controller.selection;
-    final base = _clamp(selection.baseOffset, rewritten.length);
-    final extent = _clamp(selection.extentOffset, rewritten.length);
+    final base = _mapOffset(selection.baseOffset, edits, rewritten.length);
+    final extent = _mapOffset(selection.extentOffset, edits, rewritten.length);
 
     _writing = true;
     try {
@@ -179,9 +215,6 @@ class _StructuredJsonPanelState extends State<StructuredJsonPanel> {
     }
     setState(() => _applied = true);
   }
-
-  int _clamp(int offset, int length) =>
-      offset < 0 ? 0 : (offset > length ? length : offset);
 
   @override
   Widget build(BuildContext context) {
