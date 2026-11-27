@@ -906,6 +906,28 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     }
   }
 
+  Future<bool?> _confirmNonRestorableExport() async {
+    final strings = AppLocalizations.of(context)!;
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.workspaceExportTooLargeTitle),
+        content: Text(strings.workspaceExportTooLargeQuestion),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancelImport),
+          ),
+          TextButton(
+            key: const ValueKey('workspace-export-too-large-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(strings.workspaceExportTooLargeContinue),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _exportWorkspace() async {
     final strings = AppLocalizations.of(context)!;
     final draft = _nonEmptyWorkspaceDraft();
@@ -922,29 +944,21 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     // savable as a plain UTF-8 file and report it as non-restorable.
     final tooLarge = utf8.encode(content).length > maxTextImportBytes;
     if (tooLarge) {
-      final saveAnyway = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(strings.workspaceExportTooLargeTitle),
-          content: Text(strings.workspaceExportTooLargeQuestion),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(strings.cancelImport),
-            ),
-            TextButton(
-              key: const ValueKey('workspace-export-too-large-confirm'),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(strings.workspaceExportTooLargeContinue),
-            ),
-          ],
-        ),
-      );
+      final saveAnyway = await _confirmNonRestorableExport();
       if (!mounted || saveAnyway != true) return;
     }
+    final disclosedOverLimit = tooLarge;
     await _exportToFile(
       contentBuilder: () =>
           formatWorkspaceExport(_nonEmptyWorkspaceDraft() ?? draft),
+      confirmBeforeWrite: (written) async {
+        if (disclosedOverLimit ||
+            utf8.encode(written).length <= maxTextImportBytes) {
+          return true;
+        }
+        final ok = await _confirmNonRestorableExport();
+        return mounted && ok == true;
+      },
       suggestedName: 'workspace.txt',
       successNoticeFor: (written) =>
           utf8.encode(written).length > maxTextImportBytes
@@ -1009,6 +1023,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // single-translation and whole-workspace exports.
   Future<void> _exportToFile({
     required String Function() contentBuilder,
+    Future<bool> Function(String content)? confirmBeforeWrite,
     required String suggestedName,
     required String Function(String content) successNoticeFor,
     required String emptyNotice,
@@ -1035,6 +1050,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(emptyNotice)));
         }
+        return;
+      }
+      if (confirmBeforeWrite != null && !await confirmBeforeWrite(content)) {
         return;
       }
       await widget.exportText(location.path, content);

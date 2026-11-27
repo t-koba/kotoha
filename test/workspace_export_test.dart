@@ -449,6 +449,10 @@ void main() {
       picker.complete(FileSaveLocation('/user/chosen/workspace.txt'));
       await tester.pumpAndSettle();
 
+      expect(find.text('Save a non-restorable export?'), findsOneWidget);
+      await tester.tap(field('workspace-export-too-large-confirm'));
+      await tester.pumpAndSettle();
+
       expect(writer.writes, hasLength(1));
       expect(
         utf8.encode(writer.writes.single.$2).length,
@@ -459,6 +463,40 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Workspace exported.'), findsNothing);
+    });
+  });
+
+  testWidgets('workspace export grown past the cap while the picker is pending '
+      'can be canceled at write time', (tester) async {
+    await withPlatform(TargetPlatform.macOS, () async {
+      final writer = _Writer();
+      final picker = Completer<FileSaveLocation?>();
+      selector.pending = picker;
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      tester.widget<TextField>(field('source-text')).controller!.text =
+          '\\' * (maxTextImportBytes ~/ 2 + 1);
+      await tester.pump();
+
+      picker.complete(FileSaveLocation('/user/chosen/workspace.txt'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save a non-restorable export?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(selector.calls, 1);
+      expect(writer.writes, isEmpty);
+      expect(find.text('Workspace exported.'), findsNothing);
+      expect(
+        find.text('Saved as text, but too large for Kotoha to restore.'),
+        findsNothing,
+      );
     });
   });
 
