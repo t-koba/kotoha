@@ -101,6 +101,22 @@ class DeclaredModelCapabilities {
   final List<DeclaredTaskCapability> tasks;
   final List<String> requiredCapabilities;
   final DeclaredResourceNeeds resources;
+
+  /// A fail-closed empty declaration: no tasks, capabilities or routes.
+  static const DeclaredModelCapabilities empty = DeclaredModelCapabilities(
+    modelId: '',
+    engineId: '',
+    adapterId: '',
+    tasks: [],
+    requiredCapabilities: [],
+    resources: DeclaredResourceNeeds(
+      storageBytes: 0,
+      peakHostBytes: 0,
+      peakAcceleratorBytes: 0,
+      basis: 'declared',
+      conditions: '',
+    ),
+  );
 }
 
 /// Pure queries over declared capability data; no runtime lookup or inference.

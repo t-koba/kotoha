@@ -46,20 +46,7 @@ class VerifiedTerms {
     required this.manifestDigest,
     required this.termsDigest,
     required this.declaredFiles,
-    this.capabilities = const DeclaredModelCapabilities(
-      modelId: '',
-      engineId: '',
-      adapterId: '',
-      tasks: [],
-      requiredCapabilities: [],
-      resources: DeclaredResourceNeeds(
-        storageBytes: 0,
-        peakHostBytes: 0,
-        peakAcceleratorBytes: 0,
-        basis: 'declared',
-        conditions: '',
-      ),
-    ),
+    this.capabilities = DeclaredModelCapabilities.empty,
   });
   final String modelId, modelName, publisher;
   final List<TermsDocument> documents;
@@ -93,12 +80,19 @@ class EphemeralModelAuthorization {
     this.manifestDigest,
     this.termsDigest, [
     this.declaredFiles = const <DeclaredModelFile>[],
+    this.capabilities = DeclaredModelCapabilities.empty,
   ]);
   final String manifestDigest, termsDigest;
 
   /// Declared non-terms files, in manifest order. An integrity check is a
   /// separate explicit action; acceptance alone never opens these files.
   final List<DeclaredModelFile> declaredFiles;
+
+  /// Manifest-DECLARED capabilities carried over from the accepted review.
+  /// Declaration-only: never verified support, availability, licensing or
+  /// runtime authorization. Retained in volatile state so declaration-level
+  /// eligibility queries can be made without re-reading the package.
+  final DeclaredModelCapabilities capabilities;
 }
 
 /// Strict terms-review contract.
@@ -234,6 +228,7 @@ class ModelTermsImport {
       review.manifestDigest,
       review.termsDigest,
       review.declaredFiles,
+      review.capabilities,
     );
   }
 }
