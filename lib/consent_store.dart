@@ -1,12 +1,14 @@
 /// In-memory consent records scoped to a purpose, a capability range and the
-/// digests of reviewed terms, plus classification of changed conditions.
+/// digests of reviewed terms, plus classification and retirement of receipts
+/// when declared conditions change.
 ///
 /// These records are not engine authorization and do not verify origin,
 /// authenticity, licensing or runtime capability. Nothing is persisted: every
 /// record is explicit, revocable, and cleared with the in-memory review state.
 /// Change classification is digest/declaration-level decision data for
-/// presenting changed conditions (design §7.4); it grants nothing and performs
-/// no I/O.
+/// presenting changed conditions (design §7.4); applying it can retire an
+/// exactly matching stored receipt, but neither operation grants consent or
+/// performs I/O.
 library;
 
 import 'package:kotoha/model_terms_import.dart';
