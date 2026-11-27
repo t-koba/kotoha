@@ -148,6 +148,17 @@ class ModelRegistry {
   /// Number of outstanding pins for [id].
   int leaseCount(String id) => _leases[id]?.length ?? 0;
 
+  /// Clears the active binding without forgetting it, failing closed while
+  /// a lease still references it. No content or runtime state is touched.
+  void deactivate() {
+    final id = _activeId;
+    if (id == null) return;
+    if (leaseCount(id) > 0) {
+      throw const ModelRegistryException(ModelRegistryFailure.inUse);
+    }
+    _activeId = null;
+  }
+
   /// Forgets an unused binding. No content is deleted here.
   void remove(String id) {
     if (!_installed.containsKey(id)) {

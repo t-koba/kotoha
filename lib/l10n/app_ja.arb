@@ -215,7 +215,7 @@
   "modelPackageId": "パッケージID: {id}",
   "modelDeclaredPublisher": "申告された発行者（未検証）: {publisher}",
   "modelAllTermsVerified": "宣言された利用条件ファイル{count}件すべてを検証してから表示しています。",
-  "modelSessionActive": "セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。",
+  "modelSessionActive": "セッションの同意を記録しました（ダイジェストのみ）。モデルの実行機能は有効ではありません。",
   "clearModelConsent": "セッションの同意を解除",
   "modelConsentCleared": "セッションの同意を解除しました。承認は保持されていません。",
   "modelReleaseFailure": "一時フォルダーのアクセスを解除できませんでした。セッションの同意を解除しました。",
@@ -226,6 +226,9 @@
   "modelIntegrityCancel": "キャンセル",
   "modelIntegritySuccess": "宣言されたモデルファイルはマニフェストのダイジェストと一致しました。実行機能は有効ではありません。",
   "modelIntegrityFailure": "モデルファイルの検証に失敗するかキャンセルされました。実行機能は有効ではありません。",
+  "modelBindingActive": "このセッションのダイジェスト束縛をメモリに記録しました。エンジンや実行環境は有効ではありません。",
+  "modelBindingFailed": "メモリ内のダイジェスト束縛を記録できませんでした。エンジンや実行環境は有効ではありません。",
+  "modelBindingInUse": "メモリ内のダイジェスト束縛がまだ参照されているため、セッションの同意は解除されませんでした。エンジンや実行環境は有効ではありません。",
   "@modelTermsTitle": {
     "description": "確認するモデル利用条件のタイトル。",
     "placeholders": {

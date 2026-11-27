@@ -223,7 +223,7 @@
   "modelPackageId": "Package ID: {id}",
   "modelDeclaredPublisher": "Declared publisher (unverified): {publisher}",
   "modelAllTermsVerified": "Declared terms files verified before review: {count}.",
-  "modelSessionActive": "Session acceptance recorded (digests only). No model is installed and runtime is not enabled.",
+  "modelSessionActive": "Session acceptance recorded (digests only). No model runtime is enabled.",
   "clearModelConsent": "Clear session consent",
   "modelConsentCleared": "Session acceptance cleared. No approval is retained.",
   "modelReleaseFailure": "Temporary folder access could not be released. Session acceptance was cleared.",
@@ -234,6 +234,9 @@
   "modelIntegrityCancel": "Cancel",
   "modelIntegritySuccess": "Declared model files matched their manifest digests. No engine was enabled.",
   "modelIntegrityFailure": "Model-file integrity check failed or was cancelled. No engine was enabled.",
+  "modelBindingActive": "In-memory digest binding recorded for this session. No engine or runtime is enabled.",
+  "modelBindingFailed": "The in-memory digest binding could not be recorded. No engine or runtime is enabled.",
+  "modelBindingInUse": "The in-memory digest binding is still referenced, so session consent was not cleared. No engine or runtime is enabled.",
   "@modelPackageId": {
     "description": "Unverified identifier declared in the selected model package.",
     "placeholders": {

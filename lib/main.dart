@@ -23,6 +23,7 @@ import 'workspace_export.dart';
 import 'model_terms_import.dart';
 import 'model_file_integrity.dart';
 import 'model_package_android.dart';
+import 'model_registry.dart';
 
 const ValueKey<String> _modelConsentStatusKey = ValueKey(
   'model-consent-status',
@@ -33,10 +34,16 @@ const ValueKey<String> _modelIntegritySuccessKey = ValueKey(
 const ValueKey<String> _modelIntegrityFailureKey = ValueKey(
   'model-integrity-failure',
 );
+const ValueKey<String> _modelBindingFailureKey = ValueKey(
+  'model-binding-failure',
+);
+const ValueKey<String> _modelBindingInUseKey = ValueKey('model-binding-in-use');
 final Set<ValueKey<String>> _modelStatusKeys = {
   _modelConsentStatusKey,
   _modelIntegritySuccessKey,
   _modelIntegrityFailureKey,
+  _modelBindingFailureKey,
+  _modelBindingInUseKey,
 };
 
 void main() {
@@ -162,6 +169,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
+  // Volatile digest bindings from accepted, integrity-checked reviews. No
+  // file is read here, no engine is started and nothing is persisted.
+  final ModelRegistry _modelRegistry = ModelRegistry();
   // Tracks the model status notice at the front of the messenger. Model
   // statuses clear the queue before being shown, so the tracked notice is
   // never queued. Identity matters: an earlier notice's exit must not clear
@@ -210,6 +220,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _forgetModelBinding();
     _sessionModelAuthorization = null;
     _sourceImportNoticeTimer?.cancel();
     _sourceLanguage.dispose();
@@ -388,6 +399,31 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     }
   }
 
+  /// Forgets the active in-memory binding when nothing references it.
+  /// Returns false when the registry refuses removal: the binding then stays
+  /// active and the caller must keep the session authorization as well.
+  bool _forgetModelBinding() {
+    final activeId = _modelRegistry.activeId;
+    if (activeId == null) return true;
+    try {
+      _modelRegistry.deactivate();
+      _modelRegistry.remove(activeId);
+      return true;
+    } on ModelRegistryException {
+      return false;
+    }
+  }
+
+  void _showModelBindingFailure() {
+    final strings = AppLocalizations.of(context)!;
+    _showModelConsentStatus(
+      SnackBar(
+        key: _modelBindingFailureKey,
+        content: Text(strings.modelBindingFailed),
+      ),
+    );
+  }
+
   void _showModelConsentStatus(SnackBar status) {
     final key = status.key;
     if (key is ValueKey<String> && _modelStatusKeys.contains(key)) {
@@ -412,6 +448,16 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     if (_reviewingModel || _importing || _verifyingModel) {
       return;
     }
+    if (!_forgetModelBinding()) {
+      // A referenced binding must not be orphaned from its session consent.
+      _showModelConsentStatus(
+        SnackBar(
+          key: _modelBindingInUseKey,
+          content: Text(AppLocalizations.of(context)!.modelBindingInUse),
+        ),
+      );
+      return;
+    }
     // The old binding's status no longer applies as soon as a new review starts.
     _removeCurrentModelStatus();
     setState(() {
@@ -433,10 +479,12 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       if (!mounted) return;
       // Hold only the digest binding in volatile state; never persist it.
       accepted = authorization != null;
+      if (authorization == null) _forgetModelBinding();
       setState(() => _sessionModelAuthorization = authorization);
     } on Exception {
       failed = true;
       if (mounted) {
+        _forgetModelBinding();
         setState(() => _sessionModelAuthorization = null);
         _showModelConsentStatus(
           SnackBar(
@@ -453,7 +501,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         await AndroidPackageReader.release();
       } on Exception {
         releaseFailed = true;
-        if (mounted) setState(() => _sessionModelAuthorization = null);
+        if (mounted) {
+          _forgetModelBinding();
+          setState(() => _sessionModelAuthorization = null);
+        }
       }
       if (mounted) {
         setState(() => _reviewingModel = false);
@@ -477,6 +528,17 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   /// authorization is involved.
   void _clearModelConsent() {
     if (_reviewingModel || _verifyingModel || _importing) return;
+    if (!_forgetModelBinding()) {
+      // The registry kept its binding, so the session authorization must stay
+      // too. Only fixed text reports the refusal; no exception detail leaks.
+      _showModelConsentStatus(
+        SnackBar(
+          key: _modelBindingInUseKey,
+          content: Text(AppLocalizations.of(context)!.modelBindingInUse),
+        ),
+      );
+      return;
+    }
     setState(() => _sessionModelAuthorization = null);
     _showModelConsentStatus(
       SnackBar(
@@ -545,7 +607,30 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       final matched = await const ModelFileIntegrity().verify(
         authorization.declaredFiles,
       );
-      if (mounted) _showModelIntegrityResult(matched);
+      if (!mounted) return;
+      if (!matched) {
+        _showModelIntegrityResult(false);
+        return;
+      }
+      try {
+        final id = authorization.manifestDigest;
+        final installed = _modelRegistry.lookup(id);
+        if (installed == null) {
+          _modelRegistry.install(authorization);
+        } else if (installed.termsDigest != authorization.termsDigest) {
+          // A different accepted binding must not be activated under the same
+          // content identity.
+          _showModelBindingFailure();
+          return;
+        }
+        _modelRegistry.activate(id);
+      } on ModelRegistryException {
+        _showModelBindingFailure();
+        return;
+      }
+      // The keyed indicator reads the registry's active binding.
+      setState(() {});
+      _showModelIntegrityResult(true);
     } on Exception {
       if (mounted) _showModelIntegrityResult(false);
     } finally {
@@ -1122,6 +1207,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                             child: Text(
                               strings.modelSessionActive,
                               key: const ValueKey('model-session-active'),
+                            ),
+                          ),
+                        if (_modelRegistry.activeId != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              strings.modelBindingActive,
+                              key: const ValueKey('model-binding-active'),
                             ),
                           ),
                         if (_sessionModelAuthorization != null)

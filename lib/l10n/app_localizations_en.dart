@@ -321,7 +321,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modelSessionActive =>
-      'Session acceptance recorded (digests only). No model is installed and runtime is not enabled.';
+      'Session acceptance recorded (digests only). No model runtime is enabled.';
 
   @override
   String get clearModelConsent => 'Clear session consent';
@@ -358,6 +358,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get modelIntegrityFailure =>
       'Model-file integrity check failed or was cancelled. No engine was enabled.';
+
+  @override
+  String get modelBindingActive =>
+      'In-memory digest binding recorded for this session. No engine or runtime is enabled.';
+
+  @override
+  String get modelBindingFailed =>
+      'The in-memory digest binding could not be recorded. No engine or runtime is enabled.';
+
+  @override
+  String get modelBindingInUse =>
+      'The in-memory digest binding is still referenced, so session consent was not cleared. No engine or runtime is enabled.';
 
   @override
   String get documentOutline => 'Document outline';

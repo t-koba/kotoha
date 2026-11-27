@@ -311,7 +311,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get modelSessionActive =>
-      'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。';
+      'セッションの同意を記録しました（ダイジェストのみ）。モデルの実行機能は有効ではありません。';
 
   @override
   String get clearModelConsent => 'セッションの同意を解除';
@@ -345,6 +345,18 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get modelIntegrityFailure =>
       'モデルファイルの検証に失敗するかキャンセルされました。実行機能は有効ではありません。';
+
+  @override
+  String get modelBindingActive =>
+      'このセッションのダイジェスト束縛をメモリに記録しました。エンジンや実行環境は有効ではありません。';
+
+  @override
+  String get modelBindingFailed =>
+      'メモリ内のダイジェスト束縛を記録できませんでした。エンジンや実行環境は有効ではありません。';
+
+  @override
+  String get modelBindingInUse =>
+      'メモリ内のダイジェスト束縛がまだ参照されているため、セッションの同意は解除されませんでした。エンジンや実行環境は有効ではありません。';
 
   @override
   String get documentOutline => '原文の構成';

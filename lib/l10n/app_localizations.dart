@@ -623,7 +623,7 @@ abstract class AppLocalizations {
   /// No description provided for @modelSessionActive.
   ///
   /// In ja, this message translates to:
-  /// **'セッションの同意を記録しました（ダイジェストのみ）。モデルはインストールされず、実行機能は有効ではありません。'**
+  /// **'セッションの同意を記録しました（ダイジェストのみ）。モデルの実行機能は有効ではありません。'**
   String get modelSessionActive;
 
   /// No description provided for @clearModelConsent.
@@ -685,6 +685,24 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'モデルファイルの検証に失敗するかキャンセルされました。実行機能は有効ではありません。'**
   String get modelIntegrityFailure;
+
+  /// No description provided for @modelBindingActive.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションのダイジェスト束縛をメモリに記録しました。エンジンや実行環境は有効ではありません。'**
+  String get modelBindingActive;
+
+  /// No description provided for @modelBindingFailed.
+  ///
+  /// In ja, this message translates to:
+  /// **'メモリ内のダイジェスト束縛を記録できませんでした。エンジンや実行環境は有効ではありません。'**
+  String get modelBindingFailed;
+
+  /// No description provided for @modelBindingInUse.
+  ///
+  /// In ja, this message translates to:
+  /// **'メモリ内のダイジェスト束縛がまだ参照されているため、セッションの同意は解除されませんでした。エンジンや実行環境は有効ではありません。'**
+  String get modelBindingInUse;
 
   /// 原文から解析したブロック一覧の見出し。
   ///

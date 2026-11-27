@@ -272,4 +272,25 @@ void main() {
     registry.install(EphemeralModelAuthorization(a, digest('1')));
     expect(registry.lookup(a), isNotNull);
   });
+
+  test('deactivate clears the active binding only when it is unused', () {
+    final registry = ModelRegistry();
+    final a = digest('a');
+    registry
+      ..install(EphemeralModelAuthorization(a, digest('1')))
+      ..activate(a);
+    expect(registry.activeId, a);
+
+    final lease = registry.pin(a);
+    expectFailure(ModelRegistryFailure.inUse, registry.deactivate);
+    expect(registry.activeId, a);
+    expect(registry.lookup(a), isNotNull);
+
+    registry.release(lease);
+    registry.deactivate();
+    expect(registry.activeId, isNull);
+    expect(registry.lookup(a), isNotNull);
+    registry.remove(a);
+    expect(registry.installedIds, isEmpty);
+  });
 }

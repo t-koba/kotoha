@@ -326,6 +326,51 @@ void main() {
     }
   });
 
+  testWidgets('verified integrity records a session-only in-memory binding', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+      await acceptTerms(tester);
+
+      final strings = AppLocalizationsEn();
+      final binding = find.byKey(const ValueKey('model-binding-active'));
+      expect(binding, findsNothing);
+
+      final verifyButton = find.byKey(const ValueKey('verify-model-files'));
+      await tester.ensureVisible(verifyButton);
+      await tester.tap(verifyButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('confirm-model-integrity')));
+      await tester.pumpAndSettle();
+
+      expect(binding, findsOneWidget);
+      final text = tester.widget<Text>(binding).data;
+      expect(text, strings.modelBindingActive);
+      expect(text, contains('In-memory digest binding'));
+      // Fixed text only: no digests, declared paths or provider labels.
+      expect(text, isNot(contains('a' * 64)));
+      expect(text, isNot(contains('weights.bin')));
+      expect(text, isNot(contains('fixture')));
+
+      final clearButton = find.byKey(const ValueKey('clear-model-consent'));
+      await tester.ensureVisible(clearButton);
+      await tester.tap(clearButton);
+      await tester.pumpAndSettle();
+      expect(binding, findsNothing);
+      expect(find.text(strings.modelConsentCleared), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('integrity failure and cancelled selection fail closed', (
     tester,
   ) async {
@@ -354,6 +399,7 @@ void main() {
         find.byKey(const ValueKey('model-integrity-success')),
         findsNothing,
       );
+      expect(find.byKey(const ValueKey('model-binding-active')), findsNothing);
       // Acceptance stays session-only and no runtime control appears.
       expect(
         find.byKey(const ValueKey('model-session-active')),
