@@ -688,6 +688,8 @@ void main() {
         final strings = AppLocalizationsEn();
         final success = find.text(strings.modelIntegritySuccess);
         expect(success, findsOneWidget);
+        final binding = find.byKey(const ValueKey('model-binding-active'));
+        expect(binding, findsOneWidget);
 
         // Cancelling the new folder selection issues no review notice, so the
         // invalidated binding must not leave its old status on screen.
@@ -702,6 +704,7 @@ void main() {
           find.byKey(const ValueKey('model-session-active')),
           findsNothing,
         );
+        expect(binding, findsNothing);
         expect(success, findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
