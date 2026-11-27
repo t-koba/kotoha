@@ -429,6 +429,50 @@ void main() {
     });
   });
 
+  testWidgets('workspace export writes text changed by replace all', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.macOS, () async {
+      final writer = _Writer();
+      selector.result = FileSaveLocation('/user/chosen/workspace.txt');
+      await openWorkspace(tester, writer);
+
+      final findToggle = field('find-replace-toggle');
+      await tester.ensureVisible(findToggle);
+      await tester.tap(findToggle);
+      await tester.pumpAndSettle();
+      await tester.enterText(field('find-query'), '原文');
+      await tester.enterText(field('find-replacement'), '改文');
+      final replaceAll = field('replace-all');
+      await tester.ensureVisible(replaceAll);
+      await tester.tap(replaceAll);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(field('source-text')).controller!.text,
+        '改文',
+      );
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, [
+        (
+          '/user/chosen/workspace.txt',
+          formatWorkspaceExport(
+            TextWorkspaceDraft(
+              sourceLanguage: 'ja',
+              sourceText: '改文',
+              translations: _draft().translations,
+            ),
+          ),
+        ),
+      ]);
+      expect(find.text('Workspace exported.'), findsOneWidget);
+    });
+  });
+
   testWidgets('workspace cleared while the picker is pending writes nothing', (
     tester,
   ) async {
