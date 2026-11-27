@@ -162,9 +162,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // Volatile session-only digest binding; never persisted. Cleared on a new,
   // declined, failed, or released review and on dispose.
   EphemeralModelAuthorization? _sessionModelAuthorization;
-  // Tracks the model status at the front of the messenger. Model statuses
-  // clear the queue before being shown, so the tracked one is never queued.
-  ValueKey<String>? _visibleModelStatusKey;
+  // Tracks the model status notice at the front of the messenger. Model
+  // statuses clear the queue before being shown, so the tracked notice is
+  // never queued. Identity matters: an earlier notice's exit must not clear
+  // the tracking of a notice that replaced it.
+  SnackBar? _visibleModelStatus;
   late List<_TranslationFields> _translations = [
     _TranslationFields(() => _appResumed),
   ];
@@ -380,9 +382,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     // Invalidating a model binding flushes the shared snack-bar queue: Flutter
     // drops every notice, so neither a stale status nor a queued notice can
     // surface once the binding is gone.
-    if (_modelStatusKeys.contains(_visibleModelStatusKey)) {
+    if (_visibleModelStatus != null) {
       ScaffoldMessenger.of(context).clearSnackBars();
-      _visibleModelStatusKey = null;
+      _visibleModelStatus = null;
     }
   }
 
@@ -392,12 +394,14 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       // Model statuses own the messenger: clearing first keeps a newer status
       // (or withdrawal confirmation) from queued behind another notice.
       ScaffoldMessenger.of(context).clearSnackBars();
-      _visibleModelStatusKey = key;
+      _visibleModelStatus = status;
       ScaffoldMessenger.of(context)
           .showSnackBar(status)
           .closed
           .whenComplete(() {
-            if (_visibleModelStatusKey == key) _visibleModelStatusKey = null;
+            if (identical(_visibleModelStatus, status)) {
+              _visibleModelStatus = null;
+            }
           });
       return;
     }

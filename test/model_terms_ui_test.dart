@@ -782,6 +782,41 @@ void main() {
     }
   });
 
+  testWidgets('cleared consent status does not survive a cancelled restart', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    try {
+      installFixture('Synthetic license body');
+      await openAndroid(tester);
+      await acceptTerms(tester, clearStatus: false);
+      final strings = AppLocalizationsEn();
+      final cleared = find.text(strings.modelConsentCleared);
+
+      final clearButton = find.byKey(const ValueKey('clear-model-consent'));
+      await tester.ensureVisible(clearButton);
+      await tester.tap(clearButton);
+      await tester.pumpAndSettle();
+      expect(cleared, findsOneWidget);
+
+      selectReplies = false;
+      final review = reviewButton();
+      Scrollable.of(tester.element(review)).position.jumpTo(0);
+      await tester.pumpAndSettle();
+      await tester.tap(review);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+      expect(cleared, findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets(
     'a cancelled review during snackbar exit does not show stale consent',
     (tester) async {
