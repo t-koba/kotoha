@@ -223,6 +223,16 @@
   "modelPackageId": "Package ID: {id}",
   "modelDeclaredPublisher": "Declared publisher (unverified): {publisher}",
   "modelAllTermsVerified": "Declared terms files verified before review: {count}.",
+  "modelDeclaredCapabilitiesTitle": "Declared capabilities (unverified)",
+  "modelDeclaredRoute": "Declared route (unverified): {source} → {target}",
+  "@modelDeclaredRoute": {
+    "description": "A manifest-declared language route shown before consent; a declaration, not verified support.",
+    "placeholders": {
+      "source": { "type": "String" },
+      "target": { "type": "String" }
+    }
+  },
+  "modelDeclaredCapabilitiesNote": "Declared capabilities are manifest claims only. They are not verified support, availability, quality or runtime authorization.",
   "modelSessionActive": "Session acceptance recorded (digests only). No model runtime is enabled.",
   "clearModelConsent": "Clear session consent",
   "modelConsentCleared": "Session acceptance cleared. No approval is retained.",

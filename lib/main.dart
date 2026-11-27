@@ -356,6 +356,24 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
                       review.verifiedTermsFileCount,
                     ),
                   ),
+                  if (review.capabilities.tasks.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      strings.modelDeclaredCapabilitiesTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(strings.modelDeclaredCapabilitiesNote),
+                    for (final task in review.capabilities.tasks)
+                      for (final route in task.routes) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          strings.modelDeclaredRoute(
+                            route.source,
+                            route.target,
+                          ),
+                        ),
+                      ],
+                  ],
                   for (final document in review.documents) ...[
                     const SizedBox(height: 12),
                     Text(

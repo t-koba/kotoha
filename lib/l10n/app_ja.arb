@@ -215,6 +215,16 @@
   "modelPackageId": "パッケージID: {id}",
   "modelDeclaredPublisher": "申告された発行者（未検証）: {publisher}",
   "modelAllTermsVerified": "宣言された利用条件ファイル{count}件すべてを検証してから表示しています。",
+  "modelDeclaredCapabilitiesTitle": "宣言された機能（未検証）",
+  "modelDeclaredRoute": "宣言された経路（未検証）: {source} → {target}",
+  "@modelDeclaredRoute": {
+    "description": "同意前に表示するマニフェスト申告の言語経路。検証済みの対応ではない。",
+    "placeholders": {
+      "source": { "type": "String" },
+      "target": { "type": "String" }
+    }
+  },
+  "modelDeclaredCapabilitiesNote": "宣言された機能はマニフェストの申告のみです。検証済みの対応、利用可能性、品質、実行認可を意味しません。",
   "modelSessionActive": "セッションの同意を記録しました（ダイジェストのみ）。モデルの実行機能は有効ではありません。",
   "clearModelConsent": "セッションの同意を解除",
   "modelConsentCleared": "セッションの同意を解除しました。承認は保持されていません。",

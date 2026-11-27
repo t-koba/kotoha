@@ -310,6 +310,18 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get modelDeclaredCapabilitiesTitle => '宣言された機能（未検証）';
+
+  @override
+  String modelDeclaredRoute(String source, String target) {
+    return '宣言された経路（未検証）: $source → $target';
+  }
+
+  @override
+  String get modelDeclaredCapabilitiesNote =>
+      '宣言された機能はマニフェストの申告のみです。検証済みの対応、利用可能性、品質、実行認可を意味しません。';
+
+  @override
   String get modelSessionActive =>
       'セッションの同意を記録しました（ダイジェストのみ）。モデルの実行機能は有効ではありません。';
 

@@ -620,6 +620,24 @@ abstract class AppLocalizations {
   /// **'宣言された利用条件ファイル{count}件すべてを検証してから表示しています。'**
   String modelAllTermsVerified(int count);
 
+  /// No description provided for @modelDeclaredCapabilitiesTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'宣言された機能（未検証）'**
+  String get modelDeclaredCapabilitiesTitle;
+
+  /// 同意前に表示するマニフェスト申告の言語経路。検証済みの対応ではない。
+  ///
+  /// In ja, this message translates to:
+  /// **'宣言された経路（未検証）: {source} → {target}'**
+  String modelDeclaredRoute(String source, String target);
+
+  /// No description provided for @modelDeclaredCapabilitiesNote.
+  ///
+  /// In ja, this message translates to:
+  /// **'宣言された機能はマニフェストの申告のみです。検証済みの対応、利用可能性、品質、実行認可を意味しません。'**
+  String get modelDeclaredCapabilitiesNote;
+
   /// No description provided for @modelSessionActive.
   ///
   /// In ja, this message translates to:

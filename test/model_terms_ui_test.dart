@@ -235,6 +235,36 @@ void main() {
     }
   });
 
+  testWidgets('review shows declared routes as unverified manifest claims', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      const terms = 'Synthetic license body';
+      installFixture(terms);
+      await openAndroid(tester);
+
+      await tester.tap(reviewButton());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Declared capabilities (unverified)'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'not verified support, availability, quality or runtime authorization',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Declared route (unverified): de → ar'), findsOneWidget);
+      // Displaying declared routes does not read weights or enable runtime.
+      expect(requests, ['model_manifest.json', 'license/terms.txt']);
+      expect(requests.contains('weights.bin'), isFalse);
+      expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('integrity check needs distinct consent and reports success', (
     tester,
   ) async {

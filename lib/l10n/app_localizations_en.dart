@@ -320,6 +320,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get modelDeclaredCapabilitiesTitle =>
+      'Declared capabilities (unverified)';
+
+  @override
+  String modelDeclaredRoute(String source, String target) {
+    return 'Declared route (unverified): $source → $target';
+  }
+
+  @override
+  String get modelDeclaredCapabilitiesNote =>
+      'Declared capabilities are manifest claims only. They are not verified support, availability, quality or runtime authorization.';
+
+  @override
   String get modelSessionActive =>
       'Session acceptance recorded (digests only). No model runtime is enabled.';
 
