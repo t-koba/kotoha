@@ -511,6 +511,19 @@ def validate_byte_count_contract() -> None:
     require(f"<p>{BYTE_COUNT_SENTENCE}</p>" in html, "HTML byte count contract")
 
 
+def validate_html_embedded_contract_copies() -> None:
+    """Require byte-exact HTML viewing copies of the validator and its results."""
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    for path in ("specs/validate_specs.py", "appendices/validation_results.json"):
+        label = f'<p class="filepath">{path}</p>'
+        require(html.count(label) == 1, f"HTML embedded label: {path}")
+        block = html.split(label, 1)[1].split("</code></pre>", 1)[0]
+        require(block.startswith("<pre><code>"), f"HTML embedded block: {path}")
+        embedded = html_text.unescape(block[len("<pre><code>"):])
+        expected = (ROOT / path).read_text(encoding="utf-8")
+        require(embedded == expected, f"HTML embedded copy drift: {path}")
+
+
 def locale_parity(
     english: dict[str, Any],
     japanese: dict[str, Any],
@@ -697,6 +710,7 @@ def main() -> int:
     check("HTML acceptance mirror drift detection", validate_html_acceptance_mirror_drift)
     check("Language validation contract", validate_language_validation_contract)
     check("Byte count contract", validate_byte_count_contract)
+    check("HTML embedded contract copies", validate_html_embedded_contract_copies)
     check("Engine event language contract", validate_engine_event_language_contract)
     check("Locale parity", validate_locale_parity)
     check("Locale parity rejects token drift", lambda case="token": locale_parity_drift(case), True)

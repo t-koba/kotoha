@@ -2529,11 +2529,13 @@ CREATE INDEX translations_target_idx ON translations(snapshot_id,target_language
 CREATE INDEX jobs_state_idx ON jobs(state,updated_at);
 COMMIT;
 </code></pre></div></details><details><summary>検査スクリプト</summary><div class="detail-body"><p class="filepath">specs/validate_specs.py</p><pre><code>#!/usr/bin/env python3
-"""Validate kotoha's design contracts with synthetic fixtures."""
+"""Validate design contracts, Apple bundle metadata, and synthetic fixtures."""
 from __future__ import annotations
 import copy
 import hashlib
+import html as html_text
 import json
+import plistlib
 import re
 import shutil
 import sqlite3
@@ -2553,6 +2555,10 @@ except ImportError as exc:
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS: list[dict[str, str]] = []
 
+MAX_BYTE_COUNT = 2**63 - 1
+BYTE_COUNT_COMMENT = "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
+BYTE_COUNT_SENTENCE = "バイト数はJSON整数構文の符号付き64ビット整数（0から9223372036854775807）のみを受け付け、0.0・1.5・指数表記・範囲外は付属検査とDart取り込みの両方で拒否する。"
+
 
 def load(path: str) -&gt; Any:
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
@@ -2561,6 +2567,12 @@ def load(path: str) -&gt; Any:
 def require(condition: bool, detail: str) -&gt; None:
     if not condition:
         raise ValueError(detail)
+
+
+def require_byte_count(value: Any, minimum: int, context: str) -&gt; None:
+    """JSON Schema integer also accepts 0.0; require an exact JSON integer."""
+    require(type(value) is int, f"{context}: exact JSON integer required")
+    require(minimum &lt;= value &lt;= MAX_BYTE_COUNT, f"{context}: byte count out of range")
 
 
 def check(name: str, action: Callable[[], Any], rejected: bool = False) -&gt; None:
@@ -2599,6 +2611,12 @@ def safe_path(value: str) -&gt; str:
 def validate_model(data: dict[str, Any]) -&gt; None:
     structural("model_manifest", data)
     files = data["files"]
+    resources = data["resources"]
+    for index, item in enumerate(files):
+        require_byte_count(item["size_bytes"], 1, f"files[{index}].size_bytes")
+    require_byte_count(resources["storage_bytes"], 1, "resources.storage_bytes")
+    require_byte_count(resources["peak_host_bytes"], 0, "resources.peak_host_bytes")
+    require_byte_count(resources["peak_accelerator_bytes"], 0, "resources.peak_accelerator_bytes")
     keys = [safe_path(x["path"]) for x in files]
     require(len(keys) == len(set(keys)), "duplicate asset path")
     by_path = {x["path"]: x for x in files}
@@ -2876,6 +2894,241 @@ def header_test(language: str, compiler: str, standard: str) -&gt; None:
         require(result.returncode == 0, result.stderr)
 
 
+def validate_apple_bundle_metadata() -&gt; None:
+    l10n = ROOT.parent / "lib/l10n"
+    locale_values = [
+        json.loads(path.read_text(encoding="utf-8"))["@@locale"]
+        for path in l10n.glob("app_*.arb")
+    ]
+    require(bool(locale_values) and len(locale_values) == len(set(locale_values)), "unique ARB locales")
+    locales = set(locale_values)
+    for platform in ("ios", "macos"):
+        info_path = ROOT.parent / platform / "Runner/Info.plist"
+        info = plistlib.loads(info_path.read_bytes())
+        require(info.get("CFBundleName") == "Kotoha", f"{platform} bundle name")
+        require(info.get("CFBundleDisplayName") == "Kotoha", f"{platform} display name")
+        require(locales &lt;= set(info.get("CFBundleLocalizations", [])), f"{platform} bundle locales")
+        project = (ROOT.parent / platform / "Runner.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
+        match = re.search(r"\bknownRegions\s*=\s*\((.*?)\);", project, re.DOTALL)
+        require(match is not None, f"{platform} known regions")
+        regions = set(re.findall(r"\b[A-Za-z][A-Za-z0-9-]*\b", match.group(1)))
+        require(locales &lt;= regions and "Base" in regions, f"{platform} project locales")
+
+
+
+def acceptance_matrix_rows(markdown: str, html: str) -&gt; tuple[list[tuple[str, ...]], list[tuple[str, ...]]]:
+    """Return ordered Markdown rows and rendered HTML rows of the acceptance matrix."""
+    cross_cutting = markdown.split("## 横断する受入項目", 1)[1].splitlines()
+    expected: list[tuple[str, ...]] = []
+    for line in markdown.splitlines():
+        if not line.startswith("| "):
+            continue
+        cells = tuple(cell.strip() for cell in line.strip().strip("|").split("|"))
+        if not cells or (re.fullmatch(r"F\d{2}", cells[0]) is None
+                         and line not in cross_cutting):
+            continue
+        if cells[0] in {"ID", "項目"} or all(re.fullmatch(r":?-+:?", cell) for cell in cells):
+            continue
+        expected.append(cells)
+
+    visible = re.sub(r"&lt;!--.*?--&gt;", "", html, flags=re.DOTALL)
+    section = visible.split("&lt;details&gt;&lt;summary&gt;受入マトリクス&lt;/summary&gt;", 1)[1]
+    section = section.split("&lt;/details&gt;", 1)[0]
+    rendered: list[tuple[str, ...]] = []
+    for row in re.findall(r"&lt;tr\b[^&gt;]*&gt;(.*?)&lt;/tr&gt;", section, flags=re.DOTALL):
+        cells = tuple(
+            html_text.unescape(re.sub(r"&lt;[^&gt;]+&gt;", "", cell)).strip()
+            for cell in re.findall(r"&lt;td\b[^&gt;]*&gt;(.*?)&lt;/td&gt;", row, flags=re.DOTALL)
+        )
+        if cells:
+            rendered.append(cells)
+    return expected, rendered
+
+
+def validate_html_acceptance_mirror() -&gt; None:
+    """Keep the HTML viewing mirror of the acceptance matrix in sync."""
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    acceptance = (ROOT / "appendices/acceptance_matrix.md").read_text(encoding="utf-8")
+    expected, rendered = acceptance_matrix_rows(acceptance, html)
+    require(len(expected) == len(rendered),
+            f"HTML mirror row count: expected {len(expected)}, rendered {len(rendered)}")
+    for index, (source, mirror) in enumerate(zip(expected, rendered)):
+        require(source == mirror, f"HTML mirror row {index}: {source[0]}")
+
+
+def validate_html_acceptance_mirror_drift() -&gt; None:
+    """Reject hidden rows and rows whose cells no longer match the source."""
+    markdown = (
+        "| ID | 機能 | 操作・条件 | 確認する証拠 |\n"
+        "|---|---|---|---|\n"
+        "| F99 | 試験機能 | 条件 | 証拠 |\n"
+        "\n## 横断する受入項目\n\n"
+        "| 項目 | 適用する確認 |\n|---|---|\n| 多言語 | 書字方向 |\n"
+    )
+    row = "&lt;tr&gt;&lt;td&gt;F99&lt;/td&gt;&lt;td&gt;試験機能&lt;/td&gt;&lt;td&gt;条件&lt;/td&gt;&lt;td&gt;証拠&lt;/td&gt;&lt;/tr&gt;"
+    cross_row = "&lt;tr&gt;&lt;td&gt;多言語&lt;/td&gt;&lt;td&gt;書字方向&lt;/td&gt;&lt;/tr&gt;"
+    visible = (
+        "&lt;details&gt;&lt;summary&gt;受入マトリクス&lt;/summary&gt;&lt;table&gt;&lt;thead&gt;&lt;tr&gt;"
+        "&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;機能&lt;/th&gt;&lt;th&gt;操作・条件&lt;/th&gt;&lt;th&gt;確認する証拠&lt;/th&gt;"
+        "&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;" + row + cross_row +
+        "&lt;/tbody&gt;&lt;/table&gt;&lt;/details&gt;"
+    )
+    hidden = visible.replace(cross_row, "&lt;!-- " + cross_row + " --&gt;")
+    shortened = visible.replace(
+        row, "&lt;tr&gt;&lt;td&gt;F99&lt;/td&gt;&lt;td&gt;試験機能&lt;/td&gt;&lt;td&gt;条件&lt;/td&gt;&lt;/tr&gt;",
+    )
+    expected, rendered = acceptance_matrix_rows(markdown, visible)
+    require(rendered == expected, "acceptance mirror baseline does not match")
+    for html in (hidden, shortened):
+        expected, rendered = acceptance_matrix_rows(markdown, html)
+        require(rendered != expected, "acceptance mirror drift was not detected")
+
+
+LANGUAGE_TAG_DESCRIPTION = "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
+LANGUAGE_TAG_CLAIM = "正規形の言語タグ。実行時にBCP 47の構文・登録情報と照合する。"
+LANGUAGE_CONTRACT_SENTENCE = "言語タグのBCP 47構造検査（§2.1のABNF、重複 variant/singleton なし）は言語アダプターが担当する。登録情報と正規形の照合は日付付きIANAレジストリを同梱するまでは行わない。付属検査はフィールドの構文と参照整合を扱う。個別言語の翻訳品質は評価プロファイルで測定する。"
+
+
+def validate_engine_event_language_contract() -&gt; None:
+    """Keep the engine-event language descriptions honest in schema and HTML."""
+    payload = SCHEMAS["engine_event"]["allOf"][0]["then"]["properties"]["payload"]["properties"]
+    descriptions = [payload["source_language"]["description"],
+                    payload["outputs"]["items"]["properties"]["language"]["description"]]
+    for description in descriptions:
+        require(description == LANGUAGE_TAG_DESCRIPTION, "engine language description")
+        require(LANGUAGE_TAG_CLAIM not in description, "engine registry validation claim")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    engine_html = html.split('&lt;p class="filepath"&gt;specs/engine_event.schema.json&lt;/p&gt;', 1)[1].split("&lt;/code&gt;&lt;/pre&gt;", 1)[0]
+    require(engine_html.count(f'"description": "{LANGUAGE_TAG_DESCRIPTION}"') == 2,
+            "HTML engine language descriptions")
+    require(LANGUAGE_TAG_CLAIM not in engine_html, "HTML engine registry validation claim")
+
+
+def validate_language_validation_contract() -&gt; None:
+    """Keep the model-manifest language contract honest across its three copies."""
+    languages = SCHEMAS["model_manifest"]["properties"]["tasks"]["items"]["properties"]["languages"]["properties"]
+    descriptions = [languages["source"]["items"]["description"], languages["target"]["items"]["description"],
+                    languages["routes"]["items"]["properties"]["source"]["description"],
+                    languages["routes"]["items"]["properties"]["target"]["description"]]
+    for description in descriptions:
+        require(description == LANGUAGE_TAG_DESCRIPTION, "model language description")
+        require(not any(claim in description for claim in ("正規形の言語タグ", "構文・登録情報と照合する")),
+                "registry validation claim")
+    readme = (ROOT / "specs/README.md").read_text(encoding="utf-8")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    model_html = html.split('&lt;p class="filepath"&gt;specs/model_manifest.schema.json&lt;/p&gt;', 1)[1].split("&lt;/code&gt;&lt;/pre&gt;", 1)[0]
+    require(model_html.count(f'"description": "{LANGUAGE_TAG_DESCRIPTION}"') == 4, "HTML model language descriptions")
+    require(LANGUAGE_TAG_CLAIM not in model_html, "HTML model registry validation claim")
+    require(readme.count(LANGUAGE_CONTRACT_SENTENCE) == 1, "specs README language contract")
+    require(f"&lt;p&gt;{LANGUAGE_CONTRACT_SENTENCE}&lt;/p&gt;" in html, "HTML README language contract")
+
+
+def validate_byte_count_contract() -&gt; None:
+    """Keep the byte-count schema, embedded copy and prose copies consistent."""
+    properties = SCHEMAS["model_manifest"]["properties"]
+    fields = [properties["files"]["items"]["properties"]["size_bytes"]]
+    fields += [properties["resources"]["properties"][key] for key in
+               ("storage_bytes", "peak_host_bytes", "peak_accelerator_bytes")]
+    for field in fields:
+        require(field["maximum"] == MAX_BYTE_COUNT, "byte count maximum")
+        require(field["$comment"] == BYTE_COUNT_COMMENT, "byte count comment")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    model_html = html.split('&lt;p class="filepath"&gt;specs/model_manifest.schema.json&lt;/p&gt;', 1)[1].split("&lt;/code&gt;&lt;/pre&gt;", 1)[0]
+    require(model_html.count(f'"maximum": {MAX_BYTE_COUNT}') == 4, "HTML byte count maximum")
+    require(model_html.count(f'"$comment": "{BYTE_COUNT_COMMENT}"') == 4, "HTML byte count comments")
+    readme = (ROOT / "specs/README.md").read_text(encoding="utf-8")
+    require(readme.count(BYTE_COUNT_SENTENCE) == 1, "specs README byte count contract")
+    require(f"&lt;p&gt;{BYTE_COUNT_SENTENCE}&lt;/p&gt;" in html, "HTML byte count contract")
+
+
+def validate_html_embedded_contract_copies() -&gt; None:
+    """Require byte-exact HTML viewing copies of the validator and its results."""
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    for path in ("specs/validate_specs.py", "appendices/validation_results.json"):
+        label = f'&lt;p class="filepath"&gt;{path}&lt;/p&gt;'
+        require(html.count(label) == 1, f"HTML embedded label: {path}")
+        block = html.split(label, 1)[1].split("&lt;/code&gt;&lt;/pre&gt;", 1)[0]
+        require(block.startswith("&lt;pre&gt;&lt;code&gt;"), f"HTML embedded block: {path}")
+        embedded = html_text.unescape(block[len("&lt;pre&gt;&lt;code&gt;"):])
+        expected = (ROOT / path).read_text(encoding="utf-8")
+        require(embedded == expected, f"HTML embedded copy drift: {path}")
+
+
+def locale_parity(
+    english: dict[str, Any],
+    japanese: dict[str, Any],
+    generated: dict[str, set[str]],
+) -&gt; None:
+    """Compare message tokens, metadata and declared placeholders across locales."""
+    messages = lambda data: {key for key in data if not key.startswith("@")}
+    metadata = lambda data: {
+        key for key in data if key.startswith("@") and not key.startswith("@@")
+    }
+    tokens = lambda value: set(re.findall(r"\{\s*(\w+)", value))
+    require(messages(english) == messages(japanese), "locale message keys")
+    require(metadata(english) == metadata(japanese), "locale metadata keys")
+    for name, declared in generated.items():
+        require(messages(english) &lt;= declared, f"generated locale messages: {name}")
+    for key in messages(english):
+        english_tokens = tokens(english[key]) if isinstance(english[key], str) else set()
+        japanese_tokens = tokens(japanese[key]) if isinstance(japanese[key], str) else set()
+        english_declared = english.get("@" + key, {}).get("placeholders", {})
+        japanese_declared = japanese.get("@" + key, {}).get("placeholders", {})
+        require(
+            english_tokens == japanese_tokens == set(english_declared),
+            f"locale message placeholders: {key}",
+        )
+        require(
+            set(english_declared) == set(japanese_declared),
+            f"locale declared placeholders: {key}",
+        )
+        for name, spec in english_declared.items():
+            require(
+                spec.get("type") == japanese_declared[name].get("type"),
+                f"locale placeholder types: {key}.{name}",
+            )
+
+
+def locale_generated_messages() -&gt; dict[str, set[str]]:
+    l10n = ROOT.parent / "lib" / "l10n"
+    generated = {}
+    for name in ("app_localizations.dart", "app_localizations_en.dart", "app_localizations_ja.dart"):
+        source = (l10n / name).read_text(encoding="utf-8")
+        declared = set(re.findall(r"\bString get (\w+)\b", source))
+        declared |= set(re.findall(r"\bString (\w+)\(", source))
+        generated[name] = declared
+    return generated
+
+
+def validate_locale_parity() -&gt; None:
+    l10n = ROOT.parent / "lib" / "l10n"
+    english = json.loads((l10n / "app_en.arb").read_text(encoding="utf-8"))
+    japanese = json.loads((l10n / "app_ja.arb").read_text(encoding="utf-8"))
+    locale_parity(english, japanese, locale_generated_messages())
+
+
+def locale_parity_drift(case: str) -&gt; None:
+    """Reject synthetic locale drift so the parity gate cannot go silent."""
+    l10n = ROOT.parent / "lib" / "l10n"
+    english = json.loads((l10n / "app_en.arb").read_text(encoding="utf-8"))
+    japanese = json.loads((l10n / "app_ja.arb").read_text(encoding="utf-8"))
+    generated = locale_generated_messages()
+    if case == "generated":
+        generated["app_localizations_ja.dart"].discard("copyTranslationNumber")
+    elif case == "token":
+        japanese["copyTranslationNumber"] = japanese["copyTranslationNumber"].replace(
+            "{number}", ""
+        )
+    elif case == "declaration":
+        placeholders = japanese["@copyTranslationNumber"]["placeholders"]
+        placeholders["index"] = placeholders.pop("number")
+    elif case == "metadata":
+        del japanese["@copyTranslationNumber"]
+    else:
+        raise ValueError(f"unknown drift case: {case}")
+    locale_parity(english, japanese, generated)
+
+
 def main() -&gt; int:
     for name, schema in SCHEMAS.items():
         check(f"Schema: {name}", lambda schema=schema: Draft202012Validator.check_schema(schema))
@@ -2901,6 +3154,17 @@ def main() -&gt; int:
         ("Model consent contract", lambda d: d["terms"][0].update(consent="implicit")),
     ]:
         check(title, lambda fn=fn: validate_model(mutate(model, fn)), True)
+    byte_count_fields = [
+        ("file size", lambda d, v: d["files"][0].update(size_bytes=v)),
+        ("storage bytes", lambda d, v: d["resources"].update(storage_bytes=v)),
+        ("host peak bytes", lambda d, v: d["resources"].update(peak_host_bytes=v)),
+        ("accelerator peak bytes", lambda d, v: d["resources"].update(peak_accelerator_bytes=v)),
+    ]
+    for label, set_value in byte_count_fields:
+        for value in (0.0, 1.5, 2**63):
+            check(f"Model {label} {value}",
+                  lambda set_value=set_value, value=value: validate_model(
+                      mutate(model, lambda d, v=value: set_value(d, v))), True)
     check("Unicode asset path", lambda: safe_path("資料/語彙.dat"))
     check("Private language syntax", lambda: Draft202012Validator(SCHEMAS["model_manifest"]["properties"]["tasks"]["items"]["properties"]["languages"]["properties"]["source"]["items"]).validate("x-fixture"))
     check("Mode fixture", lambda: validate_recipe(recipe, registry))
@@ -2972,8 +3236,20 @@ def main() -&gt; int:
     ids=lambda text: set(re.findall(r"\bF\d{2}\b",text))
     expected={f"F{i:02}" for i in range(1,39)}
     check("Feature traceability",lambda: require(ids(doc)==ids(acceptance)==expected,"feature mapping"))
+    check("HTML acceptance mirror", validate_html_acceptance_mirror)
+    check("HTML acceptance mirror drift detection", validate_html_acceptance_mirror_drift)
+    check("Language validation contract", validate_language_validation_contract)
+    check("Byte count contract", validate_byte_count_contract)
+    check("HTML embedded contract copies", validate_html_embedded_contract_copies)
+    check("Engine event language contract", validate_engine_event_language_contract)
+    check("Locale parity", validate_locale_parity)
+    check("Locale parity rejects token drift", lambda case="token": locale_parity_drift(case), True)
+    check("Locale parity rejects declaration drift", lambda case="declaration": locale_parity_drift(case), True)
+    check("Locale parity rejects metadata drift", lambda case="metadata": locale_parity_drift(case), True)
+    check("Locale parity rejects generated drift", lambda case="generated": locale_parity_drift(case), True)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
-    report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_and_synthetic_fixtures"}
+    check("Apple bundle metadata", validate_apple_bundle_metadata)
+    report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}
     (ROOT/"appendices/validation_results.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"checks":len(RESULTS),"passed":len(RESULTS)},ensure_ascii=False))
     return 0
@@ -3212,8 +3488,8 @@ if __name__ == "__main__":
   }
 }
 </code></pre></div></details><details><summary>検査結果のデータ</summary><div class="detail-body"><p class="filepath">appendices/validation_results.json</p><pre><code>{
-  "checks": 92,
-  "passed": 92,
+  "checks": 116,
+  "passed": 116,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -3302,6 +3578,66 @@ if __name__ == "__main__":
     },
     {
       "name": "Model consent contract",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model file size 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model file size 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model file size 9223372036854775808",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage bytes 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage bytes 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage bytes 9223372036854775808",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model host peak bytes 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model host peak bytes 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model host peak bytes 9223372036854775808",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model accelerator peak bytes 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model accelerator peak bytes 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model accelerator peak bytes 9223372036854775808",
       "status": "pass",
       "case": "incompatible"
     },
@@ -3671,11 +4007,71 @@ if __name__ == "__main__":
       "case": "compatible"
     },
     {
+      "name": "HTML acceptance mirror",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "HTML acceptance mirror drift detection",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Language validation contract",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Byte count contract",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "HTML embedded contract copies",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Engine event language contract",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Locale parity",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Locale parity rejects token drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Locale parity rejects declaration drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Locale parity rejects metadata drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Locale parity rejects generated drift",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
       "name": "Contract identifiers",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Apple bundle metadata",
       "status": "pass",
       "case": "compatible"
     }
   ],
-  "scope": "design_contracts_and_synthetic_fixtures"
+  "scope": "design_contracts_apple_bundle_metadata_and_synthetic_fixtures"
 }
 </code></pre></div></details></section><footer>kotoha／ことは — 設計資料</footer></main></body></html>
