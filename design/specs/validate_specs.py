@@ -25,6 +25,10 @@ except ImportError as exc:
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS: list[dict[str, str]] = []
 
+MAX_BYTE_COUNT = 2**63 - 1
+BYTE_COUNT_COMMENT = "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
+BYTE_COUNT_SENTENCE = "バイト数はJSON整数構文の符号付き64ビット整数（0から9223372036854775807）のみを受け付け、0.0・1.5・指数表記・範囲外は付属検査とDart取り込みの両方で拒否する。"
+
 
 def load(path: str) -> Any:
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
@@ -33,6 +37,12 @@ def load(path: str) -> Any:
 def require(condition: bool, detail: str) -> None:
     if not condition:
         raise ValueError(detail)
+
+
+def require_byte_count(value: Any, minimum: int, context: str) -> None:
+    """JSON Schema integer also accepts 0.0; require an exact JSON integer."""
+    require(type(value) is int, f"{context}: exact JSON integer required")
+    require(minimum <= value <= MAX_BYTE_COUNT, f"{context}: byte count out of range")
 
 
 def check(name: str, action: Callable[[], Any], rejected: bool = False) -> None:
@@ -71,6 +81,12 @@ def safe_path(value: str) -> str:
 def validate_model(data: dict[str, Any]) -> None:
     structural("model_manifest", data)
     files = data["files"]
+    resources = data["resources"]
+    for index, item in enumerate(files):
+        require_byte_count(item["size_bytes"], 1, f"files[{index}].size_bytes")
+    require_byte_count(resources["storage_bytes"], 1, "resources.storage_bytes")
+    require_byte_count(resources["peak_host_bytes"], 0, "resources.peak_host_bytes")
+    require_byte_count(resources["peak_accelerator_bytes"], 0, "resources.peak_accelerator_bytes")
     keys = [safe_path(x["path"]) for x in files]
     require(len(keys) == len(set(keys)), "duplicate asset path")
     by_path = {x["path"]: x for x in files}
@@ -477,6 +493,24 @@ def validate_language_validation_contract() -> None:
     require(f"<p>{LANGUAGE_CONTRACT_SENTENCE}</p>" in html, "HTML README language contract")
 
 
+def validate_byte_count_contract() -> None:
+    """Keep the byte-count schema, embedded copy and prose copies consistent."""
+    properties = SCHEMAS["model_manifest"]["properties"]
+    fields = [properties["files"]["items"]["properties"]["size_bytes"]]
+    fields += [properties["resources"]["properties"][key] for key in
+               ("storage_bytes", "peak_host_bytes", "peak_accelerator_bytes")]
+    for field in fields:
+        require(field["maximum"] == MAX_BYTE_COUNT, "byte count maximum")
+        require(field["$comment"] == BYTE_COUNT_COMMENT, "byte count comment")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    model_html = html.split('<p class="filepath">specs/model_manifest.schema.json</p>', 1)[1].split("</code></pre>", 1)[0]
+    require(model_html.count(f'"maximum": {MAX_BYTE_COUNT}') == 4, "HTML byte count maximum")
+    require(model_html.count(f'"$comment": "{BYTE_COUNT_COMMENT}"') == 4, "HTML byte count comments")
+    readme = (ROOT / "specs/README.md").read_text(encoding="utf-8")
+    require(readme.count(BYTE_COUNT_SENTENCE) == 1, "specs README byte count contract")
+    require(f"<p>{BYTE_COUNT_SENTENCE}</p>" in html, "HTML byte count contract")
+
+
 def locale_parity(
     english: dict[str, Any],
     japanese: dict[str, Any],
@@ -577,6 +611,17 @@ def main() -> int:
         ("Model consent contract", lambda d: d["terms"][0].update(consent="implicit")),
     ]:
         check(title, lambda fn=fn: validate_model(mutate(model, fn)), True)
+    byte_count_fields = [
+        ("file size", lambda d, v: d["files"][0].update(size_bytes=v)),
+        ("storage bytes", lambda d, v: d["resources"].update(storage_bytes=v)),
+        ("host peak bytes", lambda d, v: d["resources"].update(peak_host_bytes=v)),
+        ("accelerator peak bytes", lambda d, v: d["resources"].update(peak_accelerator_bytes=v)),
+    ]
+    for label, set_value in byte_count_fields:
+        for value in (0.0, 1.5, 2**63):
+            check(f"Model {label} {value}",
+                  lambda set_value=set_value, value=value: validate_model(
+                      mutate(model, lambda d, v=value: set_value(d, v))), True)
     check("Unicode asset path", lambda: safe_path("資料/語彙.dat"))
     check("Private language syntax", lambda: Draft202012Validator(SCHEMAS["model_manifest"]["properties"]["tasks"]["items"]["properties"]["languages"]["properties"]["source"]["items"]).validate("x-fixture"))
     check("Mode fixture", lambda: validate_recipe(recipe, registry))
@@ -651,6 +696,7 @@ def main() -> int:
     check("HTML acceptance mirror", validate_html_acceptance_mirror)
     check("HTML acceptance mirror drift detection", validate_html_acceptance_mirror_drift)
     check("Language validation contract", validate_language_validation_contract)
+    check("Byte count contract", validate_byte_count_contract)
     check("Engine event language contract", validate_engine_event_language_contract)
     check("Locale parity", validate_locale_parity)
     check("Locale parity rejects token drift", lambda case="token": locale_parity_drift(case), True)

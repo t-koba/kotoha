@@ -1411,6 +1411,7 @@ kotoha capabilities --json
 <h2>モデルの検査</h2>
 <p>署名付きカタログと持込みファイルは、由来を別に記録する。署名の検証では署名対象の原バイト列を使用し、その後にJSONを解析する。モデル資産は整合性、形式、演算、資源を検査する。</p>
 <p>言語タグのBCP 47構造検査（§2.1のABNF、重複 variant/singleton なし）は言語アダプターが担当する。登録情報と正規形の照合は日付付きIANAレジストリを同梱するまでは行わない。付属検査はフィールドの構文と参照整合を扱う。個別言語の翻訳品質は評価プロファイルで測定する。</p>
+<p>バイト数はJSON整数構文の符号付き64ビット整数（0から9223372036854775807）のみを受け付け、0.0・1.5・指数表記・範囲外は付属検査とDart取り込みの両方で拒否する。</p>
 <h2>モードの実行</h2>
 <p>操作レジストリには各操作の入力・出力型、必須能力、必要権限、パラメーター契約を登録する。モードはそのレジストリへ解決する。新しい処理実装は配布工程、処理の組み合わせはモード定義として管理する。</p>
 <p>ノードはsource、processor、sinkの役割を持つ。入力ポートは宣言された型と接続数へ適合し、全ノードが入力から出力へ至る経路に属する。反復実行とストリームの継続はジョブ管理が担当する。</p>
@@ -1472,7 +1473,9 @@ python specs/validate_specs.py
           },
           "size_bytes": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 9223372036854775807,
+            "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
           }
         },
         "required": [
@@ -1640,15 +1643,21 @@ python specs/validate_specs.py
       "properties": {
         "storage_bytes": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 9223372036854775807,
+          "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
         },
         "peak_host_bytes": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 9223372036854775807,
+          "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
         },
         "peak_accelerator_bytes": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 9223372036854775807,
+          "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
         },
         "basis": {
           "enum": [

@@ -465,6 +465,68 @@ void main() {
     expect(called, isFalse);
     expect(r.requests, ['model_manifest.json']);
   });
+  test('byte counts require exact JSON integer syntax', () async {
+    const terms = 'terms';
+    const marker = 987654321;
+    const fields = [
+      'size_bytes',
+      'storage_bytes',
+      'peak_host_bytes',
+      'peak_accelerator_bytes',
+    ];
+    for (final key in fields) {
+      for (final invalid in <Object?>[0.0, 1.5, marker]) {
+        final encoded = jsonEncode(
+          fullManifest(
+            terms,
+            mutate: (m) {
+              if (key == 'size_bytes') {
+                (m['files'] as List).first[key] = invalid;
+              } else {
+                (m['resources'] as Map)[key] = invalid;
+              }
+              return m;
+            },
+          ),
+        );
+        // Dart int is signed 64-bit, so 2^63 is injected as a raw JSON literal.
+        final literal = invalid == marker ? '9223372036854775808' : '$invalid';
+        final raw = invalid == marker
+            ? encoded.replaceAll('$marker', literal)
+            : encoded;
+        expect(raw.contains('"$key":$literal'), isTrue, reason: key);
+        final r = MemoryReader({
+          'model_manifest.json': bytes(raw),
+          'license/terms.txt': bytes(terms),
+        });
+        var called = false;
+        await expectLater(
+          const ModelTermsImport().run(r, (_) async {
+            called = true;
+            return true;
+          }),
+          throwsA(isA<FormatException>()),
+          reason: '$key rejects $literal',
+        );
+        expect(called, isFalse, reason: '$key rejects $literal');
+        expect(r.requests, ['model_manifest.json'], reason: key);
+      }
+    }
+    // Valid integers, including the signed-64-bit maximum for peak fields,
+    // still import.
+    final accepted = fullManifest(
+      terms,
+      mutate: (m) {
+        (m['files'] as List).first['size_bytes'] = 16;
+        (m['resources'] as Map)['storage_bytes'] = 16 + bytes(terms).length;
+        (m['resources'] as Map)['peak_host_bytes'] = 0x7fffffffffffffff;
+        (m['resources'] as Map)['peak_accelerator_bytes'] = 0x7fffffffffffffff;
+        return m;
+      },
+    );
+    final r = reader(accepted, {'license/terms.txt': terms});
+    expect(await const ModelTermsImport().run(r, (_) async => true), isNotNull);
+  });
   test('missing manifest is a verification failure, not a decline', () async {
     var called = false;
     await expectLater(

@@ -6,6 +6,9 @@ import 'package:crypto/crypto.dart';
 import 'language_roles.dart';
 import 'model_capabilities.dart';
 
+/// Largest byte count representable by a signed 64-bit JSON integer.
+const int _maxByteCount = 0x7fffffffffffffff;
+
 /// Metadata-only, read-in-place package access. Implementations must never follow
 /// paths outside the selected package root or persist provider permissions.
 abstract interface class PackageReader {
@@ -364,6 +367,14 @@ void _requireNonEmptyString(Object? value, String context) {
   if (value is! String || value.isEmpty) _invalid('Invalid $context');
 }
 
+/// `jsonDecode` turns 0.0 and integers beyond int64 into doubles; never
+/// round those into a byte count.
+void _requireByteCount(Object? value, int minimum, String context) {
+  if (value is! int || value < minimum || value > _maxByteCount) {
+    _invalid('Invalid $context');
+  }
+}
+
 void _requireStringList(
   Object? value,
   String context, {
@@ -439,9 +450,7 @@ Map<String, Map<String, dynamic>> _validateManifest(
         !_shaPattern.hasMatch(item['sha256'] as String)) {
       _invalid('Invalid file digest');
     }
-    if (item['size_bytes'] is! int || (item['size_bytes'] as int) < 1) {
-      _invalid('Invalid file size');
-    }
+    _requireByteCount(item['size_bytes'], 1, 'file size');
     files[path] = item;
   }
 
@@ -591,25 +600,22 @@ Map<String, Map<String, dynamic>> _validateManifest(
     },
     'resources',
   );
-  if (resources['storage_bytes'] is! int ||
-      (resources['storage_bytes'] as int) < 1) {
-    _invalid('Invalid storage bytes');
-  }
-  for (final key in ['peak_host_bytes', 'peak_accelerator_bytes']) {
-    if (resources[key] is! int || (resources[key] as int) < 0) {
-      _invalid('Invalid $key');
-    }
-  }
+  _requireByteCount(resources['storage_bytes'], 1, 'storage bytes');
+  _requireByteCount(resources['peak_host_bytes'], 0, 'peak_host_bytes');
+  _requireByteCount(
+    resources['peak_accelerator_bytes'],
+    0,
+    'peak_accelerator_bytes',
+  );
   if (resources['basis'] is! String ||
       !const {'declared', 'measured'}.contains(resources['basis'])) {
     _invalid('Invalid basis');
   }
   _requireNonEmptyString(resources['conditions'], 'resources.conditions');
   var total = 0;
-  const maxInt64 = 0x7fffffffffffffff;
   for (final entry in files.values) {
     final size = entry['size_bytes'] as int;
-    if (size > maxInt64 - total) _invalid('Storage total overflow');
+    if (size > _maxByteCount - total) _invalid('Storage total overflow');
     total += size;
   }
   if (total != resources['storage_bytes']) _invalid('Storage total mismatch');

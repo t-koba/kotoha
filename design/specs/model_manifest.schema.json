@@ -43,7 +43,9 @@
           },
           "size_bytes": {
             "type": "integer",
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 9223372036854775807,
+            "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
           }
         },
         "required": [
@@ -211,15 +213,21 @@
       "properties": {
         "storage_bytes": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 9223372036854775807,
+          "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
         },
         "peak_host_bytes": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 9223372036854775807,
+          "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
         },
         "peak_accelerator_bytes": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 9223372036854775807,
+          "$comment": "JSON整数構文のみ。JSON Schemaのintegerは0.0も受け付けるため、付属検査で厳密な整数型を確認する。"
         },
         "basis": {
           "enum": [

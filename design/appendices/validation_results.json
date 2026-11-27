@@ -1,6 +1,6 @@
 {
-  "checks": 102,
-  "passed": 102,
+  "checks": 115,
+  "passed": 115,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -89,6 +89,66 @@
     },
     {
       "name": "Model consent contract",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model file size 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model file size 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model file size 9223372036854775808",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage bytes 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage bytes 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model storage bytes 9223372036854775808",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model host peak bytes 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model host peak bytes 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model host peak bytes 9223372036854775808",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model accelerator peak bytes 0.0",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model accelerator peak bytes 1.5",
+      "status": "pass",
+      "case": "incompatible"
+    },
+    {
+      "name": "Model accelerator peak bytes 9223372036854775808",
       "status": "pass",
       "case": "incompatible"
     },
@@ -469,6 +529,11 @@
     },
     {
       "name": "Language validation contract",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "Byte count contract",
       "status": "pass",
       "case": "compatible"
     },
