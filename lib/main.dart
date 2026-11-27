@@ -705,7 +705,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       contentBuilder: () =>
           _translations.contains(fields) ? fields.text.text : text,
       suggestedName: 'translation.txt',
-      successNotice: strings.exportedTranslationNotice,
+      successNoticeFor: (_) => strings.exportedTranslationNotice,
+      emptyNotice: strings.emptyTranslationExportNotice,
       failureNotice: strings.exportFailureNotice,
     );
   }
@@ -927,9 +928,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       contentBuilder: () =>
           formatWorkspaceExport(_nonEmptyWorkspaceDraft() ?? draft),
       suggestedName: 'workspace.txt',
-      successNotice: tooLarge
+      successNoticeFor: (written) =>
+          utf8.encode(written).length > maxTextImportBytes
           ? strings.exportedWorkspaceTooLargeNotice
           : strings.exportedWorkspaceNotice,
+      emptyNotice: strings.emptyWorkspaceExportNotice,
       failureNotice: strings.workspaceExportFailureNotice,
     );
   }
@@ -989,9 +992,11 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   Future<void> _exportToFile({
     required String Function() contentBuilder,
     required String suggestedName,
-    required String successNotice,
+    required String Function(String content) successNoticeFor,
+    required String emptyNotice,
     required String failureNotice,
   }) async {
+    late final String content;
     try {
       final location = await FileSelectorPlatform.instance.getSaveLocation(
         acceptedTypeGroups: const [
@@ -1006,7 +1011,15 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         ),
       );
       if (!mounted || location == null) return;
-      await widget.exportText(location.path, contentBuilder());
+      content = contentBuilder();
+      if (content.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(emptyNotice)));
+        }
+        return;
+      }
+      await widget.exportText(location.path, content);
     } on Exception {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -1015,7 +1028,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(successNotice)));
+        .showSnackBar(SnackBar(content: Text(successNoticeFor(content))));
   }
 
   Future<void> _removeTranslation(_TranslationFields fields) async {

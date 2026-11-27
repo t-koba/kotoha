@@ -429,6 +429,39 @@ void main() {
     });
   });
 
+  testWidgets('workspace export grown past the cap while the picker is pending '
+      'reports a non-restorable notice', (tester) async {
+    await withPlatform(TargetPlatform.macOS, () async {
+      final writer = _Writer();
+      final picker = Completer<FileSaveLocation?>();
+      selector.pending = picker;
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      tester.widget<TextField>(field('source-text')).controller!.text =
+          '\\' * (maxTextImportBytes ~/ 2 + 1);
+      await tester.pump();
+
+      picker.complete(FileSaveLocation('/user/chosen/workspace.txt'));
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, hasLength(1));
+      expect(
+        utf8.encode(writer.writes.single.$2).length,
+        greaterThan(maxTextImportBytes),
+      );
+      expect(
+        find.text('Saved as text, but too large for Kotoha to restore.'),
+        findsOneWidget,
+      );
+      expect(find.text('Workspace exported.'), findsNothing);
+    });
+  });
+
   testWidgets(
     'translation export writes the text edited while the picker is open',
     (tester) async {
@@ -452,6 +485,34 @@ void main() {
 
         expect(writer.writes, [('/user/chosen/translation.txt', 'Edited, 🌏')]);
         expect(find.text('Translation exported.'), findsOneWidget);
+      });
+    },
+  );
+
+  testWidgets(
+    'translation cleared while the picker is pending writes nothing',
+    (tester) async {
+      await withPlatform(TargetPlatform.macOS, () async {
+        final writer = _Writer();
+        final picker = Completer<FileSaveLocation?>();
+        selector.pending = picker;
+        await openWorkspace(tester, writer);
+
+        final exportButton = field('export-translation-1');
+        await tester.ensureVisible(exportButton);
+        await tester.tap(exportButton);
+        await tester.pump();
+
+        tester.widget<TextField>(field('translation-text-1')).controller!.text =
+            '';
+        await tester.pump();
+
+        picker.complete(FileSaveLocation('/user/chosen/translation.txt'));
+        await tester.pumpAndSettle();
+
+        expect(writer.writes, isEmpty);
+        expect(find.text('Enter a translation to export.'), findsOneWidget);
+        expect(find.text('Translation exported.'), findsNothing);
       });
     },
   );
@@ -641,6 +702,45 @@ void main() {
       );
     });
   });
+
+  testWidgets(
+    'workspace export shrunk below the cap while the picker is pending '
+    'reports a normal notice',
+    (tester) async {
+      await withPlatform(TargetPlatform.windows, () async {
+        final writer = _Writer();
+        final picker = Completer<FileSaveLocation?>();
+        selector.pending = picker;
+        await fillOversizedWorkspace(tester, writer);
+
+        final exportButton = field('export-workspace');
+        await tester.ensureVisible(exportButton);
+        await tester.tap(exportButton);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Save a non-restorable export?'), findsOneWidget);
+        await tester.tap(field('workspace-export-too-large-confirm'));
+        await tester.pumpAndSettle();
+
+        tester.widget<TextField>(field('source-text')).controller!.text = '原文';
+        await tester.pump();
+
+        picker.complete(FileSaveLocation('/user/chosen/workspace.txt'));
+        await tester.pumpAndSettle();
+
+        expect(writer.writes, hasLength(1));
+        expect(
+          utf8.encode(writer.writes.single.$2).length,
+          lessThanOrEqualTo(maxTextImportBytes),
+        );
+        expect(find.text('Workspace exported.'), findsOneWidget);
+        expect(
+          find.text('Saved as text, but too large for Kotoha to restore.'),
+          findsNothing,
+        );
+      });
+    },
+  );
 
   testWidgets('uses the Japanese over-limit export disclosure', (tester) async {
     binding.platformDispatcher.localesTestValue = const [Locale('ja')];
