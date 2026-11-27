@@ -581,4 +581,104 @@ void main() {
     expect(controller.selection.isDirectional, isTrue);
     expect(controller.selection.affinity, TextAffinity.upstream);
   });
+
+  testWidgets('apply shifts a caret at the end of a lengthened value', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf('",')),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Good morning',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Good morning","b":"World"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 18);
+  });
+
+  testWidgets('apply shifts a caret at the end of a shortened value', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf('",')),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Hi',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Hi","b":"World"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 8);
+  });
+
+  testWidgets('apply accumulates shifts across two rewritten values', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf('}')),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Good morning',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-1')),
+      'Hi',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Good morning","b":"Hi"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 28);
+  });
+
+  testWidgets('apply maps a caret inside the second value with a prior shift', (
+    tester,
+  ) async {
+    final controller = selectedController(
+      twoValueSource,
+      TextSelection.collapsed(offset: twoValueSource.indexOf('World') + 1),
+    );
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(panelFor(controller));
+    await expand(tester);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-0')),
+      'Good morning',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('structured-json-field-1')),
+      'Hi',
+    );
+    await tester.tap(find.byKey(applyKey));
+    await tester.pumpAndSettle();
+
+    expect(controller.text, '{"a":"Good morning","b":"Hi"}');
+    expect(controller.selection.isCollapsed, isTrue);
+    expect(controller.selection.baseOffset, 26);
+  });
 }

@@ -33,8 +33,10 @@ enum _PanelState { valid, invalid, tooLarge, tooMany }
 
 /// Maps an old UTF-16 selection offset through source-ordered [edits].
 ///
-/// An offset in or at a replaced raw range is clamped into the rewritten
-/// value; later offsets shift by the accumulated length delta.
+/// An offset strictly inside a replaced raw range maps by relative clamped
+/// position; an offset exactly at a range end is a boundary and shifts by
+/// the cumulative delta to the new end, consistently for longer and shorter
+/// replacements.
 int _mapOffset(
   int offset,
   List<({int start, int end, int newLength})> edits,
@@ -43,7 +45,7 @@ int _mapOffset(
   var shift = 0;
   for (final edit in edits) {
     if (offset < edit.start) break;
-    if (offset <= edit.end) {
+    if (offset < edit.end) {
       final inner = offset - edit.start;
       return _clamp(
         edit.start + shift + (inner < edit.newLength ? inner : edit.newLength),
