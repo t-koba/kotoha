@@ -1,10 +1,33 @@
 import 'package:flutter/widgets.dart'
     show TextEditingController, TextSelection, TextRange;
 
+/// True when [text] contains a UTF-16 surrogate that is not part of a pair.
+/// Flutter selections and edits operate on code units, so such text would
+/// split a character if it were used as a query or inserted as a replacement.
+bool _hasUnpairedSurrogate(String text) {
+  for (var i = 0; i < text.length; i++) {
+    final unit = text.codeUnitAt(i);
+    if (unit >= 0xD800 && unit <= 0xDBFF) {
+      if (i + 1 >= text.length) return true;
+      final next = text.codeUnitAt(i + 1);
+      if (next < 0xDC00 || next > 0xDFFF) return true;
+      i++;
+    } else if (unit >= 0xDC00 && unit <= 0xDFFF) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Returns the half-open range of the first literal, case-sensitive [query]
-/// at or after [start], or null when [query] is empty or absent.
+/// at or after [start], or null when [query] is empty, malformed or absent.
 TextRange? findLiteralMatch(String text, String query, int start) {
-  if (query.isEmpty || start < 0 || start > text.length) return null;
+  if (query.isEmpty ||
+      _hasUnpairedSurrogate(query) ||
+      start < 0 ||
+      start > text.length) {
+    return null;
+  }
   final index = text.indexOf(query, start);
   if (index < 0) return null;
   return TextRange(start: index, end: index + query.length);
@@ -32,13 +55,18 @@ bool findNext(TextEditingController controller, String query) {
 }
 
 /// Replaces the selected text only when it is exactly [query]. The inserted
-/// text becomes the selection. An empty query never changes the value.
+/// text becomes the selection. Empty or unpaired-surrogate queries and
+/// replacements never change the value.
 bool replaceSelection(
   TextEditingController controller,
   String query,
   String replacement,
 ) {
-  if (query.isEmpty) return false;
+  if (query.isEmpty ||
+      _hasUnpairedSurrogate(query) ||
+      _hasUnpairedSurrogate(replacement)) {
+    return false;
+  }
   final value = controller.value;
   final selection = value.selection;
   if (selection.isCollapsed || selection.textInside(value.text) != query) {
@@ -63,14 +91,19 @@ bool replaceSelection(
 /// Returns -1 without changing [controller] when a growing replacement would
 /// make the result exceed the caller-supplied [maxOutputLength] UTF-16 code
 /// units. Shrinking replacements are allowed even when the source already
-/// exceeds that limit.
+/// exceeds that limit. Unpaired-surrogate queries and replacements are
+/// rejected without changing the value.
 int replaceAll(
   TextEditingController controller,
   String query,
   String replacement, {
   required int maxOutputLength,
 }) {
-  if (query.isEmpty) return 0;
+  if (query.isEmpty ||
+      _hasUnpairedSurrogate(query) ||
+      _hasUnpairedSurrogate(replacement)) {
+    return 0;
+  }
   final value = controller.value;
   final text = value.text;
   final caret = value.selection.end.clamp(0, text.length);

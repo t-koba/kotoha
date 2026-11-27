@@ -86,6 +86,51 @@ void main() {
     expect(controller.selection.isCollapsed, isTrue);
   });
 
+  test('unpaired surrogates never select or edit part of a character', () {
+    const text = 'A\u{1F600}B';
+    final loneHigh = String.fromCharCode(0xD83D);
+    final loneLow = String.fromCharCode(0xDE00);
+
+    for (final query in [loneHigh, loneLow]) {
+      final controller = TextEditingController(text: text);
+      controller.selection = const TextSelection.collapsed(offset: 4);
+      final before = controller.value;
+
+      expect(findNext(controller, query), isFalse);
+      expect(replaceSelection(controller, query, 'X'), isFalse);
+      expect(
+        replaceAll(
+          controller,
+          query,
+          'X',
+          maxOutputLength: replaceAllOutputLimit,
+        ),
+        0,
+      );
+      expect(controller.value, before);
+    }
+
+    for (final replacement in [loneHigh, loneLow]) {
+      final controller = TextEditingController(text: text);
+      final before = controller.value;
+      expect(replaceSelection(controller, '\u{1F600}', replacement), isFalse);
+      expect(
+        replaceAll(
+          controller,
+          '\u{1F600}',
+          replacement,
+          maxOutputLength: replaceAllOutputLimit,
+        ),
+        0,
+      );
+      expect(controller.value, before);
+    }
+
+    final wellFormed = TextEditingController(text: text);
+    expect(findNext(wellFormed, '\u{1F600}'), isTrue);
+    expect(wellFormed.selection.textInside(text), '\u{1F600}');
+  });
+
   test('replace requires the selected text to equal the query exactly', () {
     final controller = TextEditingController(text: 'cat dog cat');
     controller.selection = const TextSelection(baseOffset: 4, extentOffset: 6);
