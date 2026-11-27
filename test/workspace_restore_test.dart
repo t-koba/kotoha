@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -355,6 +356,46 @@ void main() {
       );
       expect(textOf(tester, 'source-text'), 'edited during confirmation');
       expect(textOf(tester, 'target-language-0'), 'old target');
+      expect(find.text('Workspace restored.'), findsNothing);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('an edit reverted during the picker aborts restore', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final read = Completer<XFile?>();
+      picker.pick = () => read.future;
+      await open(tester);
+      await restore(tester);
+
+      // Type and clear while the picker still holds the read open. The final
+      // draft matches the pre-picker snapshot, but the edit still raced it.
+      final source = field('source-text');
+      await tester.ensureVisible(source);
+      await tester.enterText(source, 'typed while picking');
+      await tester.pump();
+      await tester.enterText(source, '');
+      await tester.pump();
+
+      read.complete(_File(formatWorkspaceExport(restoredDraft())));
+      await tester.pumpAndSettle();
+
+      expect(textOf(tester, 'source-language'), isEmpty);
+      expect(textOf(tester, 'source-text'), isEmpty);
+      expect(
+        find.byKey(const ValueKey('restore-workspace-confirm')),
+        findsNothing,
+      );
+      expect(
+        find.text(
+          'Workspace changed during restore. Your edits were kept; choose Restore workspace again to retry.',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Workspace restored.'), findsNothing);
     } finally {
       debugDefaultTargetPlatformOverride = null;

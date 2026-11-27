@@ -157,6 +157,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   bool _allowImePersonalizedLearning = false;
   bool _appResumed = true;
   bool _importing = false;
+  // Monotonic record of user edits while a restore is in flight. A field
+  // can be typed into and reverted, so the draft alone cannot tell an
+  // editor raced the picker/read from one that never changed.
+  int _workspaceMutationCount = 0;
   // Increment only for whole-source replacements: the JSON editor uses this
   // to discard pending edits when another document has identical bytes.
   int _documentRevision = 0;
@@ -242,6 +246,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   }
 
   void _addTranslation() {
+    _workspaceMutationCount++;
     setState(() => _translations.add(_TranslationFields(() => _appResumed)));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _addTranslationFocusNode.requestFocus();
@@ -746,6 +751,26 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     final strings = AppLocalizations.of(context)!;
     setState(() => _importing = true);
     final before = _workspaceDraft();
+    final mutationsBefore = _workspaceMutationCount;
+    // Watch text, not selection/focus changes: a user who types and reverts a
+    // field during the picker/read has still edited the workspace.
+    final watched = <_DraftController>[
+      _sourceLanguage,
+      _sourceText,
+      for (final fields in _translations) ...[fields.language, fields.text],
+    ];
+    final watchers = <({_DraftController controller, VoidCallback listener})>[];
+    for (final controller in watched) {
+      var observed = controller.text;
+      void watch() {
+        if (controller.text == observed) return;
+        observed = controller.text;
+        _workspaceMutationCount++;
+      }
+
+      watchers.add((controller: controller, listener: watch));
+      controller.addListener(watch);
+    }
     try {
       final file = await pickTextDocument();
       if (!mounted || file == null) return;
@@ -757,7 +782,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       if (!mounted) return;
       final restored = parseWorkspaceExport(text);
       final editable = normalizeWorkspaceDraftForEditing(restored);
-      bool changed() => !_sameWorkspaceDraft(_workspaceDraft(), before);
+      bool changed() =>
+          _workspaceMutationCount != mutationsBefore ||
+          !_sameWorkspaceDraft(_workspaceDraft(), before);
 
       if (changed()) {
         _importNotice(strings.restoreWorkspaceChangedNotice);
@@ -852,6 +879,9 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     } on Exception {
       if (mounted) _importNotice(strings.restoreWorkspaceFailureNotice);
     } finally {
+      for (final watcher in watchers) {
+        watcher.controller.removeListener(watcher.listener);
+      }
       if (mounted) setState(() => _importing = false);
     }
   }
@@ -1024,6 +1054,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         ? _translations[currentIndex + 1]
         : null;
     final removed = _translations[currentIndex];
+    _workspaceMutationCount++;
     setState(() {
       if (identical(_selectedFindTarget, removed.text)) {
         if (_findReplaceOpen &&
