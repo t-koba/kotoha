@@ -645,6 +645,8 @@ void main() {
       final strings = AppLocalizationsEn();
       final success = find.text(strings.modelIntegritySuccess);
       expect(success, findsOneWidget);
+      final binding = find.byKey(const ValueKey('model-binding-active'));
+      expect(binding, findsOneWidget);
 
       final clearButton = find.byKey(const ValueKey('clear-model-consent'));
       await tester.ensureVisible(clearButton);
@@ -653,6 +655,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('model-session-active')), findsNothing);
+      expect(binding, findsNothing);
       expect(find.text(strings.modelConsentCleared), findsOneWidget);
       expect(success, findsNothing);
     } finally {
