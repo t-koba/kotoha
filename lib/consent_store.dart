@@ -287,6 +287,27 @@ class ConsentStore {
     return true;
   }
 
+  /// Retires the stored receipt when [report] says a declared binding changed.
+  ///
+  /// The report is decision data from [classifyConsentChange], not a fresh
+  /// inspection of current declarations. Revocation happens only when the
+  /// report requires new consent and [priorReceipt] exactly matches the stored
+  /// active record; an unknown, revoked or mismatched receipt, or an unchanged
+  /// report, leaves existing consent intact. This is record maintenance only:
+  /// no consent is granted, and no engine, file or network operation occurs.
+  bool revokeForChangedConditions({
+    required ConsentReceipt priorReceipt,
+    required ConsentChangeReport report,
+  }) {
+    if (!report.requiresNewConsent) return false;
+    final prior = _freezeReceipt(priorReceipt);
+    if (prior.revoked) return false;
+    final stored = _records[prior.id];
+    if (stored == null || stored.revoked || stored != prior) return false;
+    _records[stored.id] = stored.revoke();
+    return true;
+  }
+
   /// The unique active receipt for an exact digest and purpose match whose
   /// scope covers [capabilityId], else null. Ambiguity fails closed.
   ConsentReceipt? activeFor(

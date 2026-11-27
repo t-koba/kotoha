@@ -741,4 +741,138 @@ void main() {
       isNotNull,
     );
   });
+
+  test(
+    'changed conditions retire the stored receipt and end authorization',
+    () {
+      final store = ConsentStore()..grant(_receipt());
+      final changed = _classify(termsDigest: _otherDigest);
+
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: _receipt(),
+          report: changed,
+        ),
+        isTrue,
+      );
+      expect(store.receipts.single.revoked, isTrue);
+      expect(
+        store.activeFor(
+          _manifestDigest,
+          _termsDigest,
+          ConsentPurpose.translation,
+          'translation.text',
+        ),
+        isNull,
+      );
+      expect(
+        store.isAuthorized(
+          const EphemeralModelAuthorization(_manifestDigest, _termsDigest),
+          ConsentPurpose.translation,
+          'translation.text',
+        ),
+        isFalse,
+      );
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: _receipt(),
+          report: changed,
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  test(
+    'unchanged conditions and mismatched prior records preserve consent',
+    () {
+      final store = ConsentStore()..grant(_receipt());
+      final changed = _classify(termsDigest: _otherDigest);
+
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: _receipt(),
+          report: _classify(),
+        ),
+        isFalse,
+      );
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: _receipt(id: 'other-receipt'),
+          report: changed,
+        ),
+        isFalse,
+      );
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: _receipt(grantedAt: DateTime.utc(2030, 1, 1)),
+          report: changed,
+        ),
+        isFalse,
+      );
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: _receipt().revoke(),
+          report: changed,
+        ),
+        isFalse,
+      );
+      expect(
+        store
+            .activeFor(
+              _manifestDigest,
+              _termsDigest,
+              ConsentPurpose.translation,
+              'translation.text',
+            )
+            ?.id,
+        'receipt-1',
+      );
+      expect(store.receipts.single.revoked, isFalse);
+    },
+  );
+
+  test(
+    'changed-condition retirement affects only the exact stored receipt',
+    () {
+      final translation = _receipt(id: 'translation-receipt');
+      final ocr = _receipt(
+        id: 'ocr-receipt',
+        purpose: ConsentPurpose.ocr,
+        capabilityIds: {'ocr.text'},
+      );
+      final store = ConsentStore()
+        ..grant(translation)
+        ..grant(ocr);
+      final changed = _classify(
+        priorReceipt: translation,
+        termsDigest: _otherDigest,
+      );
+
+      expect(
+        store.revokeForChangedConditions(
+          priorReceipt: translation,
+          report: changed,
+        ),
+        isTrue,
+      );
+      expect(store.receipts.map((receipt) => receipt.id), [
+        'translation-receipt',
+        'ocr-receipt',
+      ]);
+      expect(store.receipts.first.revoked, isTrue);
+      expect(store.receipts.last.revoked, isFalse);
+      expect(
+        store
+            .activeFor(
+              _manifestDigest,
+              _termsDigest,
+              ConsentPurpose.ocr,
+              'ocr.text',
+            )
+            ?.id,
+        'ocr-receipt',
+      );
+    },
+  );
 }
