@@ -576,6 +576,7 @@ REPORT_FEATURE_NAMES = frozenset({
     "Locale parity rejects generated drift",
     "Contract identifiers",
     "HTML embedded markdown prose",
+    "HTML design prose mirror",
     "Validation report consistency",
 })
 
@@ -634,6 +635,11 @@ def html_report_rows(html: str) -> list[tuple[str, int]]:
     return rows
 
 
+def plain_prose_line(text: str) -> str:
+    """Remove inline markdown code and emphasis markers from one prose line."""
+    return re.sub(r"`([^`]+)`", r"\1", text.replace("**", ""))
+
+
 def markdown_prose(text: str) -> list[str]:
     """Normalized prose lines, excluding headings, tables and fenced commands."""
     prose = []
@@ -645,7 +651,7 @@ def markdown_prose(text: str) -> list[str]:
             continue
         if fenced or not stripped or stripped.startswith(("#", "|")):
             continue
-        prose.append(re.sub(r"`([^`]+)`", r"\1", stripped))
+        prose.append(plain_prose_line(stripped))
     return prose
 
 
@@ -654,6 +660,49 @@ def html_prose(section: str) -> list[str]:
         html_text.unescape(re.sub(r"<[^>]+>", "", match)).strip()
         for match in re.findall(r"<p\b[^>]*>(.*?)</p>", section, flags=re.DOTALL)
     ]
+
+
+def main_markdown_prose(text: str) -> list[str]:
+    """Main-body prose paragraphs, with hard line breaks joined and lists excluded."""
+    lines = text.splitlines()
+    prose: list[str] = []
+    fenced = False
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            fenced = not fenced
+            index += 1
+            continue
+        if fenced or not stripped or stripped.startswith(("#", "|")) or re.match(r"^[-*+] ", stripped):
+            index += 1
+            continue
+        parts = [plain_prose_line(stripped)]
+        while index + 1 < len(lines) and line.endswith("  ") and lines[index + 1].strip():
+            index += 1
+            line = lines[index]
+            parts.append(plain_prose_line(line.strip()))
+        prose.append("\n".join(parts))
+        index += 1
+    return prose
+
+
+def main_html_prose(html: str) -> list[str]:
+    require(html.count("<h1>ことは 設計書</h1>") == 1, "HTML design title")
+    require(html.count('<section id="appendix">') == 1, "HTML appendix boundary")
+    section = html.split("<h1>ことは 設計書</h1>", 1)[1].split('<section id="appendix">', 1)[0]
+    return html_prose(re.sub(r"<br\s*/?>\s*", "\n", section))
+
+
+def validate_html_design_prose_mirror() -> None:
+    """Keep the HTML design document's main prose an exact mirror of the markdown."""
+    expected = main_markdown_prose((ROOT / "kotoha_design.md").read_text(encoding="utf-8"))
+    rendered = main_html_prose((ROOT / "kotoha_design.html").read_text(encoding="utf-8"))
+    require(len(expected) == len(rendered),
+            f"HTML main prose count: expected {len(expected)}, rendered {len(rendered)}")
+    for index, (source, mirror) in enumerate(zip(expected, rendered)):
+        require(source == mirror, f"HTML main prose paragraph {index}")
 
 
 def validate_validation_report() -> None:
@@ -885,6 +934,7 @@ def main() -> int:
     check("Locale parity rejects generated drift", lambda case="generated": locale_parity_drift(case), True)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
     check("HTML embedded markdown prose", validate_html_embedded_markdown_prose)
+    check("HTML design prose mirror", validate_html_design_prose_mirror)
     check("Apple bundle metadata", validate_apple_bundle_metadata)
     check("Validation report consistency", validate_validation_report)
     report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}
