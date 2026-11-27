@@ -33,7 +33,8 @@ refer to the same terms file; each unique terms-role file must be represented by
 a review record. Safe relative paths, exact byte lengths and SHA-256 values, and
 strict UTF-8 are required before rendering. Every declared terms file is verified
 once before the reviewer runs; unreferenced terms-role files fail closed. Package
-ID and publisher are shown as unverified manifest claims.
+ID, publisher, and every manifest-declared language route are shown as unverified
+manifest claims.
 
 Bounds are 1 MiB for the manifest, 1 MiB per terms file, and 4 MiB total
 unique terms bytes (configurable in `ModelTermsImport`). Native reads enforce
@@ -73,7 +74,11 @@ authorization.
 
 The review UI presents every verified document with its full text, usage
 requirements, and required attributions, plus the unique verified terms-file
-count, a runtime-disabled notice, and an integrity-only notice: hashes prove only that
+count, a runtime-disabled notice, and an integrity-only notice. When the manifest
+declares capabilities, it also shows a "Declared capabilities (unverified)" section
+with one "Declared route (unverified): <source> -> <target>" line per declared route
+and an explicit disclaimer that declared capabilities are manifest claims only, not
+verified support, availability, quality or runtime authorization. Hashes prove only that
 the bytes read match the manifest; they do not prove origin, authenticity,
 signature/provenance, or license approval. The engine remains disabled.
 
