@@ -628,6 +628,28 @@ def html_report_rows(html: str) -> list[tuple[str, int]]:
     return rows
 
 
+def markdown_report_prose(text: str) -> list[str]:
+    """Summary prose lines, excluding headings, tables and fenced commands."""
+    prose = []
+    fenced = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced or not stripped or stripped.startswith(("#", "|")):
+            continue
+        prose.append(re.sub(r"`([^`]+)`", r"\1", stripped))
+    return prose
+
+
+def html_report_prose(section: str) -> list[str]:
+    return [
+        html_text.unescape(re.sub(r"<[^>]+>", "", match)).strip()
+        for match in re.findall(r"<p\b[^>]*>(.*?)</p>", section, flags=re.DOTALL)
+    ]
+
+
 def validate_validation_report() -> None:
     """Keep the report summary and its HTML viewing copy in sync with results."""
     names = [item["name"] for item in RESULTS] + ["Validation report consistency"]
@@ -642,6 +664,13 @@ def validate_validation_report() -> None:
     require(markdown_report_rows(report) == expected, "validation report summary")
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
     require(html_report_rows(html) == expected, "HTML embedded validation report")
+    label = '<p class="filepath">appendices/validation_report.md</p>'
+    require(html.count(label) == 1, "HTML report label")
+    section = html.split(label, 1)[1].split("</details>", 1)[0]
+    require(
+        html_report_prose(section) == markdown_report_prose(report),
+        "HTML embedded validation report prose",
+    )
 
 
 def locale_parity(

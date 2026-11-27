@@ -1260,7 +1260,7 @@ kotoha capabilities --json
 <p>各試験は機能ID、必要能力、言語・形式・資源の条件、入力の内容識別、使用するモデル資産、操作、観測値、受入閾値、結果、確認者を持つ。閾値は用途別の評価設計で定め、結果には測定条件を添える。</p>
 <p>試験実施は設計資料の構造検査、処理実装の契約試験、各環境の統合試験、品質・性能試験、配布物の監査に分けて記録する。</p>
 </div></details><details><summary>検査記録</summary><div class="detail-body"><p class="filepath">appendices/validation_report.md</p><h1>ことは 検査記録</h1>
-<p>設計資料に付属するデータ契約、宣言、保存構造と合成データに対して検査を実行した。</p>
+<p>設計資料に付属するデータ契約、Appleのバンドル情報、保存構造と合成データに対して検査を実行した。</p>
 <h2>実行結果</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1326,7 +1326,7 @@ kotoha capabilities --json
 <p>検査用データには、構造に適合するケースと、構造・参照・権限・許諾の条件から外れるケースを用意した。後者については、期待する検査箇所で扱いが決まることを確認した。</p>
 <p>モデル定義では、ファイル集合、容量、許諾対象、本文ハッシュの参照、方向付き言語経路、必要能力を照合した。実際のモデル資産は利用者の導入領域で管理する設計であり、この検査は合成情報を使用している。</p>
 <p>モード定義では、登録済み操作、パラメーター、型、接続、権限、循環を検査した。イベントでは、再送の冪等性、入力スナップショット、順序、確定・終端の扱いを確認した。</p>
-<p>保存構造はSQLiteで読み込み、外部キー、資料・参加者の所属、スナップショット、実行単位のイベント、削除時の参照整合を確認した。ヘッダーはCとC++のコンパイラーで構文検査した。</p>
+<p>保存構造はSQLiteで読み込み、外部キー、資料・参加者の所属、スナップショット、実行単位のイベント、削除時の参照整合を確認した。親ジョブの削除時には別プロジェクトの子ジョブを残し、その親参照を切り離す。ヘッダーはCとC++のコンパイラーで構文検査した。</p>
 <p>機能カタログの38項目は受入マトリクスと照合した。本文・ファイル名・スキーマ・宣言・例示データを横断して、名称と契約の整合を確認した。</p>
 <h2>閲覧文書</h2>
 <p>HTMLの内部参照を照合し、画面幅に応じた表示をブラウザーで確認した。文書の表示資産はファイル内に収めている。</p>
@@ -3165,6 +3165,28 @@ def html_report_rows(html: str) -&gt; list[tuple[str, int]]:
     return rows
 
 
+def markdown_report_prose(text: str) -&gt; list[str]:
+    """Summary prose lines, excluding headings, tables and fenced commands."""
+    prose = []
+    fenced = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced or not stripped or stripped.startswith(("#", "|")):
+            continue
+        prose.append(re.sub(r"`([^`]+)`", r"\1", stripped))
+    return prose
+
+
+def html_report_prose(section: str) -&gt; list[str]:
+    return [
+        html_text.unescape(re.sub(r"&lt;[^&gt;]+&gt;", "", match)).strip()
+        for match in re.findall(r"&lt;p\b[^&gt;]*&gt;(.*?)&lt;/p&gt;", section, flags=re.DOTALL)
+    ]
+
+
 def validate_validation_report() -&gt; None:
     """Keep the report summary and its HTML viewing copy in sync with results."""
     names = [item["name"] for item in RESULTS] + ["Validation report consistency"]
@@ -3179,6 +3201,13 @@ def validate_validation_report() -&gt; None:
     require(markdown_report_rows(report) == expected, "validation report summary")
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
     require(html_report_rows(html) == expected, "HTML embedded validation report")
+    label = '&lt;p class="filepath"&gt;appendices/validation_report.md&lt;/p&gt;'
+    require(html.count(label) == 1, "HTML report label")
+    section = html.split(label, 1)[1].split("&lt;/details&gt;", 1)[0]
+    require(
+        html_report_prose(section) == markdown_report_prose(report),
+        "HTML embedded validation report prose",
+    )
 
 
 def locale_parity(
