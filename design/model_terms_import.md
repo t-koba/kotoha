@@ -67,6 +67,8 @@ count, a runtime-disabled notice, and an integrity-only notice: hashes prove onl
 the bytes read match the manifest; they do not prove origin, authenticity,
 signature/provenance, or license approval. The engine remains disabled.
 
+Model-status notices use fixed localized text only: package-supplied names, paths, digests, exceptions and caller text are never echoed. Starting a new review invalidates the prior digest binding and removes any tracked model-status notice; the same flush runs before showing a newer model status. Because Flutter's public `ScaffoldMessengerState` API cannot remove one specific queued `SnackBar`, clearing a tracked status also clears the whole shared queue, so an ordinary notice queued behind it is dropped. This documented tradeoff keeps a stale acceptance or integrity message from resurfacing after its binding is gone.
+
 Native verification uses `MessageDigest.getInstance("SHA-256")`. Native reads
 and streaming hashes share the plugin's single busy slot: release, detach,
 reselect, and a missing selection stop the operation, close the stream, and
