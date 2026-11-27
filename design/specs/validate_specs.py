@@ -511,17 +511,39 @@ def validate_byte_count_contract() -> None:
     require(f"<p>{BYTE_COUNT_SENTENCE}</p>" in html, "HTML byte count contract")
 
 
+EMBEDDED_FILE_COPIES = frozenset({
+    "specs/model_manifest.schema.json",
+    "specs/mode_recipe.schema.json",
+    "specs/engine_event.schema.json",
+    "specs/dependency_policy.json",
+    "specs/kotoha_api.h",
+    "specs/storage_schema.sql",
+    "specs/validate_specs.py",
+    "examples/model_manifest.json",
+    "examples/mode_recipe.json",
+    "examples/engine_events.json",
+    "examples/operation_registry.json",
+    "appendices/validation_results.json",
+})
+
+
 def validate_html_embedded_contract_copies() -> None:
-    """Require byte-exact HTML viewing copies of the validator and its results."""
+    """Require byte-exact HTML viewing copies for every labelled file block."""
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
-    for path in ("specs/validate_specs.py", "appendices/validation_results.json"):
-        label = f'<p class="filepath">{path}</p>'
-        require(html.count(label) == 1, f"HTML embedded label: {path}")
-        block = html.split(label, 1)[1].split("</code></pre>", 1)[0]
-        require(block.startswith("<pre><code>"), f"HTML embedded block: {path}")
-        embedded = html_text.unescape(block[len("<pre><code>"):])
+    found = set()
+    for match in re.finditer(r'<p class="filepath">([^<]+)</p>', html):
+        path = match.group(1)
+        section = html[match.end():].split("</details>", 1)[0]
+        if not section.lstrip().startswith("<pre><code>"):
+            continue  # Prose and rendered tables are not file copies.
+        require(path not in found, f"duplicate HTML embedded label: {path}")
+        found.add(path)
+        block = section.lstrip()[len("<pre><code>"):].split("</code></pre>", 1)[0]
+        embedded = html_text.unescape(block)
         expected = (ROOT / path).read_text(encoding="utf-8")
         require(embedded == expected, f"HTML embedded copy drift: {path}")
+    require(EMBEDDED_FILE_COPIES <= found,
+            f"missing HTML embedded copies: {sorted(EMBEDDED_FILE_COPIES - found)}")
 
 
 REPORT_CATEGORIES = (

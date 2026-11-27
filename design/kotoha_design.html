@@ -1460,7 +1460,7 @@ python specs/validate_specs.py
           "path": {
             "type": "string",
             "minLength": 1,
-            "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+            "description": "ASCII-onlyの相対パス。区切り・大文字小文字・正規化・OS上の安全性を取り込み時に検査する。"
           },
           "role": {
             "enum": [
@@ -1697,7 +1697,7 @@ python specs/validate_specs.py
           "text_file": {
             "type": "string",
             "minLength": 1,
-            "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+            "description": "ASCII-onlyの相対パス。区切り・大文字小文字・正規化・OS上の安全性を取り込み時に検査する。"
           },
           "text_sha256": {
             "type": "string",
@@ -1727,7 +1727,7 @@ python specs/validate_specs.py
             "items": {
               "type": "string",
               "minLength": 1,
-              "description": "管理領域からの相対パス。区切り・正規化・OS上の安全性を取り込み時に検査する。"
+              "description": "ASCII-onlyの相対パス。区切り・大文字小文字・正規化・OS上の安全性を取り込み時に検査する。"
             },
             "minItems": 1,
             "uniqueItems": true
@@ -2497,7 +2497,8 @@ CREATE TABLE translation_memory (
 CREATE TABLE jobs (
  job_id TEXT PRIMARY KEY,
  project_id TEXT REFERENCES projects(project_id) ON DELETE CASCADE,
- parent_job_id TEXT REFERENCES jobs(job_id),
+ -- Parent links record lineage; deleting a parent detaches surviving children, not their jobs.
+ parent_job_id TEXT REFERENCES jobs(job_id) ON DELETE SET NULL,
  state TEXT NOT NULL,
  input_fingerprint TEXT NOT NULL,
  plan_json TEXT NOT NULL,
@@ -2531,6 +2532,7 @@ CREATE TABLE evaluation_profiles (
 );
 CREATE INDEX segments_order_idx ON segments(project_id,asset_id,ordinal);
 CREATE INDEX translations_target_idx ON translations(snapshot_id,target_language);
+CREATE INDEX jobs_parent_idx ON jobs(parent_job_id);
 CREATE INDEX jobs_state_idx ON jobs(state,updated_at);
 COMMIT;
 </code></pre></div></details><details><summary>検査スクリプト</summary><div class="detail-body"><p class="filepath">specs/validate_specs.py</p><pre><code>#!/usr/bin/env python3
@@ -3046,17 +3048,39 @@ def validate_byte_count_contract() -&gt; None:
     require(f"&lt;p&gt;{BYTE_COUNT_SENTENCE}&lt;/p&gt;" in html, "HTML byte count contract")
 
 
+EMBEDDED_FILE_COPIES = frozenset({
+    "specs/model_manifest.schema.json",
+    "specs/mode_recipe.schema.json",
+    "specs/engine_event.schema.json",
+    "specs/dependency_policy.json",
+    "specs/kotoha_api.h",
+    "specs/storage_schema.sql",
+    "specs/validate_specs.py",
+    "examples/model_manifest.json",
+    "examples/mode_recipe.json",
+    "examples/engine_events.json",
+    "examples/operation_registry.json",
+    "appendices/validation_results.json",
+})
+
+
 def validate_html_embedded_contract_copies() -&gt; None:
-    """Require byte-exact HTML viewing copies of the validator and its results."""
+    """Require byte-exact HTML viewing copies for every labelled file block."""
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
-    for path in ("specs/validate_specs.py", "appendices/validation_results.json"):
-        label = f'&lt;p class="filepath"&gt;{path}&lt;/p&gt;'
-        require(html.count(label) == 1, f"HTML embedded label: {path}")
-        block = html.split(label, 1)[1].split("&lt;/code&gt;&lt;/pre&gt;", 1)[0]
-        require(block.startswith("&lt;pre&gt;&lt;code&gt;"), f"HTML embedded block: {path}")
-        embedded = html_text.unescape(block[len("&lt;pre&gt;&lt;code&gt;"):])
+    found = set()
+    for match in re.finditer(r'&lt;p class="filepath"&gt;([^&lt;]+)&lt;/p&gt;', html):
+        path = match.group(1)
+        section = html[match.end():].split("&lt;/details&gt;", 1)[0]
+        if not section.lstrip().startswith("&lt;pre&gt;&lt;code&gt;"):
+            continue  # Prose and rendered tables are not file copies.
+        require(path not in found, f"duplicate HTML embedded label: {path}")
+        found.add(path)
+        block = section.lstrip()[len("&lt;pre&gt;&lt;code&gt;"):].split("&lt;/code&gt;&lt;/pre&gt;", 1)[0]
+        embedded = html_text.unescape(block)
         expected = (ROOT / path).read_text(encoding="utf-8")
         require(embedded == expected, f"HTML embedded copy drift: {path}")
+    require(EMBEDDED_FILE_COPIES &lt;= found,
+            f"missing HTML embedded copies: {sorted(EMBEDDED_FILE_COPIES - found)}")
 
 
 REPORT_CATEGORIES = (
