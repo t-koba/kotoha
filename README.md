@@ -111,8 +111,12 @@ manual dispatch. The `mizu` integration branch is excluded from automatic push
 runs; reviewed `mizu` publications use explicit exact-publication CI requests.
 The workflow also builds debug apps on Android, iOS/macOS, and Windows runners.
 A separate, path-scoped `Native engine probe` workflow runs on reviewed `mizu`
-publications with changed probe inputs; it builds an isolated Windows CPU candidate,
-not product inference. See `design/archive/engine_probe.md` for its evidence and gates.
+publications with changed probe inputs. It builds an isolated Windows CPU candidate
+and runs an Android API 35 x86_64 owned-emulator feasibility probe; neither is product
+inference. The Android ABI is a developer probe, not a selected product build or
+physical-device support. Configuring a job is not evidence that a run succeeded or
+that an engine was adopted. See `design/archive/engine_probe.md` for its evidence
+and gates.
 On the same pinned mobile profiles used for privacy callback tests, CI runs the
 native privacy and import checks that can pass on hosted runners. Flutter widget
 tests cover localized language-field semantics, bidirectional entry and focus,
