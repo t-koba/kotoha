@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +13,7 @@ import 'package:kotoha/workspace_export.dart';
 
 class _Selector extends FileSelectorPlatform {
   FileSaveLocation? result;
+  Completer<FileSaveLocation?>? pending;
   int calls = 0;
   List<XTypeGroup>? acceptedTypeGroups;
   SaveDialogOptions? options;
@@ -26,7 +28,8 @@ class _Selector extends FileSelectorPlatform {
     calls++;
     this.acceptedTypeGroups = acceptedTypeGroups;
     this.options = options;
-    return result;
+    final pendingPicker = pending;
+    return pendingPicker != null ? pendingPicker.future : result;
   }
 }
 
@@ -388,6 +391,70 @@ void main() {
       });
     });
   }
+
+  testWidgets('workspace export writes text edited while the picker is open', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.macOS, () async {
+      final writer = _Writer();
+      final picker = Completer<FileSaveLocation?>();
+      selector.pending = picker;
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pump();
+
+      await tester.enterText(field('source-text'), 'Picker 中');
+      await tester.pump();
+      expect(writer.writes, isEmpty);
+
+      picker.complete(FileSaveLocation('/user/chosen/workspace.txt'));
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, [
+        (
+          '/user/chosen/workspace.txt',
+          formatWorkspaceExport(
+            TextWorkspaceDraft(
+              sourceLanguage: 'ja',
+              sourceText: 'Picker 中',
+              translations: _draft().translations,
+            ),
+          ),
+        ),
+      ]);
+      expect(find.text('Workspace exported.'), findsOneWidget);
+    });
+  });
+
+  testWidgets(
+    'translation export writes the text edited while the picker is open',
+    (tester) async {
+      await withPlatform(TargetPlatform.macOS, () async {
+        final writer = _Writer();
+        final picker = Completer<FileSaveLocation?>();
+        selector.pending = picker;
+        await openWorkspace(tester, writer);
+
+        final exportButton = field('export-translation-1');
+        await tester.ensureVisible(exportButton);
+        await tester.tap(exportButton);
+        await tester.pump();
+
+        await tester.enterText(field('translation-text-1'), 'Edited, 🌏');
+        await tester.pump();
+        expect(writer.writes, isEmpty);
+
+        picker.complete(FileSaveLocation('/user/chosen/translation.txt'));
+        await tester.pumpAndSettle();
+
+        expect(writer.writes, [('/user/chosen/translation.txt', 'Edited, 🌏')]);
+        expect(find.text('Translation exported.'), findsOneWidget);
+      });
+    },
+  );
 
   testWidgets('cancelling the picker writes nothing and keeps drafts', (
     tester,

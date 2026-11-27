@@ -702,7 +702,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
     }
 
     await _exportToFile(
-      content: text,
+      contentBuilder: () =>
+          _translations.contains(fields) ? fields.text.text : text,
       suggestedName: 'translation.txt',
       successNotice: strings.exportedTranslationNotice,
       failureNotice: strings.exportFailureNotice,
@@ -923,7 +924,8 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
       if (!mounted || saveAnyway != true) return;
     }
     await _exportToFile(
-      content: content,
+      contentBuilder: () =>
+          formatWorkspaceExport(_nonEmptyWorkspaceDraft() ?? draft),
       suggestedName: 'workspace.txt',
       successNotice: tooLarge
           ? strings.exportedWorkspaceTooLargeNotice
@@ -985,7 +987,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
   // One owner for the save-location, write and notice contract shared by the
   // single-translation and whole-workspace exports.
   Future<void> _exportToFile({
-    required String content,
+    required String Function() contentBuilder,
     required String suggestedName,
     required String successNotice,
     required String failureNotice,
@@ -1004,7 +1006,7 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         ),
       );
       if (!mounted || location == null) return;
-      await widget.exportText(location.path, content);
+      await widget.exportText(location.path, contentBuilder());
     } on Exception {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
