@@ -524,6 +524,104 @@ def validate_html_embedded_contract_copies() -> None:
         require(embedded == expected, f"HTML embedded copy drift: {path}")
 
 
+REPORT_CATEGORIES = (
+    "JSON Schemaの構造",
+    "モデル資産・許諾・言語経路",
+    "モードと処理グラフ",
+    "イベントの順序と整合",
+    "依存の許諾条件",
+    "保存構造・参照・削除",
+    "C・C++のヘッダー読込み",
+    "機能・契約の対応",
+    "Appleのバンドル情報",
+)
+REPORT_LANGUAGE_NAMES = frozenset({
+    "Unicode asset path",
+    "Private language syntax",
+    "Language validation contract",
+    "Engine event language contract",
+})
+REPORT_FEATURE_NAMES = frozenset({
+    "Feature traceability",
+    "HTML acceptance mirror",
+    "HTML acceptance mirror drift detection",
+    "Byte count contract",
+    "HTML embedded contract copies",
+    "Locale parity",
+    "Locale parity rejects token drift",
+    "Locale parity rejects declaration drift",
+    "Locale parity rejects metadata drift",
+    "Locale parity rejects generated drift",
+    "Contract identifiers",
+    "Validation report consistency",
+})
+
+
+def report_category(name: str) -> str | None:
+    """Classify a generated check name into the report's summary categories."""
+    if name.startswith("Schema:"):
+        return "JSON Schemaの構造"
+    if name.startswith("Model ") or name in REPORT_LANGUAGE_NAMES:
+        return "モデル資産・許諾・言語経路"
+    if name.startswith("Mode "):
+        return "モードと処理グラフ"
+    if name.startswith("Events "):
+        return "イベントの順序と整合"
+    if name.startswith("License"):
+        return "依存の許諾条件"
+    if name.startswith("SQL "):
+        return "保存構造・参照・削除"
+    if name in ("C header", "C++ header"):
+        return "C・C++のヘッダー読込み"
+    if name in REPORT_FEATURE_NAMES:
+        return "機能・契約の対応"
+    if name == "Apple bundle metadata":
+        return "Appleのバンドル情報"
+    return None
+
+
+def markdown_report_rows(text: str) -> list[tuple[str, int]]:
+    rows = []
+    for match in re.finditer(
+        r"^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|\s*通過\s*\|$",
+        text,
+        flags=re.MULTILINE,
+    ):
+        rows.append((match.group(1).strip(), int(match.group(2))))
+    return rows
+
+
+def html_report_rows(html: str) -> list[tuple[str, int]]:
+    label = '<p class="filepath">appendices/validation_report.md</p>'
+    require(html.count(label) == 1, "HTML report label")
+    section = html.split(label, 1)[1].split("</details>", 1)[0]
+    rows = []
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", section, flags=re.DOTALL):
+        cells = [
+            html_text.unescape(re.sub(r"<[^>]+>", "", cell)).strip()
+            for cell in re.findall(r"<td\b[^>]*>(.*?)</td>", row, flags=re.DOTALL)
+        ]
+        if len(cells) == 3 and cells[1].isdigit() and cells[2] == "通過":
+            rows.append((cells[0], int(cells[1])))
+    return rows
+
+
+def validate_validation_report() -> None:
+    """Keep the report summary and its HTML viewing copy in sync with results."""
+    names = [item["name"] for item in RESULTS] + ["Validation report consistency"]
+    counts = {category: 0 for category in REPORT_CATEGORIES}
+    for name in names:
+        category = report_category(name)
+        require(category is not None, f"uncategorised check: {name}")
+        counts[category] += 1
+    expected = [(category, counts[category]) for category in REPORT_CATEGORIES]
+    expected.append(("合計", len(names)))
+    report = (ROOT / "appendices/validation_report.md").read_text(encoding="utf-8")
+    require(markdown_report_rows(report) == expected, "validation report summary")
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    require(html_report_rows(html) == expected, "HTML embedded validation report")
+
+
 def locale_parity(
     english: dict[str, Any],
     japanese: dict[str, Any],
@@ -719,6 +817,7 @@ def main() -> int:
     check("Locale parity rejects generated drift", lambda case="generated": locale_parity_drift(case), True)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
     check("Apple bundle metadata", validate_apple_bundle_metadata)
+    check("Validation report consistency", validate_validation_report)
     report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}
     (ROOT/"appendices/validation_results.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n")
     print(json.dumps({"checks":len(RESULTS),"passed":len(RESULTS)},ensure_ascii=False))
