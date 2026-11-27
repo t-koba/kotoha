@@ -143,7 +143,10 @@ class ExecutionEventGate {
   /// Whether a terminal event has been admitted by this gate.
   bool get terminalApplied => _terminal != null;
 
-  /// Decides whether [event] may be admitted, without applying any effect.
+  /// Decides whether [event] may be admitted and records that decision.
+  ///
+  /// An accepted event advances this gate's admission state; no content,
+  /// model, job, storage or display state is changed here.
   ///
   /// Identity is checked first, so changed input snapshots, jobs and
   /// executions are all stale. After a terminal, only the exact admitted
