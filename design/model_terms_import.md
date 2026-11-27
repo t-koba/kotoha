@@ -54,11 +54,16 @@ Dart, stored, cached, bundled, downloaded, or handed to an engine. A hash
 matching the manifest is not proof of origin, authenticity, or licensing, and
 this check adds no runtime, platform-support, quality, or adoption claim.
 
-Consent is session-only: acceptance returns only an in-memory SHA-256 binding
-for manifest and terms, held as `EphemeralModelAuthorization` in volatile
-widget state, cleared on a new, declined, or failed review and on disposal, and
-never persisted. The temporary directory grant is released after review; that
-does not clear the digest binding for this app session. A successful
+Consent is session-only: acceptance returns an in-memory
+`EphemeralModelAuthorization` held in volatile widget state, cleared on a new,
+declined, or failed review and on disposal, and never persisted. It carries the
+SHA-256 manifest and terms digests, the read-only manifest-declared non-terms
+file metadata in manifest order, and a read-only snapshot of the manifest-DECLARED
+capabilities. That capability snapshot is declaration-only: never verified
+support, availability, licensing or runtime authorization; it exists so
+declaration-level eligibility queries can be made without re-reading the package.
+The temporary directory grant is released after review; that does not clear the
+binding for this app session. A successful
 “Verify model files” check also installs and activates that digest binding in a
 volatile in-memory `ModelRegistry`; no bytes are copied or persisted and no
 engine or runtime is enabled. A new review, consent withdrawal while the binding
