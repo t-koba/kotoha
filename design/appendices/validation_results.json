@@ -1,6 +1,6 @@
 {
-  "checks": 117,
-  "passed": 117,
+  "checks": 118,
+  "passed": 118,
   "results": [
     {
       "name": "Schema: model_manifest",
@@ -574,6 +574,11 @@
     },
     {
       "name": "Contract identifiers",
+      "status": "pass",
+      "case": "compatible"
+    },
+    {
+      "name": "HTML embedded markdown prose",
       "status": "pass",
       "case": "compatible"
     },

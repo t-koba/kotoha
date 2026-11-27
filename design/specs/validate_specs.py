@@ -575,6 +575,7 @@ REPORT_FEATURE_NAMES = frozenset({
     "Locale parity rejects metadata drift",
     "Locale parity rejects generated drift",
     "Contract identifiers",
+    "HTML embedded markdown prose",
     "Validation report consistency",
 })
 
@@ -613,10 +614,15 @@ def markdown_report_rows(text: str) -> list[tuple[str, int]]:
     return rows
 
 
+def html_markdown_section(html: str, path: str) -> str:
+    """Return one labelled markdown viewing section from the HTML mirror."""
+    label = f'<p class="filepath">{path}</p>'
+    require(html.count(label) == 1, f"HTML markdown label: {path}")
+    return html.split(label, 1)[1].split("</details>", 1)[0]
+
+
 def html_report_rows(html: str) -> list[tuple[str, int]]:
-    label = '<p class="filepath">appendices/validation_report.md</p>'
-    require(html.count(label) == 1, "HTML report label")
-    section = html.split(label, 1)[1].split("</details>", 1)[0]
+    section = html_markdown_section(html, "appendices/validation_report.md")
     rows = []
     for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", section, flags=re.DOTALL):
         cells = [
@@ -628,8 +634,8 @@ def html_report_rows(html: str) -> list[tuple[str, int]]:
     return rows
 
 
-def markdown_report_prose(text: str) -> list[str]:
-    """Summary prose lines, excluding headings, tables and fenced commands."""
+def markdown_prose(text: str) -> list[str]:
+    """Normalized prose lines, excluding headings, tables and fenced commands."""
     prose = []
     fenced = False
     for line in text.splitlines():
@@ -643,7 +649,7 @@ def markdown_report_prose(text: str) -> list[str]:
     return prose
 
 
-def html_report_prose(section: str) -> list[str]:
+def html_prose(section: str) -> list[str]:
     return [
         html_text.unescape(re.sub(r"<[^>]+>", "", match)).strip()
         for match in re.findall(r"<p\b[^>]*>(.*?)</p>", section, flags=re.DOTALL)
@@ -664,13 +670,24 @@ def validate_validation_report() -> None:
     require(markdown_report_rows(report) == expected, "validation report summary")
     html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
     require(html_report_rows(html) == expected, "HTML embedded validation report")
-    label = '<p class="filepath">appendices/validation_report.md</p>'
-    require(html.count(label) == 1, "HTML report label")
-    section = html.split(label, 1)[1].split("</details>", 1)[0]
-    require(
-        html_report_prose(section) == markdown_report_prose(report),
-        "HTML embedded validation report prose",
-    )
+
+
+RENDERED_MARKDOWN_LABELS = (
+    "appendices/acceptance_matrix.md",
+    "appendices/validation_report.md",
+    "specs/README.md",
+)
+
+
+def validate_html_embedded_markdown_prose() -> None:
+    """Keep every rendered markdown viewing copy in sync with its source."""
+    html = (ROOT / "kotoha_design.html").read_text(encoding="utf-8")
+    for path in RENDERED_MARKDOWN_LABELS:
+        require(
+            html_prose(html_markdown_section(html, path))
+            == markdown_prose((ROOT / path).read_text(encoding="utf-8")),
+            f"HTML embedded markdown prose drift: {path}",
+        )
 
 
 def locale_parity(
@@ -867,6 +884,7 @@ def main() -> int:
     check("Locale parity rejects metadata drift", lambda case="metadata": locale_parity_drift(case), True)
     check("Locale parity rejects generated drift", lambda case="generated": locale_parity_drift(case), True)
     check("Contract identifiers",lambda: require(all(re.fullmatch(r"urn:kotoha:[a-z-]+",s["$id"]) for s in SCHEMAS.values()),"contract names"))
+    check("HTML embedded markdown prose", validate_html_embedded_markdown_prose)
     check("Apple bundle metadata", validate_apple_bundle_metadata)
     check("Validation report consistency", validate_validation_report)
     report={"checks":len(RESULTS),"passed":len(RESULTS),"results":RESULTS,"scope":"design_contracts_apple_bundle_metadata_and_synthetic_fixtures"}
