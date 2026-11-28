@@ -17,13 +17,22 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   // Test policy default, overridable in the Runner scheme/build setting.
   private var timeout: TimeInterval = 10
 
-  // The hosted simulator did not always expose the Files picker's Cancel
-  // control as an XCUIButton (CI 46138618554: cancelButtons=0 while
-  // cancelElements=1). Match the exact label across element types, then require
-  // hittability before tapping; presentation, Cancel and draft assertions stay.
+  // The hosted simulator has shown two Cancel shapes: CI 46138618554 reported
+  // cancelButtons=0/cancelElements=1, and CI 46149853340 reported
+  // cancelButtons=1/cancelElements=2 with the first candidate non-hittable.
+  // Match the exact label across element types, enumerate the bounded matches
+  // and return the first hittable one; if none is hittable, return the first
+  // candidate so the existing hittability assertion still fails with diagnostics.
+  // Candidate resolution never weakens the presentation, Cancel or draft
+  // assertions, and makes no device or provider claim.
   private var pickerCancel: XCUIElement {
-    app.descendants(matching: .any).matching(
-      NSPredicate(format: "label == %@", "Cancel")).firstMatch
+    let candidates = app.descendants(matching: .any).matching(
+      NSPredicate(format: "label == %@", "Cancel"))
+    for index in 0..<candidates.count {
+      let candidate = candidates.element(boundBy: index)
+      if candidate.isHittable { return candidate }
+    }
+    return candidates.firstMatch
   }
 
   override func setUpWithError() throws {
