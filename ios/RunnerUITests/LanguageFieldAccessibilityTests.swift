@@ -81,69 +81,122 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     let source = reveal("source-text")
     source.tap()
     app.typeText("unsaved source")
-    for round in 1...2 {
-      // A scroll/locale rebuild can replace the native button node between
-      // discovery and tap. Re-resolve it on each bounded attempt; the system
-      // picker's Cancel button remains the presentation assertion.
-      // A disabled importer can be a pending presentation, not a missed tap.
-      // The hosted arm64 runner can need longer than the shared element budget
-      // to initialize UIKit's Files picker (CI 45418969661, job 138535780162:
-      // an enabled importer was tapped, but no Cancel appeared within 10 s).
-      // Give only this OS presentation a bounded 30 s floor; the presentation,
-      // Cancel and draft assertions stay unchanged.
-      let pickerTimeout = max(timeout, 30)
-      var presented = false
-      var diagnostics = ""
-      for attempt in 1...2 {
-        let importButton = app.buttons["Import text or Markdown"]
-        if !importButton.isHittable { app.swipeDown() }
-        XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
-        let enabledBeforeTap = importButton.isEnabled
-        let hittableBeforeTap = importButton.isHittable
-        let beforeTap = "enabled=\(enabledBeforeTap), hittable=\(hittableBeforeTap)"
-        if enabledBeforeTap && hittableBeforeTap { importButton.tap() }
-        // Always allow the full wait: a presentation may already be opening.
-        let cancel = pickerCancel
-        let didPresent = cancel.waitForExistence(timeout: pickerTimeout)
-        // Collect bounded state before deciding on a re-tap: a disabled importer
-        // means a re-tap would auto-fail and hide why no Cancel was observed.
-        // Bounded state only: never log picker contents, UI trees or draft text.
-        let importerExists = importButton.exists
-        let errorNotice = app.descendants(matching: .any).matching(NSPredicate(
-          format: "label == %@",
-          "Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.")).firstMatch.exists
-        diagnostics = "tapAttempt=\(attempt), beforeTap=[\(beforeTap)], "
-          + "tapped=\(enabledBeforeTap && hittableBeforeTap), "
-          + "importerExists=\(importerExists), "
-          + "enabled=\(importerExists && importButton.isEnabled), "
-          + "hittable=\(importerExists && importButton.isHittable), errorNotice=\(errorNotice), "
-          + "alerts=\(app.alerts.count), cancelButtons=\(app.buttons.matching(identifier: "Cancel").count), "
-          + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count), "
-          + "cancelHittable=\(cancel.isHittable)"
-        if didPresent {
-          presented = true
-          break
-        }
-        // Only an enabled, hittable importer is eligible for the bounded re-tap.
-        guard importerExists, importButton.isEnabled, importButton.isHittable else { break }
-      }
-      guard presented else {
-        // The two rounds are intentional: the first disabled-importer state can
-        // be a pending OS presentation. Keep the full presentation, Cancel and
-        // draft assertions; only let the already-bounded second round run.
-        if round < 2 { continue }
-        XCTFail("System document picker must be presented; round=\(round), \(diagnostics)")
-        return
-      }
-      let cancel = pickerCancel
-      XCTAssertTrue(cancel.isHittable, "System document picker Cancel control must be hittable")
-      cancel.tap()
-      // Keep verification independent of the editor's current scroll position.
-      // If XCTest has dropped the offscreen field node, reveal it before the
-      // unchanged exact draft-value assertion.
-      if !field("source-text").exists { _ = reveal("source-text") }
-      assertField("source-text", label: "Source text", value: "unsaved source")
+    // Two explicit transactions: the first open is not a rehearsal. Every call
+    // keeps its own presentation, Cancel hittability and exact draft assertions;
+    // with continueAfterFailure = false a failed first call stops the test.
+    presentCancelAndAssertDraftPreserved("unsaved source", transaction: 1)
+    presentCancelAndAssertDraftPreserved("unsaved source", transaction: 2)
+  }
+
+  // Bounded, categorized XCUI observations of native-side state: what XCTest can
+  // see on the app side, not the importer adapter's internals. No picker
+  // contents, accessibility trees, draft text or user data are recorded.
+  private func importDiagnostics(
+    transaction: Int,
+    attempt: Int? = nil,
+    request: String = "pending",
+    presentation: String = "pending",
+    dismissal: String = "pending",
+    cancelLookup: String = "pending",
+    signals: String = "pending"
+  ) -> String {
+    let attemptText = attempt.map { ", attempt=\($0)" } ?? ""
+    return "transaction=\(transaction)\(attemptText), nativeRequest[\(request)], "
+      + "nativePresentation[\(presentation)], nativeDismissal[\(dismissal)], "
+      + "xcuiCancel[\(cancelLookup)], xcuiSignals[\(signals)]"
+  }
+
+  // One complete presentation/cancel/draft transaction. The bounded re-tap only
+  // covers button discovery/presentation; it never starts another transaction.
+  private func presentCancelAndAssertDraftPreserved(_ expected: String, transaction: Int) {
+    let sourceID = "source-text"
+    let sourceLabel = "Source text"
+    let importID = "Import text or Markdown"
+
+    // A canceled picker can leave the editor scrolled or without a focused
+    // native node. Reveal/focus only when needed; the caller typed the draft
+    // once and this helper never re-enters it.
+    let editable = field(sourceID)
+    if !editable.exists || !editable.isHittable || !editable.hasKeyboardFocus {
+      _ = focusField(sourceID)
     }
+
+    // A scroll/locale rebuild can replace the native button node between
+    // discovery and tap. Re-resolve it on each bounded attempt; the system
+    // picker's Cancel control remains the presentation assertion.
+    // A disabled importer can be a pending presentation, not a missed tap.
+    // The hosted arm64 runner can need longer than the shared element budget
+    // to initialize UIKit's Files picker (CI 45418969661, job 138535780162:
+    // an enabled importer was tapped, but no Cancel appeared within 10 s).
+    // Keep the 30 s floor; the presentation, Cancel and draft assertions stay.
+    let pickerTimeout = max(timeout, 30)
+    var presented = false
+    var lastAttempt = 0
+    var request = "pending"
+    var presentation = "pending"
+    var cancelLookup = "pending"
+    var signals = "pending"
+    for attempt in 1...2 {
+      lastAttempt = attempt
+      let importButton = app.buttons[importID]
+      if !importButton.isHittable { app.swipeDown() }
+      XCTAssertTrue(importButton.waitForExistence(timeout: timeout))
+      let requestExists = importButton.exists
+      let requestEnabled = requestExists && importButton.isEnabled
+      let requestHittable = requestExists && importButton.isHittable
+      let tapped = requestEnabled && requestHittable
+      if tapped { importButton.tap() }
+      // Always allow the full wait: a presentation may already be opening.
+      let cancel = pickerCancel
+      let didPresent = cancel.waitForExistence(timeout: pickerTimeout)
+      // Bounded state read before deciding on a re-tap: a disabled importer
+      // means a re-tap would auto-fail and hide why no Cancel was observed.
+      let cancelExists = cancel.exists
+      let cancelHittable = cancel.isHittable
+      let alertCount = app.alerts.count
+      let errorNotice = app.descendants(matching: .any).matching(NSPredicate(
+        format: "label == %@",
+        "Could not import this document. Choose a UTF-8 .txt, .md, or .markdown file.")).firstMatch.exists
+      request = "exists=\(requestExists), enabled=\(requestEnabled), "
+        + "hittable=\(requestHittable), tapped=\(tapped)"
+      presentation = "wait=\(didPresent), exists=\(cancelExists), hittable=\(cancelHittable)"
+      cancelLookup = "cancelButtons=\(app.buttons.matching(identifier: "Cancel").count), "
+        + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count), "
+        + "cancelHittable=\(cancelHittable)"
+      signals = "alerts=\(alertCount), errorNotice=\(errorNotice)"
+      if didPresent { presented = true; break }
+      // Only an enabled, hittable importer is eligible for the bounded re-tap.
+      guard requestExists, importButton.isEnabled, importButton.isHittable else { break }
+    }
+    guard presented else {
+      XCTFail("System document picker must be presented; "
+        + importDiagnostics(transaction: transaction, attempt: lastAttempt, request: request,
+                            presentation: presentation, cancelLookup: cancelLookup,
+                            signals: signals))
+      return
+    }
+    let cancel = pickerCancel
+    XCTAssertTrue(cancel.isHittable,
+                  "System document picker Cancel control must be hittable; "
+                    + importDiagnostics(transaction: transaction, attempt: lastAttempt, request: request,
+                                        presentation: presentation, cancelLookup: cancelLookup,
+                                        signals: signals))
+    cancel.tap()
+    // Keep verification independent of the editor's current scroll position.
+    if !field(sourceID).exists { _ = reveal(sourceID) }
+    // XCUI snapshot after dismissal: importer idle state and the immediate exact
+    // value observation. assertField still owns the bounded exact-value check.
+    let settled = field(sourceID)
+    let importer = app.buttons[importID]
+    let importerExists = importer.exists
+    let dismissal = "importerExists=\(importerExists), "
+      + "importerEnabled=\(importerExists && importer.isEnabled), "
+      + "importerHittable=\(importerExists && importer.isHittable), "
+      + "draftMatches=\(matchesField(settled, label: sourceLabel, expected: expected))"
+    assertField(sourceID, label: sourceLabel, value: expected,
+                context: importDiagnostics(transaction: transaction, attempt: lastAttempt, request: request,
+                                           presentation: presentation, dismissal: dismissal,
+                                           cancelLookup: cancelLookup, signals: signals))
   }
 
   // Only the Japanese tests switch locale through the UI; English tests use the
@@ -293,7 +346,7 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
     }
   }
 
-  private func assertField(_ id: String, label: String, value: String) {
+  private func assertField(_ id: String, label: String, value: String, context: String = "") {
     let state = NSPredicate { [self] _, _ in
       // Resolve the identity on each poll; Flutter can replace its semantics node
       // when the field direction changes from RTL to LTR.
@@ -326,7 +379,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
           + "Post-wait observation: exists=\(current.exists), enabled=\(current.isEnabled), "
           + "label=\(current.label), valueType=\(valueType), "
           + "scalarPrefix=[\(scalarPrefix)], scalarCount=\(scalarCount), "
-          + "fieldKeyboardFocus=\(focusedField.exists), keyboardVisible=\(keyboardVisible)")
+          + "fieldKeyboardFocus=\(focusedField.exists), keyboardVisible=\(keyboardVisible)"
+          + (context.isEmpty ? "" : ", \(context)"))
       return
     }
   }
