@@ -144,6 +144,74 @@ void main() {
       expect(tag.script, 'Hant');
       expect(tag.region, 'TW');
     });
+
+    test('accepts fixed grandfathered tags case-insensitively, unmapped', () {
+      const fixed = <String>{
+        'en-GB-oed',
+        'i-ami',
+        'i-bnn',
+        'i-default',
+        'i-enochian',
+        'i-hak',
+        'i-klingon',
+        'i-lux',
+        'i-mingo',
+        'i-navajo',
+        'i-pwn',
+        'i-tao',
+        'i-tay',
+        'i-tsu',
+        'sgn-BE-FR',
+        'sgn-BE-NL',
+        'sgn-CH-DE',
+        'art-lojban',
+        'cel-gaulish',
+        'no-bok',
+        'no-nyn',
+        'zh-guoyu',
+        'zh-hakka',
+        'zh-min',
+        'zh-min-nan',
+        'zh-xiang',
+      };
+      for (final spelling in fixed) {
+        for (final input in <String>[
+          spelling,
+          spelling.toLowerCase(),
+          spelling.toUpperCase(),
+          '  ${spelling.toLowerCase()}  ',
+        ]) {
+          final tag = LanguageTag.parse(input);
+          expect(tag, isNotNull, reason: input);
+          expect(tag!.canonical, spelling, reason: input);
+          expect(tag.toString(), spelling, reason: input);
+          expect(tag.subtags, spelling.split('-'), reason: input);
+          expect(
+            tag.language,
+            spelling.split('-').first.toLowerCase(),
+            reason: input,
+          );
+        }
+      }
+    });
+
+    test('rejects malformed variants and suffixes on grandfathered tags', () {
+      for (final bad in <String>[
+        'i-klingon-x-private',
+        'I-KLINGON-X-PRIVATE',
+        'i-klingon-',
+        'i-klingon-extra',
+        'i-klingon-1996',
+        'i-klingson',
+        'en-GB-oed-x-private',
+        'en-GB-oed-oed',
+        'en-GB-oed-',
+        'sgn-BE-FR-x-private',
+        'sgn-BE-FR-extra',
+      ]) {
+        expect(LanguageTag.parse(bad), isNull, reason: bad);
+      }
+    });
   });
 
   group('LanguageProfile', () {

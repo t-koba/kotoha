@@ -203,6 +203,40 @@ void main() {
   );
 
   test(
+    'manifest boundary accepts a grandfathered tag as declared data',
+    () async {
+      const tag = 'I-KLINGON';
+      VerifiedTerms? reviewed;
+      final manifest = fullManifest(
+        'Synthetic license',
+        mutate: (m) {
+          final task = (m['tasks'] as List).first as Map<String, Object?>;
+          final languages = task['languages'] as Map<String, Object?>;
+          languages['source'] = [tag];
+          languages['target'] = [tag];
+          languages['routes'] = [
+            {'source': tag, 'target': tag, 'evidence': 'user'},
+          ];
+          return m;
+        },
+      );
+      final authorization = await const ModelTermsImport().run(
+        reader(manifest, {'license/terms.txt': 'Synthetic license'}),
+        (terms) async {
+          reviewed = terms;
+          return true;
+        },
+      );
+      expect(authorization, isNotNull);
+      final declared = reviewed!.capabilities.tasks.single;
+      expect(declared.sourceLanguages, ['i-klingon']);
+      expect(declared.targetLanguages, ['i-klingon']);
+      expect(declared.routes.single.source, 'i-klingon');
+      expect(declared.routes.single.target, 'i-klingon');
+    },
+  );
+
+  test(
     'review only after verified manifest and terms; approval is digest-bound',
     () async {
       const terms = 'Synthetic license';

@@ -40,6 +40,12 @@ enum LanguageRole {
 /// rule 3 (no repeated extension singletons, compared case-insensitively).
 /// Repeating a singleton inside private use is not an extension repeat.
 ///
+/// RFC 5646 §2.1.2 fixed grandfathered tags are accepted as exact structural
+/// alternatives: the trimmed input is matched case-insensitively against the
+/// complete tag and returned in its fixed spelling. There is no registry
+/// lookup, subtag membership check, or preferred-value mapping (`i-klingon`
+/// stays `i-klingon`, it is not rewritten to `tlh`), and no suffix is accepted.
+///
 /// This is structure only: no registry lookup, no subtag membership or prefix
 /// checks, and no full canonicalization claim. The canonical form is a
 /// deterministic case normalization: lowercase the primary, extended language,
@@ -53,6 +59,37 @@ class LanguageTag {
   LanguageTag._(this._subtags, this.script, this.region)
     : language = _subtags.first,
       canonical = _subtags.join('-');
+
+  // RFC 5646 §2.1.2 fixed grandfathered tags: complete-tag matches only, keyed
+  // in lowercase, with the spelling fixed by the grammar itself as the value.
+  static const Map<String, String> _fixedGrandfathered = <String, String>{
+    'en-gb-oed': 'en-GB-oed',
+    'i-ami': 'i-ami',
+    'i-bnn': 'i-bnn',
+    'i-default': 'i-default',
+    'i-enochian': 'i-enochian',
+    'i-hak': 'i-hak',
+    'i-klingon': 'i-klingon',
+    'i-lux': 'i-lux',
+    'i-mingo': 'i-mingo',
+    'i-navajo': 'i-navajo',
+    'i-pwn': 'i-pwn',
+    'i-tao': 'i-tao',
+    'i-tay': 'i-tay',
+    'i-tsu': 'i-tsu',
+    'sgn-be-fr': 'sgn-BE-FR',
+    'sgn-be-nl': 'sgn-BE-NL',
+    'sgn-ch-de': 'sgn-CH-DE',
+    'art-lojban': 'art-lojban',
+    'cel-gaulish': 'cel-gaulish',
+    'no-bok': 'no-bok',
+    'no-nyn': 'no-nyn',
+    'zh-guoyu': 'zh-guoyu',
+    'zh-hakka': 'zh-hakka',
+    'zh-min': 'zh-min',
+    'zh-min-nan': 'zh-min-nan',
+    'zh-xiang': 'zh-xiang',
+  };
 
   static final RegExp _primary = RegExp(r'^[A-Za-z]{2,8}$');
   static final RegExp _privatePrimary = RegExp(r'^[xX]$');
@@ -70,7 +107,16 @@ class LanguageTag {
   /// tag in the supported RFC 5646 structural subset. The input is trimmed;
   /// canonical casing is applied per subtag as described on [LanguageTag].
   static LanguageTag? parse(String entry) {
-    final parts = entry.trim().split('-');
+    final trimmed = entry.trim();
+    final fixed = _fixedGrandfathered[trimmed.toLowerCase()];
+    if (fixed != null) {
+      return LanguageTag._(
+        List<String>.unmodifiable(fixed.split('-')),
+        null,
+        null,
+      );
+    }
+    final parts = trimmed.split('-');
     final primary = parts.first;
     final privatePrimary = _privatePrimary.hasMatch(primary);
     if (!privatePrimary && !_primary.hasMatch(primary)) return null;

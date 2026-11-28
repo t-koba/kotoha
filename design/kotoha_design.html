@@ -1576,7 +1576,7 @@ python specs/validate_specs.py
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                  "pattern": "^(?:[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
                   "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
                 },
                 "minItems": 0,
@@ -1586,7 +1586,7 @@ python specs/validate_specs.py
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                  "pattern": "^(?:[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
                   "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
                 },
                 "minItems": 0,
@@ -1599,12 +1599,12 @@ python specs/validate_specs.py
                   "properties": {
                     "source": {
                       "type": "string",
-                      "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                      "pattern": "^(?:[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
                       "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
                     },
                     "target": {
                       "type": "string",
-                      "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                      "pattern": "^(?:[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
                       "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
                     },
                     "evidence": {
@@ -2025,7 +2025,7 @@ python specs/validate_specs.py
               },
               "source_language": {
                 "type": "string",
-                "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                "pattern": "^(?:[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
                 "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
               },
               "outputs": {
@@ -2035,7 +2035,7 @@ python specs/validate_specs.py
                   "properties": {
                     "language": {
                       "type": "string",
-                      "pattern": "^(?:[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
+                      "pattern": "^(?:[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*|[xX](?:-[A-Za-z0-9]{1,8})+)$",
                       "description": "BCP 47 §2.1の構造と重複 variant/singleton を検査した言語タグ。レジストリによる登録情報・正規形の照合は行わない。"
                     },
                     "text": {
