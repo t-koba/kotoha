@@ -32,11 +32,11 @@ class _Selector extends FileSelectorPlatform {
 }
 
 class _Writer {
-  final writes = <(String, String)>[];
+  final writes = <(String, String, bool)>[];
   Object? failure;
 
-  Future<void> write(String path, String text) async {
-    writes.add((path, text));
+  Future<void> write(String path, String text, bool replaceExisting) async {
+    writes.add((path, text, replaceExisting));
     final error = failure;
     if (error != null) throw error;
   }
@@ -175,7 +175,7 @@ void main() {
     final path = '${directory.path}${Platform.pathSeparator}translation.txt';
     File(path).writeAsBytesSync(utf8.encode('previous contents'));
 
-    await exportTextDocument(path, 'Hello, 🌏');
+    await exportTextDocument(path, 'Hello, 🌏', true);
 
     expect(File(path).readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
@@ -186,7 +186,7 @@ void main() {
     addTearDown(() => directory.deleteSync(recursive: true));
     final path = '${directory.path}${Platform.pathSeparator}translation.txt';
 
-    await exportTextDocument(path, 'Hello, 🌏');
+    await exportTextDocument(path, 'Hello, 🌏', false);
 
     expect(File(path).readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
@@ -200,7 +200,7 @@ void main() {
     await _command('chmod', ['600', file.path]);
     expect(file.statSync().mode & 0x1ff, 0x180);
 
-    await exportTextDocument(file.path, 'Hello, 🌏');
+    await exportTextDocument(file.path, 'Hello, 🌏', true);
 
     expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(file.statSync().mode & 0x1ff, 0x180);
@@ -216,7 +216,7 @@ void main() {
       ..writeAsStringSync('previous contents');
     await _command('chmod', ['444', file.path]);
 
-    await exportTextDocument(file.path, 'Hello, 🌏');
+    await exportTextDocument(file.path, 'Hello, 🌏', true);
 
     expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(file.statSync().mode & 0xfff, 0x124);
@@ -252,7 +252,7 @@ void main() {
     expect(before, isNotNull);
     final mode = file.statSync().mode & 0x1ff;
 
-    await exportTextDocument(file.path, 'Hello, 🌏');
+    await exportTextDocument(file.path, 'Hello, 🌏', true);
 
     expect(file.readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(file.statSync().mode & 0x1ff, mode);
@@ -266,7 +266,7 @@ void main() {
     acl.setUint16(14, 4, Endian.little); // named user: read
     acl.setUint16(30, 4, Endian.little); // mask: read
     acl.setUint16(38, 0, Endian.little); // other: none
-    await exportTextDocumentWithStagedWriter(plain.path, 'Hello, 🌏', (
+    await exportTextDocumentWithStagedWriter(plain.path, 'Hello, 🌏', true, (
       staged,
       sink,
       bytes,
@@ -311,7 +311,7 @@ void main() {
     expect(expectedAcl, isNotNull);
     final output = File('${directory.path}/translation.txt');
 
-    await exportTextDocumentWithStagedWriter(output.path, 'Hello, 🌏', (
+    await exportTextDocumentWithStagedWriter(output.path, 'Hello, 🌏', false, (
       staged,
       sink,
       bytes,
@@ -356,7 +356,7 @@ void main() {
     expect(before, isNotEmpty);
     expect(before.join(), contains('everyone deny read'));
 
-    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', true, (
       staged,
       sink,
       bytes,
@@ -405,7 +405,7 @@ void main() {
       ..writeAsStringSync('reference');
     expect(await acl(reference.path), isNotEmpty);
 
-    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+    await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', true, (
       staged,
       sink,
       bytes,
@@ -437,7 +437,7 @@ void main() {
     final expectedAcl = await acl(reference.path);
     final output = File('${directory.path}/translation.txt');
 
-    await exportTextDocument(output.path, 'Hello, 🌏');
+    await exportTextDocument(output.path, 'Hello, 🌏', false);
 
     expect(output.readAsBytesSync(), utf8.encode('Hello, 🌏'));
     expect(await acl(output.path), expectedAcl);
@@ -464,7 +464,7 @@ void main() {
 
       final expectedDacl = await dacl(reference);
 
-      await exportTextDocument(output.path, 'Hello, 🌏');
+      await exportTextDocument(output.path, 'Hello, 🌏', false);
 
       expect(output.readAsBytesSync(), utf8.encode('Hello, 🌏'));
       expect(await dacl(output), expectedDacl);
@@ -507,7 +507,7 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
       final before = await dacl(file.path);
       expect(before, contains('D:P')); // protected, unlike the parent's DACL
 
-      await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', (
+      await exportTextDocumentWithStagedWriter(file.path, 'Hello, 🌏', true, (
         staged,
         sink,
         bytes,
@@ -542,7 +542,7 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
       int? stagingDirectoryMode;
 
       await expectLater(
-        exportTextDocumentWithStagedWriter(path, 'Hello, 🌏', (
+        exportTextDocumentWithStagedWriter(path, 'Hello, 🌏', true, (
           file,
           sink,
           bytes,
@@ -582,7 +582,7 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
       await _command('chmod', ['600', target.path]);
       await link.create(target.path);
 
-      await exportTextDocument(link.path, 'Hello, 🌏');
+      await exportTextDocument(link.path, 'Hello, 🌏', true);
 
       expect(target.readAsBytesSync(), utf8.encode('Hello, 🌏'));
       expect(target.statSync().mode & 0x1ff, 0x180);
@@ -611,7 +611,9 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
         await tester.tap(exportButton);
         await tester.pump();
 
-        expect(writer.writes, [('/user/chosen/translation.txt', 'Hello, 🌏')]);
+        expect(writer.writes, [
+          ('/user/chosen/translation.txt', 'Hello, 🌏', false),
+        ]);
         expect(selector.calls, 1);
         expect(selector.acceptedTypeGroups, hasLength(1));
         expect(selector.acceptedTypeGroups!.single.extensions, ['txt']);
@@ -704,7 +706,7 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
       await tester.tap(field('export-overwrite-confirm'));
       await tester.pumpAndSettle();
 
-      expect(writer.writes, [(destination.path, 'Hello, 🌏')]);
+      expect(writer.writes, [(destination.path, 'Hello, 🌏', true)]);
       // Only the injected writer runs here; the real destination is untouched.
       expect(destination.readAsStringSync(), 'previous destination contents');
       expect(find.text('Translation exported.'), findsOneWidget);
@@ -728,9 +730,33 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
       await tester.pumpAndSettle();
 
       expect(find.text('Replace existing file?'), findsNothing);
-      expect(writer.writes, [(destination, 'Hello, 🌏')]);
+      expect(writer.writes, [(destination, 'Hello, 🌏', false)]);
       expect(find.text('Translation exported.'), findsOneWidget);
     });
+  });
+
+  test('a destination created during staging is not replaced', () async {
+    final directory = Directory.systemTemp.createTempSync('kotoha-export');
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final path = '${directory.path}${Platform.pathSeparator}translation.txt';
+    final inserted = utf8.encode('inserted after the existence check');
+    expect(File(path).existsSync(), isFalse);
+
+    await expectLater(
+      exportTextDocumentWithStagedWriter(path, 'Hello, 🌏', false, (
+        staged,
+        sink,
+        bytes,
+      ) async {
+        // A file appears after selection but before the exporter commits.
+        File(path).writeAsBytesSync(inserted);
+        await sink.writeFrom(bytes);
+      }),
+      throwsA(isA<FileSystemException>()),
+    );
+
+    expect(File(path).readAsBytesSync(), inserted);
+    expect(directory.listSync().map((entity) => entity.path).toSet(), {path});
   });
 
   testWidgets('cancelling export leaves all drafts unchanged', (tester) async {

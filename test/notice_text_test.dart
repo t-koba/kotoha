@@ -37,7 +37,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      KotohaApp(exportText: (path, text) async => throw Exception(marker)),
+      KotohaApp(exportText: (_, _, _) async => throw Exception(marker)),
     );
     await tester.enterText(find.byKey(const ValueKey('source-text')), marker);
     await tester.enterText(

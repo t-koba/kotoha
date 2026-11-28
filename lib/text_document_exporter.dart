@@ -8,16 +8,21 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 /// Writes one explicitly exported translation as UTF-8 to the selected path.
 ///
 /// Bytes are staged beside the destination before replacement, so a failed
-/// staging write cannot truncate an existing export. POSIX staging directories
-/// use mode 0700; inherited ACL handling is platform- and destination-specific.
+/// staging write cannot truncate an existing export. Replacement requires
+/// explicit `replaceExisting` intent; a file appearing before commit is not
+/// overwritten. POSIX staging directories use mode 0700; inherited ACL handling
+/// is platform- and destination-specific.
 /// Existing files retain POSIX access permissions (including Linux access ACLs),
 /// macOS ACLs, or Windows DACLs. Metadata-preservation failures abort without
 /// fallback. This is not a durability or concurrency guarantee, nor a promise
 /// to preserve all file metadata.
-Future<void> exportTextDocument(String path, String text) =>
-    _exportTextDocument(path, text, (_, sink, bytes) async {
-      await sink.writeFrom(bytes);
-    });
+Future<void> exportTextDocument(
+  String path,
+  String text,
+  bool replaceExisting,
+) => _exportTextDocument(path, text, replaceExisting, (_, sink, bytes) async {
+  await sink.writeFrom(bytes);
+});
 
 typedef _MkdtempNative = Pointer<Utf8> Function(Pointer<Utf8>);
 typedef _MkdtempDart = Pointer<Utf8> Function(Pointer<Utf8>);
@@ -194,9 +199,10 @@ final class _LinuxStatx extends Struct {
 Future<void> exportTextDocumentWithStagedWriter(
   String path,
   String text,
+  bool replaceExisting,
   Future<void> Function(File file, RandomAccessFile sink, List<int> bytes)
   writeStagedFile,
-) => _exportTextDocument(path, text, writeStagedFile);
+) => _exportTextDocument(path, text, replaceExisting, writeStagedFile);
 
 Directory _createStagingDirectory(Directory parent) {
   // Called only on POSIX. All native lookups in this file are lazy and occur
@@ -576,8 +582,18 @@ void _replaceWindowsFile(File destination, File stagedFile) {
   });
 }
 
-Future<void> _commit(File destination, File stagedFile) async {
+Future<void> _commit(
+  File destination,
+  File stagedFile,
+  bool replaceExisting,
+) async {
   final type = await FileSystemEntity.type(destination.path);
+  if (type != FileSystemEntityType.notFound && !replaceExisting) {
+    throw FileSystemException(
+      'Export destination already exists',
+      destination.path,
+    );
+  }
   if (type == FileSystemEntityType.file) {
     if (Platform.isWindows) {
       _replaceWindowsFile(destination, stagedFile);
@@ -602,6 +618,7 @@ Future<void> _commit(File destination, File stagedFile) async {
 Future<void> _exportTextDocument(
   String path,
   String text,
+  bool replaceExisting,
   Future<void> Function(File file, RandomAccessFile sink, List<int> bytes)
   writeStagedFile,
 ) async {
@@ -620,6 +637,9 @@ Future<void> _exportTextDocument(
   if (destinationType != FileSystemEntityType.file &&
       destinationType != FileSystemEntityType.notFound) {
     throw FileSystemException('Export destination is not a file', path);
+  }
+  if (!replaceExisting && destinationType != FileSystemEntityType.notFound) {
+    throw FileSystemException('Export destination already exists', path);
   }
   final existing = destinationType == FileSystemEntityType.file;
   final stagingDirectory = Platform.isWindows
@@ -647,7 +667,7 @@ Future<void> _exportTextDocument(
     } finally {
       await sink.close();
     }
-    await _commit(destination, stagedFile);
+    await _commit(destination, stagedFile, replaceExisting);
     stagedFileCreated = false;
   } finally {
     if (stagedFileCreated && await stagedFile.exists()) {

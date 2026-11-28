@@ -34,11 +34,11 @@ class _Selector extends FileSelectorPlatform {
 }
 
 class _Writer {
-  final writes = <(String, String)>[];
+  final writes = <(String, String, bool)>[];
   Object? failure;
 
-  Future<void> write(String path, String text) async {
-    writes.add((path, text));
+  Future<void> write(String path, String text, bool replaceExisting) async {
+    writes.add((path, text, replaceExisting));
     final error = failure;
     if (error != null) throw error;
   }
@@ -48,8 +48,8 @@ class _Writer {
 // the destination bytes as well as the writer callback.
 class _DiskWriter extends _Writer {
   @override
-  Future<void> write(String path, String text) async {
-    await super.write(path, text);
+  Future<void> write(String path, String text, bool replaceExisting) async {
+    await super.write(path, text, replaceExisting);
     File(path).writeAsBytesSync(utf8.encode(text));
   }
 }
@@ -387,7 +387,11 @@ void main() {
         await tester.pump();
 
         expect(writer.writes, [
-          ('/user/chosen/workspace.txt', formatWorkspaceExport(_draft())),
+          (
+            '/user/chosen/workspace.txt',
+            formatWorkspaceExport(_draft()),
+            false,
+          ),
         ]);
         expect(selector.calls, 1);
         expect(selector.acceptedTypeGroups, hasLength(1));
@@ -433,6 +437,7 @@ void main() {
               translations: _draft().translations,
             ),
           ),
+          false,
         ),
       ]);
       expect(find.text('Workspace exported.'), findsOneWidget);
@@ -477,6 +482,7 @@ void main() {
               translations: _draft().translations,
             ),
           ),
+          false,
         ),
       ]);
       expect(find.text('Workspace exported.'), findsOneWidget);
@@ -653,7 +659,7 @@ void main() {
       await tester.tap(field('export-overwrite-confirm'));
       await tester.pumpAndSettle();
 
-      expect(writer.writes, [(destination.path, utf8.decode(expected))]);
+      expect(writer.writes, [(destination.path, utf8.decode(expected), true)]);
       expect(destination.readAsBytesSync(), expected);
       expect(find.text('Workspace exported.'), findsOneWidget);
     });
@@ -680,7 +686,9 @@ void main() {
         picker.complete(FileSaveLocation('/user/chosen/translation.txt'));
         await tester.pumpAndSettle();
 
-        expect(writer.writes, [('/user/chosen/translation.txt', 'Edited, 🌏')]);
+        expect(writer.writes, [
+          ('/user/chosen/translation.txt', 'Edited, 🌏', false),
+        ]);
         expect(find.text('Translation exported.'), findsOneWidget);
       });
     },

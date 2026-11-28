@@ -81,7 +81,8 @@ bool _sameWorkspaceDraft(TextWorkspaceDraft a, TextWorkspaceDraft b) {
 class KotohaApp extends StatefulWidget {
   const KotohaApp({super.key, this.exportText = exportTextDocument});
 
-  final Future<void> Function(String path, String text) exportText;
+  final Future<void> Function(String path, String text, bool replaceExisting)
+  exportText;
 
   @override
   State<KotohaApp> createState() => _KotohaAppState();
@@ -124,7 +125,8 @@ class TextWorkspacePage extends StatefulWidget {
   });
 
   final ValueChanged<Locale> onLocaleChanged;
-  final Future<void> Function(String path, String text) exportText;
+  final Future<void> Function(String path, String text, bool replaceExisting)
+  exportText;
 
   @override
   State<TextWorkspacePage> createState() => _TextWorkspacePageState();
@@ -1081,14 +1083,16 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         }
         return;
       }
+      var replaceExisting = false;
       if (File(location.path).existsSync()) {
         final overwrite = await _confirmExportOverwrite();
         if (!mounted || overwrite != true) return;
+        replaceExisting = true;
       }
       if (confirmBeforeWrite != null && !await confirmBeforeWrite(content)) {
         return;
       }
-      await widget.exportText(location.path, content);
+      await widget.exportText(location.path, content, replaceExisting);
     } on Exception {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
