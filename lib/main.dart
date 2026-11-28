@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
@@ -1023,6 +1024,30 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
         .showSnackBar(SnackBar(content: Text(successNotice)));
   }
 
+  // The save panel's overwrite behavior is not relied on: an explicit desktop
+  // export asks here when the chosen path already has a file.
+  Future<bool?> _confirmExportOverwrite() async {
+    final strings = AppLocalizations.of(context)!;
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.exportOverwriteTitle),
+        content: Text(strings.exportOverwriteQuestion),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(strings.cancelImport),
+          ),
+          TextButton(
+            key: const ValueKey('export-overwrite-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(strings.exportFileButton),
+          ),
+        ],
+      ),
+    );
+  }
+
   // One owner for the save-location, write and notice contract shared by the
   // single-translation and whole-workspace exports.
   Future<void> _exportToFile({
@@ -1055,6 +1080,10 @@ class _TextWorkspacePageState extends State<TextWorkspacePage>
               .showSnackBar(SnackBar(content: Text(emptyNotice)));
         }
         return;
+      }
+      if (File(location.path).existsSync()) {
+        final overwrite = await _confirmExportOverwrite();
+        if (!mounted || overwrite != true) return;
       }
       if (confirmBeforeWrite != null && !await confirmBeforeWrite(content)) {
         return;

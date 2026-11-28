@@ -458,6 +458,18 @@ abstract class AppLocalizations {
   /// **'テキストとして保存しましたが、Kotohaでは復元できません。'**
   String get exportedWorkspaceTooLargeNotice;
 
+  /// 選択した場所に既存のファイルがあるとき、書き出しの前に表示する確認のタイトル。
+  ///
+  /// In ja, this message translates to:
+  /// **'既存のファイルを上書きしますか？'**
+  String get exportOverwriteTitle;
+
+  /// 選択した場所に既存のファイルがあるとき、書き出しの前に表示する確認の文。
+  ///
+  /// In ja, this message translates to:
+  /// **'選択した場所にはすでにファイルがあります。書き出すとそのファイルを上書きします。続けますか？'**
+  String get exportOverwriteQuestion;
+
   /// No description provided for @exportFileButton.
   ///
   /// In ja, this message translates to:

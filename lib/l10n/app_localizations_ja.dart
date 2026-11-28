@@ -216,6 +216,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'テキストとして保存しましたが、Kotohaでは復元できません。';
 
   @override
+  String get exportOverwriteTitle => '既存のファイルを上書きしますか？';
+
+  @override
+  String get exportOverwriteQuestion =>
+      '選択した場所にはすでにファイルがあります。書き出すとそのファイルを上書きします。続けますか？';
+
+  @override
   String get exportFileButton => '書き出す';
 
   @override

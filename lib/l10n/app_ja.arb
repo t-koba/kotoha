@@ -185,6 +185,14 @@
   "@exportedWorkspaceTooLargeNotice": {
     "description": "サイズ超過の作業テキストを保存した後の案内。"
   },
+  "exportOverwriteTitle": "既存のファイルを上書きしますか？",
+  "@exportOverwriteTitle": {
+    "description": "選択した場所に既存のファイルがあるとき、書き出しの前に表示する確認のタイトル。"
+  },
+  "exportOverwriteQuestion": "選択した場所にはすでにファイルがあります。書き出すとそのファイルを上書きします。続けますか？",
+  "@exportOverwriteQuestion": {
+    "description": "選択した場所に既存のファイルがあるとき、書き出しの前に表示する確認の文。"
+  },
   "exportFileButton": "書き出す",
   "licenses": "ライセンス",
   "uiLanguage": "表示言語",

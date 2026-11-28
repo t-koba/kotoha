@@ -643,6 +643,96 @@ $aclPath = if ($env:KOTOHA_EXPORT_STAGE_PATH) { $env:KOTOHA_EXPORT_STAGE_PATH } 
     });
   }
 
+  testWidgets('existing export path: Cancel writes nothing', (tester) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final destination = File(
+        '${directory.path}${Platform.pathSeparator}translation.txt',
+      )..writeAsStringSync('previous destination contents');
+      final writer = _Writer();
+      selector.result = FileSaveLocation(destination.path);
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-translation-1');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Replace existing file?'), findsOneWidget);
+      expect(
+        find.text(
+          'A file already exists at the selected path. Exporting will '
+          'overwrite it. Continue?',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Cancel'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, isEmpty);
+      expect(destination.readAsStringSync(), 'previous destination contents');
+      expect(find.text('Translation exported.'), findsNothing);
+      expect(selector.calls, 1);
+    });
+  });
+
+  testWidgets('existing export path: confirm writes the translation', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final destination = File(
+        '${directory.path}${Platform.pathSeparator}translation.txt',
+      )..writeAsStringSync('previous destination contents');
+      final writer = _Writer();
+      selector.result = FileSaveLocation(destination.path);
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-translation-1');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Replace existing file?'), findsOneWidget);
+
+      await tester.tap(field('export-overwrite-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, [(destination.path, 'Hello, 🌏')]);
+      // Only the injected writer runs here; the real destination is untouched.
+      expect(destination.readAsStringSync(), 'previous destination contents');
+      expect(find.text('Translation exported.'), findsOneWidget);
+    });
+  });
+
+  testWidgets('missing export path has no overwrite dialog', (tester) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final destination =
+          '${directory.path}${Platform.pathSeparator}translation.txt';
+      expect(File(destination).existsSync(), isFalse);
+      final writer = _Writer();
+      selector.result = FileSaveLocation(destination);
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-translation-1');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Replace existing file?'), findsNothing);
+      expect(writer.writes, [(destination, 'Hello, 🌏')]);
+      expect(find.text('Translation exported.'), findsOneWidget);
+    });
+  });
+
   testWidgets('cancelling export leaves all drafts unchanged', (tester) async {
     await withPlatform(TargetPlatform.windows, () async {
       final writer = _Writer();

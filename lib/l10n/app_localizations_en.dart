@@ -224,6 +224,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Saved as text, but too large for Kotoha to restore.';
 
   @override
+  String get exportOverwriteTitle => 'Replace existing file?';
+
+  @override
+  String get exportOverwriteQuestion =>
+      'A file already exists at the selected path. Exporting will overwrite it. Continue?';
+
+  @override
   String get exportFileButton => 'Export';
 
   @override

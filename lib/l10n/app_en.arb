@@ -185,6 +185,14 @@
   "@exportedWorkspaceTooLargeNotice": {
     "description": "Notice shown after saving an over-limit workspace text file."
   },
+  "exportOverwriteTitle": "Replace existing file?",
+  "@exportOverwriteTitle": {
+    "description": "Title of the in-app confirmation asked before exporting to a path that already exists."
+  },
+  "exportOverwriteQuestion": "A file already exists at the selected path. Exporting will overwrite it. Continue?",
+  "@exportOverwriteQuestion": {
+    "description": "Question shown before an export replaces a file that already exists at the selected path."
+  },
   "exportFileButton": "Export",
   "licenses": "Licenses",
   "uiLanguage": "Interface language",
