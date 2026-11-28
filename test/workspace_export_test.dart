@@ -44,6 +44,16 @@ class _Writer {
   }
 }
 
+// Writes the injected export to a real temp file so overwrite tests can check
+// the destination bytes as well as the writer callback.
+class _DiskWriter extends _Writer {
+  @override
+  Future<void> write(String path, String text) async {
+    await super.write(path, text);
+    File(path).writeAsBytesSync(utf8.encode(text));
+  }
+}
+
 TextWorkspaceDraft _draft() => TextWorkspaceDraft(
   sourceLanguage: 'ja',
   sourceText: '原文',
@@ -581,6 +591,71 @@ void main() {
         find.text('Saved as text, but too large for Kotoha to restore.'),
         findsNothing,
       );
+    });
+  });
+
+  testWidgets('existing workspace export path: Cancel keeps the file', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final destination = File(
+        '${directory.path}${Platform.pathSeparator}workspace.txt',
+      );
+      final original = utf8.encode('previous destination contents');
+      destination.writeAsBytesSync(original);
+      final writer = _DiskWriter();
+      selector.result = FileSaveLocation(destination.path);
+      await openWorkspace(tester, writer);
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Replace existing file?'), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Cancel'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, isEmpty);
+      expect(destination.readAsBytesSync(), original);
+      expect(find.text('Workspace exported.'), findsNothing);
+      expect(selector.calls, 1);
+    });
+  });
+
+  testWidgets('existing workspace export path: confirm writes the workspace', (
+    tester,
+  ) async {
+    await withPlatform(TargetPlatform.windows, () async {
+      final directory = Directory.systemTemp.createTempSync('kotoha-export');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final destination = File(
+        '${directory.path}${Platform.pathSeparator}workspace.txt',
+      )..writeAsStringSync('previous destination contents');
+      final writer = _DiskWriter();
+      selector.result = FileSaveLocation(destination.path);
+      await openWorkspace(tester, writer);
+      final expected = utf8.encode(formatWorkspaceExport(_draft()));
+
+      final exportButton = field('export-workspace');
+      await tester.ensureVisible(exportButton);
+      await tester.tap(exportButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Replace existing file?'), findsOneWidget);
+      await tester.tap(field('export-overwrite-confirm'));
+      await tester.pumpAndSettle();
+
+      expect(writer.writes, [(destination.path, utf8.decode(expected))]);
+      expect(destination.readAsBytesSync(), expected);
+      expect(find.text('Workspace exported.'), findsOneWidget);
     });
   });
 
