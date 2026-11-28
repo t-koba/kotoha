@@ -140,7 +140,25 @@ jobs:
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
       - name: Build Android debug APK
-        run: flutter build apk --debug --no-pub
+        run: |
+          set +e
+          status=1
+          for attempt in 1 2 3; do
+            log="$RUNNER_TEMP/android-build-attempt-$attempt.log"
+            flutter build apk --debug --no-pub 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            if [ "$status" -eq 0 ]; then
+              exit 0
+            fi
+            if ! grep -q 'Received status code 429 from server: Too Many Requests' "$log"; then
+              exit "$status"
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Dependency repository rate-limited; retrying after backoff"
+              sleep $((attempt * 30))
+            fi
+          done
+          exit "$status"
       # Privacy callbacks and bounded model-terms import coverage; native
       # accessibility/input is checked by Flutter widget tests on the hosted
       # runners. Shell-injected key delivery varies between identical hosted
