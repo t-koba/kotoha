@@ -17,6 +17,15 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
   // Test policy default, overridable in the Runner scheme/build setting.
   private var timeout: TimeInterval = 10
 
+  // The hosted simulator did not always expose the Files picker's Cancel
+  // control as an XCUIButton (CI 46138618554: cancelButtons=0 while
+  // cancelElements=1). Match the exact label across element types, then require
+  // hittability before tapping; presentation, Cancel and draft assertions stay.
+  private var pickerCancel: XCUIElement {
+    app.descendants(matching: .any).matching(
+      NSPredicate(format: "label == %@", "Cancel")).firstMatch
+  }
+
   override func setUpWithError() throws {
     continueAfterFailure = false
     // A hosted arm64 simulator exceeded XCTest's default two-minute allowance
@@ -94,7 +103,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
         let beforeTap = "enabled=\(enabledBeforeTap), hittable=\(hittableBeforeTap)"
         if enabledBeforeTap && hittableBeforeTap { importButton.tap() }
         // Always allow the full wait: a presentation may already be opening.
-        let didPresent = app.buttons["Cancel"].waitForExistence(timeout: pickerTimeout)
+        let cancel = pickerCancel
+        let didPresent = cancel.waitForExistence(timeout: pickerTimeout)
         // Collect bounded state before deciding on a re-tap: a disabled importer
         // means a re-tap would auto-fail and hide why no Cancel was observed.
         // Bounded state only: never log picker contents, UI trees or draft text.
@@ -108,7 +118,8 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
           + "enabled=\(importerExists && importButton.isEnabled), "
           + "hittable=\(importerExists && importButton.isHittable), errorNotice=\(errorNotice), "
           + "alerts=\(app.alerts.count), cancelButtons=\(app.buttons.matching(identifier: "Cancel").count), "
-          + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count)"
+          + "cancelElements=\(app.descendants(matching: .any).matching(NSPredicate(format: "label == 'Cancel'")).count), "
+          + "cancelHittable=\(cancel.isHittable)"
         if didPresent {
           presented = true
           break
@@ -124,7 +135,9 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
         XCTFail("System document picker must be presented; round=\(round), \(diagnostics)")
         return
       }
-      app.buttons["Cancel"].tap()
+      let cancel = pickerCancel
+      XCTAssertTrue(cancel.isHittable, "System document picker Cancel control must be hittable")
+      cancel.tap()
       // Keep verification independent of the editor's current scroll position.
       // If XCTest has dropped the offscreen field node, reveal it before the
       // unchanged exact draft-value assertion.
