@@ -24,7 +24,9 @@ class MemoryFileBackend implements DraftFileBackend {
   bool failNextWriteStagingGeneric = false;
   bool failNextRemoveStaging = false;
   int removeStagingCalls = 0;
+  int writeStagingCalls = 0;
   Future<void> Function(String name)? beforeRead;
+  Future<void> Function(String name, Uint8List bytes)? afterWriteStaging;
 
   void seed(String name, Uint8List bytes) {
     _files[name] = Uint8List.fromList(bytes);
@@ -41,12 +43,15 @@ class MemoryFileBackend implements DraftFileBackend {
 
   @override
   Future<void> writeStaging(String name, Uint8List bytes) async {
+    writeStagingCalls++;
     if (_files.containsKey(name)) throw const _StagingExists();
     if (failNextWriteStagingGeneric) {
       failNextWriteStagingGeneric = false;
       throw StateError('synthetic staging failure');
     }
     seed(name, bytes);
+    final hook = afterWriteStaging;
+    if (hook != null) await hook(name, bytes);
     if (failNextWriteStagingAfterCreate) {
       failNextWriteStagingAfterCreate = false;
       throw const DraftFileStoreException.stagingCreated();
@@ -218,6 +223,109 @@ void main() {
       );
       expect(await backend.read(staging), orderedEquals(bytesA));
       await expectLater(store.load(), fails(DraftFileFailure.savePending));
+    },
+  );
+
+  test('a discard from another store during a save is refused and the save '
+      'commits its own bytes', () async {
+    final other = DraftFileStore(backend: backend, name: name);
+    backend.afterWriteStaging = (stagingName, staged) async {
+      backend.afterWriteStaging = null; // Interleave only the first save.
+      expect(stagingName, staging);
+      expect(staged, orderedEquals(bytesA));
+      await expectLater(
+        other.discardPending(),
+        fails(DraftFileFailure.savePending),
+      );
+      expect(await backend.read(staging), orderedEquals(bytesA));
+    };
+
+    await store.save(bytesA);
+
+    expect(await store.load(), orderedEquals(bytesA));
+    expect(await backend.read(staging), isNull);
+    await other.save(bytesB);
+    expect(await other.load(), orderedEquals(bytesB));
+    expect(await backend.read(staging), isNull);
+  });
+
+  test(
+    'a second concurrent save is refused without disturbing staging',
+    () async {
+      final other = DraftFileStore(backend: backend, name: name);
+      backend.afterWriteStaging = (_, staged) async {
+        backend.afterWriteStaging = null; // Interleave only the first save.
+        expect(staged, orderedEquals(bytesA));
+        await expectLater(
+          other.save(bytesB),
+          fails(DraftFileFailure.savePending),
+        );
+        expect(backend.writeStagingCalls, 1);
+        expect(await backend.read(staging), orderedEquals(bytesA));
+      };
+
+      await store.save(bytesA);
+
+      expect(await store.load(), orderedEquals(bytesA));
+      expect(await backend.read(staging), isNull);
+      await other.save(bytesB);
+      expect(await other.load(), orderedEquals(bytesB));
+    },
+  );
+
+  test('partial staging cleanup is owned by the failing save', () async {
+    final other = DraftFileStore(backend: backend, name: name);
+    backend.failNextWriteStagingAfterCreate = true;
+    backend.afterWriteStaging = (_, _) async {
+      backend.afterWriteStaging = null; // Interleave only the first save.
+      await expectLater(
+        other.discardPending(),
+        fails(DraftFileFailure.savePending),
+      );
+      await expectLater(
+        other.save(bytesB),
+        fails(DraftFileFailure.savePending),
+      );
+    };
+
+    await expectLater(store.save(bytesA), fails(DraftFileFailure.stage));
+
+    expect(backend.removeStagingCalls, 1);
+    expect(await backend.read(staging), isNull);
+    await other.save(bytesB);
+    expect(await other.load(), orderedEquals(bytesB));
+  });
+
+  test('the guard covers one backend and staging name only', () async {
+    final otherBackend = MemoryFileBackend();
+    final otherBackendStore = DraftFileStore(backend: otherBackend, name: name);
+    final otherNameStore = DraftFileStore(backend: backend, name: 'other');
+    var firstWrite = true;
+    backend.afterWriteStaging = (_, _) async {
+      if (!firstWrite) return;
+      firstWrite = false;
+      await otherBackendStore.save(bytesB);
+      await otherNameStore.save(bytesB);
+    };
+
+    await store.save(bytesA);
+
+    expect(await store.load(), orderedEquals(bytesA));
+    expect(await otherBackendStore.load(), orderedEquals(bytesB));
+    expect(await otherNameStore.load(), orderedEquals(bytesB));
+  });
+
+  test(
+    'a failed commit releases ownership so another store can discard',
+    () async {
+      final other = DraftFileStore(backend: backend, name: name);
+      backend.failNextCommit = true;
+
+      await expectLater(store.save(bytesA), fails(DraftFileFailure.commit));
+      await other.discardPending();
+
+      expect(await backend.read(staging), isNull);
+      expect(await store.load(), isNull);
     },
   );
 }

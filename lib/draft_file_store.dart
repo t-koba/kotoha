@@ -43,6 +43,17 @@ abstract interface class DraftFileBackend {
 /// File-commit framing only: stores opaque bytes without parsing them or
 /// generating keys. This adapter performs no cryptography or real file I/O.
 class DraftFileStore {
+  /// Isolate-local owner tokens for active staging operations, keyed by
+  /// backend identity (through [Expando]) and staging name. Every store in
+  /// this isolate that shares a backend and staging name shares this guard.
+  ///
+  /// The guarantee stops at this isolate. A real backend must enforce the
+  /// same exclusivity across isolates and processes: exclusive staging
+  /// creation, and commit or removal bound to the owning writer. This
+  /// adapter is file-commit framing only; it enables no persistence,
+  /// encryption, platform key-store behavior, or cross-process locking.
+  static final Expando<Map<String, Object>> _activeStaging = Expando();
+
   DraftFileStore({required this._backend, required String name})
     : _name = name,
       _stagingName = '$name.pending';
@@ -68,44 +79,89 @@ class DraftFileStore {
     throw const DraftFileStoreException(DraftFileFailure.savePending);
   }
 
+  /// Synchronous so callers in one isolate cannot both claim the same
+  /// staging: the claim happens before either method reaches its first await.
+  Object? _claimStaging() {
+    var owners = _activeStaging[_backend];
+    if (owners == null) {
+      owners = <String, Object>{};
+      _activeStaging[_backend] = owners;
+    }
+    if (owners.containsKey(_stagingName)) return null;
+    final owner = Object();
+    owners[_stagingName] = owner;
+    return owner;
+  }
+
+  bool _ownsStaging(Object owner) =>
+      identical(_activeStaging[_backend]?[_stagingName], owner);
+
+  void _releaseStaging(Object owner) {
+    final owners = _activeStaging[_backend];
+    if (owners != null && identical(owners[_stagingName], owner)) {
+      owners.remove(_stagingName);
+    }
+  }
+
   /// Explicitly removes a pending staging file so a store wedged by an
   /// interrupted save can be reopened or saved again. Never touches committed
-  /// bytes. The caller must decide the pending bytes are not worth recovering;
-  /// [load] never discards them on its own.
+  /// bytes. Refuses with [DraftFileFailure.savePending] while a save or
+  /// discard in this isolate owns the staging. The caller must decide the
+  /// pending bytes are not worth recovering; [load] never discards them on
+  /// its own.
   Future<void> discardPending() async {
+    final owner = _claimStaging();
+    if (owner == null) {
+      throw const DraftFileStoreException(DraftFileFailure.savePending);
+    }
     try {
       await _backend.removeStaging(_stagingName);
     } catch (_) {
       throw const DraftFileStoreException(DraftFileFailure.discard);
+    } finally {
+      _releaseStaging(owner);
     }
   }
 
+  /// Claims this store's staging before writing it. A concurrent save or
+  /// discard on any store sharing this backend and name is refused with
+  /// [DraftFileFailure.savePending] until commit or cleanup finishes.
   Future<void> save(Uint8List envelope) async {
     if (envelope.isEmpty) {
       throw const DraftFileStoreException(DraftFileFailure.stage);
     }
-    try {
-      await _backend.writeStaging(_stagingName, Uint8List.fromList(envelope));
-    } catch (error) {
-      if (error is DraftFileStoreException) {
-        if (error.failure == DraftFileFailure.savePending) {
-          throw const DraftFileStoreException(DraftFileFailure.savePending);
-        }
-        if (error._stagingCreated) {
-          try {
-            await _backend.removeStaging(_stagingName);
-          } catch (_) {
-            // Best effort: preserve the original stage failure.
-          }
-        }
-      }
-      throw const DraftFileStoreException(DraftFileFailure.stage);
+    final owner = _claimStaging();
+    if (owner == null) {
+      throw const DraftFileStoreException(DraftFileFailure.savePending);
     }
     try {
-      await _backend.commitReplace(_stagingName, _name);
-    } catch (_) {
-      // Leave staging alone after a commit failure; do not infer its state.
-      throw const DraftFileStoreException(DraftFileFailure.commit);
+      try {
+        await _backend.writeStaging(_stagingName, Uint8List.fromList(envelope));
+      } catch (error) {
+        if (error is DraftFileStoreException) {
+          if (error.failure == DraftFileFailure.savePending) {
+            throw const DraftFileStoreException(DraftFileFailure.savePending);
+          }
+          // Only the failing save that still owns this staging may clean it
+          // up; ownership cannot be assumed from the staging name alone.
+          if (error._stagingCreated && _ownsStaging(owner)) {
+            try {
+              await _backend.removeStaging(_stagingName);
+            } catch (_) {
+              // Best effort: preserve the original stage failure.
+            }
+          }
+        }
+        throw const DraftFileStoreException(DraftFileFailure.stage);
+      }
+      try {
+        await _backend.commitReplace(_stagingName, _name);
+      } catch (_) {
+        // Leave staging alone after a commit failure; do not infer its state.
+        throw const DraftFileStoreException(DraftFileFailure.commit);
+      }
+    } finally {
+      _releaseStaging(owner);
     }
   }
 }
