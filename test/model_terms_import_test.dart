@@ -112,6 +112,14 @@ MemoryReader reader(Map<String, Object?> m, Map<String, String> termsByPath) {
   return MemoryReader(files);
 }
 
+MemoryReader rawReader(String rawJson, Map<String, String> termsByPath) {
+  final files = <String, Uint8List>{'model_manifest.json': bytes(rawJson)};
+  for (final entry in termsByPath.entries) {
+    files[entry.key] = bytes(entry.value);
+  }
+  return MemoryReader(files);
+}
+
 void main() {
   test('manifest language routes use the app structural parser', () async {
     const rejected = <String>[
@@ -550,6 +558,140 @@ void main() {
     );
     expect(called, isFalse);
   });
+  test('duplicate top-level JSON member never invokes reviewer', () async {
+    const terms = 'terms';
+    final encoded = jsonEncode(fullManifest(terms));
+    final raw =
+        '${encoded.substring(0, encoded.length - 1)},'
+        '"display_name":"shadow"}';
+    final r = rawReader(raw, {'license/terms.txt': terms});
+    var called = false;
+    await expectLater(
+      const ModelTermsImport().run(r, (_) async {
+        called = true;
+        return true;
+      }),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          'Duplicate JSON member name',
+        ),
+      ),
+    );
+    expect(called, isFalse);
+    expect(r.requests, ['model_manifest.json']);
+  });
+  test('duplicate nested JSON member never invokes reviewer', () async {
+    const terms = 'terms';
+    final raw = jsonEncode(fullManifest(terms))
+        .replaceFirst('"engine_id":', '"engine_id":"shadow","engine_id":');
+    final r = rawReader(raw, {'license/terms.txt': terms});
+    var called = false;
+    await expectLater(
+      const ModelTermsImport().run(r, (_) async {
+        called = true;
+        return true;
+      }),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          'Duplicate JSON member name',
+        ),
+      ),
+    );
+    expect(called, isFalse);
+    expect(r.requests, ['model_manifest.json']);
+  });
+  test('escaped spelling of a JSON member name collides', () async {
+    const terms = 'terms';
+    final raw = jsonEncode(fullManifest(terms))
+        .replaceFirst('"role":', r'"role":"shadow","r\u006fle":');
+    final r = rawReader(raw, {'license/terms.txt': terms});
+    var called = false;
+    await expectLater(
+      const ModelTermsImport().run(r, (_) async {
+        called = true;
+        return true;
+      }),
+      throwsA(
+        isA<FormatException>().having(
+          (e) => e.message,
+          'message',
+          'Duplicate JSON member name',
+        ),
+      ),
+    );
+    expect(called, isFalse);
+    expect(r.requests, ['model_manifest.json']);
+  });
+  test('repeated non-key JSON strings stay importable', () async {
+    const terms = 'terms';
+    final manifest = fullManifest(
+      terms,
+      mutate: (m) {
+        m['publisher'] = 'id'; // Value spelling like a member name.
+        final entry = (m['terms'] as List).first as Map<String, Object?>;
+        entry['usage_requirements'] = ['role', 'role'];
+        entry['required_attributions'] = ['terms', 'terms'];
+        return m;
+      },
+    );
+    final r = reader(manifest, {'license/terms.txt': terms});
+    VerifiedTerms? reviewed;
+    final authorization = await const ModelTermsImport().run(r, (v) async {
+      reviewed = v;
+      return true;
+    });
+    expect(authorization, isNotNull);
+    final seen = reviewed!;
+    expect(seen.publisher, 'id');
+    expect(seen.documents.single.usageRequirements, ['role', 'role']);
+    expect(seen.documents.single.attributions, ['terms', 'terms']);
+  });
+  test(
+    'unique escaped JSON member names keep the same authorization',
+    () async {
+      const terms = 'terms';
+      final canonical = jsonEncode(fullManifest(terms));
+      final escaped = canonical.replaceFirst(
+        '"display_name":',
+        r'"di\u0073play_name":',
+      );
+      final baseline = reader(fullManifest(terms), {
+        'license/terms.txt': terms,
+      });
+      final raw = rawReader(escaped, {'license/terms.txt': terms});
+      VerifiedTerms? baselineReview;
+      VerifiedTerms? escapedReview;
+      final baselineAuth = await const ModelTermsImport().run(baseline, (
+        v,
+      ) async {
+        baselineReview = v;
+        return true;
+      });
+      final escapedAuth = await const ModelTermsImport().run(raw, (v) async {
+        escapedReview = v;
+        return true;
+      });
+      expect(baselineAuth, isNotNull);
+      expect(escapedAuth, isNotNull);
+      final escapedSeen = escapedReview!;
+      expect(escapedSeen.modelName, 'Test model');
+      expect(escapedSeen.termsDigest, baselineReview!.termsDigest);
+      expect(
+        escapedAuth!.declaredFiles.map((file) => file.toPlatformArguments()),
+        baselineAuth!.declaredFiles.map((file) => file.toPlatformArguments()),
+      );
+      // The digest still binds the exact raw bytes, escaped spelling included.
+      expect(
+        escapedAuth.manifestDigest,
+        sha256.convert(bytes(escaped)).toString(),
+      );
+      expect(escapedAuth.manifestDigest, isNot(baselineAuth.manifestDigest));
+    },
+  );
   test('strict schema failures never invoke reviewer', () async {
     const terms = 'terms';
     final h = sha256.convert(bytes(terms)).toString();

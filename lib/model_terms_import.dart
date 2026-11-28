@@ -130,9 +130,9 @@ class ModelTermsImport {
     if (manifestBytes.length > maxManifestBytes) {
       throw const FormatException('Manifest too large');
     }
-    final Object? decoded = jsonDecode(
-      utf8.decode(manifestBytes, allowMalformed: false),
-    );
+    final manifestText = utf8.decode(manifestBytes, allowMalformed: false);
+    final Object? decoded = jsonDecode(manifestText);
+    _assertNoDuplicateJsonMembers(manifestText);
     if (decoded is! Map<String, dynamic>) {
       throw const FormatException('Invalid manifest');
     }
@@ -231,6 +231,58 @@ class ModelTermsImport {
       review.capabilities,
     );
   }
+}
+
+/// Rejects repeated member names in JSON text that `jsonDecode` already
+/// accepted. `jsonDecode` keeps only the last value for a repeated name, so
+/// two distinct byte streams could otherwise decode to identical declarations.
+/// Key tokens are unescaped with `jsonDecode`, making escaped spellings of the
+/// same name collide. This is not a JSON validator: it runs only after decoding
+/// succeeded and checks names, not structure.
+void _assertNoDuplicateJsonMembers(String text) {
+  final frames = <_JsonFrame>[];
+  var i = 0;
+  while (i < text.length) {
+    final unit = text.codeUnitAt(i);
+    if (unit == 0x22) {
+      // A quoted token; escapes are skipped so escaped quotes cannot end it.
+      final start = i++;
+      while (i < text.length) {
+        final current = text.codeUnitAt(i++);
+        if (current == 0x5c) {
+          i++; // Skip the escaped character (or the 'u' of a \uXXXX escape).
+        } else if (current == 0x22) {
+          break;
+        }
+      }
+      final frame = frames.isEmpty ? null : frames.last;
+      if (frame != null && frame.isObject && frame.expectingKey) {
+        final name = jsonDecode(text.substring(start, i)) as String;
+        if (!frame.names.add(name)) {
+          throw const FormatException('Duplicate JSON member name');
+        }
+        frame.expectingKey = false; // The next quoted token is a value.
+      }
+      continue;
+    }
+    if (unit == 0x7b || unit == 0x5b) {
+      // '{' or '[': only objects can have member names.
+      final isObject = unit == 0x7b;
+      frames.add(_JsonFrame(isObject, expectingKey: isObject));
+    } else if (unit == 0x7d || unit == 0x5d) {
+      frames.removeLast();
+    } else if (unit == 0x2c && frames.isNotEmpty && frames.last.isObject) {
+      frames.last.expectingKey = true; // ',' between object members.
+    }
+    i++;
+  }
+}
+
+class _JsonFrame {
+  _JsonFrame(this.isObject, {required this.expectingKey});
+  final bool isObject;
+  final Set<String> names = <String>{};
+  bool expectingKey;
 }
 
 /// Copies the already-validated manifest capability declarations into a typed
