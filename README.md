@@ -123,18 +123,21 @@ native privacy and import checks that can pass on hosted runners. Flutter widget
 tests cover localized language-field semantics, bidirectional entry and focus,
 keyboard traversal, and picker cancellation with draft preservation.
 
-Three native checks remain in the sources but are not CI gates because their
+Two native checks remain in the sources but are not CI gates because their
 result depends on the runner rather than the product: Android's
 `MainActivityAccessibilityTest` (shell-injected key delivery varies between
-identical runs), `ios/RunnerUITests/LanguageFieldAccessibilityTests` (simulator
-software-keyboard presence) and `macos/RunnerUITests/NativeExportPanelUITests`
-(the hosted XCUI client lacks Accessibility trust). CI therefore no longer
-observes native language-field labels/values and synthesized input, iOS
-system-picker presentation and cancellation through XCUI, or the macOS save
-panel's accessibility and cancel-preserves-draft path. Those behaviours need a
-runner with the required keyboard and accessibility conditions; the audits below
-record the evidence. All retained native checks still fail on missing profiles
-or inaccessible fields rather than skipping.
+identical runs) and `macos/RunnerUITests/NativeExportPanelUITests` (the hosted
+XCUI client lacks Accessibility trust). CI does gate the iOS
+`LanguageFieldAccessibilityTests` XCUI target on a pinned iPhone 17/iOS 26.2
+Simulator: it checks localized native field labels and values, synthesized
+input, focus continuity between fields, and system-picker presentation with
+Cancel preserving the draft. It does not use software-keyboard visibility as
+an assertion. CI still does not observe Android native language-field behaviour
+with shell-injected key delivery, or the macOS save panel's accessibility and
+cancel-preserves-draft path. Those behaviours need runners with the required
+key-delivery and accessibility conditions; the audits below record the evidence.
+All retained native checks still fail on missing profiles or inaccessible fields
+rather than skipping.
 
 None of these checks validates TalkBack/VoiceOver speech or gestures,
 physical-device or physical-keyboard behavior. Native execution requires the CI
