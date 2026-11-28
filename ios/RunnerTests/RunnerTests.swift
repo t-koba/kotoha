@@ -314,4 +314,86 @@ class RunnerTests: XCTestCase {
     XCTAssertEqual(detachCompletions, 1)
   }
 
+  @MainActor
+  func testTextImportPresentationFailureClearsPendingAndDelegates() throws {
+    // Injected adapter-state evidence only: no hosted Files scene is presented,
+    // no device or document-provider behaviour is claimed, and this does not
+    // prove the XCUI gate. The UIKit objects below are real, but presentation is
+    // reported as failed by the injected seam, not observed from Files.
+    let configured = ProcessInfo.processInfo.environment["KOTOHA_AX_TIMEOUT_SECONDS"] ?? "10"
+    let timeout = try XCTUnwrap(Double(configured))
+    let active = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+      TextImportPlugin.activePresenter() != nil
+    }, object: nil)
+    waitForPredicate(active, timeout: timeout, context: "active presenter")
+    let presenter = try XCTUnwrap(TextImportPlugin.activePresenter())
+    let flutter = try XCTUnwrap(presenter as? FlutterViewController)
+    let engine = try XCTUnwrap(flutter.engine)
+    let plugin = try XCTUnwrap(engine.valuePublished(byPlugin: "TextImportPlugin") as? TextImportPlugin,
+                              "Must be registered by the implicit engine callback")
+    let originalReader = plugin.reader
+    let originalPresentPicker = plugin.presentPicker
+    let originalPickerIsPresented = plugin.pickerIsPresented
+    let originalDismissPicker = plugin.dismissPicker
+    defer {
+      plugin.reader = originalReader
+      plugin.presentPicker = originalPresentPicker
+      plugin.pickerIsPresented = originalPickerIsPresented
+      plugin.dismissPicker = originalDismissPicker
+    }
+
+    var presentedPickers: [UIDocumentPickerViewController] = []
+    var presentedControllers: [UIPresentationController] = []
+    plugin.presentPicker = { selectedPresenter, picker, completion in
+      XCTAssertTrue(selectedPresenter === presenter)
+      presentedPickers.append(picker)
+      let presentationController = UIPresentationController(presentedViewController: picker,
+                                                            presenting: selectedPresenter)
+      presentedControllers.append(presentationController)
+      completion(presentationController)
+    }
+    plugin.pickerIsPresented = { _ in false }
+
+    let first = expectation(description: "first presentation_failed")
+    var firstCompletions = 0
+    var firstError: FlutterError?
+    plugin.handle(FlutterMethodCall(methodName: "open", arguments: ["maxBytes": 3])) { value in
+      firstCompletions += 1
+      firstError = value as? FlutterError
+      first.fulfill()
+    }
+    wait(for: [first], timeout: timeout)
+    XCTAssertEqual(firstCompletions, 1)
+    XCTAssertEqual(firstError?.code, "presentation_failed")
+    XCTAssertEqual(presentedPickers.count, 1)
+    XCTAssertEqual(presentedControllers.count, 1)
+    let firstPicker = try XCTUnwrap(presentedPickers.first)
+    let firstController = try XCTUnwrap(presentedControllers.first)
+    XCTAssertNil(firstPicker.delegate, "The picker delegate must not survive the failure")
+    XCTAssertNil(firstController.delegate,
+                 "The failed branch stops before installing a presentation-controller delegate")
+    XCTAssertNil(plugin.picker, "A failed presentation must not leave an active picker")
+
+    // The same injected adapter state drives a second valid open: if the first
+    // request stayed pending, this would be rejected as busy instead.
+    let second = expectation(description: "second presentation_failed")
+    var secondCompletions = 0
+    var secondError: FlutterError?
+    plugin.handle(FlutterMethodCall(methodName: "open", arguments: ["maxBytes": 3])) { value in
+      secondCompletions += 1
+      secondError = value as? FlutterError
+      second.fulfill()
+    }
+    wait(for: [second], timeout: timeout)
+    XCTAssertEqual(secondCompletions, 1)
+    XCTAssertEqual(secondError?.code, "presentation_failed")
+    XCTAssertEqual(presentedPickers.count, 2)
+    XCTAssertEqual(presentedControllers.count, 2)
+    let secondPicker = try XCTUnwrap(presentedPickers.last)
+    let secondController = try XCTUnwrap(presentedControllers.last)
+    XCTAssertFalse(secondPicker === firstPicker)
+    XCTAssertNil(secondPicker.delegate)
+    XCTAssertNil(secondController.delegate)
+    XCTAssertNil(plugin.picker)
+  }
 }
