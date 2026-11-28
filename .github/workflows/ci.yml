@@ -136,7 +136,28 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
+      # The first run of this job had no Gradle cache and a dependency host
+      # answered 429; a later run saved the implicit cache only after success.
+      # Restore explicitly, including the previously saved setup-java entries,
+      # and save even after a failed attempt so a partial resolution is reusable.
+      - name: Restore Gradle dependency cache
+        id: gradle-deps-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.gradle/caches
+          key: kotoha-gradle-deps-${{ runner.os }}-3.47.9-${{ hashFiles('android/**/*.gradle', 'android/**/*.gradle.kts', 'android/gradle.properties', 'pubspec.lock') }}
+          restore-keys: |
+            kotoha-gradle-deps-${{ runner.os }}-3.47.9-
+            setup-java-${{ runner.os }}-x64-gradle-
+      - name: Restore Gradle wrapper cache
+        id: gradle-wrapper-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.gradle/wrapper
+          key: kotoha-gradle-wrapper-${{ runner.os }}-3.47.9-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.jar', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            kotoha-gradle-wrapper-${{ runner.os }}-3.47.9-
+            setup-java-${{ runner.os }}-x64-gradle-wrapper-
       - name: Resolve locked dependencies
         run: flutter pub get --enforce-lockfile
       - name: Build Android debug APK
@@ -159,6 +180,18 @@ jobs:
             fi
           done
           exit "$status"
+      - name: Save Gradle dependency cache
+        if: always() && steps.gradle-deps-cache.outputs.cache-matched-key != steps.gradle-deps-cache.outputs.cache-primary-key
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.gradle/caches
+          key: ${{ steps.gradle-deps-cache.outputs.cache-primary-key }}
+      - name: Save Gradle wrapper cache
+        if: always() && steps.gradle-wrapper-cache.outputs.cache-matched-key != steps.gradle-wrapper-cache.outputs.cache-primary-key
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ steps.gradle-wrapper-cache.outputs.cache-primary-key }}
       # Privacy callbacks and bounded model-terms import coverage; native
       # accessibility/input is checked by Flutter widget tests on the hosted
       # runners. Shell-injected key delivery varies between identical hosted
