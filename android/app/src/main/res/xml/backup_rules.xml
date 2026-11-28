@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<full-backup-content>
-    <!-- API 30 and lower: keep all app data on the device. -->
-    <exclude domain="root" />
-    <exclude domain="database" />
-    <exclude domain="sharedpref" />
-    <exclude domain="external" />
-</full-backup-content>

@@ -15,7 +15,7 @@ void main() {
   });
 
   test(
-    'Android backup rules exclude every domain from cloud and D2D transfer',
+    'Android backup rules exclude every documented domain from transfer',
     () {
       final manifest = File('android/app/src/main/AndroidManifest.xml')
           .readAsStringSync();
@@ -27,10 +27,20 @@ void main() {
       );
       expect(
         application.group(0),
-        contains('android:fullBackupContent="@xml/backup_rules"'),
+        contains('android:fullBackupContent="false"'),
       );
 
-      final domains = ['root', 'database', 'sharedpref', 'external'];
+      final domains = [
+        'file',
+        'database',
+        'sharedpref',
+        'external',
+        'root',
+        'device_file',
+        'device_database',
+        'device_sharedpref',
+        'device_root',
+      ];
       final rules = File(
         'android/app/src/main/res/xml/data_extraction_rules.xml',
       ).readAsStringSync();
@@ -40,24 +50,24 @@ void main() {
           dotAll: true,
         ).firstMatch(rules);
         expect(match, isNotNull, reason: 'missing $section rules');
+        final body = match!.group(1)!;
+        expect(
+          body,
+          isNot(contains('<include')),
+          reason: '$section includes data',
+        );
         for (final domain in domains) {
           expect(
-            match!.group(1),
-            contains('<exclude domain="$domain"'),
-            reason: '$section must exclude $domain',
+            body,
+            contains('<exclude domain="$domain" path="." />'),
+            reason: '$section must exclude all of $domain',
           );
         }
       }
-
-      final legacy = File('android/app/src/main/res/xml/backup_rules.xml')
-          .readAsStringSync();
-      for (final domain in domains) {
-        expect(
-          legacy,
-          contains('<exclude domain="$domain"'),
-          reason: 'API 30 rules must exclude $domain',
-        );
-      }
+      expect(
+        File('android/app/src/main/res/xml/backup_rules.xml').existsSync(),
+        isFalse,
+      );
     },
   );
 }
