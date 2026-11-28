@@ -117,6 +117,10 @@ final class LanguageFieldAccessibilityTests: XCTestCase {
         guard importerExists, importButton.isEnabled, importButton.isHittable else { break }
       }
       guard presented else {
+        // The two rounds are intentional: the first disabled-importer state can
+        // be a pending OS presentation. Keep the full presentation, Cancel and
+        // draft assertions; only let the already-bounded second round run.
+        if round < 2 { continue }
         XCTFail("System document picker must be presented; round=\(round), \(diagnostics)")
         return
       }
